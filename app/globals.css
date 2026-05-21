@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 210 30% 98%;
+  --foreground: 216 29% 17%;
+  --card: 0 0% 100%;
+  --card-foreground: 216 29% 17%;
+  --primary: 194 94% 39%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 206 30% 93%;
+  --secondary-foreground: 215 26% 24%;
+  --muted: 210 26% 95%;
+  --muted-foreground: 215 16% 40%;
+  --accent: 152 76% 90%;
+  --accent-foreground: 160 84% 20%;
+  --border: 214 31% 87%;
+  --input: 214 31% 87%;
+  --ring: 194 94% 39%;
+  --radius: 0.75rem;
+}
+
+* {
+  @apply border-border;
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+  font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: Sora, Manrope, "Avenir Next", "Segoe UI", sans-serif;
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+}

@@ -2,6 +2,7 @@
 
 import { data } from "@/lib/data";
 import { useCustomerState } from "@/lib/state/customer-state";
+import { ActiveStaffIndicator } from "@/components/staff/active-staff-indicator";
 
 export function TopBar() {
   const location = data.locations[0];
@@ -13,8 +14,11 @@ export function TopBar() {
         <p className="text-xs uppercase tracking-wide text-muted-foreground">Active Location</p>
         <p className="font-semibold">{location.name}</p>
       </div>
-      <div data-testid="header-occupancy" className="rounded-md bg-secondary px-3 py-2 text-sm text-muted-foreground">
-        {occupancyCount} currently in
+      <div className="flex flex-wrap items-center gap-2">
+        <div data-testid="header-occupancy" className="rounded-md bg-secondary px-3 py-2 text-sm text-muted-foreground">
+          {occupancyCount} currently in
+        </div>
+        <ActiveStaffIndicator />
       </div>
     </header>
   );

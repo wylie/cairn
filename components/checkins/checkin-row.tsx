@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { CheckInLogRecord } from "@/types/domain";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { StaffAttributionLabel } from "@/components/staff/staff-attribution-label";
 
 function formatTime(value: string | null) {
   if (!value) return "-";
@@ -21,6 +22,8 @@ export function CheckInRow({
   readOnly: boolean;
   onCheckOut: (recordId: string) => void;
 }) {
+  const checkedInByStaffId = record.checkedInByStaffId ?? record.staffUserId;
+
   return (
     <div
       data-testid={`checkin-row-${record.customerId}`}
@@ -49,11 +52,23 @@ export function CheckInRow({
           <Button variant="outline">View Customer</Button>
         </Link>
       )}
-      {typeof record.punchesUsed === "number" || typeof record.punchesRemaining === "number" ? (
-        <p className="relative z-10 pointer-events-none md:col-span-5 text-xs text-muted-foreground">
-          Punches used: {record.punchesUsed ?? 0} • Remaining: {record.punchesRemaining ?? "N/A"}
-        </p>
-      ) : null}
+      <div className="relative z-10 pointer-events-none md:col-span-5 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+        <StaffAttributionLabel
+          label="Checked in by"
+          staffId={checkedInByStaffId}
+          fallbackName={record.checkedInByStaffName}
+        />
+        {record.checkedOutByStaffId || record.checkedOutByStaffName ? (
+          <StaffAttributionLabel
+            label="Checked out by"
+            staffId={record.checkedOutByStaffId}
+            fallbackName={record.checkedOutByStaffName}
+          />
+        ) : null}
+        {typeof record.punchesUsed === "number" || typeof record.punchesRemaining === "number" ? (
+          <p>Punches used: {record.punchesUsed ?? 0} • Remaining: {record.punchesRemaining ?? "N/A"}</p>
+        ) : null}
+      </div>
     </div>
   );
 }

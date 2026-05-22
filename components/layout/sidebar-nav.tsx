@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, Users, ScanLine, Calendar, Boxes, CreditCard, BarChart3, Settings } from "lucide-react";
+import { LayoutDashboard, Users, ScanLine, Calendar, Boxes, CreditCard, BarChart3, Settings, Tags } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -8,6 +8,7 @@ const navItems = [
   { href: "/check-in", label: "Check-in", icon: ScanLine },
   { href: "/calendar", label: "Calendar", icon: Calendar },
   { href: "/programs", label: "Programs", icon: Boxes },
+  { href: "/products", label: "Products", icon: Tags },
   { href: "/pos", label: "POS", icon: CreditCard },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings }

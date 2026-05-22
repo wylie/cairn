@@ -1,45 +1,164 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AddCustomerModal } from "@/components/customers/add-customer-modal";
 import { CustomerCard } from "@/components/customers/customer-card";
+import { SellAccessModal } from "@/components/pos/sell-access-modal";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SearchInput } from "@/components/shared/search-input";
+import { StaffSwitcher } from "@/components/staff/staff-switcher";
+import { Button } from "@/components/ui/button";
 import { filterCustomers } from "@/lib/data/customer-search";
 import { getMembershipForCustomer, getPassForCustomer, getWaiverForCustomer } from "@/lib/data/selectors";
 import { useCustomerState } from "@/lib/state/customer-state";
+import { useWorkstationState } from "@/lib/state/workstation-state";
 
 export function CustomerList() {
-  const { customers, toggleCheckIn } = useCustomerState();
+  const { customers, accessProducts, runCustomerCheckInAction, sellAccessProducts, addCustomer } = useCustomerState();
+  const { activeStaff, assertPermission, requestStaffSwitch, hasPermission } = useWorkstationState();
   const [query, setQuery] = useState("");
+  const [feedback, setFeedback] = useState("");
+  const [warning, setWarning] = useState("");
+  const [showSwitchPrompt, setShowSwitchPrompt] = useState(false);
+  const [sellCustomerId, setSellCustomerId] = useState<string | null>(null);
+  const [showAddCustomer, setShowAddCustomer] = useState(false);
 
   const filtered = useMemo(() => filterCustomers(customers, query), [customers, query]);
+  const sellCustomer = useMemo(() => customers.find((entry) => entry.id === sellCustomerId) ?? null, [customers, sellCustomerId]);
+
+  const handleToggleCheckIn = (customerId: string) => {
+    const customer = customers.find((entry) => entry.id === customerId);
+    const permission = assertPermission(customer?.checkInStatus === "in" ? "checkOutCustomer" : "checkInCustomer");
+    if (!permission.ok) {
+      setWarning(permission.message);
+      setFeedback("");
+      setShowSwitchPrompt(true);
+      requestStaffSwitch("Staff PIN Required");
+      return;
+    }
+
+    const staffName = `${activeStaff!.firstName} ${activeStaff!.lastName}`;
+    const result = runCustomerCheckInAction(customerId, {
+      staffUserId: activeStaff!.id,
+      staffName,
+      source: "manual_search"
+    });
+
+    if (!result.ok) {
+      setWarning(result.message);
+      setFeedback("");
+      setShowSwitchPrompt(true);
+      return;
+    }
+
+    setFeedback(result.message);
+    setWarning("");
+    setShowSwitchPrompt(false);
+  };
 
   return (
     <section className="space-y-4">
-      <div className="w-full max-w-md">
-        <SearchInput
-          value={query}
-          onChange={setQuery}
-          placeholder="Search by name, email, phone, or member ID"
-          label="Search customers"
-        />
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="w-full max-w-md">
+          <SearchInput
+            value={query}
+            onChange={setQuery}
+            placeholder="Search by name, email, phone, or member ID"
+            label="Search customers"
+          />
+        </div>
+        <Button className="min-h-11" variant="outline" onClick={() => setShowAddCustomer(true)}>Add Customer</Button>
       </div>
+      {feedback ? <div role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{feedback}</div> : null}
+      {warning ? (
+        <div role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <p>{warning}</p>
+          {showSwitchPrompt ? (
+            <div className="mt-2">
+              <StaffSwitcher label="Switch Staff" title="Switch Staff PIN" />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       {filtered.length === 0 ? (
-        <EmptyState title="No customers found" description="Try a different name, email, phone, or member ID." />
+        <div className="space-y-2">
+          <EmptyState title="No customers found" description="Try a different name, email, phone, or member ID." />
+          <Button className="min-h-11" variant="outline" onClick={() => setShowAddCustomer(true)}>Add Customer</Button>
+        </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((customer) => (
+            (() => {
+              const membership = getMembershipForCustomer(customer);
+              const punchPass = getPassForCustomer(customer);
+              const canCheckIn =
+                customer.checkInStatus === "in" ||
+                Boolean(customer.dayPassProductName) ||
+                (membership?.status === "active") ||
+                Boolean(punchPass && punchPass.remainingUses > 0);
+              const blockedReason = canCheckIn ? undefined : "No valid access method.";
+              return (
             <CustomerCard
               key={customer.id}
               customer={customer}
-              membership={getMembershipForCustomer(customer)}
-              punchPass={getPassForCustomer(customer)}
+              membership={membership}
+              punchPass={punchPass}
               waiver={getWaiverForCustomer(customer)}
-              onToggleCheckIn={toggleCheckIn}
+              canCheckIn={canCheckIn}
+              blockedReason={blockedReason}
+              onToggleCheckIn={handleToggleCheckIn}
+              onSellAccess={setSellCustomerId}
             />
+              );
+            })()
           ))}
         </div>
       )}
+      {sellCustomer ? (
+        <SellAccessModal
+          open
+          onClose={() => setSellCustomerId(null)}
+          customer={sellCustomer}
+          products={accessProducts}
+          canUsePOS={hasPermission("usePOS")}
+          canOverrideAccess={hasPermission("overrideAccess")}
+          onSubmit={({ productIds, checkInAfterSale }) => {
+            if (!activeStaff) {
+              requestStaffSwitch("Staff PIN Required");
+              return { ok: false, message: "Select staff PIN to continue.", transaction: null };
+            }
+            const result = sellAccessProducts({
+              customerId: sellCustomer.id,
+              productIds,
+              soldByStaffId: activeStaff.id,
+              soldByStaffName: `${activeStaff.firstName} ${activeStaff.lastName}`,
+              checkInAfterSale
+            });
+            if (result.ok) {
+              setFeedback(result.message);
+              setWarning("");
+              setShowSwitchPrompt(false);
+            } else {
+              setWarning(result.message);
+            }
+            return { ...result, transaction: result.transaction ?? null };
+          }}
+        />
+      ) : null}
+      {showAddCustomer ? (
+        <AddCustomerModal
+          open
+          onClose={() => setShowAddCustomer(false)}
+          onCreate={(input) => {
+            const result = addCustomer(input);
+            if (result.ok) {
+              setFeedback(result.message);
+              setWarning("");
+            }
+            return result;
+          }}
+        />
+      ) : null}
     </section>
   );
 }

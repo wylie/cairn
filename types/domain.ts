@@ -18,6 +18,19 @@ export interface Location {
 
 export type StaffRole = "owner" | "manager" | "front_desk" | "instructor";
 
+export type StaffPermission =
+  | "checkInCustomer"
+  | "checkOutCustomer"
+  | "overrideAccess"
+  | "editCustomer"
+  | "createCustomer"
+  | "manageProducts"
+  | "viewReports"
+  | "usePOS"
+  | "refundTransaction"
+  | "editPrograms"
+  | "manageSettings";
+
 export interface StaffUser {
   id: string;
   organizationId: string;
@@ -26,6 +39,10 @@ export interface StaffUser {
   lastName: string;
   email: string;
   role: StaffRole;
+  initials: string;
+  pin: string;
+  active: boolean;
+  permissions: StaffPermission[];
 }
 
 export type MembershipState = "active" | "expiring" | "inactive" | "trial";
@@ -93,7 +110,14 @@ export interface CheckInLogRecord {
   checkOutTime: string | null;
   checkInSource: CheckInSource;
   status: CheckInStatus;
-  staffUserId: string;
+  checkedInByStaffId: string;
+  checkedInByStaffName?: string;
+  // Backward-compat for pre-workstation records kept in hot state during dev.
+  staffUserId?: string;
+  checkedOutByStaffId?: string;
+  checkedOutByStaffName?: string;
+  overriddenByStaffId?: string;
+  overrideReason?: string;
   notes?: string;
 }
 
@@ -125,6 +149,63 @@ export interface PosProduct {
   id: string;
   organizationId: string;
   name: string;
-  category: "membership" | "pass" | "retail" | "fee";
+  description?: string;
+  category: "day_passes" | "memberships" | "punch_passes" | "classes" | "camps" | "retail" | "comps" | "misc";
   priceCents: number;
+  type?: "access" | "membership" | "punch-pass" | "class" | "camp" | "retail" | "comp";
+  productCategory?:
+    | "day_passes"
+    | "memberships"
+    | "punch_passes"
+    | "classes"
+    | "camps"
+    | "comps"
+    | "retail"
+    | "misc";
+  colorToken?: "blue" | "green" | "amber" | "purple" | "orange" | "slate" | "gray" | "red";
+  colorLabel?: string;
+  categoryColorToken?: "blue" | "green" | "amber" | "purple" | "orange" | "gray";
+  showAsQuickButton?: boolean;
+  accessScope?: "facility" | "class" | "camp";
+  accessBehavior?: "single_entry" | "punch_decrement" | "recurring_membership" | "registration_access" | "manual_comp" | "retail_placeholder";
+  expirationBehavior?: "end_of_day" | "fixed_date" | "rolling_30_days" | "monthly";
+  validDays?: number;
+  punchQuantity?: number;
+  expirationDays?: number;
+  waiverRequired?: boolean;
+  active?: boolean;
+}
+
+export interface PosTransactionItem {
+  productId: string;
+  productName: string;
+  category: PosProduct["category"];
+  type: NonNullable<PosProduct["type"]>;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+}
+
+export interface PosTransaction {
+  id: string;
+  organizationId: string;
+  locationId: string;
+  customerId: string;
+  customerName: string;
+  customerEmail?: string;
+  customerMemberId?: string;
+  transactionType: "sale" | "return";
+  originalTransactionId?: string;
+  returnStatus: "none" | "partially_returned" | "fully_returned";
+  returnedItemIds?: string[];
+  refundedTotal?: number;
+  soldByStaffId?: string;
+  soldByStaffName?: string;
+  items: PosTransactionItem[];
+  subtotal: number;
+  total: number;
+  completedAt: string;
+  paymentType: "mock";
+  checkInTriggered: boolean;
+  receiptNumber: string;
 }

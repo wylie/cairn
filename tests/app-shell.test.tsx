@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { vi } from "vitest";
 import { AppShell } from "@/components/layout/app-shell";
-import { CustomerStateProvider } from "@/lib/state/customer-state";
+import { TestProviders } from "@/tests/test-providers";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/dashboard"
@@ -10,11 +10,11 @@ vi.mock("next/navigation", () => ({
 describe("AppShell", () => {
   it("renders sidebar and main content", () => {
     render(
-      <CustomerStateProvider>
+      <TestProviders>
         <AppShell>
           <div>Page Content</div>
         </AppShell>
-      </CustomerStateProvider>
+      </TestProviders>
     );
 
     expect(screen.getByText("Facility Ops")).toBeInTheDocument();

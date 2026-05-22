@@ -1,17 +1,218 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+"use client";
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { AccessProductPicker } from "@/components/pos/access-product-picker";
+import { CustomerAccessSummary } from "@/components/pos/customer-access-summary";
+import { AddCustomerModal } from "@/components/customers/add-customer-modal";
+import { CustomerSearchCombobox } from "@/components/shared/customer-search-combobox";
+import { MockReceiptPanel } from "@/components/pos/mock-receipt-panel";
+import { ProductPriceLabel } from "@/components/pos/product-price-label";
+import { PermissionGate } from "@/components/staff/permission-gate";
+import { StaffSwitcher } from "@/components/staff/staff-switcher";
+import { Button } from "@/components/ui/button";
+import { data } from "@/lib/data";
+import { filterCustomers } from "@/lib/data/customer-search";
+import { useCustomerState } from "@/lib/state/customer-state";
+import { useWorkstationState } from "@/lib/state/workstation-state";
 
 export default function PosPage() {
+  const { customers, memberships, punchPasses, accessProducts, sellAccessProducts, addCustomer } = useCustomerState();
+  const { activeStaff, hasPermission, requestStaffSwitch } = useWorkstationState();
+
+  const [query, setQuery] = useState("");
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [cart, setCart] = useState<string[]>([]);
+  const [feedback, setFeedback] = useState("");
+  const [warning, setWarning] = useState("");
+  const [receipt, setReceipt] = useState<ReturnType<typeof sellAccessProducts>["transaction"] | null>(null);
+  const [showAddCustomer, setShowAddCustomer] = useState(false);
+
+  const selectedCustomer = useMemo(
+    () => customers.find((entry) => entry.id === selectedCustomerId) ?? null,
+    [customers, selectedCustomerId]
+  );
+
+  const searchResults = useMemo(() => {
+    if (!query.trim()) return [];
+    return filterCustomers(customers, query).slice(0, 8);
+  }, [customers, query]);
+
+  const cartProducts = useMemo(
+    () => accessProducts.filter((product) => cart.includes(product.id)),
+    [accessProducts, cart]
+  );
+  const subtotal = cartProducts.reduce((sum, product) => sum + product.priceCents, 0);
+  const canUsePos = hasPermission("usePOS");
+  const hasSelectedCustomer = Boolean(selectedCustomer);
+  const hasCartItems = cartProducts.length > 0;
+  const hasActiveStaff = Boolean(activeStaff);
+  const canCheckout = canUsePos && hasSelectedCustomer && hasCartItems && hasActiveStaff;
+
+  const membership = selectedCustomer?.membershipId
+    ? memberships.find((entry) => entry.id === selectedCustomer.membershipId)
+    : undefined;
+  const punchPass = selectedCustomer?.punchPassId
+    ? punchPasses.find((entry) => entry.id === selectedCustomer.punchPassId)
+    : undefined;
+  const waiver = selectedCustomer?.waiverId
+    ? data.waivers.find((entry) => entry.id === selectedCustomer.waiverId)
+    : undefined;
+
+  const submit = (checkInAfterSale: boolean) => {
+    if (!selectedCustomer) {
+      setWarning("Select a customer first.");
+      setFeedback("");
+      return;
+    }
+    if (!activeStaff) {
+      setWarning("Select staff PIN to continue.");
+      setFeedback("");
+      requestStaffSwitch("Staff PIN Required");
+      return;
+    }
+
+    const result = sellAccessProducts({
+      customerId: selectedCustomer.id,
+      productIds: cart,
+      soldByStaffId: activeStaff.id,
+      soldByStaffName: `${activeStaff.firstName} ${activeStaff.lastName}`,
+      checkInAfterSale
+    });
+
+    if (!result.ok) {
+      setWarning(result.message);
+      setFeedback("");
+      return;
+    }
+
+    setWarning("");
+    setFeedback(result.message);
+    setReceipt(result.transaction ?? null);
+    setCart([]);
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>POS</CardTitle>
-        <CardDescription>Point of sale placeholder.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <p className="text-sm text-muted-foreground">
-          TODO(stripe): Attach checkout session creation, invoice events, and subscription sync with Stripe.
-        </p>
-      </CardContent>
-    </Card>
+    <PermissionGate permission="usePOS">
+      <section className="space-y-4">
+        <header>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-3xl font-semibold">Front Desk POS</h2>
+            <Link href="/pos/history" className="text-sm text-muted-foreground underline">Sales History</Link>
+          </div>
+          <p className="text-sm text-muted-foreground">Sell access products quickly, then check guests in without leaving this screen.</p>
+        </header>
+
+        <div className="grid gap-4 xl:grid-cols-[0.95fr_1.35fr]">
+          <div className="space-y-4 rounded-xl border bg-card p-4">
+            <h3 className="text-lg font-semibold">Customer</h3>
+            <CustomerSearchCombobox
+              label="Search customer"
+              placeholder="Search by name, member ID, phone, or email"
+              query={query}
+              onQueryChange={setQuery}
+              customers={searchResults}
+              onSelect={(customerId) => {
+                setSelectedCustomerId(customerId);
+                setQuery("");
+              }}
+              onAddCustomer={() => setShowAddCustomer(true)}
+              emptyMessage="No customers found. Add a new customer to continue."
+            />
+
+            {selectedCustomer ? (
+              <CustomerAccessSummary
+                customer={selectedCustomer}
+                membership={membership}
+                punchPass={punchPass}
+                waiverStatus={waiver?.status ?? "missing"}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">Select a customer to start a sale.</p>
+            )}
+
+            {selectedCustomer?.checkInStatus === "in" ? (
+              <p className="text-sm text-amber-800">Customer is already checked in.</p>
+            ) : null}
+            {waiver && waiver.status !== "signed" ? (
+              <p className="text-sm text-amber-800">Waiver missing or expired.</p>
+            ) : null}
+          </div>
+
+          <div className="space-y-4 rounded-xl border bg-card p-4">
+            <h3 className="text-lg font-semibold">Access Products</h3>
+            <AccessProductPicker
+              products={accessProducts}
+              disableStaffComp={!hasPermission("overrideAccess")}
+              onAdd={(productId) => setCart((prev) => [...prev, productId])}
+            />
+
+            <div className="rounded-lg border p-3">
+              <p className="font-medium">Cart</p>
+              {cartProducts.length === 0 ? <p className="text-sm text-muted-foreground">No access products selected.</p> : null}
+              <div className="mt-2 space-y-2">
+                {cartProducts.map((item, index) => (
+                  <div key={`${item.id}-${index}`} className="flex items-center justify-between text-sm">
+                    <span>{item.name}</span>
+                    <div className="flex items-center gap-2">
+                      <ProductPriceLabel cents={item.priceCents} />
+                      <button className="text-xs text-muted-foreground" onClick={() => setCart((prev) => prev.filter((_, i) => i !== index))}>Remove</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 flex items-center justify-between border-t pt-2">
+                <span className="text-sm text-muted-foreground">Subtotal</span>
+                <ProductPriceLabel cents={subtotal} />
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button variant="outline" className="min-h-11" onClick={() => setCart([])}>Clear</Button>
+                <Button className="min-h-11" disabled={!canCheckout} onClick={() => submit(false)}>Complete</Button>
+                <Button className="min-h-11 whitespace-normal text-center" disabled={!canCheckout} onClick={() => submit(true)}>Complete + Check In</Button>
+              </div>
+              {!hasSelectedCustomer ? (
+                <p className="mt-2 text-sm text-muted-foreground">Select a customer to complete sale.</p>
+              ) : null}
+              {!hasCartItems ? (
+                <p className="mt-2 text-sm text-muted-foreground">Add at least one product to complete sale.</p>
+              ) : null}
+              {!hasActiveStaff ? (
+                <p className="mt-2 text-sm text-muted-foreground">Select staff PIN to continue.</p>
+              ) : null}
+            </div>
+
+            <div className="rounded-lg border bg-secondary/30 px-3 py-2 text-sm text-muted-foreground">
+              Staff: {activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : "No staff selected"}
+            </div>
+          </div>
+        </div>
+
+        {feedback ? <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{feedback}</p> : null}
+        {warning ? (
+          <div role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            <p>{warning}</p>
+            <div className="mt-2"><StaffSwitcher label="Switch Staff" title="Switch Staff PIN" /></div>
+          </div>
+        ) : null}
+        <MockReceiptPanel transaction={receipt ?? null} />
+      </section>
+      {showAddCustomer ? (
+        <AddCustomerModal
+          open
+          onClose={() => setShowAddCustomer(false)}
+          onCreate={(input) => {
+            const result = addCustomer(input);
+            if (result.ok && result.customerId) {
+              setSelectedCustomerId(result.customerId);
+              setFeedback(result.message);
+              setWarning("");
+              setQuery("");
+            }
+            return result;
+          }}
+          title="Add Customer"
+        />
+      ) : null}
+    </PermissionGate>
   );
 }

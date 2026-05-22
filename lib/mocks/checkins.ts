@@ -14,7 +14,7 @@ export const checkInRecords: CheckInLogRecord[] = [
     checkOutTime: null,
     checkInSource: "manual_search",
     status: "checked-in",
-    staffUserId: "staff_001"
+    checkedInByStaffId: "staff_001"
   },
   {
     id: "log_1002",
@@ -31,7 +31,7 @@ export const checkInRecords: CheckInLogRecord[] = [
     checkOutTime: "2026-05-19T15:40:00Z",
     checkInSource: "barcode_scan",
     status: "checked-out",
-    staffUserId: "staff_001",
+    checkedInByStaffId: "staff_001",
     notes: "Original pass quantity: 10"
   },
   {
@@ -49,6 +49,6 @@ export const checkInRecords: CheckInLogRecord[] = [
     checkOutTime: "2026-05-18T14:05:00Z",
     checkInSource: "manual_search",
     status: "checked-out",
-    staffUserId: "staff_001"
+    checkedInByStaffId: "staff_001"
   }
 ];

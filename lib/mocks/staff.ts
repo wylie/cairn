@@ -8,6 +8,61 @@ export const staffUsers: StaffUser[] = [
     firstName: "Taylor",
     lastName: "Nguyen",
     email: "taylor.nguyen@example.com",
-    role: "front_desk"
+    role: "owner",
+    initials: "TN",
+    pin: "1111",
+    active: true,
+    permissions: [
+      "checkInCustomer",
+      "checkOutCustomer",
+      "overrideAccess",
+      "editCustomer",
+      "createCustomer",
+      "manageProducts",
+      "viewReports",
+      "usePOS",
+      "refundTransaction",
+      "editPrograms",
+      "manageSettings"
+    ]
+  },
+  {
+    id: "staff_002",
+    organizationId: "org_summit",
+    locationIds: ["loc_001"],
+    firstName: "Maya",
+    lastName: "Lopez",
+    email: "maya.lopez@example.com",
+    role: "manager",
+    initials: "ML",
+    pin: "2222",
+    active: true,
+    permissions: ["checkInCustomer", "checkOutCustomer", "overrideAccess", "editCustomer", "createCustomer", "manageProducts", "viewReports", "usePOS", "editPrograms"]
+  },
+  {
+    id: "staff_003",
+    organizationId: "org_summit",
+    locationIds: ["loc_001"],
+    firstName: "Sam",
+    lastName: "Rivera",
+    email: "sam.rivera@example.com",
+    role: "front_desk",
+    initials: "SR",
+    pin: "3333",
+    active: true,
+    permissions: ["checkInCustomer", "checkOutCustomer", "usePOS", "createCustomer"]
+  },
+  {
+    id: "staff_004",
+    organizationId: "org_summit",
+    locationIds: ["loc_001"],
+    firstName: "Iris",
+    lastName: "Chen",
+    email: "iris.chen@example.com",
+    role: "instructor",
+    initials: "IC",
+    pin: "4444",
+    active: true,
+    permissions: ["editPrograms"]
   }
 ];

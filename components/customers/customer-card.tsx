@@ -9,15 +9,22 @@ export function CustomerCard({
   membership,
   punchPass,
   waiver,
-  onToggleCheckIn
+  canCheckIn,
+  blockedReason,
+  onToggleCheckIn,
+  onSellAccess
 }: {
   customer: Customer;
   membership?: Membership;
   punchPass?: PunchPass;
   waiver?: Waiver;
+  canCheckIn: boolean;
+  blockedReason?: string;
   onToggleCheckIn: (customerId: string) => void;
+  onSellAccess: (customerId: string) => void;
 }) {
   const checkedIn = customer.checkInStatus === "in";
+  const disableAction = !checkedIn && !canCheckIn;
 
   return (
     <Card className="transition hover:-translate-y-0.5 hover:shadow">
@@ -35,10 +42,18 @@ export function CustomerCard({
           <Link href={`/customers/${customer.id}`}>
             <Button variant="outline" className="min-h-11">View Profile</Button>
           </Link>
-          <Button onClick={() => onToggleCheckIn(customer.id)} className="min-h-11" variant={checkedIn ? "outline" : "default"}>
+          <Button onClick={() => onSellAccess(customer.id)} variant="outline" className="min-h-11">Sell Access</Button>
+          <Button
+            onClick={() => onToggleCheckIn(customer.id)}
+            className="min-h-11"
+            variant={checkedIn ? "outline" : "default"}
+            disabled={disableAction}
+            aria-label={disableAction && blockedReason ? blockedReason : undefined}
+          >
             {checkedIn ? "Check Out" : "Check In"}
           </Button>
         </div>
+        {disableAction && blockedReason ? <p className="text-xs text-amber-800">{blockedReason}</p> : null}
       </CardContent>
     </Card>
   );

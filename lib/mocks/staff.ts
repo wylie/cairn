@@ -23,7 +23,8 @@ export const staffUsers: StaffUser[] = [
       "usePOS",
       "refundTransaction",
       "editPrograms",
-      "manageSettings"
+      "manageSettings",
+      "manageStaff"
     ]
   },
   {
@@ -37,7 +38,10 @@ export const staffUsers: StaffUser[] = [
     initials: "ML",
     pin: "2222",
     active: true,
-    permissions: ["checkInCustomer", "checkOutCustomer", "overrideAccess", "editCustomer", "createCustomer", "manageProducts", "viewReports", "usePOS", "editPrograms"]
+    canTeach: true,
+    activeInstructor: true,
+    instructorBio: "Leads operations and introductory coaching.",
+    permissions: ["checkInCustomer", "checkOutCustomer", "overrideAccess", "editCustomer", "createCustomer", "manageProducts", "viewReports", "usePOS", "editPrograms", "manageStaff"]
   },
   {
     id: "staff_003",
@@ -63,6 +67,25 @@ export const staffUsers: StaffUser[] = [
     initials: "IC",
     pin: "4444",
     active: true,
+    canTeach: true,
+    activeInstructor: true,
+    instructorBio: "Specializes in mobility and youth coaching.",
+    permissions: ["editPrograms"]
+  },
+  {
+    id: "staff_005",
+    organizationId: "org_summit",
+    locationIds: ["loc_001"],
+    firstName: "Nora",
+    lastName: "Vale",
+    email: "nora.vale@example.com",
+    role: "instructor",
+    initials: "NV",
+    pin: "5555",
+    active: true,
+    canTeach: true,
+    activeInstructor: false,
+    instructorBio: "Seasonal substitute instructor.",
     permissions: ["editPrograms"]
   }
 ];

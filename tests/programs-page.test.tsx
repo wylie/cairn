@@ -3,6 +3,7 @@ import { within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import ProgramsPage from "@/app/(app)/programs/page";
+import CalendarPage from "@/app/(app)/calendar/page";
 import { TopBar } from "@/components/layout/top-bar";
 import { TestProviders } from "@/tests/test-providers";
 
@@ -39,22 +40,8 @@ async function activateStaff(user: ReturnType<typeof userEvent.setup>, pin = "22
   await user.click(screen.getByRole("button", { name: "Confirm" }));
 }
 
-describe("Programs page foundation", () => {
-  it("renders programs, sessions, and registrations sections", () => {
-    render(
-      <TestProviders>
-        <TopBar />
-        <ProgramsPage />
-      </TestProviders>
-    );
-
-    expect(screen.getByRole("heading", { name: "Programs" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Program Catalog" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Sessions" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Registrations" })).toBeInTheDocument();
-  });
-
-  it("can create a session for a program", async () => {
+describe("Programs page IA", () => {
+  it("does not show add forms by default and opens Add Program on demand", async () => {
     const user = userEvent.setup();
     render(
       <TestProviders>
@@ -63,38 +50,116 @@ describe("Programs page foundation", () => {
       </TestProviders>
     );
 
-    await user.selectOptions(screen.getByLabelText("Program for new session"), "prog_101");
-    await user.type(screen.getByLabelText("Session start"), "2026-06-20T09:00");
-    await user.type(screen.getByLabelText("Session end"), "2026-06-20T10:00");
-    await user.clear(screen.getByLabelText("Session capacity"));
-    await user.type(screen.getByLabelText("Session capacity"), "16");
-    await user.click(screen.getByRole("button", { name: "Create Session" }));
-
-    expect(screen.getByText(/Session created for Morning Mobility Flow/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Jun 20, 2026/i).length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText("program-form-panel")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add Program" }));
+    expect(screen.getByLabelText("program-form-panel")).toBeInTheDocument();
+    expect(screen.getByLabelText("program-form-layout")).toBeInTheDocument();
   });
 
-  it("can register a customer to a session", async () => {
+  it("Edit Program opens populated form", async () => {
     const user = userEvent.setup();
     render(
       <TestProviders>
         <TopBar />
         <ProgramsPage />
+      </TestProviders>
+    );
+
+    await user.click(screen.getAllByRole("button", { name: "Edit Program" })[0]);
+    expect(screen.getByLabelText("Program name")).toHaveValue("Morning Mobility Flow");
+  });
+
+  it("Add Instructor form is hidden by default and opens on demand", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <ProgramsPage />
+      </TestProviders>
+    );
+
+    expect(screen.queryByLabelText("instructor-form-panel")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add Instructor" }));
+    expect(screen.getByLabelText("instructor-form-panel")).toBeInTheDocument();
+    expect(screen.getByLabelText("instructor-form-layout")).toBeInTheDocument();
+  });
+
+  it("age range validates min and max", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <ProgramsPage />
+      </TestProviders>
+    );
+
+    await user.click(screen.getByRole("button", { name: "Add Program" }));
+    await user.type(screen.getByLabelText("Program name"), "Youth Bouldering Basics");
+    await user.type(screen.getByLabelText("Program minimum age"), "12");
+    await user.type(screen.getByLabelText("Program maximum age"), "8");
+    await user.click(screen.getByRole("button", { name: "Create Program" }));
+
+    expect(screen.getByText("Maximum age must be greater than or equal to minimum age.")).toBeInTheDocument();
+  });
+
+  it("age range display formats correctly", () => {
+    render(
+      <TestProviders>
+        <TopBar />
+        <ProgramsPage />
+      </TestProviders>
+    );
+
+    expect(screen.getByText(/Ages 8-14/i)).toBeInTheDocument();
+    expect(screen.getByText(/All ages/i)).toBeInTheDocument();
+  });
+
+  it("registration panel no longer appears on Programs page", () => {
+    render(
+      <TestProviders>
+        <TopBar />
+        <ProgramsPage />
+      </TestProviders>
+    );
+
+    expect(screen.queryByRole("heading", { name: "Registrations" })).not.toBeInTheDocument();
+  });
+
+  it("registration appears in Calendar session detail", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+
+    await user.click(screen.getAllByRole("button", { name: "View Details" })[0]);
+    expect(screen.getByText("Registrations")).toBeInTheDocument();
+  });
+
+  it("creating session uses program default capacity and allows override", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
       </TestProviders>
     );
     await activateStaff(user, "2222");
 
-    await user.type(screen.getByLabelText("Register session search"), "Morning");
-    await user.keyboard("{ArrowDown}{Enter}");
-    await user.type(screen.getByLabelText("Register customer search"), "Alex");
-    await user.keyboard("{ArrowDown}{Enter}");
-    await user.click(screen.getByRole("button", { name: "Register" }));
+    await user.click(screen.getAllByRole("button", { name: "Create Session" })[0]);
+    expect(screen.getByLabelText("Session capacity")).toHaveValue("12");
 
-    expect(screen.getByText(/Registration confirmed for Alex Rivera/i)).toBeInTheDocument();
-    expect(screen.getByText(/Alex Rivera • Morning Mobility Flow/i)).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Session program"), "prog_202");
+    expect(screen.getByLabelText("Session capacity")).toHaveValue("24");
+
+    await user.clear(screen.getByLabelText("Session capacity"));
+    await user.type(screen.getByLabelText("Session capacity"), "30");
+    expect(screen.getByLabelText("Session capacity")).toHaveValue("30");
   });
 
-  it("persists sessions and registrations after refresh", async () => {
+  it("instructor list persists after refresh", async () => {
     const storage = installStorageMock();
     const user = userEvent.setup();
 
@@ -106,18 +171,11 @@ describe("Programs page foundation", () => {
     );
     await activateStaff(user, "2222");
 
-    await user.selectOptions(screen.getByLabelText("Program for new session"), "prog_101");
-    await user.type(screen.getByLabelText("Session start"), "2026-06-22T09:00");
-    await user.type(screen.getByLabelText("Session end"), "2026-06-22T10:00");
-    await user.clear(screen.getByLabelText("Session capacity"));
-    await user.type(screen.getByLabelText("Session capacity"), "10");
-    await user.click(screen.getByRole("button", { name: "Create Session" }));
-
-    await user.type(screen.getByLabelText("Register session search"), "Jun 22");
-    await user.keyboard("{ArrowDown}{Enter}");
-    await user.type(screen.getByLabelText("Register customer search"), "Maya");
-    await user.keyboard("{ArrowDown}{Enter}");
-    await user.click(screen.getByRole("button", { name: "Register" }));
+    await user.click(screen.getByRole("button", { name: "Add Instructor" }));
+    await user.type(screen.getByLabelText("Instructor first name"), "Jamie");
+    await user.type(screen.getByLabelText("Instructor last name"), "Park");
+    await user.click(screen.getByRole("button", { name: "Create Instructor" }));
+    expect(screen.getByText(/Instructor added: Jamie Park/i)).toBeInTheDocument();
 
     first.unmount();
 
@@ -128,153 +186,40 @@ describe("Programs page foundation", () => {
       </TestProviders>
     );
 
-    expect(screen.getByText(/Maya Patel • Morning Mobility Flow/i)).toBeInTheDocument();
+    expect(screen.getByText("Jamie Park")).toBeInTheDocument();
     storage.restore();
   });
 
-  it("customer dropdown no longer renders and searchable picker is used", () => {
-    render(
-      <TestProviders>
-        <TopBar />
-        <ProgramsPage />
-      </TestProviders>
-    );
-
-    expect(screen.getByLabelText("Register customer search")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Register customer")).not.toBeInTheDocument();
-  });
-
-  it("search filters customers and no-results state appears", async () => {
+  it("inactive programs do not appear in create session by default", async () => {
+    const storage = installStorageMock();
     const user = userEvent.setup();
-    render(
+    const first = render(
       <TestProviders>
         <TopBar />
         <ProgramsPage />
       </TestProviders>
     );
 
-    const input = screen.getByLabelText("Register customer search");
-    await user.type(input, "Maya");
-    expect(screen.getByRole("option", { name: /Maya Patel/i })).toBeInTheDocument();
+    await user.click(screen.getAllByRole("button", { name: "Edit Program" })[0]);
+    const toggle = screen.getByLabelText("Program active");
+    if ((toggle as HTMLInputElement).checked) {
+      await user.click(toggle);
+    }
+    await user.click(screen.getByRole("button", { name: "Save Program" }));
+    first.unmount();
 
-    await user.clear(input);
-    await user.type(input, "zzzzzz");
-    expect(screen.getByText("No customers found")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add Customer" })).toBeInTheDocument();
-  });
-
-  it("keyboard navigation selects highlighted customer and supports clear", async () => {
-    const user = userEvent.setup();
     render(
       <TestProviders>
         <TopBar />
-        <ProgramsPage />
+        <CalendarPage />
       </TestProviders>
     );
 
-    const input = screen.getByLabelText("Register customer search");
-    await user.type(input, "Alex");
-    await user.keyboard("{ArrowDown}{Enter}");
-
-    expect(screen.getByLabelText("Selected registration customer")).toHaveTextContent("Alex Rivera");
-    await user.click(screen.getByRole("button", { name: "Clear" }));
-    expect(screen.queryByLabelText("Selected registration customer")).not.toBeInTheDocument();
-  });
-
-  it("register button is disabled without selected customer", async () => {
-    const user = userEvent.setup();
-    render(
-      <TestProviders>
-        <TopBar />
-        <ProgramsPage />
-      </TestProviders>
-    );
     await activateStaff(user, "2222");
+    await user.click(screen.getAllByRole("button", { name: "Create Session" })[0]);
 
-    await user.type(screen.getByLabelText("Register session search"), "Morning");
-    await user.keyboard("{ArrowDown}{Enter}");
-    expect(screen.getByRole("button", { name: "Register" })).toBeDisabled();
-  });
-
-  it("add customer option can create and select a new customer", async () => {
-    const user = userEvent.setup();
-    render(
-      <TestProviders>
-        <ProgramsPage />
-      </TestProviders>
-    );
-
-    await user.type(screen.getByLabelText("Register customer search"), "no-match-value");
-    await user.click(screen.getByRole("button", { name: "Add Customer" }));
-    await user.type(screen.getByLabelText("First name"), "Rae");
-    await user.type(screen.getByLabelText("Last name"), "Quick");
-    await user.click(screen.getByRole("button", { name: "Create Customer" }));
-
-    expect(screen.getByLabelText("Selected registration customer")).toHaveTextContent("Rae Quick");
-  });
-
-  it("session dropdown no longer renders and searchable session picker is used", () => {
-    render(
-      <TestProviders>
-        <TopBar />
-        <ProgramsPage />
-      </TestProviders>
-    );
-
-    expect(screen.getByLabelText("Register session search")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Register customer session")).not.toBeInTheDocument();
-  });
-
-  it("session search filters and shows no-results state", async () => {
-    const user = userEvent.setup();
-    render(
-      <TestProviders>
-        <TopBar />
-        <ProgramsPage />
-      </TestProviders>
-    );
-
-    const input = screen.getByLabelText("Register session search");
-    await user.type(input, "Mobility");
-    const results = screen.getByRole("listbox", { name: "Session search results" });
-    expect(within(results).getByRole("option", { name: /Morning Mobility Flow/i })).toBeInTheDocument();
-
-    await user.clear(input);
-    await user.type(input, "zzzzzz");
-    expect(screen.getByText("No sessions found")).toBeInTheDocument();
-  });
-
-  it("session keyboard navigation selects highlighted session and supports clear", async () => {
-    const user = userEvent.setup();
-    render(
-      <TestProviders>
-        <TopBar />
-        <ProgramsPage />
-      </TestProviders>
-    );
-
-    const input = screen.getByLabelText("Register session search");
-    await user.type(input, "Morning");
-    await user.keyboard("{ArrowDown}{Enter}");
-
-    const selectedSession = screen.getByLabelText("Selected registration session");
-    expect(selectedSession).toHaveTextContent("Morning Mobility Flow");
-    await user.click(within(selectedSession).getByRole("button", { name: "Clear" }));
-    expect(screen.queryByLabelText("Selected registration session")).not.toBeInTheDocument();
-  });
-
-  it("register button is disabled without selected session", async () => {
-    const user = userEvent.setup();
-    render(
-      <TestProviders>
-        <TopBar />
-        <ProgramsPage />
-      </TestProviders>
-    );
-    await activateStaff(user, "2222");
-
-    await user.type(screen.getByLabelText("Register customer search"), "Alex");
-    await user.keyboard("{ArrowDown}{Enter}");
-    expect(screen.getByRole("button", { name: "Register" })).toBeDisabled();
+    const select = screen.getByLabelText("Session program");
+    expect(within(select).queryByRole("option", { name: "Morning Mobility Flow" })).not.toBeInTheDocument();
+    storage.restore();
   });
 });

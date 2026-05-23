@@ -1,8 +1,10 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { checkInRecords as seedCheckInRecords } from "@/lib/mocks/checkins";
+import { accessRecords as seedAccessRecords } from "@/lib/mocks/access-records";
 import { customers as seedCustomers } from "@/lib/mocks/customers";
+import { locations as seedLocations } from "@/lib/mocks/locations";
 import { memberships as seedMemberships } from "@/lib/mocks/memberships";
 import { punchPasses as seedPunchPasses } from "@/lib/mocks/passes";
 import { posProducts as seedPosProducts } from "@/lib/mocks/products";
@@ -17,15 +19,19 @@ import {
   normalizeProductPriceCents
 } from "@/lib/pos-transactions";
 import { normalizeTransactions } from "@/lib/transactions";
+import { evaluateCustomerAccess, getEligibleAccess, type AccessDecision } from "@/lib/access-rules";
+import { data } from "@/lib/data";
 import type {
   CheckInLogRecord,
   CheckInSource,
   Customer,
+  CustomerAccessRecord,
   EntryMethod,
   Membership,
   PosProduct,
   PosTransaction,
   PosTransactionItem,
+  PostSaleCheckInSlot,
   Program,
   PunchPass,
   ClassCampSession,
@@ -56,6 +62,59 @@ function normalizeProductForState(product: PosProduct): PosProduct {
   };
 }
 
+function normalizeSessionForState(session: ClassCampSession, programs: Program[]): ClassCampSession {
+  const program = programs.find((entry) => entry.id === session.programId);
+  return {
+    ...session,
+    title: session.title ?? program?.title ?? "Untitled Session",
+    waitlistEnabled: session.waitlistEnabled ?? false,
+    waitlistCount: session.waitlistCount ?? 0,
+    status: session.status ?? "scheduled"
+  };
+}
+
+function normalizeProgramForState(program: Program): Program {
+  if (typeof program.minimumAge === "number" || typeof program.maximumAge === "number") {
+    return program;
+  }
+  if (!program.ageRange) return program;
+  const plusMatch = program.ageRange.match(/^(\d+)\+$/);
+  if (plusMatch) {
+    return { ...program, minimumAge: Number(plusMatch[1]), maximumAge: undefined };
+  }
+  const rangeMatch = program.ageRange.match(/^(\d+)\s*-\s*(\d+)$/);
+  if (rangeMatch) {
+    return {
+      ...program,
+      minimumAge: Number(rangeMatch[1]),
+      maximumAge: Number(rangeMatch[2])
+    };
+  }
+  return program;
+}
+
+function canCreateSaleCheckInSlot(product: PosProduct) {
+  return product.type !== "retail";
+}
+
+function expandSaleCheckInSlots(
+  transactionId: string,
+  products: PosProduct[],
+  purchasingCustomer: Customer
+): PostSaleCheckInSlot[] {
+  const eligible = products.filter(canCreateSaleCheckInSlot);
+  return eligible.map((product, index) => ({
+    id: `slot_${Math.random().toString(36).slice(2, 9)}`,
+    transactionId,
+    productId: product.id,
+    productName: product.name,
+    accessType: product.type ?? "access",
+    status: "available" as const,
+    assignedCustomerId: index === 0 ? purchasingCustomer.id : undefined,
+    assignedCustomerName: index === 0 ? `${purchasingCustomer.firstName} ${purchasingCustomer.lastName}` : undefined
+  }));
+}
+
 interface CustomerStateContextValue {
   customers: Customer[];
   memberships: Membership[];
@@ -65,6 +124,7 @@ interface CustomerStateContextValue {
   programs: Program[];
   sessions: ClassCampSession[];
   registrations: Registration[];
+  customerAccessRecords: CustomerAccessRecord[];
   checkInRecords: CheckInLogRecord[];
   activeLocationId: string;
   activeDateKey: string;
@@ -76,10 +136,19 @@ interface CustomerStateContextValue {
   occupancyCount: number;
   totalCheckIns: number;
   checkedOutCount: number;
+  evaluateCustomerEntry: (customerId: string) => AccessDecision;
   searchCustomers: (query: string) => Customer[];
   checkInCustomer: (
     customerId: string,
-    options: { staffUserId: string; staffName?: string; source?: CheckInSource; overrideReason?: string; customerOverride?: Customer }
+    options: {
+      staffUserId: string;
+      staffName?: string;
+      source?: CheckInSource;
+      overrideReason?: string;
+      customerOverride?: Customer;
+      transactionId?: string;
+      slotId?: string;
+    }
   ) => { ok: boolean; message: string };
   checkOutRecord: (recordId: string, staffUserId: string, staffName?: string) => { ok: boolean; message: string };
   runCustomerCheckInAction: (
@@ -93,9 +162,70 @@ interface CustomerStateContextValue {
     soldByStaffName?: string;
     checkInAfterSale?: boolean;
   }) => { ok: boolean; message: string; transactionId?: string; transaction?: PosTransaction };
+  assignSaleCheckInSlotCustomer: (
+    transactionId: string,
+    slotId: string,
+    customerId: string
+  ) => { ok: boolean; message: string };
+  fulfillSaleCheckInSlot: (
+    transactionId: string,
+    slotId: string,
+    options: { staffUserId: string; staffName?: string; overrideReason?: string }
+  ) => { ok: boolean; message: string };
   addCustomer: (input: { firstName: string; lastName: string; email?: string; phone?: string }) => { ok: boolean; message: string; customerId?: string };
-  createSession: (input: { programId: string; startsAt: string; endsAt: string; capacity: number }) => { ok: boolean; message: string; sessionId?: string };
+  createSession: (input: {
+    programId: string;
+    startsAt: string;
+    endsAt: string;
+    capacity: number;
+    title?: string;
+    locationId?: string;
+    instructorName?: string;
+    instructorStaffId?: string;
+    waitlistEnabled?: boolean;
+    notes?: string;
+    updatedByStaffId?: string;
+  }) => { ok: boolean; message: string; sessionId?: string };
+  updateSession: (input: {
+    sessionId: string;
+    title: string;
+    programId: string;
+    locationId: string;
+    startsAt: string;
+    endsAt: string;
+    instructorName?: string;
+    instructorStaffId?: string;
+    capacity: number;
+    waitlistEnabled: boolean;
+    notes?: string;
+    updatedByStaffId?: string;
+  }) => { ok: boolean; message: string };
+  cancelSession: (sessionId: string, cancelledByStaffId?: string) => { ok: boolean; message: string };
   registerCustomerForSession: (input: { customerId: string; sessionId: string }) => { ok: boolean; message: string; registrationId?: string };
+  cancelRegistration: (registrationId: string) => { ok: boolean; message: string };
+  createProgram: (input: {
+    title: string;
+    description?: string;
+    category: Program["category"];
+    active: boolean;
+    colorToken?: Program["colorToken"];
+    defaultCapacity?: number;
+    requiresWaiver?: boolean;
+    minimumAge?: number;
+    maximumAge?: number;
+  }) => { ok: boolean; message: string; programId?: string };
+  updateProgram: (input: {
+    id: string;
+    title: string;
+    description?: string;
+    category: Program["category"];
+    active: boolean;
+    colorToken?: Program["colorToken"];
+    defaultCapacity?: number;
+    requiresWaiver?: boolean;
+    minimumAge?: number;
+    maximumAge?: number;
+  }) => { ok: boolean; message: string };
   createProduct: (
     input: Omit<PosProduct, "id" | "organizationId"> & { price: string | number }
   ) => { ok: boolean; message: string; productId?: string };
@@ -104,6 +234,8 @@ interface CustomerStateContextValue {
     input: Omit<PosProduct, "id" | "organizationId"> & { price: string | number }
   ) => { ok: boolean; message: string };
   toggleProductActive: (productId: string) => { ok: boolean; message: string };
+  updateCustomerAccessRecord: (accessId: string, updates: Partial<CustomerAccessRecord>) => { ok: boolean; message: string };
+  addCustomerAccessRecord: (record: Omit<CustomerAccessRecord, "id">) => { ok: boolean; message: string; accessId?: string };
   toggleCheckIn: (customerId: string, staffUserId: string) => void;
   resetMockState: () => void;
 }
@@ -120,30 +252,63 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     products: buildScopedMockKey("org_summit", "loc_001", "products"),
     programs: buildScopedMockKey("org_summit", "loc_001", "programs"),
     sessions: buildScopedMockKey("org_summit", "loc_001", "sessions"),
-    registrations: buildScopedMockKey("org_summit", "loc_001", "registrations")
+    registrations: buildScopedMockKey("org_summit", "loc_001", "registrations"),
+    accessRecords: buildScopedMockKey("org_summit", "loc_001", "accessRecords")
   };
 
-  const loadedProducts = (loadMockState(storageKeys.products, seedPosProducts) as PosProduct[]).map(normalizeProductForState);
-  const loadedTransactions = normalizeTransactions(
-    loadMockState(storageKeys.transactions, seedPosTransactions) as Partial<PosTransaction>[],
-    loadedProducts
-  );
+  const initialStateRef = useRef<{
+    customers: Customer[];
+    memberships: Membership[];
+    punchPasses: PunchPass[];
+    transactions: PosTransaction[];
+    accessProducts: PosProduct[];
+    programs: Program[];
+    sessions: ClassCampSession[];
+    registrations: Registration[];
+    accessRecords: CustomerAccessRecord[];
+    checkIns: CheckInLogRecord[];
+  } | null>(null);
 
-  const [customers, setCustomers] = useState<Customer[]>(() => loadMockState(storageKeys.customers, seedCustomers));
-  const [memberships, setMemberships] = useState<Membership[]>(() => loadMockState(storageKeys.memberships, seedMemberships));
-  const [punchPasses, setPunchPasses] = useState<PunchPass[]>(() => loadMockState(storageKeys.passes, seedPunchPasses));
-  const [transactions, setTransactions] = useState<PosTransaction[]>(() => loadedTransactions);
-  const [accessProducts, setAccessProducts] = useState<PosProduct[]>(() => loadedProducts);
-  const [programs, setPrograms] = useState<Program[]>(() => loadMockState(storageKeys.programs, seedPrograms));
-  const [sessions, setSessions] = useState<ClassCampSession[]>(() => loadMockState(storageKeys.sessions, seedSessions));
-  const [registrations, setRegistrations] = useState<Registration[]>(() => loadMockState(storageKeys.registrations, seedRegistrations));
-  const [checkInLogRecords, setCheckInLogRecords] = useState<CheckInLogRecord[]>(() =>
-    loadMockState(storageKeys.checkins, seedCheckInRecords).map((record) => ({
+  if (!initialStateRef.current) {
+    const products = (loadMockState(storageKeys.products, seedPosProducts) as PosProduct[]).map(normalizeProductForState);
+    const programs = (loadMockState(storageKeys.programs, seedPrograms) as Program[]).map(normalizeProgramForState);
+    initialStateRef.current = {
+      customers: loadMockState(storageKeys.customers, seedCustomers),
+      memberships: loadMockState(storageKeys.memberships, seedMemberships),
+      punchPasses: loadMockState(storageKeys.passes, seedPunchPasses),
+      transactions: normalizeTransactions(
+        loadMockState(storageKeys.transactions, seedPosTransactions) as Partial<PosTransaction>[],
+        products
+      ),
+      accessProducts: products,
+      programs,
+      sessions: (loadMockState(storageKeys.sessions, seedSessions) as ClassCampSession[]).map((session) =>
+        normalizeSessionForState(session, programs)
+      ),
+      registrations: loadMockState(storageKeys.registrations, seedRegistrations),
+      accessRecords: loadMockState(storageKeys.accessRecords, seedAccessRecords) as CustomerAccessRecord[],
+      checkIns: loadMockState(storageKeys.checkins, seedCheckInRecords).map((record) => ({
+        ...record,
+        checkedInByStaffId: record.checkedInByStaffId ?? record.staffUserId ?? "",
+        checkedInByStaffName: record.checkedInByStaffName
+      }))
+    };
+  }
+
+  const [customers, setCustomers] = useState<Customer[]>(initialStateRef.current.customers);
+  const [memberships, setMemberships] = useState<Membership[]>(initialStateRef.current.memberships);
+  const [punchPasses, setPunchPasses] = useState<PunchPass[]>(initialStateRef.current.punchPasses);
+  const [transactions, setTransactions] = useState<PosTransaction[]>(initialStateRef.current.transactions);
+  const [accessProducts, setAccessProducts] = useState<PosProduct[]>(initialStateRef.current.accessProducts);
+  const [programs, setPrograms] = useState<Program[]>(initialStateRef.current.programs);
+  const [sessions, setSessions] = useState<ClassCampSession[]>(initialStateRef.current.sessions);
+  const [registrations, setRegistrations] = useState<Registration[]>(initialStateRef.current.registrations);
+  const [customerAccessRecords, setCustomerAccessRecords] = useState<CustomerAccessRecord[]>(initialStateRef.current.accessRecords);
+  const [checkInLogRecords, setCheckInLogRecords] = useState<CheckInLogRecord[]>(initialStateRef.current.checkIns.map((record) => ({
       ...record,
       checkedInByStaffId: record.checkedInByStaffId ?? record.staffUserId ?? "",
       checkedInByStaffName: record.checkedInByStaffName
-    }))
-  );
+    })));
   const [activeDateKey, setActiveDateKey] = useState<string>(BASE_DATE);
   const activeLocationId = "loc_001";
 
@@ -163,6 +328,32 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
   const totalCheckIns = todayLogRecords.length;
   const checkedOutCount = todayLogRecords.filter((record) => record.status === "checked-out").length;
   const isActiveDateToday = activeDateKey === BASE_DATE;
+
+  const evaluateCustomerEntry = (customerId: string) => {
+    const customer = customers.find((entry) => entry.id === customerId);
+    if (!customer) {
+      return {
+        outcome: "denied",
+        allowed: false,
+        headline: "Access Denied",
+        reasons: ["Customer not found."],
+        warnings: [],
+        accessSummary: []
+      } as AccessDecision;
+    }
+    const waiver = customer.waiverId ? data.waivers.find((entry) => entry.id === customer.waiverId) : undefined;
+    return evaluateCustomerAccess({
+      customer,
+      waiver,
+      locationId: activeLocationId,
+      dayKey: activeDateKey,
+      accessRecords: customerAccessRecords,
+      registrations,
+      sessions,
+      programs,
+      allowSessionRegistrationAccess: true
+    });
+  };
 
   useEffect(() => {
     saveMockState(storageKeys.customers, customers);
@@ -189,6 +380,9 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
   useEffect(() => {
     saveMockState(storageKeys.registrations, registrations);
   }, [registrations]);
+  useEffect(() => {
+    saveMockState(storageKeys.accessRecords, customerAccessRecords);
+  }, [customerAccessRecords]);
 
   useEffect(() => {
     saveMockState(storageKeys.checkins, checkInLogRecords);
@@ -219,7 +413,15 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
 
   const checkInCustomer = (
     customerId: string,
-    options: { staffUserId: string; staffName?: string; source?: CheckInSource; overrideReason?: string; customerOverride?: Customer }
+    options: {
+      staffUserId: string;
+      staffName?: string;
+      source?: CheckInSource;
+      overrideReason?: string;
+      customerOverride?: Customer;
+      transactionId?: string;
+      slotId?: string;
+    }
   ) => {
     if (!isActiveDateToday) return { ok: false, message: "Historical check-in logs are read-only." };
 
@@ -240,38 +442,112 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       return { ok: false, message: `${customer.firstName} ${customer.lastName} is already checked in.` };
     }
 
-    const membership = customer.membershipId ? memberships.find((m) => m.id === customer.membershipId) : undefined;
-    const pass = customer.punchPassId ? punchPasses.find((p) => p.id === customer.punchPassId) : undefined;
+    const decision = evaluateCustomerEntry(customer.id);
+    const eligibleAccess = getEligibleAccess({
+      customer,
+      waiver: customer.waiverId ? data.waivers.find((entry) => entry.id === customer.waiverId) : undefined,
+      locationId: activeLocationId,
+      dayKey: activeDateKey,
+      accessRecords: customerAccessRecords,
+      registrations,
+      sessions,
+      programs,
+      allowSessionRegistrationAccess: true
+    });
+    const slotProduct = options.transactionId && options.slotId
+      ? transactions
+          .find((entry) => entry.id === options.transactionId)
+          ?.checkInSlots?.find((slot) => slot.id === options.slotId)
+      : undefined;
+    const slotCanGrantAccess = Boolean(
+      slotProduct &&
+        (slotProduct.accessType === "access" ||
+          slotProduct.accessType === "membership" ||
+          slotProduct.accessType === "punch-pass" ||
+          slotProduct.accessType === "class" ||
+          slotProduct.accessType === "camp" ||
+          slotProduct.accessType === "comp")
+    );
+    if (!eligibleAccess.eligible && !options.overrideReason && !slotCanGrantAccess) {
+      const detail = [...decision.reasons, ...decision.warnings].filter(Boolean).join(" ");
+      const fallback = `${customer.firstName} ${customer.lastName} has no valid access method.`;
+      const normalizedDetail = detail.toLowerCase().includes("no valid access") ? `${detail} ${fallback}` : detail || fallback;
+      return { ok: false, message: `${decision.headline}. ${normalizedDetail}`.trim() };
+    }
 
-    let entryMethod: EntryMethod | null = null;
-    let membershipPassType = "";
-    let passProductUsed: string | undefined;
+    let entryMethod: EntryMethod = "staff_comp";
+    let membershipPassType = "Staff/Manual Comp";
+    let passProductUsed: string | undefined = "Manual Access Override";
     let punchesUsed: number | undefined;
     let punchesRemaining: number | undefined;
 
-    if (membership && membership.status === "active") {
-      entryMethod = "membership";
-      membershipPassType = membership.planName;
-      passProductUsed = membership.planName;
-    } else if (pass && pass.remainingUses > 0) {
-      entryMethod = "multi_visit_pass";
-      membershipPassType = pass.title;
-      passProductUsed = pass.title;
-      punchesUsed = 1;
-      punchesRemaining = pass.remainingUses - 1;
-      setPunchPasses((prev) => prev.map((entry) => (entry.id === pass.id ? { ...entry, remainingUses: entry.remainingUses - 1 } : entry)));
-    } else if (customer.dayPassProductName) {
-      entryMethod = "day_pass";
-      membershipPassType = customer.dayPassProductName;
-      passProductUsed = customer.dayPassProductName;
-    } else if (options.overrideReason) {
-      entryMethod = "staff_comp";
-      membershipPassType = "Staff/Manual Comp";
-      passProductUsed = "Manual Access Override";
-    }
-
-    if (!entryMethod) {
-      return { ok: false, message: `${customer.firstName} ${customer.lastName} has no valid access method.` };
+    if (decision.sessionAccess && !slotCanGrantAccess) {
+      entryMethod = decision.sessionAccess.programCategory === "camp" ? "camp_registration" : "class_registration";
+      membershipPassType = `Registered: ${decision.sessionAccess.sessionTitle}`;
+      passProductUsed = "Session Registration";
+    } else if (decision.chosenAccess) {
+      if (decision.chosenAccess.type === "membership") {
+        entryMethod = "membership";
+      } else if (decision.chosenAccess.type === "day-pass") {
+        entryMethod = "day_pass";
+      } else if (decision.chosenAccess.type === "punch-pass") {
+        entryMethod = "multi_visit_pass";
+      } else {
+        entryMethod = "staff_comp";
+      }
+      const linkedProduct = decision.chosenAccess.productId
+        ? accessProducts.find((entry) => entry.id === decision.chosenAccess!.productId)
+        : undefined;
+      membershipPassType = linkedProduct?.name ?? decision.chosenAccess.notes ?? decision.chosenAccess.type.replace("-", " ");
+      passProductUsed = linkedProduct?.name ?? decision.chosenAccess.notes ?? decision.chosenAccess.type.replace("-", " ");
+      if (decision.chosenAccess.type === "punch-pass") {
+        const current = decision.chosenAccess.remainingPunches ?? 0;
+        punchesUsed = 1;
+        punchesRemaining = Math.max(current - 1, 0);
+        setCustomerAccessRecords((prev) =>
+          prev.map((entry) =>
+            entry.id === decision.chosenAccess!.id
+              ? {
+                  ...entry,
+                  remainingPunches: punchesRemaining,
+                  status: punchesRemaining <= 0 ? "expired" : entry.status
+                }
+              : entry
+          )
+        );
+        if (customer.punchPassId) {
+          setPunchPasses((prev) =>
+            prev.map((entry) =>
+              entry.id === customer.punchPassId
+                ? { ...entry, remainingUses: punchesRemaining }
+                : entry
+            )
+          );
+        }
+      }
+      if (decision.chosenAccess.type === "day-pass") {
+        setCustomerAccessRecords((prev) =>
+          prev.map((entry) =>
+            entry.id === decision.chosenAccess!.id
+              ? {
+                  ...entry,
+                  status: "expired",
+                  notes: entry.notes ?? "Day Pass"
+                }
+              : entry
+          )
+        );
+      }
+    } else if (slotCanGrantAccess) {
+      const slotLabel = slotProduct?.productName ?? "Sale Access";
+      if (slotProduct?.accessType === "membership") entryMethod = "membership";
+      else if (slotProduct?.accessType === "punch-pass") entryMethod = "multi_visit_pass";
+      else if (slotProduct?.accessType === "class") entryMethod = "class_registration";
+      else if (slotProduct?.accessType === "camp") entryMethod = "camp_registration";
+      else if (slotProduct?.accessType === "comp") entryMethod = "staff_comp";
+      else entryMethod = "day_pass";
+      membershipPassType = slotLabel;
+      passProductUsed = slotLabel;
     }
 
     const timestamp = `${activeDateKey}T16:00:00Z`;
@@ -291,6 +567,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       checkOutTime: null,
       checkInSource: source,
       status: "checked-in",
+      transactionId: options.transactionId,
       checkedInByStaffId: options.staffUserId,
       checkedInByStaffName: options.staffName,
       overriddenByStaffId: options.overrideReason ? options.staffUserId : undefined,
@@ -300,7 +577,21 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     setCheckInLogRecords((prev) => [newRecord, ...prev]);
     setCustomers((prev) => prev.map((entry) => (entry.id === customerId ? { ...entry, checkInStatus: "in" } : entry)));
 
-    return { ok: true, message: `Check-in recorded for ${customer.firstName} ${customer.lastName}.` };
+    const accessUsedMessage =
+      entryMethod === "membership"
+        ? `Checked in using ${membershipPassType}.`
+        : entryMethod === "day_pass"
+          ? `Checked in using Day Pass${punchesUsed ? " (1 consumed)." : "."}`
+          : entryMethod === "multi_visit_pass"
+            ? `Checked in using Punch Pass (${(punchesRemaining ?? 0) + 1} \u2192 ${punchesRemaining ?? 0} remaining).`
+            : entryMethod === "class_registration" || entryMethod === "camp_registration"
+              ? `Checked in using Session Registration.`
+              : `Checked in using ${membershipPassType}.`;
+    const warningSuffix = decision.warnings.length > 0 ? ` ${decision.warnings.join(" ")}` : "";
+    return {
+      ok: true,
+      message: `Check-in recorded for ${customer.firstName} ${customer.lastName}. ${accessUsedMessage}${warningSuffix}`.trim()
+    };
   };
 
   const toggleCheckIn = (customerId: string, staffUserId: string) => {
@@ -350,16 +641,32 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     if (!options.soldByStaffId) return { ok: false, message: "Select staff PIN to continue." };
     if (!options.soldByStaffName) return { ok: false, message: "Staff attribution is required to complete sale." };
 
-    const selectedProducts = accessProducts.filter((product) => options.productIds.includes(product.id));
+    const selectedProducts = options.productIds
+      .map((productId) => accessProducts.find((product) => product.id === productId))
+      .filter((product): product is PosProduct => Boolean(product));
     if (selectedProducts.length === 0) return { ok: false, message: "Select at least one access product." };
 
     let nextCustomer = customer;
+    const newAccessRecords: CustomerAccessRecord[] = [];
     let createdPass: PunchPass | null = null;
     let createdMembership: Membership | null = null;
 
     selectedProducts.forEach((product) => {
       if (product.category === "day_passes" || product.category === "classes" || product.category === "camps" || product.category === "comps") {
         nextCustomer = { ...nextCustomer, dayPassProductName: product.name };
+        newAccessRecords.push({
+          id: `acc_${Math.random().toString(36).slice(2, 9)}`,
+          customerId: customer.id,
+          productId: product.id,
+          type: product.category === "comps" ? "comp" : "day-pass",
+          status: "active",
+          startDate: activeDateKey,
+          expirationDate: activeDateKey,
+          locationsAllowed: [activeLocationId],
+          notes: product.name,
+          grantedByStaffId: options.soldByStaffId,
+          grantedByStaffName: options.soldByStaffName
+        });
       }
 
       if (product.category === "punch_passes" || product.accessBehavior === "punch_decrement") {
@@ -374,6 +681,20 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
           type: "multi_visit"
         };
         nextCustomer = { ...nextCustomer, punchPassId: passId, dayPassProductName: undefined };
+        newAccessRecords.push({
+          id: `acc_${Math.random().toString(36).slice(2, 9)}`,
+          customerId: customer.id,
+          productId: product.id,
+          type: "punch-pass",
+          status: "active",
+          startDate: activeDateKey,
+          expirationDate: "2026-06-30",
+          remainingPunches: product.punchQuantity ?? 10,
+          locationsAllowed: [activeLocationId],
+          notes: product.name,
+          grantedByStaffId: options.soldByStaffId,
+          grantedByStaffName: options.soldByStaffName
+        });
       }
 
       if (product.category === "memberships" || product.type === "membership") {
@@ -386,11 +707,26 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
           renewalDate: "2026-06-20"
         };
         nextCustomer = { ...nextCustomer, membershipId, dayPassProductName: undefined };
+        newAccessRecords.push({
+          id: `acc_${Math.random().toString(36).slice(2, 9)}`,
+          customerId: customer.id,
+          productId: product.id,
+          type: "membership",
+          status: "active",
+          startDate: activeDateKey,
+          expirationDate: "2026-06-20",
+          unlimitedAccess: true,
+          locationsAllowed: [activeLocationId],
+          notes: product.name,
+          grantedByStaffId: options.soldByStaffId,
+          grantedByStaffName: options.soldByStaffName
+        });
       }
     });
 
     if (createdPass) setPunchPasses((prev) => [createdPass as PunchPass, ...prev]);
     if (createdMembership) setMemberships((prev) => [createdMembership as Membership, ...prev]);
+    if (newAccessRecords.length > 0) setCustomerAccessRecords((prev) => [...newAccessRecords, ...prev]);
     setCustomers((prev) => prev.map((entry) => (entry.id === customer.id ? nextCustomer : entry)));
 
     const cartItems = selectedProducts.map((product) => normalizeCartItem(product));
@@ -405,8 +741,10 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
 
     const { subtotal, total } = calculateTransactionTotals(items);
     const receiptNumber = `R-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const transactionId = `txn_${Math.random().toString(36).slice(2, 9)}`;
+    const saleCheckInSlots = expandSaleCheckInSlots(transactionId, selectedProducts, customer);
     const transaction: PosTransaction = {
-      id: `txn_${Math.random().toString(36).slice(2, 9)}`,
+      id: transactionId,
       organizationId: customer.organizationId,
       locationId: activeLocationId,
       customerId: customer.id,
@@ -423,18 +761,63 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       completedAt: `${activeDateKey}T15:30:00Z`,
       paymentType: "mock",
       checkInTriggered: Boolean(options.checkInAfterSale),
-      receiptNumber
+      receiptNumber,
+      checkInSlots: saleCheckInSlots
     };
     setTransactions((prev) => [transaction, ...prev]);
 
     if (options.checkInAfterSale) {
-      const checkInResult = checkInCustomer(customer.id, {
+      const firstSlot = saleCheckInSlots[0];
+      const checkInResult = firstSlot
+        ? checkInCustomer(firstSlot.assignedCustomerId ?? customer.id, {
+            staffUserId: options.soldByStaffId,
+            staffName: options.soldByStaffName,
+            source: "pos_sale",
+            customerOverride: nextCustomer,
+            transactionId: transaction.id,
+            slotId: firstSlot.id
+          })
+        : checkInCustomer(customer.id, {
         staffUserId: options.soldByStaffId,
         staffName: options.soldByStaffName,
         source: "pos_sale",
-        customerOverride: nextCustomer
+        customerOverride: nextCustomer,
+        transactionId: transaction.id
       });
-      if (!checkInResult.ok) return { ok: false, message: checkInResult.message };
+
+      if (firstSlot && checkInResult.ok) {
+        setTransactions((prev) =>
+          prev.map((entry) =>
+            entry.id !== transaction.id
+              ? entry
+              : {
+                  ...entry,
+                  checkInSlots: (entry.checkInSlots ?? []).map((slot) =>
+                    slot.id === firstSlot.id
+                      ? {
+                          ...slot,
+                          status: "checked-in",
+                          checkedInAt: `${activeDateKey}T16:00:00Z`,
+                          checkedInByStaffId: options.soldByStaffId,
+                          checkedInByStaffName: options.soldByStaffName,
+                          assignedCustomerId: firstSlot.assignedCustomerId ?? customer.id,
+                          assignedCustomerName: firstSlot.assignedCustomerName ?? `${customer.firstName} ${customer.lastName}`
+                        }
+                      : slot
+                  )
+                }
+          )
+        );
+      }
+
+      if (!checkInResult.ok) {
+        return {
+          ok: true,
+          message: `Sale completed for ${customer.firstName} ${customer.lastName}. Check-in blocked: ${checkInResult.message}`,
+          transactionId: transaction.id,
+          transaction
+        };
+      }
     }
 
     return {
@@ -443,6 +826,88 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       transactionId: transaction.id,
       transaction
     };
+  };
+
+  const assignSaleCheckInSlotCustomer = (transactionId: string, slotId: string, customerId: string) => {
+    const customer = customers.find((entry) => entry.id === customerId);
+    if (!customer) return { ok: false, message: "Customer not found." };
+    let updated = false;
+    setTransactions((prev) =>
+      prev.map((entry) => {
+        if (entry.id !== transactionId) return entry;
+        return {
+          ...entry,
+          checkInSlots: (entry.checkInSlots ?? []).map((slot) => {
+            if (slot.id !== slotId || slot.status !== "available") return slot;
+            updated = true;
+            return {
+              ...slot,
+              assignedCustomerId: customer.id,
+              assignedCustomerName: `${customer.firstName} ${customer.lastName}`
+            };
+          })
+        };
+      })
+    );
+    if (!updated) return { ok: false, message: "Slot not available." };
+    return { ok: true, message: "Check-in slot assigned." };
+  };
+
+  const fulfillSaleCheckInSlot = (
+    transactionId: string,
+    slotId: string,
+    options: { staffUserId: string; staffName?: string; overrideReason?: string }
+  ) => {
+    const transaction = transactions.find((entry) => entry.id === transactionId);
+    if (!transaction) return { ok: false, message: "Transaction not found." };
+    const slot = transaction.checkInSlots?.find((entry) => entry.id === slotId);
+    if (!slot) return { ok: false, message: "Check-in slot not found." };
+    if (slot.status !== "available") return { ok: false, message: "Check-in slot has already been fulfilled." };
+    if (!slot.assignedCustomerId) {
+      return { ok: false, message: "Create or select a customer to check in." };
+    }
+    if (!options.staffUserId) return { ok: false, message: "Select staff PIN to continue." };
+
+    const checkInResult = checkInCustomer(slot.assignedCustomerId, {
+      staffUserId: options.staffUserId,
+      staffName: options.staffName,
+      source: "pos_sale",
+      transactionId: transaction.id,
+      slotId: slot.id,
+      overrideReason: options.overrideReason
+    });
+
+    if (!checkInResult.ok) return checkInResult;
+
+    const latestRecord = checkInLogRecords.find(
+      (entry) =>
+        entry.transactionId === transaction.id &&
+        entry.customerId === slot.assignedCustomerId &&
+        entry.status === "checked-in"
+    );
+    setTransactions((prev) =>
+      prev.map((entry) =>
+        entry.id !== transaction.id
+          ? entry
+          : {
+              ...entry,
+              checkInSlots: (entry.checkInSlots ?? []).map((slotEntry) =>
+                slotEntry.id !== slot.id
+                  ? slotEntry
+                  : {
+                      ...slotEntry,
+                      status: "checked-in",
+                      checkedInAt: `${activeDateKey}T16:00:00Z`,
+                      checkedInByStaffId: options.staffUserId,
+                      checkedInByStaffName: options.staffName,
+                      checkInRecordId: latestRecord?.id
+                    }
+              )
+            }
+      )
+    );
+
+    return { ok: true, message: checkInResult.message };
   };
 
   const addCustomer = (input: { firstName: string; lastName: string; email?: string; phone?: string }) => {
@@ -474,7 +939,19 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     return { ok: true, message: `Customer created: ${firstName} ${lastName}.`, customerId: id };
   };
 
-  const createSession = (input: { programId: string; startsAt: string; endsAt: string; capacity: number }) => {
+  const createSession = (input: {
+    programId: string;
+    startsAt: string;
+    endsAt: string;
+    capacity: number;
+    title?: string;
+    locationId?: string;
+    instructorName?: string;
+    instructorStaffId?: string;
+    waitlistEnabled?: boolean;
+    notes?: string;
+    updatedByStaffId?: string;
+  }) => {
     const program = programs.find((entry) => entry.id === input.programId);
     if (!program) return { ok: false, message: "Program not found." };
     if (!input.startsAt || !input.endsAt) return { ok: false, message: "Session start and end are required." };
@@ -488,7 +965,15 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     const next: ClassCampSession = {
       id: sessionId,
       programId: program.id,
-      locationId: activeLocationId,
+      locationId: input.locationId || activeLocationId,
+      title: input.title?.trim() || program.title,
+      instructorName: input.instructorName,
+      instructorStaffId: input.instructorStaffId,
+      notes: input.notes?.trim() || undefined,
+      status: "scheduled",
+      waitlistEnabled: input.waitlistEnabled ?? false,
+      waitlistCount: 0,
+      updatedByStaffId: input.updatedByStaffId,
       startsAt,
       endsAt,
       capacity: Math.round(input.capacity),
@@ -496,6 +981,72 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     };
     setSessions((prev) => [next, ...prev]);
     return { ok: true, message: `Session created for ${program.title}.`, sessionId };
+  };
+
+  const updateSession = (input: {
+    sessionId: string;
+    title: string;
+    programId: string;
+    locationId: string;
+    startsAt: string;
+    endsAt: string;
+    instructorName?: string;
+    instructorStaffId?: string;
+    capacity: number;
+    waitlistEnabled: boolean;
+    notes?: string;
+    updatedByStaffId?: string;
+  }) => {
+    const existing = sessions.find((entry) => entry.id === input.sessionId);
+    if (!existing) return { ok: false as const, message: "Session not found." };
+    if (!input.programId) return { ok: false as const, message: "Program is required." };
+    if (!input.startsAt || !input.endsAt) return { ok: false as const, message: "Session start and end are required." };
+    if (!Number.isFinite(input.capacity) || input.capacity <= 0) return { ok: false as const, message: "Capacity must be greater than zero." };
+    const startsAt = new Date(input.startsAt).toISOString();
+    const endsAt = new Date(input.endsAt).toISOString();
+    if (endsAt <= startsAt) return { ok: false as const, message: "Session end must be after start." };
+    if (!seedLocations.find((entry) => entry.id === input.locationId)) return { ok: false as const, message: "Location is required." };
+
+    setSessions((prev) =>
+      prev.map((entry) =>
+        entry.id === input.sessionId
+          ? {
+              ...entry,
+              title: input.title.trim() || existing.title || "Untitled Session",
+              programId: input.programId,
+              locationId: input.locationId,
+              startsAt,
+              endsAt,
+              instructorName: input.instructorName?.trim() || undefined,
+              instructorStaffId: input.instructorStaffId || undefined,
+              capacity: Math.round(input.capacity),
+              waitlistEnabled: input.waitlistEnabled,
+              notes: input.notes?.trim() || undefined,
+              updatedByStaffId: input.updatedByStaffId ?? entry.updatedByStaffId
+            }
+          : entry
+      )
+    );
+
+    return { ok: true as const, message: "Session updated." };
+  };
+
+  const cancelSession = (sessionId: string, cancelledByStaffId?: string) => {
+    const existing = sessions.find((entry) => entry.id === sessionId);
+    if (!existing) return { ok: false as const, message: "Session not found." };
+    setSessions((prev) =>
+      prev.map((entry) =>
+        entry.id === sessionId
+          ? {
+              ...entry,
+              status: "cancelled",
+              cancelledAt: `${BASE_DATE}T18:00:00Z`,
+              cancelledByStaffId
+            }
+          : entry
+      )
+    );
+    return { ok: true as const, message: `${existing.title ?? "Session"} cancelled.` };
   };
 
   const registerCustomerForSession = (input: { customerId: string; sessionId: string }) => {
@@ -506,19 +1057,116 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
 
     const existing = registrations.find((entry) => entry.customerId === input.customerId && entry.sessionId === input.sessionId && entry.status !== "cancelled");
     if (existing) return { ok: false, message: `${customer.firstName} ${customer.lastName} is already registered.` };
-    if (session.enrolled >= session.capacity) return { ok: false, message: "Session is full." };
+    const sessionIsFull = session.enrolled >= session.capacity;
+    if (sessionIsFull && !session.waitlistEnabled) return { ok: false, message: "Session is full." };
 
     const registrationId = `reg_${Math.random().toString(36).slice(2, 9)}`;
     const registration: Registration = {
       id: registrationId,
       customerId: customer.id,
       sessionId: session.id,
-      status: "confirmed"
+      status: sessionIsFull ? "waitlisted" : "confirmed"
     };
 
     setRegistrations((prev) => [registration, ...prev]);
-    setSessions((prev) => prev.map((entry) => (entry.id === session.id ? { ...entry, enrolled: entry.enrolled + 1 } : entry)));
+    setSessions((prev) =>
+      prev.map((entry) =>
+        entry.id === session.id
+          ? {
+              ...entry,
+              enrolled: sessionIsFull ? entry.enrolled : entry.enrolled + 1,
+              waitlistCount: sessionIsFull ? (entry.waitlistCount ?? 0) + 1 : entry.waitlistCount ?? 0
+            }
+          : entry
+      )
+    );
     return { ok: true, message: `Registration confirmed for ${customer.firstName} ${customer.lastName}.`, registrationId };
+  };
+
+  const cancelRegistration = (registrationId: string) => {
+    const existing = registrations.find((entry) => entry.id === registrationId);
+    if (!existing) return { ok: false as const, message: "Registration not found." };
+    if (existing.status === "cancelled") return { ok: true as const, message: "Registration already cancelled." };
+
+    setRegistrations((prev) => prev.map((entry) => (entry.id === registrationId ? { ...entry, status: "cancelled" } : entry)));
+    setSessions((prev) =>
+      prev.map((entry) => {
+        if (entry.id !== existing.sessionId) return entry;
+        if (existing.status === "waitlisted") {
+          return { ...entry, waitlistCount: Math.max((entry.waitlistCount ?? 0) - 1, 0) };
+        }
+        return { ...entry, enrolled: Math.max(entry.enrolled - 1, 0) };
+      })
+    );
+    return { ok: true as const, message: "Registration cancelled." };
+  };
+
+  const createProgram = (input: {
+    title: string;
+    description?: string;
+    category: Program["category"];
+    active: boolean;
+    colorToken?: Program["colorToken"];
+    defaultCapacity?: number;
+    requiresWaiver?: boolean;
+    minimumAge?: number;
+    maximumAge?: number;
+  }) => {
+    const title = input.title.trim();
+    if (!title) return { ok: false as const, message: "Program name is required." };
+    const id = `prog_${Math.random().toString(36).slice(2, 9)}`;
+    const next: Program = {
+      id,
+      organizationId: "org_summit",
+      title,
+      description: input.description?.trim() || undefined,
+      category: input.category,
+      active: input.active,
+      colorToken: input.colorToken,
+      defaultCapacity: input.defaultCapacity,
+      requiresWaiver: input.requiresWaiver,
+      minimumAge: Number.isFinite(input.minimumAge) ? input.minimumAge : undefined,
+      maximumAge: Number.isFinite(input.maximumAge) ? input.maximumAge : undefined
+    };
+    setPrograms((prev) => [next, ...prev]);
+    return { ok: true as const, message: `Program created: ${title}.`, programId: id };
+  };
+
+  const updateProgram = (input: {
+    id: string;
+    title: string;
+    description?: string;
+    category: Program["category"];
+    active: boolean;
+    colorToken?: Program["colorToken"];
+    defaultCapacity?: number;
+    requiresWaiver?: boolean;
+    minimumAge?: number;
+    maximumAge?: number;
+  }) => {
+    const existing = programs.find((entry) => entry.id === input.id);
+    if (!existing) return { ok: false as const, message: "Program not found." };
+    const title = input.title.trim();
+    if (!title) return { ok: false as const, message: "Program name is required." };
+    setPrograms((prev) =>
+      prev.map((entry) =>
+        entry.id === input.id
+          ? {
+              ...entry,
+              title,
+              description: input.description?.trim() || undefined,
+              category: input.category,
+              active: input.active,
+              colorToken: input.colorToken,
+              defaultCapacity: input.defaultCapacity,
+              requiresWaiver: input.requiresWaiver,
+              minimumAge: Number.isFinite(input.minimumAge) ? input.minimumAge : undefined,
+              maximumAge: Number.isFinite(input.maximumAge) ? input.maximumAge : undefined
+            }
+          : entry
+      )
+    );
+    return { ok: true as const, message: `Program updated: ${title}.` };
   };
 
   const parseProductInput = (input: Omit<PosProduct, "id" | "organizationId"> & { price: string | number }) => {
@@ -570,6 +1218,19 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     return { ok: true as const, message: `${existing.name} ${existing.active === false ? "activated" : "deactivated"}.` };
   };
 
+  const updateCustomerAccessRecord = (accessId: string, updates: Partial<CustomerAccessRecord>) => {
+    const existing = customerAccessRecords.find((entry) => entry.id === accessId);
+    if (!existing) return { ok: false as const, message: "Access record not found." };
+    setCustomerAccessRecords((prev) => prev.map((entry) => (entry.id === accessId ? { ...entry, ...updates } : entry)));
+    return { ok: true as const, message: "Access record updated." };
+  };
+
+  const addCustomerAccessRecord = (record: Omit<CustomerAccessRecord, "id">) => {
+    const accessId = `acc_${Math.random().toString(36).slice(2, 9)}`;
+    setCustomerAccessRecords((prev) => [{ ...record, id: accessId }, ...prev]);
+    return { ok: true as const, message: "Access added.", accessId };
+  };
+
   const value = useMemo<CustomerStateContextValue>(
     () => ({
       customers,
@@ -580,6 +1241,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       programs,
       sessions,
       registrations,
+      customerAccessRecords,
       checkInRecords: checkInLogRecords,
       activeLocationId,
       activeDateKey,
@@ -591,6 +1253,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       occupancyCount,
       totalCheckIns,
       checkedOutCount,
+      evaluateCustomerEntry,
       searchCustomers(query: string) {
         const q = query.trim().toLowerCase();
         if (!q || !isActiveDateToday) return [];
@@ -612,12 +1275,21 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       checkOutRecord,
       runCustomerCheckInAction,
       sellAccessProducts,
+      assignSaleCheckInSlotCustomer,
+      fulfillSaleCheckInSlot,
       addCustomer,
       createSession,
+      updateSession,
+      cancelSession,
       registerCustomerForSession,
+      cancelRegistration,
+      createProgram,
+      updateProgram,
       createProduct,
       updateProduct,
       toggleProductActive,
+      updateCustomerAccessRecord,
+      addCustomerAccessRecord,
       toggleCheckIn,
       resetMockState() {
         setCustomers(seedCustomers);
@@ -627,12 +1299,13 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         setAccessProducts(seedPosProducts.map(normalizeProductForState));
         setTransactions(normalizeTransactions(seedPosTransactions, seedPosProducts.map(normalizeProductForState)));
         setPrograms(seedPrograms);
-        setSessions(seedSessions);
+        setSessions(seedSessions.map((session) => normalizeSessionForState(session, seedPrograms)));
         setRegistrations(seedRegistrations);
+        setCustomerAccessRecords(seedAccessRecords);
         clearScopedMockState(
           "org_summit",
           "loc_001",
-          ["customers", "punchPasses", "checkIns", "memberships", "transactions", "products", "programs", "sessions", "registrations"]
+          ["customers", "punchPasses", "checkIns", "memberships", "transactions", "products", "programs", "sessions", "registrations", "accessRecords"]
         );
       }
     }),
@@ -641,6 +1314,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       memberships,
       punchPasses,
       accessProducts,
+      customerAccessRecords,
       transactions,
       programs,
       sessions,

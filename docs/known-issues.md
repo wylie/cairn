@@ -33,3 +33,9 @@ This file tracks intentionally deferred issues discovered during the stability p
 - Current behavior: transactions now include `transactionType`, `originalTransactionId`, `returnStatus`, `returnedItemIds`, and `refundedTotal`, but no return/refund UI or actions exist.
 - Impact: sales data is prepared for linking future returns, but staff cannot process returns yet.
 - Why deferred: full returns policy, permissions, and UX flow are out of scope for current POS slice.
+
+## 6) Session-registration access is not yet configurable per program/session
+- Area: memberships + access rules, check-in.
+- Current behavior: same-day confirmed registration can grant temporary check-in access via rules engine.
+- Impact: works for registered guests, but there is no admin toggle yet for "registration grants facility entry" by program/session.
+- Why deferred: requires additional product settings/UX and policy defaults for different facility types.

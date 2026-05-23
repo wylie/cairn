@@ -14,7 +14,7 @@ import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 
 export function CustomerList() {
-  const { customers, accessProducts, runCustomerCheckInAction, sellAccessProducts, addCustomer } = useCustomerState();
+  const { customers, accessProducts, runCustomerCheckInAction, sellAccessProducts, addCustomer, evaluateCustomerEntry } = useCustomerState();
   const { activeStaff, assertPermission, requestStaffSwitch, hasPermission } = useWorkstationState();
   const [query, setQuery] = useState("");
   const [feedback, setFeedback] = useState("");
@@ -91,12 +91,9 @@ export function CustomerList() {
             (() => {
               const membership = getMembershipForCustomer(customer);
               const punchPass = getPassForCustomer(customer);
-              const canCheckIn =
-                customer.checkInStatus === "in" ||
-                Boolean(customer.dayPassProductName) ||
-                (membership?.status === "active") ||
-                Boolean(punchPass && punchPass.remainingUses > 0);
-              const blockedReason = canCheckIn ? undefined : "No valid access method.";
+              const decision = evaluateCustomerEntry(customer.id);
+              const canCheckIn = customer.checkInStatus === "in" || decision.allowed;
+              const blockedReason = canCheckIn ? undefined : `${decision.headline}: ${decision.reasons[0] ?? "No valid access method."}`;
               return (
             <CustomerCard
               key={customer.id}

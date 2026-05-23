@@ -23,9 +23,24 @@ describe("Global occupancy indicator", () => {
 
     await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Jordan");
     await user.keyboard("{Enter}");
+    await user.click(screen.getByRole("button", { name: "Check In" }));
     expect(screen.getByTestId("header-occupancy").textContent).not.toBe(initial);
 
     await user.click(screen.getByRole("button", { name: "Check Out Jordan Kim" }));
     expect(screen.getByTestId("header-occupancy").textContent).toContain("currently in");
+  });
+
+  it("links to check-in and is keyboard accessible", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+      </TestProviders>
+    );
+
+    const link = screen.getByRole("link", { name: "View current check-ins" });
+    expect(link).toHaveAttribute("href", "/check-in");
+    await user.tab();
+    expect(link).toHaveFocus();
   });
 });

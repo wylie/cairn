@@ -29,7 +29,8 @@ export type StaffPermission =
   | "usePOS"
   | "refundTransaction"
   | "editPrograms"
-  | "manageSettings";
+  | "manageSettings"
+  | "manageStaff";
 
 export interface StaffUser {
   id: string;
@@ -42,6 +43,9 @@ export interface StaffUser {
   initials: string;
   pin: string;
   active: boolean;
+  canTeach?: boolean;
+  activeInstructor?: boolean;
+  instructorBio?: string;
   permissions: StaffPermission[];
 }
 
@@ -71,6 +75,22 @@ export interface Waiver {
   status: "signed" | "expired" | "missing";
   signedAt?: string;
   expiresAt?: string;
+}
+
+export interface CustomerAccessRecord {
+  id: string;
+  customerId: string;
+  productId?: string;
+  type: "membership" | "day-pass" | "punch-pass" | "comp";
+  status: "active" | "expired" | "cancelled" | "paused";
+  startDate: string;
+  expirationDate?: string;
+  remainingPunches?: number;
+  unlimitedAccess?: boolean;
+  locationsAllowed?: string[];
+  notes?: string;
+  grantedByStaffId?: string;
+  grantedByStaffName?: string;
 }
 
 export interface Customer {
@@ -110,6 +130,7 @@ export interface CheckInLogRecord {
   checkOutTime: string | null;
   checkInSource: CheckInSource;
   status: CheckInStatus;
+  transactionId?: string;
   checkedInByStaffId: string;
   checkedInByStaffName?: string;
   // Backward-compat for pre-workstation records kept in hot state during dev.
@@ -121,17 +142,53 @@ export interface CheckInLogRecord {
   notes?: string;
 }
 
+export type PostSaleCheckInSlotStatus = "available" | "checked-in" | "skipped";
+
+export interface PostSaleCheckInSlot {
+  id: string;
+  transactionId: string;
+  productId: string;
+  productName: string;
+  accessType: NonNullable<PosProduct["type"]>;
+  assignedCustomerId?: string;
+  assignedCustomerName?: string;
+  status: PostSaleCheckInSlotStatus;
+  checkedInAt?: string;
+  checkedInByStaffId?: string;
+  checkedInByStaffName?: string;
+  checkInRecordId?: string;
+}
+
 export interface Program {
   id: string;
   organizationId: string;
   title: string;
+  description?: string;
   category: "class" | "camp" | "clinic" | "course";
+  active?: boolean;
+  colorToken?: "blue" | "green" | "amber" | "purple" | "orange" | "slate" | "gray" | "red";
+  defaultCapacity?: number;
+  requiresWaiver?: boolean;
+  minimumAge?: number;
+  maximumAge?: number;
+  ageRange?: string;
 }
 
 export interface ClassCampSession {
   id: string;
   programId: string;
   locationId: string;
+  title?: string;
+  instructorStaffId?: string;
+  instructorName?: string;
+  notes?: string;
+  waitlistEnabled?: boolean;
+  waitlistCount?: number;
+  status?: "scheduled" | "cancelled" | "completed";
+  createdByStaffId?: string;
+  updatedByStaffId?: string;
+  cancelledAt?: string;
+  cancelledByStaffId?: string;
   startsAt: string;
   endsAt: string;
   capacity: number;
@@ -208,4 +265,5 @@ export interface PosTransaction {
   paymentType: "mock";
   checkInTriggered: boolean;
   receiptNumber: string;
+  checkInSlots?: PostSaleCheckInSlot[];
 }

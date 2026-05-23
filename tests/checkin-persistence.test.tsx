@@ -54,6 +54,7 @@ describe("Check-in persistence", () => {
     await switchStaff(user, "2222");
     await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Dana");
     await user.keyboard("{Enter}");
+    await user.click(screen.getByRole("button", { name: "Check In" }));
 
     expect(screen.getByTestId("checkin-row-cust_005")).toBeInTheDocument();
     expect(screen.getByTestId("header-occupancy")).toHaveTextContent("2 currently in");
@@ -120,6 +121,7 @@ describe("Check-in persistence", () => {
     await switchStaff(user, "1111");
     await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Jordan");
     await user.keyboard("{Enter}");
+    await user.click(screen.getByRole("button", { name: "Check In" }));
 
     first.unmount();
 

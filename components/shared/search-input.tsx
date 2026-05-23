@@ -1,5 +1,5 @@
 import { Search } from "lucide-react";
-import type { KeyboardEventHandler } from "react";
+import type { KeyboardEventHandler, RefObject } from "react";
 import { Input } from "@/components/ui/input";
 
 export function SearchInput({
@@ -10,7 +10,8 @@ export function SearchInput({
   showLabel = false,
   autoFocus,
   className,
-  onKeyDown
+  onKeyDown,
+  inputRef
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -20,6 +21,7 @@ export function SearchInput({
   autoFocus?: boolean;
   className?: string;
   onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
+  inputRef?: RefObject<HTMLInputElement>;
 }) {
   return (
     <div className="space-y-1">
@@ -27,6 +29,7 @@ export function SearchInput({
       <label className="relative block w-full">
         <Search data-testid="search-input-icon" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
+          ref={inputRef}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}

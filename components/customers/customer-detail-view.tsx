@@ -4,12 +4,27 @@ import { CustomerBadges } from "@/components/customers/customer-badges";
 import { ActivityTimeline } from "@/components/customers/activity-timeline";
 import { CustomerDetailActions } from "@/components/customers/customer-detail-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { data } from "@/lib/data";
 import { useCustomerState } from "@/lib/state/customer-state";
+import { useWorkstationState } from "@/lib/state/workstation-state";
 import { formatCurrency } from "@/lib/transactions";
 
 export function CustomerDetailView({ customerId }: { customerId: string }) {
-  const { customers, memberships, punchPasses, checkInRecords, transactions } = useCustomerState();
+  const {
+    customers,
+    memberships,
+    punchPasses,
+    checkInRecords,
+    transactions,
+    registrations,
+    sessions,
+    programs,
+    customerAccessRecords,
+    addCustomerAccessRecord,
+    updateCustomerAccessRecord
+  } = useCustomerState();
+  const { activeStaff } = useWorkstationState();
   const customer = customers.find((entry) => entry.id === customerId);
 
   if (!customer) {
@@ -27,6 +42,26 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     .filter((entry) => entry.customerId === customer.id)
     .sort((a, b) => b.completedAt.localeCompare(a.completedAt))
     .slice(0, 6);
+  const customerSessionHistory = registrations
+    .filter((entry) => entry.customerId === customer.id)
+    .map((entry) => {
+      const session = sessions.find((item) => item.id === entry.sessionId);
+      const program = session ? programs.find((item) => item.id === session.programId) : undefined;
+      return { registration: entry, session, program };
+    })
+    .filter((entry) => entry.session)
+    .sort((a, b) => (b.session?.startsAt ?? "").localeCompare(a.session?.startsAt ?? ""));
+  const accessRecords = customerAccessRecords
+    .filter((entry) => entry.customerId === customer.id)
+    .sort((a, b) => (b.startDate ?? "").localeCompare(a.startDate ?? ""));
+  const upcomingSessions = customerSessionHistory.filter((entry) => {
+    const startsAt = entry.session?.startsAt ?? "";
+    return startsAt >= "2026-05-22" && (entry.session?.status ?? "scheduled") !== "cancelled";
+  });
+  const pastSessions = customerSessionHistory.filter((entry) => {
+    const startsAt = entry.session?.startsAt ?? "";
+    return startsAt < "2026-05-22" || (entry.session?.status ?? "scheduled") === "cancelled";
+  });
 
   return (
     <div className="space-y-4">
@@ -59,6 +94,68 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
         </CardContent>
       </Card>
 
+      <Card aria-label="detail-access">
+        <CardHeader><CardTitle>Access</CardTitle></CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          {accessRecords.length === 0 ? <p className="text-muted-foreground">No access records.</p> : null}
+          {accessRecords.map((entry) => (
+            <div key={entry.id} className="rounded-lg border p-3">
+              <p className="font-medium">{entry.notes ?? entry.type}</p>
+              <p className="text-muted-foreground">Status: {entry.status}</p>
+              <p className="text-muted-foreground">Expiration: {entry.expirationDate ?? "N/A"}</p>
+              <p className="text-muted-foreground">Punches: {typeof entry.remainingPunches === "number" ? entry.remainingPunches : "N/A"}</p>
+              <p className="text-muted-foreground">Locations: {entry.locationsAllowed?.join(", ") ?? "All"}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button className="h-9" variant="outline" onClick={() => updateCustomerAccessRecord(entry.id, { status: "paused" })}>Pause</Button>
+                <Button className="h-9" variant="outline" onClick={() => updateCustomerAccessRecord(entry.id, { status: "cancelled" })}>Cancel</Button>
+                <Button className="h-9" variant="outline" onClick={() => updateCustomerAccessRecord(entry.id, { expirationDate: "2026-07-20" })}>Extend</Button>
+              </div>
+            </div>
+          ))}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              className="h-9"
+              variant="outline"
+              onClick={() =>
+                addCustomerAccessRecord({
+                  customerId: customer.id,
+                  type: "comp",
+                  status: "active",
+                  startDate: "2026-05-20",
+                  expirationDate: "2026-05-20",
+                  locationsAllowed: [customer.locationId],
+                  notes: "Staff comp access",
+                  grantedByStaffId: activeStaff?.id,
+                  grantedByStaffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
+                })
+              }
+            >
+              Add comp access
+            </Button>
+            <Button
+              className="h-9"
+              variant="outline"
+              onClick={() =>
+                addCustomerAccessRecord({
+                  customerId: customer.id,
+                  type: "punch-pass",
+                  status: "active",
+                  startDate: "2026-05-20",
+                  expirationDate: "2026-06-20",
+                  remainingPunches: 10,
+                  locationsAllowed: [customer.locationId],
+                  notes: "10 Visit Pass",
+                  grantedByStaffId: activeStaff?.id,
+                  grantedByStaffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
+                })
+              }
+            >
+              Add punch pass
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card aria-label="detail-waivers">
         <CardHeader><CardTitle>Waivers</CardTitle></CardHeader>
         <CardContent className="space-y-1 text-sm">
@@ -71,6 +168,11 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
         <CardHeader><CardTitle>Activity</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
           <ActivityTimeline visits={recentCheckIns} />
+          {accessRecords.slice(0, 4).map((entry) => (
+            <p key={`timeline-${entry.id}`} className="text-xs text-muted-foreground">
+              Access {entry.status} • {entry.notes ?? entry.type} • starts {entry.startDate}
+            </p>
+          ))}
           {recentPurchases.length > 0 ? (
             <div className="space-y-1 rounded-lg border bg-secondary/20 p-3">
               <p className="font-medium">Recent Purchases</p>
@@ -107,6 +209,30 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
               </div>
             ))
           )}
+        </CardContent>
+      </Card>
+
+      <Card aria-label="detail-sessions">
+        <CardHeader><CardTitle>Session History</CardTitle></CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <div>
+            <p className="font-medium">Upcoming Sessions</p>
+            {upcomingSessions.length === 0 ? <p className="text-muted-foreground">No upcoming sessions.</p> : null}
+            {upcomingSessions.slice(0, 4).map((entry) => (
+              <p key={entry.registration.id} className="text-muted-foreground">
+                {entry.session?.title ?? entry.program?.title ?? "Session"} • {new Date(entry.session?.startsAt ?? "").toLocaleString("en-US")} • {entry.registration.status}
+              </p>
+            ))}
+          </div>
+          <div>
+            <p className="font-medium">Past Sessions</p>
+            {pastSessions.length === 0 ? <p className="text-muted-foreground">No past sessions.</p> : null}
+            {pastSessions.slice(0, 4).map((entry) => (
+              <p key={entry.registration.id} className="text-muted-foreground">
+                {entry.session?.title ?? entry.program?.title ?? "Session"} • {new Date(entry.session?.startsAt ?? "").toLocaleString("en-US")} • {(entry.session?.status ?? entry.registration.status)}
+              </p>
+            ))}
+          </div>
         </CardContent>
       </Card>
 

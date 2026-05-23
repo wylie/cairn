@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { data } from "@/lib/data";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { ActiveStaffIndicator } from "@/components/staff/active-staff-indicator";
@@ -15,9 +16,15 @@ export function TopBar() {
         <p className="font-semibold">{location.name}</p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <div data-testid="header-occupancy" className="rounded-md bg-secondary px-3 py-2 text-sm text-muted-foreground">
+        <Link
+          href="/check-in"
+          prefetch
+          aria-label="View current check-ins"
+          data-testid="header-occupancy"
+          className="rounded-md bg-secondary px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
           {occupancyCount} currently in
-        </div>
+        </Link>
         <ActiveStaffIndicator />
       </div>
     </header>

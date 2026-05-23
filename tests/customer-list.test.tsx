@@ -235,7 +235,7 @@ describe("CustomerList", () => {
     const samCard = screen.getByText("Sam Noaccess").closest("div[class*='p-4']") as HTMLElement;
     const checkIn = within(samCard).getByText("Check In").closest("button") as HTMLButtonElement;
     expect(checkIn).toBeDisabled();
-    expect(within(samCard).getByText(/No valid access method/i)).toBeInTheDocument();
+    expect(within(samCard).getByText(/Access Denied:/i)).toBeInTheDocument();
   });
 
   it("no active staff prompts PIN/staff switch", async () => {

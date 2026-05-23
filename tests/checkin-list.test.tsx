@@ -60,6 +60,7 @@ describe("CheckInList date behavior", () => {
     await activateStaff(user, "1111");
     await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Jordan");
     await user.keyboard("{Enter}");
+    await user.click(screen.getByRole("button", { name: "Check In" }));
     expect(screen.getByText(/Check-in recorded for Jordan Kim/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Check Out Jordan Kim" }));
@@ -133,6 +134,7 @@ describe("Workstation staff mode", () => {
 
     await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Jordan");
     await user.keyboard("{Enter}");
+    await user.click(screen.getByRole("button", { name: "Check In" }));
 
     expect(screen.getByRole("dialog", { name: "Staff PIN" })).toBeInTheDocument();
   });
@@ -149,6 +151,7 @@ describe("Workstation staff mode", () => {
     await activateStaff(user, "3333");
     await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Jordan");
     await user.keyboard("{Enter}");
+    await user.click(screen.getByRole("button", { name: "Check In" }));
 
     const row = screen.getByTestId("checkin-row-cust_002");
     expect(within(row).getByText(/Checked in by: Sam Rivera/i)).toBeInTheDocument();
@@ -210,10 +213,10 @@ describe("Workstation staff mode", () => {
       </TestProviders>
     );
 
-    await activateStaff(user, "2222");
+    await activateStaff(user, "3333");
     await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Sam Noaccess");
     await user.keyboard("{Enter}");
-    expect(screen.getByRole("alert")).toHaveTextContent(/no valid access method/i);
+    expect(screen.getByRole("button", { name: "Cannot Check In" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Sell Access" })).toBeInTheDocument();
   });
 });
@@ -231,6 +234,7 @@ describe("CheckIn access methods", () => {
     await activateStaff(user, "1111");
     await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Jordan");
     await user.keyboard("{Enter}");
+    await user.click(screen.getByRole("button", { name: "Check In" }));
 
     const row = screen.getByTestId("checkin-row-cust_002");
     expect(within(row).getByText(/multi visit pass/i)).toBeInTheDocument();
@@ -250,15 +254,14 @@ describe("CheckIn access methods", () => {
     await activateStaff(user, "1111");
     const search = screen.getByLabelText("Scan barcode, member ID, phone, email, or search name");
     await user.type(search, "Maya");
-    await user.click(screen.getByRole("button", { name: "Check Out Maya Patel" }));
-    await user.clear(search);
-    await user.type(search, "Maya");
     await user.keyboard("{Enter}");
+    await user.click(screen.getByRole("button", { name: "Check Out Maya Patel" }));
+    await user.click(screen.getByRole("button", { name: "Check In" }));
 
     const rows = screen.getAllByTestId("checkin-row-cust_001");
     const activeRow = rows.find((row) => within(row).queryByText("Checked In"));
     expect(activeRow).toBeDefined();
-    expect(within(activeRow as HTMLElement).getByText(/membership/i)).toBeInTheDocument();
+    expect(within(activeRow as HTMLElement).getAllByText(/membership/i).length).toBeGreaterThan(0);
     expect(within(activeRow as HTMLElement).queryByText(/Punches used/i)).not.toBeInTheDocument();
   });
 
@@ -274,9 +277,33 @@ describe("CheckIn access methods", () => {
     await activateStaff(user, "1111");
     await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Dana");
     await user.keyboard("{Enter}");
+    await user.click(screen.getByRole("button", { name: "Check In" }));
 
     const row = screen.getByTestId("checkin-row-cust_005");
     expect(within(row).getAllByText(/day pass/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole("status")).toHaveTextContent(/Checked in using Day Pass/i);
+  });
+
+  it("day pass is consumed and cannot be used again after checkout", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CheckInList />
+      </TestProviders>
+    );
+
+    await activateStaff(user, "1111");
+    const search = screen.getByLabelText("Scan barcode, member ID, phone, email, or search name");
+    await user.type(search, "Dana");
+    await user.keyboard("{Enter}");
+    await user.click(screen.getByRole("button", { name: "Check In" }));
+    await user.click(screen.getByRole("button", { name: "Check Out Dana Daypass" }));
+    await user.clear(search);
+    await user.type(search, "Dana");
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("button", { name: "Cannot Check In" })).toBeDisabled();
+    expect(screen.getAllByText(/expired|no valid access/i).length).toBeGreaterThan(0);
   });
 
   it("customer with no valid access cannot check in", async () => {
@@ -291,8 +318,82 @@ describe("CheckIn access methods", () => {
     await activateStaff(user, "3333");
     await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Sam");
     await user.keyboard("{Enter}");
+    await user.click(screen.getByRole("button", { name: "Cannot Check In" }));
 
-    expect(screen.getByRole("alert")).toHaveTextContent(/no valid access method/i);
+    expect(screen.getByText(/No valid access found|no valid access method/i)).toBeInTheDocument();
     expect(screen.queryByTestId("checkin-row-cust_004")).not.toBeInTheDocument();
+  });
+});
+
+describe("Check-in desk workflow", () => {
+  it("search input auto-focuses and Enter selects a customer", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CheckInList />
+      </TestProviders>
+    );
+    const input = screen.getByLabelText("Scan barcode, member ID, phone, email, or search name");
+    expect(input).toHaveFocus();
+    await user.type(input, "Jordan");
+    await user.keyboard("{Enter}");
+    expect(screen.getAllByText("Jordan Kim").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Check In" })).toBeInTheDocument();
+  });
+
+  it("already checked-in customers show disabled state", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CheckInList />
+      </TestProviders>
+    );
+    await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Maya");
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("button", { name: "Already Checked In" })).toBeDisabled();
+  });
+
+  it("post-check-in clears search and re-focuses input", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CheckInList />
+      </TestProviders>
+    );
+    await activateStaff(user, "1111");
+    const input = screen.getByLabelText("Scan barcode, member ID, phone, email, or search name");
+    await user.type(input, "Jordan");
+    await user.keyboard("{Enter}");
+    await user.click(screen.getByRole("button", { name: "Check In" }));
+    expect(input).toHaveValue("");
+    expect(input).toHaveFocus();
+  });
+
+  it("shows manager override when blocked and override permission is present", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CheckInList />
+      </TestProviders>
+    );
+    await activateStaff(user, "2222");
+    await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Sam");
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("button", { name: "Manager Override" })).toBeInTheDocument();
+  });
+
+  it("shows clickable occupancy navigation and recent activity section", () => {
+    render(
+      <TestProviders>
+        <TopBar />
+        <CheckInList />
+      </TestProviders>
+    );
+    expect(screen.getByTestId("occupancy-count")).toHaveAttribute("href", "/check-in#recent-checkins");
+    expect(screen.getByText("Recent check-ins")).toBeInTheDocument();
   });
 });

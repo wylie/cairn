@@ -13,13 +13,17 @@ export function CustomerBadges({
   punchPass?: PunchPass;
   waiver?: Waiver;
 }) {
+  const hasActiveMembership = membership?.status === "active";
+  const hasAccessProduct = Boolean(punchPass || customer.dayPassProductName || hasActiveMembership);
+
   return (
     <div className="flex flex-wrap gap-2">
-      {membership?.status === "active" ? <Badge tone="success">Active Member</Badge> : null}
-      {membership?.status === "expiring" ? <Badge tone="warning">Expiring Soon</Badge> : null}
-      {punchPass ? <Badge tone="muted">Multi-Visit Pass</Badge> : null}
+      {hasActiveMembership ? <Badge tone="success">Membership Active</Badge> : null}
+      {membership?.status === "expiring" ? <Badge tone="warning">Membership Expiring Soon</Badge> : null}
+      {punchPass ? <Badge tone="muted">Punch Pass</Badge> : null}
       {customer.dayPassProductName ? <Badge tone="muted">Day Pass</Badge> : null}
-      {!waiver || waiver.status !== "signed" ? <Badge tone="danger">Waiver Missing</Badge> : null}
+      {waiver?.status === "valid" ? <Badge tone="success">Waiver Valid</Badge> : <Badge tone="danger">Waiver Missing</Badge>}
+      {!hasAccessProduct ? <Badge tone="warning">No Active Access</Badge> : null}
       <CustomerStatusBadge checkedIn={customer.checkInStatus === "in"} />
     </div>
   );

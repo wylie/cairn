@@ -13,7 +13,6 @@ import { PostSaleCheckInPanel } from "@/components/pos/post-sale-checkin-panel";
 import { PermissionGate } from "@/components/staff/permission-gate";
 import { StaffSwitcher } from "@/components/staff/staff-switcher";
 import { Button } from "@/components/ui/button";
-import { data } from "@/lib/data";
 import { filterCustomers } from "@/lib/data/customer-search";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
@@ -23,12 +22,14 @@ export default function PosPage() {
     customers,
     memberships,
     punchPasses,
+    waivers,
     accessProducts,
     transactions,
     sellAccessProducts,
     assignSaleCheckInSlotCustomer,
     fulfillSaleCheckInSlot,
-    addCustomer
+    addCustomer,
+    updateCustomerWaiver
   } = useCustomerState();
   const { activeStaff, hasPermission, requestStaffSwitch } = useWorkstationState();
 
@@ -73,10 +74,10 @@ export default function PosPage() {
     ? punchPasses.find((entry) => entry.id === selectedCustomer.punchPassId)
     : undefined;
   const waiver = selectedCustomer?.waiverId
-    ? data.waivers.find((entry) => entry.id === selectedCustomer.waiverId)
+    ? waivers.find((entry) => entry.id === selectedCustomer.waiverId)
     : undefined;
   const requiresWaiverInCart = cartProducts.some((product) => product.waiverRequired);
-  const waiverInvalid = !!selectedCustomer && waiver?.status !== "signed";
+  const waiverInvalid = !!selectedCustomer && waiver?.status !== "valid";
 
   const submit = (checkInAfterSale: boolean) => {
     if (!selectedCustomer) {
@@ -90,7 +91,7 @@ export default function PosPage() {
       requestStaffSwitch("Staff PIN Required");
       return;
     }
-    if (waiver?.status !== "signed") {
+    if (waiver?.status !== "valid") {
       setWarning("Waiver missing or expired. Sale can continue, but check-in will remain blocked until waiver is valid.");
     }
 
@@ -126,7 +127,7 @@ export default function PosPage() {
     if (!customerId) return "missing";
     const customer = customers.find((entry) => entry.id === customerId);
     if (!customer?.waiverId) return "missing";
-    return data.waivers.find((entry) => entry.id === customer.waiverId)?.status ?? "missing";
+    return waivers.find((entry) => entry.id === customer.waiverId)?.status ?? "missing";
   };
 
   return (
@@ -171,7 +172,7 @@ export default function PosPage() {
             {selectedCustomer?.checkInStatus === "in" ? (
               <p className="text-sm text-amber-800">Customer is already checked in.</p>
             ) : null}
-            {waiver && waiver.status !== "signed" ? (
+            {waiver && waiver.status !== "valid" ? (
               <p className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-sm text-amber-800">Waiver missing or expired</p>
             ) : null}
           </div>
@@ -203,7 +204,7 @@ export default function PosPage() {
                 <ProductPriceLabel cents={subtotal} />
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
-                <Button variant="outline" className="min-h-11" onClick={() => setCart([])}>Clear</Button>
+                <Button variant="secondary" className="min-h-11" onClick={() => setCart([])}>Clear</Button>
                 <Button className="min-h-11" disabled={!canCheckout} onClick={() => submit(false)}>Complete</Button>
                 <Button className="min-h-11 whitespace-normal text-center" disabled={!canCheckout} onClick={() => submit(true)}>Complete + Check In</Button>
               </div>
@@ -250,7 +251,7 @@ export default function PosPage() {
               }
               if (!slot?.assignedCustomerId) return { canCheckIn: false, actionLabel: "Check In" as const, statusLabel: "Available" as const };
               const waiverStatus = getWaiverStatusForCustomer(slot.assignedCustomerId);
-              if (waiverStatus === "signed") return { canCheckIn: true, actionLabel: "Check In" as const, statusLabel: "Available" as const };
+              if (waiverStatus === "valid") return { canCheckIn: true, actionLabel: "Check In" as const, statusLabel: "Available" as const };
               const canOverride = hasPermission("overrideAccess");
               return canOverride
                 ? {
@@ -298,6 +299,30 @@ export default function PosPage() {
               setFulfillmentOpen(false);
             }}
             onAddCustomer={() => setShowAddCustomer(true)}
+            onMarkWaiverSigned={(slotId) => {
+              if (!activeStaff) {
+                const result = { ok: false as const, message: "Select staff PIN to continue." };
+                setWarning(result.message);
+                requestStaffSwitch("Staff PIN Required");
+                return result;
+              }
+              const slot = activeFulfillmentTransaction.checkInSlots?.find((entry) => entry.id === slotId);
+              if (!slot?.assignedCustomerId) return { ok: false as const, message: "Create or select a customer to check in." };
+              const result = updateCustomerWaiver(slot.assignedCustomerId, {
+                status: "valid",
+                signedAt: new Date().toISOString(),
+                expiresAt: "2027-05-20",
+                signedByStaffId: activeStaff.id,
+                updatedByStaffId: activeStaff.id,
+                updatedByStaffName: `${activeStaff.firstName} ${activeStaff.lastName}`
+              });
+              if (!result.ok) setWarning(result.message);
+              else {
+                setWarning("");
+                setFeedback("Waiver marked valid. Check-in is now available.");
+              }
+              return result;
+            }}
           />
         ) : null}
       </section>
@@ -305,8 +330,14 @@ export default function PosPage() {
         <AddCustomerModal
           open
           onClose={() => setShowAddCustomer(false)}
+          customers={customers}
+          autoCloseOnSuccess
           onCreate={(input) => {
-            const result = addCustomer(input);
+            const result = addCustomer({
+              ...input,
+              createdByStaffId: activeStaff?.id,
+              createdByStaffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
+            });
             if (result.ok && result.customerId) {
               setSelectedCustomerId(result.customerId);
               setFeedback(result.message);
@@ -315,7 +346,13 @@ export default function PosPage() {
             }
             return result;
           }}
-          title="Add Customer"
+          onCreated={(customerId) => {
+            setSelectedCustomerId(customerId);
+            setFeedback("Customer created and selected.");
+            setWarning("");
+            setQuery("");
+          }}
+          title="New Customer"
         />
       ) : null}
     </PermissionGate>

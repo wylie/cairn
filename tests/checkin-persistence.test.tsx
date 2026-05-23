@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { CheckInList } from "@/components/checkins/checkin-list";
 import { TopBar } from "@/components/layout/top-bar";
+import PosPage from "@/app/(app)/pos/page";
 import { buildScopedMockKey } from "@/lib/mock-storage";
 import { TestProviders } from "@/tests/test-providers";
 
@@ -152,6 +153,41 @@ describe("Check-in persistence", () => {
 
     const checkInKey = buildScopedMockKey("org_summit", "loc_001", "checkIns");
     expect(window.localStorage.getItem(checkInKey)).not.toBeNull();
+
+    storage.restore();
+  });
+
+  it("waiver status updates persist after reload", async () => {
+    const storage = installStorageMock();
+    const user = userEvent.setup();
+
+    const first = render(
+      <TestProviders>
+        <TopBar />
+        <PosPage />
+      </TestProviders>
+    );
+
+    await switchStaff(user, "2222");
+    await user.type(screen.getByLabelText("Search customer"), "Sam");
+    await user.keyboard("{ArrowDown}{Enter}");
+    await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
+    await user.click(screen.getByRole("button", { name: "Complete" }));
+    await user.click(screen.getByRole("button", { name: "Mark Waiver Signed" }));
+    expect(screen.getByText(/Waiver marked valid/i)).toBeInTheDocument();
+
+    first.unmount();
+
+    render(
+      <TestProviders>
+        <TopBar />
+        <PosPage />
+      </TestProviders>
+    );
+
+    await user.type(screen.getByLabelText("Search customer"), "Sam");
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect(screen.getByText("Waiver: Valid")).toBeInTheDocument();
 
     storage.restore();
   });

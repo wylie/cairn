@@ -93,7 +93,7 @@ export function CustomerList() {
               const punchPass = getPassForCustomer(customer);
               const decision = evaluateCustomerEntry(customer.id);
               const canCheckIn = customer.checkInStatus === "in" || decision.allowed;
-              const blockedReason = canCheckIn ? undefined : `${decision.headline}: ${decision.reasons[0] ?? "No valid access method."}`;
+              const blockedReason = canCheckIn ? undefined : decision.reasons[0] ?? "No valid access method.";
               return (
             <CustomerCard
               key={customer.id}
@@ -146,13 +146,28 @@ export function CustomerList() {
         <AddCustomerModal
           open
           onClose={() => setShowAddCustomer(false)}
+          customers={customers}
           onCreate={(input) => {
-            const result = addCustomer(input);
+            const result = addCustomer({
+              ...input,
+              createdByStaffId: activeStaff?.id,
+              createdByStaffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
+            });
             if (result.ok) {
               setFeedback(result.message);
               setWarning("");
             }
             return result;
+          }}
+          onCreated={(_, input) => {
+            setQuery(`${input.firstName} ${input.lastName}`.trim());
+            setFeedback("Customer created.");
+            setWarning("");
+            setShowSwitchPrompt(false);
+          }}
+          quickActions={{
+            onSellAccess: (customerId) => setSellCustomerId(customerId),
+            onCheckIn: (customerId) => handleToggleCheckIn(customerId)
           }}
         />
       ) : null}

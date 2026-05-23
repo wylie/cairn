@@ -41,14 +41,14 @@ function isSameDay(date: Date, dayKey: string) {
 }
 
 function isWaiverValid(waiver: Waiver | undefined, dayKey: string) {
-  if (!waiver || waiver.status !== "signed") return false;
+  if (!waiver || waiver.status !== "valid") return false;
   const exp = toDate(waiver.expiresAt);
   if (!exp) return true;
   return exp.getTime() >= new Date(`${dayKey}T00:00:00Z`).getTime();
 }
 
 function waiverWarnings(waiver: Waiver | undefined, dayKey: string) {
-  if (!waiver || waiver.status !== "signed") return [] as string[];
+  if (!waiver || waiver.status !== "valid") return [] as string[];
   const exp = toDate(waiver.expiresAt);
   if (!exp) return [];
   const base = new Date(`${dayKey}T00:00:00Z`);

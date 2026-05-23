@@ -24,7 +24,8 @@ export const staffUsers: StaffUser[] = [
       "refundTransaction",
       "editPrograms",
       "manageSettings",
-      "manageStaff"
+      "manageStaff",
+      "grantCompAccess"
     ]
   },
   {
@@ -41,7 +42,7 @@ export const staffUsers: StaffUser[] = [
     canTeach: true,
     activeInstructor: true,
     instructorBio: "Leads operations and introductory coaching.",
-    permissions: ["checkInCustomer", "checkOutCustomer", "overrideAccess", "editCustomer", "createCustomer", "manageProducts", "viewReports", "usePOS", "editPrograms", "manageStaff"]
+    permissions: ["checkInCustomer", "checkOutCustomer", "overrideAccess", "editCustomer", "createCustomer", "manageProducts", "viewReports", "usePOS", "editPrograms", "manageStaff", "grantCompAccess"]
   },
   {
     id: "staff_003",

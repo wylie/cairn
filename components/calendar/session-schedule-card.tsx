@@ -38,10 +38,10 @@ export function SessionScheduleCard({
         </div>
       </div>
       <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
-        <Button className="h-10" variant="outline" onClick={() => onOpen(session.id)}>
+        <Button className="h-10" variant="secondary" onClick={() => onOpen(session.id)}>
           {compact ? "Open" : "View Details"}
         </Button>
-        <Button className="h-10" variant="outline" onClick={() => onEdit(session.id)}>
+        <Button className="h-10" variant="secondary" onClick={() => onEdit(session.id)}>
           Edit
         </Button>
       </div>

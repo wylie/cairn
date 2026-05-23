@@ -30,7 +30,8 @@ export type StaffPermission =
   | "refundTransaction"
   | "editPrograms"
   | "manageSettings"
-  | "manageStaff";
+  | "manageStaff"
+  | "grantCompAccess";
 
 export interface StaffUser {
   id: string;
@@ -72,9 +73,13 @@ export interface PunchPass {
 export interface Waiver {
   id: string;
   customerId: string;
-  status: "signed" | "expired" | "missing";
+  status: "valid" | "expired" | "missing";
   signedAt?: string;
   expiresAt?: string;
+  signedByStaffId?: string;
+  updatedByStaffId?: string;
+  updatedByStaffName?: string;
+  notes?: string;
 }
 
 export interface CustomerAccessRecord {
@@ -100,15 +105,59 @@ export interface Customer {
   locationId: string;
   firstName: string;
   lastName: string;
+  preferredName?: string;
+  pronouns?: string;
+  customPronouns?: string;
   email: string;
   phone: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
   tags: string[];
   checkInStatus: "in" | "out";
   membershipId?: string;
   punchPassId?: string;
   waiverId?: string;
   dayPassProductName?: string;
+  dateOfBirth?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  profilePhotoUrl?: string;
+  profilePhotoUpdatedAt?: string;
+  profilePhotoUpdatedByStaffId?: string;
+  updatedByStaffId?: string;
+  updatedByStaffName?: string;
+  updatedAt?: string;
   notes?: string;
+  relatedCustomers?: CustomerRelationship[];
+  paymentMethods?: CustomerPaymentMethod[];
+}
+
+export type CustomerRelationshipType =
+  | "parent_guardian"
+  | "child"
+  | "spouse_partner"
+  | "sibling"
+  | "emergency_contact"
+  | "other";
+
+export interface CustomerRelationship {
+  relatedCustomerId: string;
+  relationshipType: CustomerRelationshipType;
+  notes?: string;
+}
+
+export interface CustomerPaymentMethod {
+  paymentMethodId: string;
+  cardBrand: string;
+  last4: string;
+  expirationMonth: number;
+  expirationYear: number;
+  billingName: string;
+  isDefault: boolean;
+  addedAt: string;
 }
 
 export type CheckInSource = "manual_search" | "barcode_scan" | "pos_sale" | "registration";

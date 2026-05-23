@@ -12,6 +12,29 @@ async function activateStaff(user: ReturnType<typeof userEvent.setup>, pin = "22
   await user.click(screen.getByRole("button", { name: "Confirm" }));
 }
 
+async function completeNewCustomerWizardInPos(
+  user: ReturnType<typeof userEvent.setup>,
+  input: { firstName: string; lastName: string }
+) {
+  await user.type(screen.getByLabelText("First name"), input.firstName);
+  await user.type(screen.getByLabelText("Last name"), input.lastName);
+  await user.type(screen.getByLabelText("Date of birth"), "1990-01-10");
+  await user.click(screen.getByRole("button", { name: "Next" }));
+  await user.type(screen.getByLabelText("Phone"), "(212) 555-2000");
+  await user.click(screen.getByRole("button", { name: "Next" }));
+  await user.type(screen.getByLabelText("Address line 1"), "22 State St");
+  await user.type(screen.getByLabelText("City"), "New York");
+  await user.type(screen.getByLabelText("State"), "NY");
+  await user.type(screen.getByLabelText("ZIP/postal code"), "10002");
+  await user.click(screen.getByRole("button", { name: "Next" }));
+  await user.type(screen.getByLabelText("Emergency contact name"), "Pat Contact");
+  await user.type(screen.getByLabelText("Emergency contact phone"), "(212) 555-3000");
+  await user.click(screen.getByRole("button", { name: "Next" }));
+  await user.click(screen.getByLabelText("Needs waiver"));
+  await user.click(screen.getByRole("button", { name: "Next" }));
+  await user.click(screen.getByRole("button", { name: "Create Customer" }));
+}
+
 describe("POS page", () => {
   it("selling one day pass creates one post-sale check-in slot assigned to purchasing customer", async () => {
     const user = userEvent.setup();
@@ -108,6 +131,27 @@ describe("POS page", () => {
     expect(screen.getByText(/Missing or expired waiver/i)).toBeInTheDocument();
   });
 
+  it("marking waiver signed in post-sale modal enables check-in", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <PosPage />
+      </TestProviders>
+    );
+    await activateStaff(user, "2222");
+
+    await user.type(screen.getByLabelText("Search customer"), "Sam");
+    await user.keyboard("{ArrowDown}{Enter}");
+    await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
+    await user.click(screen.getByRole("button", { name: "Complete" }));
+
+    expect(screen.getByRole("button", { name: "Manager Override + Check In" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Mark Waiver Signed" }));
+    expect(screen.getByText(/Waiver marked valid/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Check In" })).toBeEnabled();
+  });
+
   it("staff with override permission can override waiver block in post-sale check-in", async () => {
     const user = userEvent.setup();
     render(
@@ -125,6 +169,7 @@ describe("POS page", () => {
 
     const overrideButton = screen.getByRole("button", { name: /Manager Override \+ Check In/i });
     expect(overrideButton).toBeEnabled();
+    expect(overrideButton.className).toContain("amber");
     await user.click(overrideButton);
     expect(screen.getAllByText(/Check-in recorded for Sam Noaccess/i).length).toBeGreaterThan(0);
   });
@@ -464,11 +509,31 @@ describe("POS page", () => {
     await user.type(screen.getByLabelText("Search customer"), "no-match-value");
     expect(screen.getByText(/No customers found/i)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Add Customer" }));
-    await user.type(screen.getByLabelText("First name"), "Rae");
-    await user.type(screen.getByLabelText("Last name"), "Quick");
-    await user.click(screen.getByRole("button", { name: "Create Customer" }));
+    await completeNewCustomerWizardInPos(user, { firstName: "Rae", lastName: "Quick" });
 
     expect(screen.getByText("Rae Quick")).toBeInTheDocument();
+  });
+
+  it("preserves cart and auto-selects newly created customer in POS flow", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <PosPage />
+      </TestProviders>
+    );
+    await activateStaff(user, "2222");
+
+    await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
+    expect(screen.getByText(/Subtotal/i)).toBeInTheDocument();
+    expect(screen.getAllByText("$28.00").length).toBeGreaterThan(0);
+
+    await user.type(screen.getByLabelText("Search customer"), "new-pos-customer");
+    await user.click(screen.getByRole("button", { name: "Add Customer" }));
+    await completeNewCustomerWizardInPos(user, { firstName: "Nova", lastName: "Desk" });
+
+    expect(screen.getByText("Nova Desk")).toBeInTheDocument();
+    expect(screen.getAllByText("$28.00").length).toBeGreaterThan(0);
   });
 });
 

@@ -7,10 +7,14 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        primary: "bg-primary text-primary-foreground hover:opacity-90",
+        secondary: "border border-border bg-transparent hover:bg-secondary",
+        caution: "border border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-200",
+        destructive: "bg-rose-600 text-white hover:bg-rose-700",
+        ghost: "hover:bg-secondary",
+        // Back-compat aliases for existing usage while migrating.
         default: "bg-primary text-primary-foreground hover:opacity-90",
-        outline: "border border-border bg-transparent hover:bg-secondary",
-        secondary: "bg-secondary text-secondary-foreground hover:opacity-90",
-        ghost: "hover:bg-secondary"
+        outline: "border border-border bg-transparent hover:bg-secondary"
       },
       size: {
         default: "h-11 px-4 py-2",
@@ -19,7 +23,7 @@ const buttonVariants = cva(
       }
     },
     defaultVariants: {
-      variant: "default",
+      variant: "primary",
       size: "default"
     }
   }

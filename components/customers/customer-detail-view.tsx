@@ -1,13 +1,17 @@
 "use client";
 
+import Link from "next/link";
+import { useMemo, useState } from "react";
 import { CustomerBadges } from "@/components/customers/customer-badges";
 import { ActivityTimeline } from "@/components/customers/activity-timeline";
 import { CustomerDetailActions } from "@/components/customers/customer-detail-actions";
+import { CustomerSummaryCard } from "@/components/customers/customer-summary-card";
+import { CustomerSearchCombobox } from "@/components/shared/customer-search-combobox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { data } from "@/lib/data";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
+import { filterCustomers } from "@/lib/data/customer-search";
 import { formatCurrency } from "@/lib/transactions";
 
 export function CustomerDetailView({ customerId }: { customerId: string }) {
@@ -17,14 +21,23 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     punchPasses,
     checkInRecords,
     transactions,
+    accessProducts,
+    waivers,
     registrations,
     sessions,
     programs,
+    evaluateCustomerEntry,
     customerAccessRecords,
-    addCustomerAccessRecord,
-    updateCustomerAccessRecord
+    addCustomerRelationship,
+    removeCustomerRelationship,
+    updateCustomerAccessRecord,
+    updateCustomerWaiver
   } = useCustomerState();
   const { activeStaff } = useWorkstationState();
+  const [relationshipQuery, setRelationshipQuery] = useState("");
+  const [relationshipType, setRelationshipType] = useState<"parent_guardian" | "child" | "spouse_partner" | "sibling" | "emergency_contact" | "other">("parent_guardian");
+  const [relationshipNotes, setRelationshipNotes] = useState("");
+  const [profileFeedback, setProfileFeedback] = useState("");
   const customer = customers.find((entry) => entry.id === customerId);
 
   if (!customer) {
@@ -32,7 +45,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
   }
 
   const membership = customer.membershipId ? memberships.find((entry) => entry.id === customer.membershipId) : undefined;
-  const waiver = customer.waiverId ? data.waivers.find((entry) => entry.id === customer.waiverId) : undefined;
+  const waiver = customer.waiverId ? waivers.find((entry) => entry.id === customer.waiverId) : undefined;
   const pass = customer.punchPassId ? punchPasses.find((entry) => entry.id === customer.punchPassId) : undefined;
   const recentCheckIns = checkInRecords
     .filter((entry) => entry.customerId === customer.id)
@@ -54,6 +67,36 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
   const accessRecords = customerAccessRecords
     .filter((entry) => entry.customerId === customer.id)
     .sort((a, b) => (b.startDate ?? "").localeCompare(a.startDate ?? ""));
+  const derivedAccessPurchases = accessRecords
+    .filter((entry) => entry.type === "membership" || entry.type === "day-pass" || entry.type === "punch-pass" || entry.type === "comp")
+    .map((entry) => ({
+      id: `access-purchase-${entry.id}`,
+      completedAt: `${entry.startDate}T12:00:00Z`,
+      soldByStaffName: entry.grantedByStaffName ?? "Staff not recorded",
+      receiptNumber: `ACCESS-${entry.id.slice(-4).toUpperCase()}`,
+      items: [
+        {
+          productId: entry.productId ?? entry.id,
+          productName:
+            accessProducts.find((product) => product.id === entry.productId)?.name ??
+            entry.notes ??
+            (entry.type === "day-pass"
+              ? "Day Pass"
+              : entry.type === "punch-pass"
+                ? "Punch Pass"
+                : entry.type === "membership"
+                  ? "Membership"
+                  : "Comp Access"),
+          quantity: 1,
+          unitPrice: 0,
+          lineTotal: 0
+        }
+      ],
+      total: 0
+    }));
+  const purchaseHistoryEntries = [...recentPurchases, ...derivedAccessPurchases]
+    .sort((a, b) => b.completedAt.localeCompare(a.completedAt))
+    .slice(0, 8);
   const upcomingSessions = customerSessionHistory.filter((entry) => {
     const startsAt = entry.session?.startsAt ?? "";
     return startsAt >= "2026-05-22" && (entry.session?.status ?? "scheduled") !== "cancelled";
@@ -62,19 +105,171 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     const startsAt = entry.session?.startsAt ?? "";
     return startsAt < "2026-05-22" || (entry.session?.status ?? "scheduled") === "cancelled";
   });
+  const latestUpcomingSession = upcomingSessions[0];
+  const activeAccessCount = accessRecords.filter((entry) => entry.status === "active").length;
+  const decision = evaluateCustomerEntry(customer.id);
+  const currentAccessLabel = decision.chosenAccess
+    ? decision.chosenAccess.type === "membership"
+      ? "Membership"
+      : decision.chosenAccess.type === "day-pass"
+        ? "Day Pass"
+        : decision.chosenAccess.type === "punch-pass"
+          ? "Punch Pass"
+          : "Comp"
+    : decision.sessionAccess
+      ? "Session Registration"
+      : "No Eligible Access";
+  const currentAccessDetail = decision.chosenAccess
+    ? decision.chosenAccess.type === "membership"
+      ? `Expires ${decision.chosenAccess.expirationDate ?? "N/A"}`
+      : decision.chosenAccess.type === "punch-pass"
+        ? `${decision.chosenAccess.remainingPunches ?? 0} punches remaining`
+        : decision.chosenAccess.type === "day-pass"
+          ? `Valid ${decision.chosenAccess.expirationDate ?? "today"}`
+          : "Manual comp access"
+    : decision.sessionAccess
+      ? `Registered for ${decision.sessionAccess.sessionTitle}`
+      : decision.reasons[0] ?? "No valid access found";
+  const relationshipCandidates = useMemo(
+    () =>
+      relationshipQuery.trim().length === 0
+        ? []
+        : filterCustomers(customers.filter((entry) => entry.id !== customer.id), relationshipQuery).slice(0, 8),
+    [customers, customer.id, relationshipQuery]
+  );
+  const displayedPronouns = customer.pronouns === "Custom" ? customer.customPronouns ?? "Custom" : customer.pronouns ?? "Not set";
+  const notesPreview = customer.notes?.trim() ? customer.notes.trim() : "No notes on file.";
+  const dobDate = customer.dateOfBirth ? new Date(`${customer.dateOfBirth}T00:00:00Z`) : null;
+  const hasValidDob = !!dobDate && !Number.isNaN(dobDate.getTime());
+  const age = hasValidDob
+    ? Math.max(0, Math.floor((Date.now() - (dobDate as Date).getTime()) / (1000 * 60 * 60 * 24 * 365.2425)))
+    : null;
+  const isBirthdayToday = hasValidDob
+    ? (() => {
+        const now = new Date();
+        return now.getUTCMonth() === (dobDate as Date).getUTCMonth() && now.getUTCDate() === (dobDate as Date).getUTCDate();
+      })()
+    : false;
+  const requiredMissing = {
+    preferredName: !customer.preferredName?.trim(),
+    pronouns: !displayedPronouns?.trim() || displayedPronouns === "Not set",
+    dateOfBirth: !hasValidDob,
+    phone: !customer.phone?.trim(),
+    addressLine1: !customer.addressLine1?.trim(),
+    city: !customer.city?.trim(),
+    state: !customer.state?.trim(),
+    postalCode: !customer.postalCode?.trim(),
+    emergencyContactName: !customer.emergencyContactName?.trim(),
+    emergencyContactPhone: !customer.emergencyContactPhone?.trim()
+  };
+  const relatedRows = (customer.relatedCustomers ?? []).map((relationship) => ({
+    ...relationship,
+    related: customers.find((entry) => entry.id === relationship.relatedCustomerId)
+  }));
+  const timelineEvents = [
+    ...recentPurchases.map((entry) => ({
+      id: `purchase-${entry.id}`,
+      occurredAt: entry.completedAt,
+      title: "POS Purchase",
+      detail: `${(entry.items ?? []).map((item) => item.productName ?? "Unknown item").join(", ") || "Unknown item"} • ${formatCurrency(entry.total)}`,
+      staff: entry.soldByStaffName ?? "Staff not recorded"
+    })),
+    ...(waiver
+      ? [
+          {
+            id: `waiver-${waiver.id}`,
+            occurredAt: waiver.signedAt ?? waiver.expiresAt ?? "2026-05-20",
+            title: "Waiver Update",
+            detail: `Status: ${waiver.status}`,
+            staff: waiver.updatedByStaffName ?? "Staff not recorded"
+          }
+        ]
+      : []),
+    ...customerSessionHistory.slice(0, 4).map((entry) => ({
+      id: `registration-${entry.registration.id}`,
+      occurredAt: entry.session?.startsAt ?? "2026-05-20",
+      title: "Session Registration",
+      detail: `${entry.session?.title ?? entry.program?.title ?? "Session"} • ${entry.registration.status}`,
+      staff: "Staff not recorded"
+    })),
+    ...accessRecords.slice(0, 4).map((entry) => ({
+      id: `access-${entry.id}`,
+      occurredAt: entry.startDate ?? "2026-05-20",
+      title: "Access Change",
+      detail: `${entry.notes ?? entry.type} • ${entry.status}`,
+      staff: entry.grantedByStaffName ?? "Staff not recorded"
+    })),
+    ...(customer.updatedAt
+      ? [
+          {
+            id: `profile-update-${customer.id}`,
+            occurredAt: customer.updatedAt,
+            title: "Profile Update",
+            detail: "Customer profile details updated",
+            staff: customer.updatedByStaffName ?? "Staff not recorded"
+          }
+        ]
+      : []),
+    ...recentCheckIns
+      .filter((entry) => Boolean(entry.overrideReason))
+      .map((entry) => ({
+        id: `override-${entry.id}`,
+        occurredAt: entry.checkInTime,
+        title: "Manager Override",
+        detail: entry.overrideReason ?? "Override applied",
+        staff: entry.checkedInByStaffName ?? "Staff not recorded"
+      }))
+  ].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
 
   return (
     <div className="space-y-4">
+      <div>
+        <Link href="/customers" className="inline-flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+          ← Back to Customers
+        </Link>
+      </div>
       <Card aria-label="detail-header">
         <CardContent className="p-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full border bg-secondary text-sm font-semibold text-muted-foreground">
-                {customer.firstName[0]}{customer.lastName[0]}
-              </div>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+              {customer.profilePhotoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={customer.profilePhotoUrl}
+                  alt={`${customer.firstName} ${customer.lastName} profile`}
+                  className="h-14 w-14 rounded-full border object-cover"
+                />
+              ) : (
+                <div className="flex h-14 w-14 items-center justify-center rounded-full border bg-secondary text-sm font-semibold text-muted-foreground">
+                  {customer.firstName[0]}{customer.lastName[0]}
+                </div>
+              )}
               <div>
                 <h2 className="text-2xl font-semibold">{customer.firstName} {customer.lastName}</h2>
                 <p className="text-sm text-muted-foreground">{customer.memberId}</p>
+                {customer.preferredName?.trim() && customer.preferredName.trim().toLowerCase() !== customer.firstName.toLowerCase() ? (
+                  <p className="text-sm text-muted-foreground">Preferred: {customer.preferredName}</p>
+                ) : null}
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                  <span>{displayedPronouns || "Not set"}</span>
+                  <span>•</span>
+                  <span>{hasValidDob ? `${(dobDate as Date).toLocaleDateString("en-US")} (${age})` : "DOB not set"}</span>
+                </div>
+                {isBirthdayToday ? (
+                  <p className="mt-2 inline-flex items-center rounded-full bg-amber-100/80 px-2.5 py-1 text-xs font-semibold text-amber-900">🎂 Birthday today</p>
+                ) : null}
+              </div>
+            </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <HeaderField label="Phone" value={customer.phone || "Not set"} warning={requiredMissing.phone} />
+                <HeaderField label="Email" value={customer.email || "Not set"} />
+                <HeaderField
+                  label="Emergency Contact"
+                  value={customer.emergencyContactName ? `${customer.emergencyContactName}${customer.emergencyContactPhone ? ` • ${customer.emergencyContactPhone}` : ""}` : "Not set"}
+                  warning={requiredMissing.emergencyContactName || requiredMissing.emergencyContactPhone}
+                  className="sm:col-span-2"
+                />
               </div>
             </div>
             <CustomerDetailActions customerId={customer.id} />
@@ -85,19 +280,96 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
         </CardContent>
       </Card>
 
-      <Card aria-label="detail-membership">
-        <CardHeader><CardTitle>Membership</CardTitle></CardHeader>
-        <CardContent className="space-y-1 text-sm">
-          <p>Plan/Pass: {membership?.planName ?? pass?.title ?? customer.dayPassProductName ?? "None"}</p>
-          <p>Expiration: {membership?.renewalDate ?? pass?.expiresAt ?? "N/A"}</p>
-          <p>Remaining Punches: {typeof pass?.remainingUses === "number" ? `${pass.remainingUses} of ${pass.originalUses}` : "N/A"}</p>
+      <Card aria-label="detail-jump-links" className="sticky top-4 z-20 border shadow-sm">
+        <CardContent className="rounded-xl bg-card/95 p-3 backdrop-blur">
+          <nav aria-label="Customer detail sections" className="flex flex-wrap gap-2">
+            {[
+              ["overview", "Overview"],
+              ["profile", "Profile"],
+              ["access", "Access"],
+              ["waiver", "Waiver"],
+              ["visits", "Visits"],
+              ["purchases", "Purchases"],
+              ["registrations", "Registrations"],
+              ["household", "Household"],
+              ["notes", "Notes"],
+              ["payment", "Payment"]
+            ].map(([id, label]) => (
+              <a key={id} href={`#${id}`} className="rounded-full border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/80">
+                {label}
+              </a>
+            ))}
+          </nav>
         </CardContent>
       </Card>
 
-      <Card aria-label="detail-access">
-        <CardHeader><CardTitle>Access</CardTitle></CardHeader>
+      <section id="overview" aria-label="section-overview" className="scroll-mt-40">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="detail-summary-cards">
+          <CustomerSummaryCard
+            title="Access Status"
+            value={activeAccessCount > 0 ? `${activeAccessCount} active` : "No active access"}
+            detail={membership?.planName ?? pass?.title ?? customer.dayPassProductName ?? "No current plan or pass"}
+          />
+          <CustomerSummaryCard
+            title="Waiver Status"
+            value={waiver?.status === "valid" ? "Valid" : waiver?.status === "expired" ? "Expired" : "Missing"}
+            detail={waiver?.expiresAt ? `Expires ${waiver.expiresAt}` : "No waiver on file"}
+          />
+          <CustomerSummaryCard
+            title="Current Access"
+            value={currentAccessLabel}
+            detail={currentAccessDetail}
+          />
+          <CustomerSummaryCard
+            title="Upcoming Registration"
+            value={latestUpcomingSession ? latestUpcomingSession.session?.title ?? "Scheduled Session" : "No upcoming session"}
+            detail={latestUpcomingSession?.session?.startsAt ? new Date(latestUpcomingSession.session.startsAt).toLocaleString("en-US") : "No upcoming registrations"}
+          />
+        </div>
+      </section>
+
+      <section id="profile" aria-label="section-profile" className="scroll-mt-40">
+        <Card aria-label="detail-profile-information">
+          <CardHeader><CardTitle>Profile Information</CardTitle></CardHeader>
+          <CardContent className="grid gap-3 text-sm md:grid-cols-2">
+            <div className="space-y-2 rounded-lg border p-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Address</p>
+              <Field label="Address line 1" value={customer.addressLine1 || "Not set"} warning={requiredMissing.addressLine1} />
+              <Field label="Address line 2" value={customer.addressLine2 || "Not set"} />
+              <Field label="City" value={customer.city || "Not set"} warning={requiredMissing.city} />
+              <Field label="State" value={customer.state || "Not set"} warning={requiredMissing.state} />
+              <Field label="ZIP/postal code" value={customer.postalCode || "Not set"} warning={requiredMissing.postalCode} />
+            </div>
+            <div className="space-y-2 rounded-lg border p-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Emergency Contact</p>
+              <Field label="Name" value={customer.emergencyContactName || "Not set"} warning={requiredMissing.emergencyContactName} />
+              <Field label="Phone" value={customer.emergencyContactPhone || "Not set"} warning={requiredMissing.emergencyContactPhone} />
+            </div>
+            <div className="space-y-2 rounded-lg border p-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Photo & Profile Metadata</p>
+              {customer.profilePhotoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={customer.profilePhotoUrl} alt="Profile" className="mt-2 h-20 w-20 rounded-lg border object-cover" />
+              ) : (
+                <p className="text-xs text-muted-foreground">Profile photo not set</p>
+              )}
+              <Field label="Profile photo URL" value={customer.profilePhotoUrl || "Not set"} />
+              <Field label="Updated by" value={customer.updatedByStaffName || "Not set"} />
+              <Field label="Last updated" value={customer.updatedAt ? new Date(customer.updatedAt).toLocaleString("en-US") : "Not set"} />
+            </div>
+            <div className="space-y-2 rounded-lg border p-3 md:col-span-2">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Notes</p>
+              <p className="text-sm">{notesPreview}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section id="access" aria-label="section-access" className="scroll-mt-40">
+      <Card aria-label="detail-access-products">
+        <CardHeader><CardTitle>Access Products</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
-          {accessRecords.length === 0 ? <p className="text-muted-foreground">No access records.</p> : null}
+          {accessRecords.length === 0 ? <p className="text-muted-foreground">No access products yet.</p> : null}
           {accessRecords.map((entry) => (
             <div key={entry.id} className="rounded-lg border p-3">
               <p className="font-medium">{entry.notes ?? entry.type}</p>
@@ -105,94 +377,185 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
               <p className="text-muted-foreground">Expiration: {entry.expirationDate ?? "N/A"}</p>
               <p className="text-muted-foreground">Punches: {typeof entry.remainingPunches === "number" ? entry.remainingPunches : "N/A"}</p>
               <p className="text-muted-foreground">Locations: {entry.locationsAllowed?.join(", ") ?? "All"}</p>
+              <p className="text-muted-foreground">Access source: {entry.notes ?? entry.type}</p>
               <div className="mt-2 flex flex-wrap gap-2">
-                <Button className="h-9" variant="outline" onClick={() => updateCustomerAccessRecord(entry.id, { status: "paused" })}>Pause</Button>
-                <Button className="h-9" variant="outline" onClick={() => updateCustomerAccessRecord(entry.id, { status: "cancelled" })}>Cancel</Button>
-                <Button className="h-9" variant="outline" onClick={() => updateCustomerAccessRecord(entry.id, { expirationDate: "2026-07-20" })}>Extend</Button>
+                <Button className="h-9" variant="secondary" onClick={() => updateCustomerAccessRecord(entry.id, { status: "paused" })}>Pause</Button>
+                <Button className="h-9" variant="destructive" onClick={() => updateCustomerAccessRecord(entry.id, { status: "cancelled" })}>Cancel</Button>
+                <Button className="h-9" variant="secondary" onClick={() => updateCustomerAccessRecord(entry.id, { expirationDate: "2026-07-20" })}>Extend</Button>
               </div>
             </div>
           ))}
-          <div className="flex flex-wrap gap-2">
-            <Button
-              className="h-9"
-              variant="outline"
-              onClick={() =>
-                addCustomerAccessRecord({
-                  customerId: customer.id,
-                  type: "comp",
-                  status: "active",
-                  startDate: "2026-05-20",
-                  expirationDate: "2026-05-20",
-                  locationsAllowed: [customer.locationId],
-                  notes: "Staff comp access",
-                  grantedByStaffId: activeStaff?.id,
-                  grantedByStaffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
-                })
-              }
-            >
-              Add comp access
-            </Button>
-            <Button
-              className="h-9"
-              variant="outline"
-              onClick={() =>
-                addCustomerAccessRecord({
-                  customerId: customer.id,
-                  type: "punch-pass",
-                  status: "active",
-                  startDate: "2026-05-20",
-                  expirationDate: "2026-06-20",
-                  remainingPunches: 10,
-                  locationsAllowed: [customer.locationId],
-                  notes: "10 Visit Pass",
-                  grantedByStaffId: activeStaff?.id,
-                  grantedByStaffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
-                })
-              }
-            >
-              Add punch pass
-            </Button>
+        </CardContent>
+      </Card>
+      </section>
+
+      <section id="household" aria-label="section-household" className="scroll-mt-40">
+      <Card aria-label="detail-related-customers">
+        <CardHeader><CardTitle>Related Customers</CardTitle></CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          {relatedRows.length === 0 ? <p className="text-muted-foreground">No related customers linked yet.</p> : null}
+          {relatedRows.map((entry) => (
+            <div key={entry.relatedCustomerId} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
+              <div>
+                <p className="font-medium">{entry.related ? `${entry.related.firstName} ${entry.related.lastName}` : "Unknown customer"}</p>
+                <p className="text-muted-foreground">
+                  {entry.relationshipType.replaceAll("_", "/")}
+                  {entry.notes ? ` • ${entry.notes}` : ""}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {entry.related ? (
+                  <Link href={`/customers/${entry.related.id}`}>
+                    <Button variant="secondary" className="h-9">View</Button>
+                  </Link>
+                ) : null}
+                <Button
+                  variant="destructive"
+                  className="h-9"
+                  onClick={() => {
+                    const result = removeCustomerRelationship(customer.id, entry.relatedCustomerId);
+                    setProfileFeedback(result.message);
+                  }}
+                >
+                  Remove
+                </Button>
+              </div>
+            </div>
+          ))}
+          <div className="space-y-2 rounded-lg border p-3">
+            <p className="font-medium">Add Related Customer</p>
+            <CustomerSearchCombobox
+              label="Search existing customer"
+              placeholder="Search by name, member ID, phone, or email"
+              query={relationshipQuery}
+              onQueryChange={setRelationshipQuery}
+              customers={relationshipCandidates}
+              onSelect={(selectedId) => {
+                const result = addCustomerRelationship(customer.id, {
+                  relatedCustomerId: selectedId,
+                  relationshipType,
+                  notes: relationshipNotes
+                });
+                setProfileFeedback(result.message);
+                if (result.ok) {
+                  setRelationshipQuery("");
+                  setRelationshipNotes("");
+                }
+              }}
+              emptyMessage="No customers found"
+            />
+            <div className="grid gap-2 md:grid-cols-2">
+              <label className="space-y-1 text-sm">
+                <span className="text-muted-foreground">Relationship type</span>
+                <select
+                  aria-label="Relationship type"
+                  className="h-11 w-full rounded-md border border-input bg-white px-3 text-sm"
+                  value={relationshipType}
+                  onChange={(event) => setRelationshipType(event.target.value as typeof relationshipType)}
+                >
+                  <option value="parent_guardian">Parent/guardian</option>
+                  <option value="child">Child</option>
+                  <option value="spouse_partner">Spouse/partner</option>
+                  <option value="sibling">Sibling</option>
+                  <option value="emergency_contact">Emergency contact</option>
+                  <option value="other">Other</option>
+                </select>
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="text-muted-foreground">Notes (optional)</span>
+                <input
+                  aria-label="Relationship notes"
+                  className="h-11 w-full rounded-md border border-input bg-white px-3 text-sm"
+                  value={relationshipNotes}
+                  onChange={(event) => setRelationshipNotes(event.target.value)}
+                />
+              </label>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card aria-label="detail-waivers">
-        <CardHeader><CardTitle>Waivers</CardTitle></CardHeader>
-        <CardContent className="space-y-1 text-sm">
-          <p>{waiver?.status === "signed" ? "Signed" : "Waiver Missing"}</p>
-          <p>Expiration: {waiver?.expiresAt ?? "N/A"}</p>
+      <Card aria-label="detail-household">
+        <CardHeader><CardTitle>Household</CardTitle></CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <p className="text-muted-foreground">No household assigned</p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              className="h-10"
+              onClick={() => setProfileFeedback("Household creation is planned for a future release.")}
+            >
+              Create Household
+            </Button>
+            <Button
+              variant="secondary"
+              className="h-10"
+              onClick={() => setProfileFeedback("Household join workflow is planned for a future release.")}
+            >
+              Join Household
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+      </section>
+
+      <section id="payment" aria-label="section-payment" className="scroll-mt-40">
+      <Card aria-label="detail-payment-methods">
+        <CardHeader><CardTitle>Payment Methods</CardTitle></CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          {(customer.paymentMethods ?? []).length === 0 ? <p className="text-muted-foreground">No saved payment methods on file.</p> : null}
+          {(customer.paymentMethods ?? []).map((method) => (
+            <div key={method.paymentMethodId} className="rounded-lg border p-3">
+              <p className="font-medium">{method.cardBrand} ending in {method.last4}</p>
+              <p className="text-muted-foreground">Expires {String(method.expirationMonth).padStart(2, "0")}/{method.expirationYear}</p>
+              <p className="text-muted-foreground">{method.isDefault ? "Default" : "Secondary"}</p>
+            </div>
+          ))}
+          <Button
+            variant="secondary"
+            className="h-10"
+            onClick={() => setProfileFeedback("Saved payment methods will be handled through a secure payment processor.")}
+          >
+            Add Payment Method
+          </Button>
+        </CardContent>
+      </Card>
+      </section>
+      {profileFeedback ? <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{profileFeedback}</p> : null}
+
+      <section id="visits" aria-label="section-visits" className="scroll-mt-40">
+      <Card aria-label="detail-timeline">
+        <CardHeader><CardTitle>Customer Timeline</CardTitle></CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          {timelineEvents.length === 0 ? <p className="text-muted-foreground">No activity recorded yet.</p> : null}
+          {timelineEvents.slice(0, 12).map((entry) => (
+            <div key={entry.id} className="rounded-lg border p-3">
+              <p className="font-medium">{entry.title}</p>
+              <p className="text-muted-foreground">{entry.detail}</p>
+              <p className="text-muted-foreground">{new Date(entry.occurredAt).toLocaleString("en-US")}</p>
+              <p className="text-muted-foreground">Staff: {entry.staff}</p>
+            </div>
+          ))}
         </CardContent>
       </Card>
 
-      <Card aria-label="detail-activity">
-        <CardHeader><CardTitle>Activity</CardTitle></CardHeader>
+      <Card aria-label="detail-visit-history">
+        <CardHeader><CardTitle>Visit History</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
           <ActivityTimeline visits={recentCheckIns} />
-          {accessRecords.slice(0, 4).map((entry) => (
-            <p key={`timeline-${entry.id}`} className="text-xs text-muted-foreground">
-              Access {entry.status} • {entry.notes ?? entry.type} • starts {entry.startDate}
-            </p>
-          ))}
-          {recentPurchases.length > 0 ? (
-            <div className="space-y-1 rounded-lg border bg-secondary/20 p-3">
-              <p className="font-medium">Recent Purchases</p>
-              {recentPurchases.slice(0, 3).map((entry) => (
-              <p key={entry.id} className="text-xs text-muted-foreground">
-                  Purchase • {new Date(entry.completedAt).toLocaleDateString()} • {(entry.items ?? []).map((item) => item.productName ?? "Unknown item").join(", ") || "Unknown item"} • {formatCurrency(entry.total)}
-              </p>
-              ))}
-            </div>
-          ) : null}
+          {recentCheckIns.length > 3 ? <p className="text-xs text-muted-foreground">Showing recent visits only.</p> : null}
         </CardContent>
       </Card>
+      </section>
 
+      <section id="purchases" aria-label="section-purchases" className="scroll-mt-40">
       <Card aria-label="detail-purchases">
         <CardHeader><CardTitle>Purchase History</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
-          {recentPurchases.length === 0 ? (
+          {purchaseHistoryEntries.length === 0 ? (
             <p className="text-muted-foreground">No purchases recorded yet.</p>
           ) : (
-            recentPurchases.map((entry) => (
+            purchaseHistoryEntries.slice(0, 3).map((entry) => (
               <div key={entry.id} className="rounded-lg border p-3">
                 <p className="font-medium">{new Date(entry.completedAt).toLocaleDateString()}</p>
                 <ul className="mt-1 space-y-1 text-sm text-muted-foreground">
@@ -209,11 +572,14 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
               </div>
             ))
           )}
+          {purchaseHistoryEntries.length > 3 ? <p className="text-xs text-muted-foreground">Showing recent purchases only.</p> : null}
         </CardContent>
       </Card>
+      </section>
 
-      <Card aria-label="detail-sessions">
-        <CardHeader><CardTitle>Session History</CardTitle></CardHeader>
+      <section id="registrations" aria-label="section-registrations" className="scroll-mt-40">
+      <Card aria-label="detail-registrations">
+        <CardHeader><CardTitle>Registrations</CardTitle></CardHeader>
         <CardContent className="space-y-3 text-sm">
           <div>
             <p className="font-medium">Upcoming Sessions</p>
@@ -235,16 +601,112 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
           </div>
         </CardContent>
       </Card>
+      </section>
 
+      <section id="waiver" aria-label="section-waiver" className="scroll-mt-40">
+      <Card aria-label="detail-waiver-history">
+        <CardHeader><CardTitle>Waiver History</CardTitle></CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          {waiver ? (
+            <div className="rounded-lg border p-3">
+              <p className={waiver.status === "valid" ? "font-medium text-emerald-800" : "font-medium text-amber-800"}>
+                {waiver.status === "valid" ? "Valid waiver on file" : waiver.status === "expired" ? "Waiver expired" : "Waiver missing"}
+              </p>
+              <p className="text-muted-foreground">Signed: {waiver.signedAt ? new Date(waiver.signedAt).toLocaleDateString() : "N/A"}</p>
+              <p className="text-muted-foreground">Expires: {waiver.expiresAt ?? "N/A"}</p>
+              <p className="text-muted-foreground">Updated by: {waiver.updatedByStaffName ?? "Staff not recorded"}</p>
+            </div>
+          ) : (
+            <p className="text-muted-foreground">No waiver history yet.</p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              className="h-9"
+              variant="outline"
+              onClick={() => {
+                if (!activeStaff) return;
+                updateCustomerWaiver(customer.id, {
+                  status: "valid",
+                  signedAt: `${new Date().toISOString()}`,
+                  expiresAt: "2027-05-20",
+                  signedByStaffId: activeStaff.id,
+                  updatedByStaffId: activeStaff.id,
+                  updatedByStaffName: `${activeStaff.firstName} ${activeStaff.lastName}`
+                });
+              }}
+            >
+              Mark Waiver Signed
+            </Button>
+            <Button
+              className="h-9"
+              variant="outline"
+              onClick={() => {
+                if (!activeStaff) return;
+                updateCustomerWaiver(customer.id, {
+                  status: "expired",
+                  updatedByStaffId: activeStaff.id,
+                  updatedByStaffName: `${activeStaff.firstName} ${activeStaff.lastName}`
+                });
+              }}
+            >
+              Mark Waiver Expired
+            </Button>
+            <Button
+              className="h-9"
+              variant="outline"
+              onClick={() => {
+                if (!activeStaff) return;
+                updateCustomerWaiver(customer.id, {
+                  status: "missing",
+                  signedAt: null,
+                  expiresAt: null,
+                  signedByStaffId: null,
+                  updatedByStaffId: activeStaff.id,
+                  updatedByStaffName: `${activeStaff.firstName} ${activeStaff.lastName}`
+                });
+              }}
+            >
+              Clear Waiver
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+      </section>
+
+      <section id="notes" aria-label="section-notes" className="scroll-mt-40">
       <Card aria-label="detail-notes">
         <CardHeader><CardTitle>Notes</CardTitle></CardHeader>
         <CardContent><p className="text-sm text-muted-foreground">{customer.notes ?? "No internal notes yet."}</p></CardContent>
       </Card>
+      </section>
+    </div>
+  );
+}
 
-      <Card aria-label="detail-billing">
-        <CardHeader><CardTitle>Billing</CardTitle></CardHeader>
-        <CardContent><p className="text-sm text-muted-foreground">Stripe-ready placeholder. Billing timeline and invoices will appear here.</p></CardContent>
-      </Card>
+function Field({ label, value, warning }: { label: string; value: string; warning?: boolean }) {
+  return (
+    <div>
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className={`text-sm ${warning ? "text-amber-700" : "text-foreground"}`}>{value}</p>
+    </div>
+  );
+}
+
+function HeaderField({
+  label,
+  value,
+  warning,
+  className
+}: {
+  label: string;
+  value: string;
+  warning?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={`rounded-md bg-secondary/35 px-3 py-2 ${className ?? ""}`}>
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className={`text-sm ${warning ? "text-amber-700" : "text-foreground"}`}>{value}</p>
     </div>
   );
 }

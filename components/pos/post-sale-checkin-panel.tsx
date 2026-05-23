@@ -16,7 +16,8 @@ export function PostSaleCheckInPanel({
   onCheckInSlot,
   getSlotCheckInState,
   onDone,
-  onAddCustomer
+  onAddCustomer,
+  onMarkWaiverSigned
 }: {
   transaction: PosTransaction;
   customers: Customer[];
@@ -24,6 +25,7 @@ export function PostSaleCheckInPanel({
   onClose: () => void;
   onAssignCustomer: (slotId: string, customerId: string) => { ok: boolean; message: string };
   onCheckInSlot: (slotId: string) => { ok: boolean; message: string };
+  onMarkWaiverSigned: (slotId: string) => { ok: boolean; message: string };
   getSlotCheckInState: (slotId: string) => {
     canCheckIn: boolean;
     reason?: string;
@@ -68,8 +70,8 @@ export function PostSaleCheckInPanel({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" className="min-h-11" onClick={onClose}>Close</Button>
-            <Button variant="outline" className="min-h-11" onClick={onDone}>Done</Button>
+            <Button variant="secondary" className="min-h-11" onClick={onClose}>Close</Button>
+            <Button variant="secondary" className="min-h-11" onClick={onDone}>Done</Button>
           </div>
         </div>
         {hasWaiverBlock ? (
@@ -95,6 +97,7 @@ export function PostSaleCheckInPanel({
                   </Badge>
                   {slot.status === "available" ? (
                     <Button
+                      variant={slotState.actionLabel.includes("Override") ? "caution" : "primary"}
                       className="min-h-11"
                       disabled={!slot.assignedCustomerId || !slotState.canCheckIn}
                       onClick={() => {
@@ -139,8 +142,28 @@ export function PostSaleCheckInPanel({
                   <p className="text-xs text-muted-foreground">Create or select a customer to check in.</p>
                 </div>
               ) : null}
-              {slot.status === "available" && slot.assignedCustomerId && !slotState.canCheckIn ? (
-                <p className="text-xs text-amber-800">{slotState.reason ?? "Unable to check in this slot."}</p>
+              {slot.status === "available" && slot.assignedCustomerId && (!slotState.canCheckIn || slotState.blockedByWaiver) ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-amber-800">{slotState.reason ?? "Unable to check in this slot."}</p>
+                  {slotState.blockedByWaiver ? (
+                    <Button
+                      className="min-h-11"
+                      variant="secondary"
+                      onClick={() => {
+                        const result = onMarkWaiverSigned(slot.id);
+                        if (result.ok) {
+                          setWarning("");
+                          setFeedback(result.message);
+                        } else {
+                          setFeedback("");
+                          setWarning(result.message);
+                        }
+                      }}
+                    >
+                      Mark Waiver Signed
+                    </Button>
+                  ) : null}
+                </div>
               ) : null}
             </article>
             );

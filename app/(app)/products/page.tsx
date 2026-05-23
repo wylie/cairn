@@ -121,9 +121,9 @@ export default function ProductsPage() {
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
-                <Button variant="outline" disabled={!canManageProducts} onClick={() => setEditingProduct(product)}>Edit Product</Button>
+                <Button variant="secondary" disabled={!canManageProducts} onClick={() => setEditingProduct(product)}>Edit Product</Button>
                 <Button
-                  variant="outline"
+                  variant={product.active === false ? "secondary" : "destructive"}
                   disabled={!canManageProducts}
                   onClick={() => {
                     const result = toggleProductActive(product.id);

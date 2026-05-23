@@ -138,7 +138,9 @@ describe("Products page", () => {
 
     const card = screen.getAllByText("Quick Test Pass")[0].closest("article");
     expect(card).not.toBeNull();
-    await user.click(within(card as HTMLElement).getByRole("button", { name: "Deactivate" }));
+    const deactivateButton = within(card as HTMLElement).getByRole("button", { name: "Deactivate" });
+    expect(deactivateButton.className).toContain("rose");
+    await user.click(deactivateButton);
 
     expect(screen.queryByRole("button", { name: "Add Quick Test Pass" })).not.toBeInTheDocument();
   });

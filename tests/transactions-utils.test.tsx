@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { vi } from "vitest";
 import { CustomerDetailView } from "@/components/customers/customer-detail-view";
 import { buildScopedMockKey } from "@/lib/mock-storage";
@@ -88,9 +88,10 @@ describe("transaction formatting and normalization", () => {
       </TestProviders>
     );
 
-    expect(screen.getByLabelText("detail-purchases")).toBeInTheDocument();
-    expect(screen.getByText("Unknown item")).toBeInTheDocument();
-    expect(screen.getByText(/Total:\s*\$0.00/i)).toBeInTheDocument();
+    const purchases = screen.getByLabelText("detail-purchases");
+    expect(purchases).toBeInTheDocument();
+    expect(within(purchases).getByText("Unknown item")).toBeInTheDocument();
+    expect(within(purchases).getAllByText(/Total:\s*\$0.00/i).length).toBeGreaterThan(0);
 
     Object.defineProperty(window, "localStorage", {
       configurable: true,

@@ -77,7 +77,7 @@ describe("access rules", () => {
 
   it("waiver expiring soon returns warning", () => {
     const customer = customers.find((entry) => entry.id === "cust_001")!;
-    const waiver = { id: "wav_tmp", customerId: customer.id, status: "signed" as const, expiresAt: "2026-05-25" };
+    const waiver = { id: "wav_tmp", customerId: customer.id, status: "valid" as const, expiresAt: "2026-05-25" };
     const decision = evaluateCustomerAccess({
       customer,
       waiver,
@@ -212,7 +212,7 @@ describe("access rules", () => {
     ];
     const decision = evaluateCustomerAccess({
       customer,
-      waiver: { id: "wav_fallback", customerId: customer.id, status: "signed", expiresAt: "2026-12-31" },
+      waiver: { id: "wav_fallback", customerId: customer.id, status: "valid", expiresAt: "2026-12-31" },
       locationId: "loc_001",
       dayKey: "2026-05-20",
       accessRecords: fallbackAccess,

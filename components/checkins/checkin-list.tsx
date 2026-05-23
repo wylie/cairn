@@ -201,7 +201,7 @@ export function CheckInList() {
               ].map(([value, label]) => (
                 <Button
                   key={value}
-                  variant={quickFilter === value ? "default" : "outline"}
+                  variant={quickFilter === value ? "primary" : "secondary"}
                   className="h-9"
                   onClick={() => setQuickFilter(value as typeof quickFilter)}
                 >
@@ -286,14 +286,14 @@ export function CheckInList() {
                     <p className="text-sm text-muted-foreground">{selectedDecision?.reasons[0] ?? "No valid access."}</p>
                     {hasPermission("overrideAccess") ? (
                       <Button
-                        variant="outline"
+                        variant="caution"
                         className="w-full min-h-11"
                         onClick={() => runCheckIn(selectedCustomer.id, "Manager override from check-in desk")}
                       >
                         Manager Override
                       </Button>
                     ) : null}
-                    <Button variant="outline" className="w-full min-h-11" onClick={() => setSellCustomerId(selectedCustomer.id)}>
+                    <Button variant="secondary" className="w-full min-h-11" onClick={() => setSellCustomerId(selectedCustomer.id)}>
                       Sell Access
                     </Button>
                   </div>
@@ -317,7 +317,7 @@ export function CheckInList() {
           ) : null}
           {warning.includes("no valid access method") && sellCustomerId ? (
             <div className="mt-2">
-              <Button variant="outline" onClick={() => setSellCustomerId(sellCustomerId)}>Sell Access</Button>
+              <Button variant="secondary" onClick={() => setSellCustomerId(sellCustomerId)}>Sell Access</Button>
             </div>
           ) : null}
         </div>
@@ -373,8 +373,13 @@ export function CheckInList() {
         <AddCustomerModal
           open
           onClose={() => setShowAddCustomer(false)}
+          customers={customers}
           onCreate={(input) => {
-            const result = addCustomer(input);
+            const result = addCustomer({
+              ...input,
+              createdByStaffId: activeStaff?.id,
+              createdByStaffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
+            });
             if (result.ok && result.customerId) {
               setQuery(`${input.firstName} ${input.lastName}`);
               setFeedback(result.message);
@@ -382,7 +387,17 @@ export function CheckInList() {
             }
             return result;
           }}
-          title="Add Customer"
+          title="New Customer"
+          onCreated={(customerId, input) => {
+            setQuery(`${input.firstName} ${input.lastName}`.trim());
+            setSelectedCustomerId(customerId);
+            setFeedback("Customer created.");
+            setWarning("");
+          }}
+          quickActions={{
+            onSellAccess: (customerId) => setSellCustomerId(customerId),
+            onCheckIn: (customerId) => runCheckIn(customerId)
+          }}
         />
       ) : null}
     </section>

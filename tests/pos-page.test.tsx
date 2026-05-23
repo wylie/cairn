@@ -13,6 +13,142 @@ async function activateStaff(user: ReturnType<typeof userEvent.setup>, pin = "22
 }
 
 describe("POS page", () => {
+  it("selling one day pass creates one post-sale check-in slot assigned to purchasing customer", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <PosPage />
+      </TestProviders>
+    );
+    await activateStaff(user, "2222");
+
+    await user.type(screen.getByLabelText("Search customer"), "Sam");
+    await user.keyboard("{ArrowDown}{Enter}");
+    await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
+    await user.click(screen.getByRole("button", { name: "Complete" }));
+
+    expect(screen.getByRole("dialog", { name: "Post-sale check-in" })).toBeInTheDocument();
+    expect(screen.getByText(/Assign Check-ins|Check In Now/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 eligible check-in/i)).toBeInTheDocument();
+    expect(screen.getByText(/Slot 1: Day Pass/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Sam Noaccess/i).length).toBeGreaterThan(0);
+  });
+
+  it("selling two day passes creates two slots and extra slot requires assignment", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <PosPage />
+      </TestProviders>
+    );
+    await activateStaff(user, "2222");
+
+    await user.type(screen.getByLabelText("Search customer"), "Dana");
+    await user.keyboard("{ArrowDown}{Enter}");
+    await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
+    await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
+    await user.click(screen.getByRole("button", { name: "Complete" }));
+
+    expect(screen.getByText(/2 eligible check-in/i)).toBeInTheDocument();
+    expect(screen.getByText(/Slot 2: Day Pass/i)).toBeInTheDocument();
+    expect(screen.getByText(/Create or select a customer to check in\./i)).toBeInTheDocument();
+    const slotButtons = screen.getAllByRole("button", { name: "Check In" });
+    expect(slotButtons[1]).toBeDisabled();
+  });
+
+  it("staff can assign another customer to extra slot and check in from sale slot", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <PosPage />
+        <CheckInList />
+      </TestProviders>
+    );
+    await activateStaff(user, "2222");
+
+    await user.type(screen.getByLabelText("Search customer"), "Dana");
+    await user.keyboard("{ArrowDown}{Enter}");
+    await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
+    await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
+    await user.click(screen.getByRole("button", { name: "Complete" }));
+
+    await user.type(screen.getByLabelText("Assign customer for slot 2"), "Jordan");
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect(screen.getByText(/Jordan Kim/i)).toBeInTheDocument();
+
+    const slotButtons = screen.getAllByRole("button", { name: "Check In" });
+    await user.click(slotButtons[1]);
+    expect(screen.getAllByText(/Check-in recorded for Jordan Kim/i).length).toBeGreaterThan(0);
+    expect(screen.getByTestId("header-occupancy")).toHaveTextContent("2 currently in");
+    expect(screen.getByTestId("checkin-row-cust_002")).toBeInTheDocument();
+  });
+
+  it("missing waiver shows warning and blocks post-sale slot check-in", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <PosPage />
+      </TestProviders>
+    );
+    await activateStaff(user, "3333");
+
+    await user.type(screen.getByLabelText("Search customer"), "Sam");
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect(screen.getByText(/Waiver missing or expired/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
+    await user.click(screen.getByRole("button", { name: "Complete" }));
+    expect(screen.getByText(/Sale completed for Sam Noaccess/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Manager Required" })).toBeDisabled();
+    expect(screen.getByText(/Waiver required before check-in/i)).toBeInTheDocument();
+    expect(screen.getByText(/Missing or expired waiver/i)).toBeInTheDocument();
+  });
+
+  it("staff with override permission can override waiver block in post-sale check-in", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <PosPage />
+      </TestProviders>
+    );
+    await activateStaff(user, "2222");
+
+    await user.type(screen.getByLabelText("Search customer"), "Sam");
+    await user.keyboard("{ArrowDown}{Enter}");
+    await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
+    await user.click(screen.getByRole("button", { name: "Complete" }));
+
+    const overrideButton = screen.getByRole("button", { name: /Manager Override \+ Check In/i });
+    expect(overrideButton).toBeEnabled();
+    await user.click(overrideButton);
+    expect(screen.getAllByText(/Check-in recorded for Sam Noaccess/i).length).toBeGreaterThan(0);
+  });
+
+  it("post-sale modal can be closed without losing transaction history", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <PosPage />
+      </TestProviders>
+    );
+    await activateStaff(user, "2222");
+
+    await user.type(screen.getByLabelText("Search customer"), "Dana");
+    await user.keyboard("{ArrowDown}{Enter}");
+    await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
+    await user.click(screen.getByRole("button", { name: "Complete" }));
+    expect(screen.getByRole("dialog", { name: "Post-sale check-in" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog", { name: "Post-sale check-in" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Receipt #/i)).toBeInTheDocument();
+  });
+
   it("only quick-button products appear by default", async () => {
     const user = userEvent.setup();
     render(
@@ -103,7 +239,7 @@ describe("POS page", () => {
     expect(screen.getByText("You do not have permission to perform this action.")).toBeInTheDocument();
   });
 
-  it("customer search works and day pass sale can check in customer", async () => {
+  it("customer search works and day pass sale completes with check-in rule feedback", async () => {
     const user = userEvent.setup();
     render(
       <TestProviders>
@@ -124,8 +260,9 @@ describe("POS page", () => {
     await user.click(screen.getByRole("button", { name: "Complete + Check In" }));
 
     expect(screen.getAllByText(/Sale completed for Sam Noaccess/i).length).toBeGreaterThan(0);
-    expect(screen.getByTestId("header-occupancy")).toHaveTextContent("2 currently in");
-    expect(screen.getByTestId("checkin-row-cust_004")).toBeInTheDocument();
+    expect(screen.getAllByText(/Check-in blocked:/i).length).toBeGreaterThan(0);
+    expect(screen.getByTestId("header-occupancy")).toHaveTextContent("1 currently in");
+    expect(screen.queryByTestId("checkin-row-cust_004")).not.toBeInTheDocument();
   });
 
   it("staff comp is protected without override permission", async () => {
@@ -373,6 +510,8 @@ describe("Customer integrations", () => {
     await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
     await user.click(screen.getByRole("button", { name: "Complete + Check In" }));
 
-    expect(screen.getByTestId("checkin-row-cust_004")).toBeInTheDocument();
+    expect(screen.getAllByText(/Sale completed for Sam Noaccess/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Check-in blocked:/i).length).toBeGreaterThan(0);
+    expect(screen.queryByTestId("checkin-row-cust_004")).not.toBeInTheDocument();
   });
 });

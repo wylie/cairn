@@ -52,7 +52,7 @@ describe("POS sales history", () => {
 
     const filterBar = screen.getByTestId("sales-history-filterbar");
     expect(filterBar.className).toContain("grid");
-    expect(filterBar.className).toContain("items-end");
+    expect(filterBar.className).toContain("[grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]");
     expect(screen.getByLabelText("Search sales history").className).toContain("h-11");
     expect(screen.getByLabelText("Date filter").className).toContain("h-11");
   });
@@ -73,7 +73,7 @@ describe("POS sales history", () => {
     await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
     await user.click(screen.getByRole("button", { name: "Complete" }));
 
-    expect(screen.getByText(/Receipt #/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Receipt #/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Customer: Sam Noaccess/i)).toBeInTheDocument();
     expect(screen.getByText(/Sold by: Maya Lopez/i)).toBeInTheDocument();
     expect(screen.getByText(/Day Pass x1/i)).toBeInTheDocument();
@@ -135,6 +135,7 @@ describe("POS sales history", () => {
     expect(screen.getAllByText(/Sam Noaccess/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Day Pass x1 — \$28.00 \(\$28.00\)/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Total: \$28.00/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Check-in fulfillment/i)).toBeInTheDocument();
   });
 
   it("staff comp can create a zero-dollar transaction", async () => {
@@ -184,7 +185,7 @@ describe("POS sales history", () => {
       </TestProviders>
     );
 
-    expect(screen.getByText(/Sam Noaccess/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Sam Noaccess/i).length).toBeGreaterThan(0);
     storage.restore();
   });
 

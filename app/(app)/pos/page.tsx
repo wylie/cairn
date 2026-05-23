@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { PosProduct } from "@/types/domain";
 import Link from "next/link";
 import { AccessProductPicker } from "@/components/pos/access-product-picker";
 import { CustomerAccessSummary } from "@/components/pos/customer-access-summary";
@@ -8,6 +9,7 @@ import { AddCustomerModal } from "@/components/customers/add-customer-modal";
 import { CustomerSearchCombobox } from "@/components/shared/customer-search-combobox";
 import { MockReceiptPanel } from "@/components/pos/mock-receipt-panel";
 import { ProductPriceLabel } from "@/components/pos/product-price-label";
+import { PostSaleCheckInPanel } from "@/components/pos/post-sale-checkin-panel";
 import { PermissionGate } from "@/components/staff/permission-gate";
 import { StaffSwitcher } from "@/components/staff/staff-switcher";
 import { Button } from "@/components/ui/button";
@@ -17,7 +19,17 @@ import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 
 export default function PosPage() {
-  const { customers, memberships, punchPasses, accessProducts, sellAccessProducts, addCustomer } = useCustomerState();
+  const {
+    customers,
+    memberships,
+    punchPasses,
+    accessProducts,
+    transactions,
+    sellAccessProducts,
+    assignSaleCheckInSlotCustomer,
+    fulfillSaleCheckInSlot,
+    addCustomer
+  } = useCustomerState();
   const { activeStaff, hasPermission, requestStaffSwitch } = useWorkstationState();
 
   const [query, setQuery] = useState("");
@@ -26,6 +38,8 @@ export default function PosPage() {
   const [feedback, setFeedback] = useState("");
   const [warning, setWarning] = useState("");
   const [receipt, setReceipt] = useState<ReturnType<typeof sellAccessProducts>["transaction"] | null>(null);
+  const [activeFulfillmentTransactionId, setActiveFulfillmentTransactionId] = useState<string | null>(null);
+  const [fulfillmentOpen, setFulfillmentOpen] = useState(false);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
 
   const selectedCustomer = useMemo(
@@ -39,7 +53,10 @@ export default function PosPage() {
   }, [customers, query]);
 
   const cartProducts = useMemo(
-    () => accessProducts.filter((product) => cart.includes(product.id)),
+    () =>
+      cart
+        .map((productId) => accessProducts.find((product) => product.id === productId))
+        .filter((product): product is PosProduct => Boolean(product)),
     [accessProducts, cart]
   );
   const subtotal = cartProducts.reduce((sum, product) => sum + product.priceCents, 0);
@@ -58,6 +75,8 @@ export default function PosPage() {
   const waiver = selectedCustomer?.waiverId
     ? data.waivers.find((entry) => entry.id === selectedCustomer.waiverId)
     : undefined;
+  const requiresWaiverInCart = cartProducts.some((product) => product.waiverRequired);
+  const waiverInvalid = !!selectedCustomer && waiver?.status !== "signed";
 
   const submit = (checkInAfterSale: boolean) => {
     if (!selectedCustomer) {
@@ -70,6 +89,9 @@ export default function PosPage() {
       setFeedback("");
       requestStaffSwitch("Staff PIN Required");
       return;
+    }
+    if (waiver?.status !== "signed") {
+      setWarning("Waiver missing or expired. Sale can continue, but check-in will remain blocked until waiver is valid.");
     }
 
     const result = sellAccessProducts({
@@ -89,7 +111,22 @@ export default function PosPage() {
     setWarning("");
     setFeedback(result.message);
     setReceipt(result.transaction ?? null);
+    setActiveFulfillmentTransactionId(result.transaction?.id ?? null);
+    if ((result.transaction?.checkInSlots?.length ?? 0) > 0) setFulfillmentOpen(true);
     setCart([]);
+  };
+
+  const activeFulfillmentTransaction = useMemo(
+    () => (activeFulfillmentTransactionId ? (transactions.find((entry) => entry.id === activeFulfillmentTransactionId) ?? receipt) : null),
+    [activeFulfillmentTransactionId, receipt, transactions]
+  );
+  const shouldShowSwitchStaff = /staff pin|permission/i.test(warning);
+
+  const getWaiverStatusForCustomer = (customerId?: string) => {
+    if (!customerId) return "missing";
+    const customer = customers.find((entry) => entry.id === customerId);
+    if (!customer?.waiverId) return "missing";
+    return data.waivers.find((entry) => entry.id === customer.waiverId)?.status ?? "missing";
   };
 
   return (
@@ -135,7 +172,7 @@ export default function PosPage() {
               <p className="text-sm text-amber-800">Customer is already checked in.</p>
             ) : null}
             {waiver && waiver.status !== "signed" ? (
-              <p className="text-sm text-amber-800">Waiver missing or expired.</p>
+              <p className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-sm text-amber-800">Waiver missing or expired</p>
             ) : null}
           </div>
 
@@ -153,7 +190,7 @@ export default function PosPage() {
               <div className="mt-2 space-y-2">
                 {cartProducts.map((item, index) => (
                   <div key={`${item.id}-${index}`} className="flex items-center justify-between text-sm">
-                    <span>{item.name}</span>
+                    <span>{item.name}{item.waiverRequired ? " • Waiver required" : ""}</span>
                     <div className="flex items-center gap-2">
                       <ProductPriceLabel cents={item.priceCents} />
                       <button className="text-xs text-muted-foreground" onClick={() => setCart((prev) => prev.filter((_, i) => i !== index))}>Remove</button>
@@ -170,6 +207,11 @@ export default function PosPage() {
                 <Button className="min-h-11" disabled={!canCheckout} onClick={() => submit(false)}>Complete</Button>
                 <Button className="min-h-11 whitespace-normal text-center" disabled={!canCheckout} onClick={() => submit(true)}>Complete + Check In</Button>
               </div>
+              {requiresWaiverInCart && waiverInvalid ? (
+                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                  This product requires a waiver. Customer cannot be checked in until waiver requirements are met.
+                </div>
+              ) : null}
               {!hasSelectedCustomer ? (
                 <p className="mt-2 text-sm text-muted-foreground">Select a customer to complete sale.</p>
               ) : null}
@@ -191,10 +233,73 @@ export default function PosPage() {
         {warning ? (
           <div role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
             <p>{warning}</p>
-            <div className="mt-2"><StaffSwitcher label="Switch Staff" title="Switch Staff PIN" /></div>
+            {shouldShowSwitchStaff ? <div className="mt-2"><StaffSwitcher label="Switch Staff" title="Switch Staff PIN" /></div> : null}
           </div>
         ) : null}
         <MockReceiptPanel transaction={receipt ?? null} />
+        {activeFulfillmentTransaction ? (
+          <PostSaleCheckInPanel
+            open={fulfillmentOpen}
+            onClose={() => setFulfillmentOpen(false)}
+            transaction={activeFulfillmentTransaction}
+            customers={customers}
+            getSlotCheckInState={(slotId) => {
+              const slot = activeFulfillmentTransaction.checkInSlots?.find((entry) => entry.id === slotId);
+              if (slot?.status === "checked-in") {
+                return { canCheckIn: false, actionLabel: "Check In" as const, statusLabel: "Checked In" as const };
+              }
+              if (!slot?.assignedCustomerId) return { canCheckIn: false, actionLabel: "Check In" as const, statusLabel: "Available" as const };
+              const waiverStatus = getWaiverStatusForCustomer(slot.assignedCustomerId);
+              if (waiverStatus === "signed") return { canCheckIn: true, actionLabel: "Check In" as const, statusLabel: "Available" as const };
+              const canOverride = hasPermission("overrideAccess");
+              return canOverride
+                ? {
+                    canCheckIn: true,
+                    actionLabel: "Manager Override + Check In" as const,
+                    statusLabel: "Blocked" as const,
+                    reason: "Missing or expired waiver",
+                    blockedByWaiver: true
+                  }
+                : {
+                    canCheckIn: false,
+                    actionLabel: "Manager Required" as const,
+                    statusLabel: "Blocked" as const,
+                    reason: "Missing or expired waiver",
+                    blockedByWaiver: true
+                  };
+            }}
+            onAssignCustomer={(slotId, customerId) => {
+              const result = assignSaleCheckInSlotCustomer(activeFulfillmentTransaction.id, slotId, customerId);
+              if (!result.ok) setWarning(result.message);
+              else setWarning("");
+              return result;
+            }}
+            onCheckInSlot={(slotId) => {
+              if (!activeStaff) {
+                const result = { ok: false as const, message: "Select staff PIN to continue." };
+                setWarning(result.message);
+                requestStaffSwitch("Staff PIN Required");
+                return result;
+              }
+              const result = fulfillSaleCheckInSlot(activeFulfillmentTransaction.id, slotId, {
+                staffUserId: activeStaff.id,
+                staffName: `${activeStaff.firstName} ${activeStaff.lastName}`,
+                overrideReason: hasPermission("overrideAccess") ? "Waiver override from POS fulfillment" : undefined
+              });
+              if (!result.ok) setWarning(result.message);
+              else {
+                setWarning("");
+                setFeedback(result.message);
+              }
+              return result;
+            }}
+            onDone={() => {
+              setActiveFulfillmentTransactionId(null);
+              setFulfillmentOpen(false);
+            }}
+            onAddCustomer={() => setShowAddCustomer(true)}
+          />
+        ) : null}
       </section>
       {showAddCustomer ? (
         <AddCustomerModal

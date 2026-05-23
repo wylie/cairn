@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { FormField } from "@/components/shared/form-layout";
 import { SearchInput } from "@/components/shared/search-input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCustomerState } from "@/lib/state/customer-state";
@@ -62,23 +63,23 @@ export default function PosHistoryPage() {
         <Link href="/pos" className="text-sm text-muted-foreground underline">Back to POS</Link>
       </header>
 
-      <div data-testid="sales-history-filterbar" className="grid items-end gap-3 md:grid-cols-[1.4fr_1fr]">
-        <SearchInput
-          value={query}
-          onChange={setQuery}
-          label="Search sales history"
-          placeholder="Search customer, staff, product, or receipt"
-          showLabel
-        />
-        <label className="space-y-1 text-sm">
-          <span className="text-sm text-muted-foreground">Date filter (placeholder)</span>
+      <div data-testid="sales-history-filterbar" className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
+        <FormField label="Search" className="min-w-[220px] md:col-span-2">
+          <SearchInput
+            value={query}
+            onChange={setQuery}
+            label="Search sales history"
+            placeholder="Search customer, staff, product, or receipt"
+          />
+        </FormField>
+        <FormField label="Date filter (placeholder)">
           <select aria-label="Date filter" className="flex h-11 w-full rounded-md border border-input bg-white px-3 py-2 text-sm">
             <option>All dates</option>
             <option>Today</option>
             <option>Last 7 days</option>
             <option>Last 30 days</option>
           </select>
-        </label>
+        </FormField>
       </div>
 
       {filtered.length === 0 ? (
@@ -118,6 +119,23 @@ export default function PosHistoryPage() {
                       ))}
                       {items.length === 0 ? <li>Unknown item</li> : null}
                     </ul>
+                    {transaction.checkInSlots && transaction.checkInSlots.length > 0 ? (
+                      <div className="mt-2 space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground">Check-in fulfillment</p>
+                        <ul className="space-y-1 text-xs text-muted-foreground">
+                          {transaction.checkInSlots.map((slot) => (
+                            <li key={slot.id}>
+                              {slot.productName}: {slot.status === "checked-in"
+                                ? `Checked in ${slot.assignedCustomerName ?? "Customer"}`
+                                : slot.assignedCustomerName
+                                ? `Assigned to ${slot.assignedCustomerName}`
+                                : "Unassigned"}
+                              {slot.checkedInByStaffName ? ` • by ${slot.checkedInByStaffName}` : ""}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
                   </div>
                   <div className="text-left md:text-right">
                     <p className="font-medium">Total: {formatCurrency(displayTotal)}</p>

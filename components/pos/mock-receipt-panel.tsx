@@ -10,8 +10,8 @@ export function MockReceiptPanel({ transaction }: { transaction: PosTransaction 
       <p>Customer: {transaction.customerName}</p>
       <p>Sold by: {transaction.soldByStaffName ?? "Staff not recorded"}</p>
       <ul className="mt-1 list-disc space-y-1 pl-5">
-        {transaction.items.map((item) => (
-          <li key={`${transaction.id}-${item.productId}`}>
+        {transaction.items.map((item, index) => (
+          <li key={`${transaction.id}-${item.productId}-${index}`}>
             {item.productName ?? "Unknown item"} x{item.quantity ?? 1} • {formatCurrency(item.lineTotal)}
           </li>
         ))}

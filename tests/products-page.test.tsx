@@ -178,7 +178,7 @@ describe("Products page", () => {
     await activateStaff(user, "2222");
 
     const filterBar = screen.getByTestId("products-filter-bar");
-    expect(filterBar.className).toContain("items-end");
+    expect(filterBar.className).toContain("[grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]");
 
     const search = screen.getByLabelText("Search products");
     const category = screen.getByLabelText("Filter products by category");

@@ -96,6 +96,34 @@ export function normalizeTransaction(entry: Partial<PosTransaction>, products: P
   const normalizedTotal =
     storedTotal !== null && storedTotal > 0 ? storedTotal : normalizedSubtotal;
 
+  const checkInSlots = Array.isArray(entry.checkInSlots)
+    ? entry.checkInSlots.map((slot, index) => ({
+        id: slot.id ?? `slot_${index}_${Math.random().toString(36).slice(2, 7)}`,
+        transactionId: slot.transactionId ?? entry.id ?? "",
+        productId: slot.productId ?? "",
+        productName: slot.productName ?? "Unknown product",
+        accessType: slot.accessType ?? "access",
+        assignedCustomerId: slot.assignedCustomerId,
+        assignedCustomerName: slot.assignedCustomerName,
+        status: slot.status ?? "available",
+        checkedInAt: slot.checkedInAt,
+        checkedInByStaffId: slot.checkedInByStaffId,
+        checkedInByStaffName: slot.checkedInByStaffName,
+        checkInRecordId: slot.checkInRecordId
+      }))
+    : undefined;
+
+  const fallbackCustomerName = typeof entry.customerName === "string" ? entry.customerName : "";
+  const slotsWithFallback = checkInSlots?.map((slot, index) =>
+    index === 0 && !slot.assignedCustomerId && entry.customerId
+      ? {
+          ...slot,
+          assignedCustomerId: entry.customerId,
+          assignedCustomerName: slot.assignedCustomerName ?? fallbackCustomerName
+        }
+      : slot
+  );
+
   return {
     id: entry.id ?? `txn_legacy_${Math.random().toString(36).slice(2, 8)}`,
     organizationId: entry.organizationId ?? "org_summit",
@@ -117,7 +145,8 @@ export function normalizeTransaction(entry: Partial<PosTransaction>, products: P
     paymentType: "mock",
     completedAt: entry.completedAt ?? new Date().toISOString(),
     checkInTriggered: Boolean(entry.checkInTriggered),
-    receiptNumber: entry.receiptNumber ?? `R-LEGACY`
+    receiptNumber: entry.receiptNumber ?? `R-LEGACY`,
+    checkInSlots: slotsWithFallback
   };
 }
 

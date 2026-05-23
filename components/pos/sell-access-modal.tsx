@@ -29,7 +29,13 @@ export function SellAccessModal({
   const [feedback, setFeedback] = useState("");
   const [receipt, setReceipt] = useState<PosTransaction | null>(null);
 
-  const cartProducts = useMemo(() => products.filter((product) => cart.includes(product.id)), [products, cart]);
+  const cartProducts = useMemo(
+    () =>
+      cart
+        .map((productId) => products.find((product) => product.id === productId))
+        .filter((product): product is PosProduct => Boolean(product)),
+    [products, cart]
+  );
   const subtotal = cartProducts.reduce((sum, item) => sum + item.priceCents, 0);
 
   if (!open) return null;

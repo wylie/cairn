@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ProductFormModal } from "@/components/products/product-form-modal";
+import { FormField } from "@/components/shared/form-layout";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
 import { StaffSwitcher } from "@/components/staff/staff-switcher";
@@ -70,16 +71,16 @@ export default function ProductsPage() {
         </div>
       ) : null}
 
-      <div data-testid="products-filter-bar" className="grid items-end gap-3 md:grid-cols-[1.5fr_1fr]">
-        <SearchInput
-          value={query}
-          onChange={setQuery}
-          label="Search products"
-          placeholder="Search name, category, type, or description"
-          showLabel
-        />
-        <label className="space-y-1 text-sm">
-          <span className="text-sm text-muted-foreground">Category</span>
+      <div data-testid="products-filter-bar" className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
+        <FormField label="Search" className="min-w-[220px] md:col-span-2">
+          <SearchInput
+            value={query}
+            onChange={setQuery}
+            label="Search products"
+            placeholder="Search name, category, type, or description"
+          />
+        </FormField>
+        <FormField label="Category">
           <select
             aria-label="Filter products by category"
             value={categoryFilter}
@@ -91,7 +92,7 @@ export default function ProductsPage() {
               <option key={key} value={key}>{label}</option>
             ))}
           </select>
-        </label>
+        </FormField>
       </div>
 
       {feedback ? <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{feedback}</p> : null}

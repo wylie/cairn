@@ -13,6 +13,7 @@ export function CustomerSearchCombobox({
   onQueryChange,
   onSelect,
   onAddCustomer,
+  getStatusLines,
   autoFocus,
   emptyMessage = "No customers found."
 }: {
@@ -22,7 +23,8 @@ export function CustomerSearchCombobox({
   query: string;
   onQueryChange: (value: string) => void;
   onSelect: (customerId: string) => void;
-  onAddCustomer: () => void;
+  onAddCustomer?: () => void;
+  getStatusLines?: (customer: Customer) => string[];
   autoFocus?: boolean;
   emptyMessage?: string;
 }) {
@@ -87,6 +89,11 @@ export function CustomerSearchCombobox({
                   <span>
                     <span className="block font-medium">{customer.firstName} {customer.lastName}</span>
                     <span className="block text-sm text-muted-foreground">{customer.memberId} • {customer.phone}</span>
+                    {getStatusLines ? (
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        {getStatusLines(customer).join(" • ")}
+                      </span>
+                    ) : null}
                   </span>
                   <span className="text-xs text-muted-foreground">Select</span>
                 </button>
@@ -95,9 +102,11 @@ export function CustomerSearchCombobox({
           ) : (
             <p className="text-sm text-muted-foreground">{emptyMessage}</p>
           )}
-          <div className="border-t pt-2">
-            <Button variant="outline" className="min-h-11" onClick={onAddCustomer}>Add Customer</Button>
-          </div>
+          {onAddCustomer ? (
+            <div className="border-t pt-2">
+              <Button variant="outline" className="min-h-11" onClick={onAddCustomer}>Add Customer</Button>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

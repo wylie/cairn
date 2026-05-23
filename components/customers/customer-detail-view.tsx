@@ -31,12 +31,20 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     addCustomerRelationship,
     removeCustomerRelationship,
     updateCustomerAccessRecord,
-    updateCustomerWaiver
+    updateCustomerWaiver,
+    households,
+    householdMembers,
+    createHousehold,
+    addHouseholdMember,
+    removeHouseholdMember,
+    updateHouseholdMember
   } = useCustomerState();
   const { activeStaff } = useWorkstationState();
   const [relationshipQuery, setRelationshipQuery] = useState("");
   const [relationshipType, setRelationshipType] = useState<"parent_guardian" | "child" | "spouse_partner" | "sibling" | "emergency_contact" | "other">("parent_guardian");
   const [relationshipNotes, setRelationshipNotes] = useState("");
+  const [householdMemberQuery, setHouseholdMemberQuery] = useState("");
+  const [newHouseholdName, setNewHouseholdName] = useState("");
   const [profileFeedback, setProfileFeedback] = useState("");
   const customer = customers.find((entry) => entry.id === customerId);
 
@@ -166,6 +174,34 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     ...relationship,
     related: customers.find((entry) => entry.id === relationship.relatedCustomerId)
   }));
+  const householdMembership = householdMembers.find((entry) => entry.customerId === customer.id);
+  const household = householdMembership ? households.find((entry) => entry.id === householdMembership.householdId) : undefined;
+  const householdRows = household
+    ? householdMembers
+        .filter((entry) => entry.householdId === household.id)
+        .map((entry) => ({
+          ...entry,
+          customer: customers.find((customerEntry) => customerEntry.id === entry.customerId)
+        }))
+        .sort((a, b) => (a.emergencyContactPriority ?? 999) - (b.emergencyContactPriority ?? 999))
+    : [];
+  const householdPrimaryContact = household
+    ? customers.find((entry) => entry.id === household.primaryContactCustomerId)
+    : undefined;
+  const householdBillingCustomer = household
+    ? customers.find((entry) => entry.id === household.billingCustomerId)
+    : undefined;
+  const householdDefaultPayment = householdBillingCustomer?.paymentMethods?.find((method) => method.isDefault);
+  const householdCandidates = useMemo(
+    () =>
+      householdMemberQuery.trim().length === 0
+        ? []
+        : filterCustomers(
+            customers.filter((entry) => !householdRows.some((member) => member.customerId === entry.id)),
+            householdMemberQuery
+          ).slice(0, 8),
+    [customers, householdRows, householdMemberQuery]
+  );
   const timelineEvents = [
     ...recentPurchases.map((entry) => ({
       id: `purchase-${entry.id}`,
@@ -478,23 +514,124 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
       <Card aria-label="detail-household">
         <CardHeader><CardTitle>Household</CardTitle></CardHeader>
         <CardContent className="space-y-3 text-sm">
-          <p className="text-muted-foreground">No household assigned</p>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="secondary"
-              className="h-10"
-              onClick={() => setProfileFeedback("Household creation is planned for a future release.")}
-            >
-              Create Household
-            </Button>
-            <Button
-              variant="secondary"
-              className="h-10"
-              onClick={() => setProfileFeedback("Household join workflow is planned for a future release.")}
-            >
-              Join Household
-            </Button>
-          </div>
+          {!household ? (
+            <>
+              <p className="text-muted-foreground">No household assigned</p>
+              <div className="grid gap-2 md:grid-cols-[1fr_auto]">
+                <input
+                  aria-label="Household name"
+                  className="h-11 w-full rounded-md border border-input bg-white px-3 text-sm"
+                  placeholder="Household name (for example: Rivera Family)"
+                  value={newHouseholdName}
+                  onChange={(event) => setNewHouseholdName(event.target.value)}
+                />
+                <Button
+                  className="h-11"
+                  onClick={() => {
+                    const result = createHousehold({
+                      householdName: newHouseholdName || `${customer.lastName} Family`,
+                      primaryContactCustomerId: customer.id,
+                      billingCustomerId: customer.id,
+                      locationId: customer.locationId
+                    });
+                    setProfileFeedback(result.message);
+                    if (result.ok) setNewHouseholdName("");
+                  }}
+                >
+                  Create Household
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="secondary" className="h-10" onClick={() => setProfileFeedback("Search a member below and add to an existing household from their profile.")}>
+                  Join Household
+                </Button>
+                <Button variant="secondary" className="h-10" onClick={() => setRelationshipType("parent_guardian")}>
+                  Link Guardian
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="rounded-lg border p-3">
+                <p className="font-semibold">{household.householdName}</p>
+                <p className="text-muted-foreground">Primary contact: {householdPrimaryContact ? `${householdPrimaryContact.firstName} ${householdPrimaryContact.lastName}` : "Unknown"}</p>
+                <p className="text-muted-foreground">Billing customer: {householdBillingCustomer ? `${householdBillingCustomer.firstName} ${householdBillingCustomer.lastName}` : "Unknown"}</p>
+                <p className="text-muted-foreground">
+                  Default payment: {householdDefaultPayment
+                    ? `${householdDefaultPayment.cardBrand} ending in ${householdDefaultPayment.last4}`
+                    : "No household payment method"}
+                </p>
+              </div>
+              <div className="space-y-2">
+                {householdRows.map((member) => (
+                  <div key={member.customerId} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
+                    <div>
+                      <p className="font-medium">
+                        {member.customer ? `${member.customer.firstName} ${member.customer.lastName}` : "Unknown customer"}
+                      </p>
+                      <p className="text-muted-foreground">
+                        {member.role} • {member.relationship}
+                      </p>
+                      <p className="text-muted-foreground">
+                        {member.canCheckInOthers ? "Can check in dependents" : "Guardian approval required"} • {member.canPurchaseForOthers ? "Can purchase for others" : "Purchases limited"}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {member.customerId !== customer.id ? (
+                        <Button
+                          variant="destructive"
+                          className="h-9"
+                          onClick={() => {
+                            const result = removeHouseholdMember(household.id, member.customerId);
+                            setProfileFeedback(result.message);
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      ) : null}
+                      <Button
+                        variant="secondary"
+                        className="h-9"
+                        onClick={() => {
+                          const result = updateHouseholdMember(household.id, member.customerId, {
+                            canCheckInOthers: !member.canCheckInOthers
+                          });
+                          setProfileFeedback(result.message);
+                        }}
+                      >
+                        {member.canCheckInOthers ? "Require Guardian" : "Allow Check-in Others"}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-2 rounded-lg border p-3">
+                <p className="font-medium">Add Household Member</p>
+                <CustomerSearchCombobox
+                  label="Search customer"
+                  placeholder="Search by name, member ID, phone, or email"
+                  query={householdMemberQuery}
+                  onQueryChange={setHouseholdMemberQuery}
+                  customers={householdCandidates}
+                  onSelect={(selectedId) => {
+                    const result = addHouseholdMember({
+                      householdId: household.id,
+                      customerId: selectedId,
+                      role: "dependent",
+                      relationship: "dependent",
+                      canCheckInOthers: false,
+                      canPurchaseForOthers: false,
+                      canSignWaivers: false,
+                      emergencyContactPriority: householdRows.length + 1
+                    });
+                    setProfileFeedback(result.message);
+                    if (result.ok) setHouseholdMemberQuery("");
+                  }}
+                  emptyMessage="No customers found"
+                />
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
       </section>

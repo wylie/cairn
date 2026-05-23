@@ -12,6 +12,7 @@ import { classCampSessions as seedSessions, programs as seedPrograms } from "@/l
 import { registrations as seedRegistrations } from "@/lib/mocks/registrations";
 import { posTransactions as seedPosTransactions } from "@/lib/mocks/transactions";
 import { waivers as seedWaivers } from "@/lib/mocks/waivers";
+import { households as seedHouseholds, householdMembers as seedHouseholdMembers } from "@/lib/mocks/households";
 import { buildScopedMockKey, clearScopedMockState, loadMockState, saveMockState } from "@/lib/mock-storage";
 import { isValidUsState, normalizeCity, normalizeStateInput, normalizeStreetAddress } from "@/lib/customer-input-format";
 import {
@@ -27,6 +28,10 @@ import type {
   CheckInSource,
   Customer,
   CustomerRelationshipType,
+  Household,
+  HouseholdMember,
+  HouseholdMemberRole,
+  HouseholdRelationship,
   CustomerAccessRecord,
   EntryMethod,
   Membership,
@@ -155,6 +160,8 @@ interface CustomerStateContextValue {
   registrations: Registration[];
   customerAccessRecords: CustomerAccessRecord[];
   waivers: Waiver[];
+  households: Household[];
+  householdMembers: HouseholdMember[];
   checkInRecords: CheckInLogRecord[];
   activeLocationId: string;
   activeDateKey: string;
@@ -187,6 +194,7 @@ interface CustomerStateContextValue {
   ) => { ok: boolean; message: string; action: "check-in" | "check-out" };
   sellAccessProducts: (options: {
     customerId: string;
+    purchaseForCustomerIds?: string[];
     productIds: string[];
     soldByStaffId: string;
     soldByStaffName?: string;
@@ -321,8 +329,47 @@ interface CustomerStateContextValue {
   addCustomerAccessRecord: (record: Omit<CustomerAccessRecord, "id">) => { ok: boolean; message: string; accessId?: string };
   updateCustomerWaiver: (
     customerId: string,
-    updates: { status: Waiver["status"]; signedAt?: string | null; expiresAt?: string | null; notes?: string | null; updatedByStaffId: string; updatedByStaffName?: string; signedByStaffId?: string | null }
+    updates: {
+      status: Waiver["status"];
+      signedAt?: string | null;
+      expiresAt?: string | null;
+      notes?: string | null;
+      updatedByStaffId: string;
+      updatedByStaffName?: string;
+      signedByStaffId?: string | null;
+      signedByCustomerId?: string | null;
+      signedByRelationship?: Waiver["signedByRelationship"] | null;
+    }
   ) => { ok: boolean; message: string };
+  createHousehold: (input: {
+    householdName: string;
+    primaryContactCustomerId: string;
+    billingCustomerId?: string;
+    locationId: string;
+    notes?: string;
+  }) => { ok: boolean; message: string; householdId?: string };
+  addHouseholdMember: (input: {
+    householdId: string;
+    customerId: string;
+    role: HouseholdMemberRole;
+    relationship: HouseholdRelationship;
+    canCheckInOthers: boolean;
+    canPurchaseForOthers: boolean;
+    canSignWaivers: boolean;
+    emergencyContactPriority?: number;
+  }) => { ok: boolean; message: string };
+  removeHouseholdMember: (householdId: string, customerId: string) => { ok: boolean; message: string };
+  updateHouseholdMember: (
+    householdId: string,
+    customerId: string,
+    updates: Partial<Pick<HouseholdMember, "role" | "relationship" | "canCheckInOthers" | "canPurchaseForOthers" | "canSignWaivers" | "emergencyContactPriority">>
+  ) => { ok: boolean; message: string };
+  familyCheckIn: (input: {
+    actingCustomerId: string;
+    memberIds: string[];
+    staffUserId: string;
+    staffName?: string;
+  }) => { ok: boolean; message: string; successes: string[]; failures: string[] };
   toggleCheckIn: (customerId: string, staffUserId: string) => void;
   resetMockState: () => void;
 }
@@ -341,7 +388,9 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     sessions: buildScopedMockKey("org_summit", "loc_001", "sessions"),
     registrations: buildScopedMockKey("org_summit", "loc_001", "registrations"),
     accessRecords: buildScopedMockKey("org_summit", "loc_001", "accessRecords"),
-    waivers: buildScopedMockKey("org_summit", "loc_001", "waivers")
+    waivers: buildScopedMockKey("org_summit", "loc_001", "waivers"),
+    households: buildScopedMockKey("org_summit", "loc_001", "households"),
+    householdMembers: buildScopedMockKey("org_summit", "loc_001", "householdMembers")
   };
 
   const initialStateRef = useRef<{
@@ -355,6 +404,8 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     registrations: Registration[];
     accessRecords: CustomerAccessRecord[];
     waivers: Waiver[];
+    households: Household[];
+    householdMembers: HouseholdMember[];
     checkIns: CheckInLogRecord[];
   } | null>(null);
 
@@ -377,6 +428,8 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       registrations: loadMockState(storageKeys.registrations, seedRegistrations),
       accessRecords: loadMockState(storageKeys.accessRecords, seedAccessRecords) as CustomerAccessRecord[],
       waivers: loadMockState(storageKeys.waivers, seedWaivers) as Waiver[],
+      households: loadMockState(storageKeys.households, seedHouseholds) as Household[],
+      householdMembers: loadMockState(storageKeys.householdMembers, seedHouseholdMembers) as HouseholdMember[],
       checkIns: loadMockState(storageKeys.checkins, seedCheckInRecords).map((record) => ({
         ...record,
         checkedInByStaffId: record.checkedInByStaffId ?? record.staffUserId ?? "",
@@ -395,6 +448,8 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
   const [registrations, setRegistrations] = useState<Registration[]>(initialStateRef.current.registrations);
   const [customerAccessRecords, setCustomerAccessRecords] = useState<CustomerAccessRecord[]>(initialStateRef.current.accessRecords);
   const [waivers, setWaivers] = useState<Waiver[]>(initialStateRef.current.waivers);
+  const [households, setHouseholds] = useState<Household[]>(initialStateRef.current.households);
+  const [householdMembers, setHouseholdMembers] = useState<HouseholdMember[]>(initialStateRef.current.householdMembers);
   const [checkInLogRecords, setCheckInLogRecords] = useState<CheckInLogRecord[]>(initialStateRef.current.checkIns.map((record) => ({
       ...record,
       checkedInByStaffId: record.checkedInByStaffId ?? record.staffUserId ?? "",
@@ -477,6 +532,12 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
   useEffect(() => {
     saveMockState(storageKeys.waivers, waivers);
   }, [waivers]);
+  useEffect(() => {
+    saveMockState(storageKeys.households, households);
+  }, [households]);
+  useEffect(() => {
+    saveMockState(storageKeys.householdMembers, householdMembers);
+  }, [householdMembers]);
 
   useEffect(() => {
     saveMockState(storageKeys.checkins, checkInLogRecords);
@@ -604,7 +665,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
               ? {
                   ...entry,
                   remainingPunches: punchesRemaining,
-                  status: punchesRemaining <= 0 ? "expired" : entry.status
+                  status: (punchesRemaining ?? 0) <= 0 ? "expired" : entry.status
                 }
               : entry
           )
@@ -613,7 +674,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
           setPunchPasses((prev) =>
             prev.map((entry) =>
               entry.id === customer.punchPassId
-                ? { ...entry, remainingUses: punchesRemaining }
+                ? { ...entry, remainingUses: punchesRemaining ?? entry.remainingUses }
                 : entry
             )
           );
@@ -724,6 +785,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
 
   const sellAccessProducts = (options: {
     customerId: string;
+    purchaseForCustomerIds?: string[];
     productIds: string[];
     soldByStaffId: string;
     soldByStaffName?: string;
@@ -740,17 +802,26 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       .filter((product): product is PosProduct => Boolean(product));
     if (selectedProducts.length === 0) return { ok: false, message: "Select at least one access product." };
 
+    const targetCustomerIds = Array.from(
+      new Set([options.customerId, ...(options.purchaseForCustomerIds ?? [])].filter(Boolean))
+    );
+    const targetCustomers = customers.filter((entry) => targetCustomerIds.includes(entry.id));
+    if (targetCustomers.length === 0) return { ok: false, message: "Select a customer to complete sale." };
+
     let nextCustomer = customer;
     const newAccessRecords: CustomerAccessRecord[] = [];
     let createdPass: PunchPass | null = null;
     let createdMembership: Membership | null = null;
 
-    selectedProducts.forEach((product) => {
+    targetCustomers.forEach((targetCustomer) => {
+      selectedProducts.forEach((product) => {
       if (product.category === "day_passes" || product.category === "classes" || product.category === "camps" || product.category === "comps") {
-        nextCustomer = { ...nextCustomer, dayPassProductName: product.name };
+        if (targetCustomer.id === customer.id) {
+          nextCustomer = { ...nextCustomer, dayPassProductName: product.name };
+        }
         newAccessRecords.push({
           id: `acc_${Math.random().toString(36).slice(2, 9)}`,
-          customerId: customer.id,
+          customerId: targetCustomer.id,
           productId: product.id,
           type: product.category === "comps" ? "comp" : "day-pass",
           status: "active",
@@ -767,17 +838,19 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         const passId = `pass_${Math.random().toString(36).slice(2, 8)}`;
         createdPass = {
           id: passId,
-          customerId: customer.id,
+          customerId: targetCustomer.id,
           title: product.name,
           originalUses: product.punchQuantity ?? 10,
           remainingUses: product.punchQuantity ?? 10,
           expiresAt: "2026-06-30",
           type: "multi_visit"
         };
-        nextCustomer = { ...nextCustomer, punchPassId: passId, dayPassProductName: undefined };
+        if (targetCustomer.id === customer.id) {
+          nextCustomer = { ...nextCustomer, punchPassId: passId, dayPassProductName: undefined };
+        }
         newAccessRecords.push({
           id: `acc_${Math.random().toString(36).slice(2, 9)}`,
-          customerId: customer.id,
+          customerId: targetCustomer.id,
           productId: product.id,
           type: "punch-pass",
           status: "active",
@@ -795,15 +868,17 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         const membershipId = `mem_${Math.random().toString(36).slice(2, 8)}`;
         createdMembership = {
           id: membershipId,
-          customerId: customer.id,
+          customerId: targetCustomer.id,
           planName: product.name,
           status: "active",
           renewalDate: "2026-06-20"
         };
-        nextCustomer = { ...nextCustomer, membershipId, dayPassProductName: undefined };
+        if (targetCustomer.id === customer.id) {
+          nextCustomer = { ...nextCustomer, membershipId, dayPassProductName: undefined };
+        }
         newAccessRecords.push({
           id: `acc_${Math.random().toString(36).slice(2, 9)}`,
-          customerId: customer.id,
+          customerId: targetCustomer.id,
           productId: product.id,
           type: "membership",
           status: "active",
@@ -816,12 +891,15 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
           grantedByStaffName: options.soldByStaffName
         });
       }
+      });
     });
 
     if (createdPass) setPunchPasses((prev) => [createdPass as PunchPass, ...prev]);
     if (createdMembership) setMemberships((prev) => [createdMembership as Membership, ...prev]);
     if (newAccessRecords.length > 0) setCustomerAccessRecords((prev) => [...newAccessRecords, ...prev]);
-    setCustomers((prev) => prev.map((entry) => (entry.id === customer.id ? nextCustomer : entry)));
+    setCustomers((prev) =>
+      prev.map((entry) => (entry.id === customer.id ? nextCustomer : entry))
+    );
 
     const cartItems = selectedProducts.map((product) => normalizeCartItem(product));
     const invalidCart = cartItems.find((item) => !item.ok);
@@ -1579,7 +1657,17 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
 
   const updateCustomerWaiver = (
     customerId: string,
-    updates: { status: Waiver["status"]; signedAt?: string | null; expiresAt?: string | null; notes?: string | null; updatedByStaffId: string; updatedByStaffName?: string; signedByStaffId?: string | null }
+    updates: {
+      status: Waiver["status"];
+      signedAt?: string | null;
+      expiresAt?: string | null;
+      notes?: string | null;
+      updatedByStaffId: string;
+      updatedByStaffName?: string;
+      signedByStaffId?: string | null;
+      signedByCustomerId?: string | null;
+      signedByRelationship?: Waiver["signedByRelationship"] | null;
+    }
   ) => {
     if (!updates.updatedByStaffId) return { ok: false as const, message: "Select staff PIN to continue." };
     const customer = customers.find((entry) => entry.id === customerId);
@@ -1593,6 +1681,9 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       signedAt: updates.signedAt === null ? undefined : updates.signedAt ?? existing?.signedAt,
       expiresAt: updates.expiresAt === null ? undefined : updates.expiresAt ?? existing?.expiresAt,
       signedByStaffId: updates.signedByStaffId === null ? undefined : updates.signedByStaffId ?? existing?.signedByStaffId,
+      signedByCustomerId: updates.signedByCustomerId === null ? undefined : updates.signedByCustomerId ?? existing?.signedByCustomerId,
+      signedByRelationship:
+        updates.signedByRelationship === null ? undefined : updates.signedByRelationship ?? existing?.signedByRelationship,
       updatedByStaffId: updates.updatedByStaffId,
       updatedByStaffName: updates.updatedByStaffName,
       notes: updates.notes === null ? undefined : updates.notes ?? existing?.notes
@@ -1609,6 +1700,169 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     return { ok: true as const, message: "Waiver updated." };
   };
 
+  const createHousehold = (input: {
+    householdName: string;
+    primaryContactCustomerId: string;
+    billingCustomerId?: string;
+    locationId: string;
+    notes?: string;
+  }) => {
+    const householdName = input.householdName.trim();
+    if (!householdName) return { ok: false as const, message: "Household name is required." };
+    const primary = customers.find((entry) => entry.id === input.primaryContactCustomerId);
+    if (!primary) return { ok: false as const, message: "Primary contact not found." };
+    const householdId = `hh_${Math.random().toString(36).slice(2, 9)}`;
+    const billingCustomerId = input.billingCustomerId ?? input.primaryContactCustomerId;
+    const nextHousehold: Household = {
+      id: householdId,
+      householdName,
+      primaryContactCustomerId: input.primaryContactCustomerId,
+      billingCustomerId,
+      locationId: input.locationId,
+      notes: input.notes?.trim() || undefined,
+      createdAt: new Date().toISOString()
+    };
+    setHouseholds((prev) => [nextHousehold, ...prev]);
+    setHouseholdMembers((prev) => {
+      const alreadyMember = prev.some(
+        (entry) => entry.householdId === householdId && entry.customerId === input.primaryContactCustomerId
+      );
+      if (alreadyMember) return prev;
+      return [
+        {
+          householdId,
+          customerId: input.primaryContactCustomerId,
+          role: "primary-adult",
+          relationship: "guardian",
+          canCheckInOthers: true,
+          canPurchaseForOthers: true,
+          canSignWaivers: true,
+          emergencyContactPriority: 1
+        },
+        ...prev
+      ];
+    });
+    return { ok: true as const, message: `Household created: ${householdName}.`, householdId };
+  };
+
+  const addHouseholdMember = (input: {
+    householdId: string;
+    customerId: string;
+    role: HouseholdMemberRole;
+    relationship: HouseholdRelationship;
+    canCheckInOthers: boolean;
+    canPurchaseForOthers: boolean;
+    canSignWaivers: boolean;
+    emergencyContactPriority?: number;
+  }) => {
+    const household = households.find((entry) => entry.id === input.householdId);
+    if (!household) return { ok: false as const, message: "Household not found." };
+    const customer = customers.find((entry) => entry.id === input.customerId);
+    if (!customer) return { ok: false as const, message: "Customer not found." };
+    const exists = householdMembers.some(
+      (entry) => entry.householdId === input.householdId && entry.customerId === input.customerId
+    );
+    if (exists) return { ok: false as const, message: "Customer is already in this household." };
+    setHouseholdMembers((prev) => [
+      {
+        householdId: input.householdId,
+        customerId: input.customerId,
+        role: input.role,
+        relationship: input.relationship,
+        canCheckInOthers: input.canCheckInOthers,
+        canPurchaseForOthers: input.canPurchaseForOthers,
+        canSignWaivers: input.canSignWaivers,
+        emergencyContactPriority: input.emergencyContactPriority
+      },
+      ...prev
+    ]);
+    return { ok: true as const, message: `${customer.firstName} ${customer.lastName} added to household.` };
+  };
+
+  const removeHouseholdMember = (householdId: string, customerId: string) => {
+    const exists = householdMembers.some(
+      (entry) => entry.householdId === householdId && entry.customerId === customerId
+    );
+    if (!exists) return { ok: false as const, message: "Household member not found." };
+    setHouseholdMembers((prev) =>
+      prev.filter((entry) => !(entry.householdId === householdId && entry.customerId === customerId))
+    );
+    return { ok: true as const, message: "Household member removed." };
+  };
+
+  const updateHouseholdMember = (
+    householdId: string,
+    customerId: string,
+    updates: Partial<
+      Pick<
+        HouseholdMember,
+        "role" | "relationship" | "canCheckInOthers" | "canPurchaseForOthers" | "canSignWaivers" | "emergencyContactPriority"
+      >
+    >
+  ) => {
+    const exists = householdMembers.some(
+      (entry) => entry.householdId === householdId && entry.customerId === customerId
+    );
+    if (!exists) return { ok: false as const, message: "Household member not found." };
+    setHouseholdMembers((prev) =>
+      prev.map((entry) =>
+        entry.householdId === householdId && entry.customerId === customerId ? { ...entry, ...updates } : entry
+      )
+    );
+    return { ok: true as const, message: "Household member updated." };
+  };
+
+  const familyCheckIn = (input: {
+    actingCustomerId: string;
+    memberIds: string[];
+    staffUserId: string;
+    staffName?: string;
+  }) => {
+    if (!isActiveDateToday) {
+      return { ok: false as const, message: "Historical check-in logs are read-only.", successes: [], failures: [] };
+    }
+    if (!input.staffUserId) {
+      return { ok: false as const, message: "Select staff PIN to continue.", successes: [], failures: [] };
+    }
+
+    const actingMembership = householdMembers.find((entry) => entry.customerId === input.actingCustomerId);
+    if (!actingMembership) {
+      return { ok: false as const, message: "Acting customer is not in a household.", successes: [], failures: [] };
+    }
+    if (!actingMembership.canCheckInOthers) {
+      return { ok: false as const, message: "Guardian approval required.", successes: [], failures: [] };
+    }
+
+    const householdId = actingMembership.householdId;
+    const allowedMembers = householdMembers
+      .filter((entry) => entry.householdId === householdId)
+      .map((entry) => entry.customerId);
+    const targets = input.memberIds.filter((memberId) => allowedMembers.includes(memberId));
+
+    const successes: string[] = [];
+    const failures: string[] = [];
+    targets.forEach((memberId) => {
+      const result = checkInCustomer(memberId, {
+        staffUserId: input.staffUserId,
+        staffName: input.staffName,
+        source: "manual_search",
+        overrideReason: `Family check-in by ${input.actingCustomerId}`
+      });
+      if (result.ok) successes.push(memberId);
+      else failures.push(result.message);
+    });
+
+    return {
+      ok: failures.length === 0,
+      message:
+        failures.length === 0
+          ? `Checked in ${successes.length} household member${successes.length === 1 ? "" : "s"}.`
+          : `Checked in ${successes.length}. ${failures.length} could not be checked in.`,
+      successes,
+      failures
+    };
+  };
+
   const value = useMemo<CustomerStateContextValue>(
     () => ({
       customers,
@@ -1621,6 +1875,8 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       registrations,
       customerAccessRecords,
       waivers,
+      households,
+      householdMembers,
       checkInRecords: checkInLogRecords,
       activeLocationId,
       activeDateKey,
@@ -1673,6 +1929,11 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       updateCustomerAccessRecord,
       addCustomerAccessRecord,
       updateCustomerWaiver,
+      createHousehold,
+      addHouseholdMember,
+      removeHouseholdMember,
+      updateHouseholdMember,
+      familyCheckIn,
       toggleCheckIn,
       resetMockState() {
         setCustomers(seedCustomers);
@@ -1686,10 +1947,12 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         setRegistrations(seedRegistrations);
         setCustomerAccessRecords(seedAccessRecords);
         setWaivers(seedWaivers);
+        setHouseholds(seedHouseholds);
+        setHouseholdMembers(seedHouseholdMembers);
         clearScopedMockState(
           "org_summit",
           "loc_001",
-          ["customers", "punchPasses", "checkIns", "memberships", "transactions", "products", "programs", "sessions", "registrations", "accessRecords", "waivers"]
+          ["customers", "punchPasses", "checkIns", "memberships", "transactions", "products", "programs", "sessions", "registrations", "accessRecords", "waivers", "households", "householdMembers"]
         );
       }
     }),
@@ -1700,6 +1963,8 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       accessProducts,
       customerAccessRecords,
       waivers,
+      households,
+      householdMembers,
       transactions,
       programs,
       sessions,

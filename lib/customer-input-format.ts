@@ -4,25 +4,25 @@ const US_STATE_SET = new Set([
 
 const SMALL_WORDS = new Set(["and", "or", "the", "of", "in", "on", "at", "to", "for"]);
 
-function capitalizeSimple(word: string) {
+function capitalizeSimple(word: string): string {
   if (!word) return word;
   return `${word[0].toUpperCase()}${word.slice(1).toLowerCase()}`;
 }
 
-function capitalizeMcWord(word: string) {
+function capitalizeMcWord(word: string): string {
   const lower = word.toLowerCase();
   if (!lower.startsWith("mc") || lower.length <= 2) return capitalizeSimple(word);
   return `Mc${lower[2].toUpperCase()}${lower.slice(3)}`;
 }
 
-function capitalizeStWord(word: string) {
+function capitalizeStWord(word: string): string {
   const lower = word.toLowerCase();
   if (lower === "st") return "St";
   if (lower === "st.") return "St.";
   return capitalizeSimple(word);
 }
 
-function normalizeWord(word: string, index: number) {
+function normalizeWord(word: string, index: number): string {
   const trimmed = word.trim();
   if (!trimmed) return "";
   if (/^\d/.test(trimmed)) return trimmed;
@@ -49,16 +49,16 @@ function normalizeWord(word: string, index: number) {
   return withApostrophe;
 }
 
-export function normalizeStateInput(value: string) {
+export function normalizeStateInput(value: string): string {
   return value.replace(/[^a-zA-Z]/g, "").slice(0, 2).toUpperCase();
 }
 
-export function isValidUsState(value: string) {
+export function isValidUsState(value: string): boolean {
   if (!value) return false;
   return US_STATE_SET.has(normalizeStateInput(value));
 }
 
-export function normalizeCity(value: string) {
+export function normalizeCity(value: string): string {
   const trimmed = value.trim();
   if (!trimmed) return "";
   return trimmed
@@ -79,7 +79,7 @@ export function normalizeCity(value: string) {
     .join(" ");
 }
 
-export function normalizeStreetAddress(value: string) {
+export function normalizeStreetAddress(value: string): string {
   const trimmed = value.trim();
   if (!trimmed) return "";
   return trimmed

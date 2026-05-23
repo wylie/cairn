@@ -34,7 +34,7 @@ export function SessionScheduleCard({
           <p className="text-xs text-muted-foreground">Instructor: {session.instructorName ?? "Unassigned"}</p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <Badge variant={status === "cancelled" ? "destructive" : "secondary"}>{status}</Badge>
+          <Badge tone={status === "cancelled" ? "danger" : "muted"}>{status}</Badge>
         </div>
       </div>
       <div className="mt-3 flex flex-wrap items-center justify-end gap-2">

@@ -36,6 +36,26 @@ async function completeNewCustomerWizardInPos(
 }
 
 describe("POS page", () => {
+  it("supports purchasing for household member or entire household", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <PosPage />
+      </TestProviders>
+    );
+    await activateStaff(user, "2222");
+
+    await user.type(screen.getByLabelText("Search customer"), "Alex");
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect(screen.getByText("Purchasing for")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Household Member" }));
+    expect(screen.getByLabelText("Purchase for household member")).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Purchase for household member"), "cust_004");
+    await user.click(screen.getByRole("button", { name: "Entire Household" }));
+    expect(screen.getByRole("button", { name: "Entire Household" })).toBeInTheDocument();
+  });
+
   it("selling one day pass creates one post-sale check-in slot assigned to purchasing customer", async () => {
     const user = userEvent.setup();
     render(

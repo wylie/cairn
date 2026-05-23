@@ -29,7 +29,8 @@ export default function PosPage() {
     assignSaleCheckInSlotCustomer,
     fulfillSaleCheckInSlot,
     addCustomer,
-    updateCustomerWaiver
+    updateCustomerWaiver,
+    householdMembers
   } = useCustomerState();
   const { activeStaff, hasPermission, requestStaffSwitch } = useWorkstationState();
 
@@ -42,6 +43,8 @@ export default function PosPage() {
   const [activeFulfillmentTransactionId, setActiveFulfillmentTransactionId] = useState<string | null>(null);
   const [fulfillmentOpen, setFulfillmentOpen] = useState(false);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const [purchaseTarget, setPurchaseTarget] = useState<"self" | "member" | "household">("self");
+  const [purchaseMemberId, setPurchaseMemberId] = useState<string>("");
 
   const selectedCustomer = useMemo(
     () => customers.find((entry) => entry.id === selectedCustomerId) ?? null,
@@ -66,6 +69,16 @@ export default function PosPage() {
   const hasCartItems = cartProducts.length > 0;
   const hasActiveStaff = Boolean(activeStaff);
   const canCheckout = canUsePos && hasSelectedCustomer && hasCartItems && hasActiveStaff;
+  const selectedMembership = selectedCustomer
+    ? householdMembers.find((entry) => entry.customerId === selectedCustomer.id)
+    : undefined;
+  const canPurchaseForHousehold = Boolean(selectedMembership?.canPurchaseForOthers);
+  const householdPurchaseMembers = selectedMembership
+    ? householdMembers
+        .filter((entry) => entry.householdId === selectedMembership.householdId)
+        .map((entry) => customers.find((customer) => customer.id === entry.customerId))
+        .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
+    : [];
 
   const membership = selectedCustomer?.membershipId
     ? memberships.find((entry) => entry.id === selectedCustomer.membershipId)
@@ -97,6 +110,12 @@ export default function PosPage() {
 
     const result = sellAccessProducts({
       customerId: selectedCustomer.id,
+      purchaseForCustomerIds:
+        purchaseTarget === "household"
+          ? householdPurchaseMembers.map((entry) => entry.id)
+          : purchaseTarget === "member" && purchaseMemberId
+            ? [purchaseMemberId]
+            : [selectedCustomer.id],
       productIds: cart,
       soldByStaffId: activeStaff.id,
       soldByStaffName: `${activeStaff.firstName} ${activeStaff.lastName}`,
@@ -171,6 +190,37 @@ export default function PosPage() {
 
             {selectedCustomer?.checkInStatus === "in" ? (
               <p className="text-sm text-amber-800">Customer is already checked in.</p>
+            ) : null}
+            {selectedCustomer && canPurchaseForHousehold ? (
+              <div className="space-y-1 rounded-lg border border-dashed p-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Purchasing for</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant={purchaseTarget === "self" ? "primary" : "secondary"} className="h-9" onClick={() => setPurchaseTarget("self")}>
+                    {selectedCustomer.firstName}
+                  </Button>
+                  <Button type="button" variant={purchaseTarget === "member" ? "primary" : "secondary"} className="h-9" onClick={() => setPurchaseTarget("member")}>
+                    Household Member
+                  </Button>
+                  <Button type="button" variant={purchaseTarget === "household" ? "primary" : "secondary"} className="h-9" onClick={() => setPurchaseTarget("household")}>
+                    Entire Household
+                  </Button>
+                </div>
+                {purchaseTarget === "member" ? (
+                  <select
+                    aria-label="Purchase for household member"
+                    className="h-11 w-full rounded-md border border-input bg-white px-3 text-sm"
+                    value={purchaseMemberId}
+                    onChange={(event) => setPurchaseMemberId(event.target.value)}
+                  >
+                    <option value="">Select household member</option>
+                    {householdPurchaseMembers.map((member) => (
+                      <option key={member.id} value={member.id}>
+                        {member.firstName} {member.lastName}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+              </div>
             ) : null}
             {waiver && waiver.status !== "valid" ? (
               <p className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-sm text-amber-800">Waiver missing or expired</p>

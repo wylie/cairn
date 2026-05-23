@@ -757,7 +757,8 @@ describe("CustomerDetailPage", () => {
     expect(details).not.toHaveTextContent("Date of birth");
   });
 
-  it("shows household placeholder section and actions", async () => {
+  it("shows household placeholder actions and can create household", async () => {
+    const user = userEvent.setup();
     const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
     render(<TestProviders>{page}</TestProviders>);
 
@@ -765,6 +766,19 @@ describe("CustomerDetailPage", () => {
     expect(household).toHaveTextContent("No household assigned");
     expect(within(household).getByRole("button", { name: "Create Household" })).toBeInTheDocument();
     expect(within(household).getByRole("button", { name: "Join Household" })).toBeInTheDocument();
+    await user.type(within(household).getByLabelText("Household name"), "Patel Family");
+    await user.click(within(household).getByRole("button", { name: "Create Household" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Household created: Patel Family.");
+  });
+
+  it("shows assigned household details and member permission actions", async () => {
+    const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_003" }) });
+    render(<TestProviders>{page}</TestProviders>);
+
+    const household = screen.getByLabelText("detail-household");
+    expect(household).toHaveTextContent("Rivera Family");
+    expect(household).toHaveTextContent("Primary contact");
+    expect(within(household).getAllByRole("button", { name: /Allow Check-in Others|Require Guardian/i }).length).toBeGreaterThan(0);
   });
 
   it("comp access grant persists after refresh", async () => {

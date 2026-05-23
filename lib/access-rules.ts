@@ -98,7 +98,8 @@ function pickBestAccess(records: CustomerAccessRecord[], locationId: string, day
     for (const record of sortedCandidates) {
       const usable = accessUsable(record, locationId, dayKey);
       if (usable.ok) return { chosen: record, deniedReasons };
-      deniedReasons.push(usable.reason);
+      const reason = "reason" in usable ? usable.reason : undefined;
+      if (reason) deniedReasons.push(reason);
     }
   }
 

@@ -77,6 +77,8 @@ export interface Waiver {
   signedAt?: string;
   expiresAt?: string;
   signedByStaffId?: string;
+  signedByCustomerId?: string;
+  signedByRelationship?: HouseholdRelationship | "self";
   updatedByStaffId?: string;
   updatedByStaffName?: string;
   notes?: string;
@@ -158,6 +160,45 @@ export interface CustomerPaymentMethod {
   billingName: string;
   isDefault: boolean;
   addedAt: string;
+}
+
+export interface Household {
+  id: string;
+  householdName: string;
+  primaryContactCustomerId: string;
+  billingCustomerId: string;
+  locationId: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export type HouseholdMemberRole =
+  | "primary-adult"
+  | "adult"
+  | "guardian"
+  | "dependent"
+  | "child"
+  | "emergency-contact-only";
+
+export type HouseholdRelationship =
+  | "parent"
+  | "child"
+  | "spouse"
+  | "partner"
+  | "sibling"
+  | "guardian"
+  | "dependent"
+  | "other";
+
+export interface HouseholdMember {
+  householdId: string;
+  customerId: string;
+  role: HouseholdMemberRole;
+  relationship: HouseholdRelationship;
+  canCheckInOthers: boolean;
+  canPurchaseForOthers: boolean;
+  canSignWaivers: boolean;
+  emergencyContactPriority?: number;
 }
 
 export type CheckInSource = "manual_search" | "barcode_scan" | "pos_sale" | "registration";

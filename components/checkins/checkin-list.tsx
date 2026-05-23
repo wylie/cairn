@@ -30,7 +30,9 @@ export function CheckInList() {
     checkOutRecord,
     evaluateCustomerEntry,
     sellAccessProducts,
-    addCustomer
+    addCustomer,
+    householdMembers,
+    familyCheckIn
   } = useCustomerState();
   const { activeStaff, assertPermission, requestStaffSwitch, hasPermission } = useWorkstationState();
 
@@ -43,7 +45,8 @@ export function CheckInList() {
   const [showSwitchPrompt, setShowSwitchPrompt] = useState(false);
   const [sellCustomerId, setSellCustomerId] = useState<string | null>(null);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [familySelection, setFamilySelection] = useState<string[]>([]);
+  const searchInputRef = useRef<HTMLInputElement>(null!);
   const sellCustomer = useMemo(() => customers.find((entry) => entry.id === sellCustomerId) ?? null, [customers, sellCustomerId]);
 
   const queryResults = useMemo(() => searchCustomers(query), [searchCustomers, query]);
@@ -59,6 +62,24 @@ export function CheckInList() {
   const activeRecord = selectedCustomer
     ? todayLogRecords.find((record) => record.customerId === selectedCustomer.id && record.status === "checked-in")
     : null;
+  const selectedHouseholdMembership = selectedCustomer
+    ? householdMembers.find((entry) => entry.customerId === selectedCustomer.id)
+    : undefined;
+  const canActForHousehold = Boolean(selectedHouseholdMembership?.canCheckInOthers);
+  const householdDependents = selectedHouseholdMembership
+    ? householdMembers
+        .filter(
+          (entry) =>
+            entry.householdId === selectedHouseholdMembership.householdId &&
+            entry.customerId !== selectedCustomer?.id &&
+            (entry.role === "child" || entry.role === "dependent")
+        )
+        .map((entry) => ({
+          ...entry,
+          customer: customers.find((customer) => customer.id === entry.customerId)
+        }))
+        .filter((entry) => entry.customer)
+    : [];
 
   const checkInLabel = useMemo(() => {
     if (!selectedDecision) return "";
@@ -115,8 +136,34 @@ export function CheckInList() {
 
   const handleSelect = (customerId: string) => {
     setSelectedCustomerId(customerId);
+    setFamilySelection([]);
     setWarning("");
     setFeedback("");
+  };
+
+  const handleFamilyCheckIn = () => {
+    if (!selectedCustomer || familySelection.length === 0) return;
+    const permission = assertPermission("checkInCustomer");
+    if (!permission.ok) {
+      setWarning(permission.message);
+      setShowSwitchPrompt(true);
+      requestStaffSwitch("Staff PIN Required");
+      return;
+    }
+    const staffName = `${activeStaff!.firstName} ${activeStaff!.lastName}`;
+    const result = familyCheckIn({
+      actingCustomerId: selectedCustomer.id,
+      memberIds: familySelection,
+      staffUserId: activeStaff!.id,
+      staffName
+    });
+    if (!result.ok) {
+      setWarning(result.message);
+      return;
+    }
+    setFeedback(result.message);
+    setWarning("");
+    setFamilySelection([]);
   };
 
   const handleCheckOut = (recordId: string) => {
@@ -298,6 +345,37 @@ export function CheckInList() {
                     </Button>
                   </div>
                 )}
+                {canActForHousehold && householdDependents.length > 0 ? (
+                  <div className="space-y-2 rounded-lg border border-dashed p-3">
+                    <p className="text-sm font-medium">Checking in for household</p>
+                    <div className="space-y-1">
+                      {householdDependents.map((entry) => (
+                        <label key={entry.customerId} className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={familySelection.includes(entry.customerId)}
+                            onChange={(event) =>
+                              setFamilySelection((prev) =>
+                                event.target.checked
+                                  ? [...prev, entry.customerId]
+                                  : prev.filter((memberId) => memberId !== entry.customerId)
+                              )
+                            }
+                          />
+                          <span>{entry.customer?.firstName} {entry.customer?.lastName}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <Button
+                      variant="secondary"
+                      className="w-full min-h-11"
+                      disabled={familySelection.length === 0}
+                      onClick={handleFamilyCheckIn}
+                    >
+                      Check In Selected
+                    </Button>
+                  </div>
+                ) : null}
               </>
             )}
           </div>

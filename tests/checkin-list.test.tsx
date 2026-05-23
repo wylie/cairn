@@ -222,6 +222,24 @@ describe("Workstation staff mode", () => {
 });
 
 describe("CheckIn access methods", () => {
+  it("supports family check-in for dependents when guardian can check in others", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CheckInList />
+      </TestProviders>
+    );
+
+    await activateStaff(user, "1111");
+    await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Alex");
+    await user.keyboard("{Enter}");
+    expect(screen.getByText("Checking in for household")).toBeInTheDocument();
+    await user.click(screen.getByLabelText("Sam Noaccess"));
+    await user.click(screen.getByRole("button", { name: "Check In Selected" }));
+    expect(screen.getByText(/Checked in 1 household member/i)).toBeInTheDocument();
+  });
+
   it("multi-visit pass check-in records punch usage and decreases remaining punches", async () => {
     const user = userEvent.setup();
     render(

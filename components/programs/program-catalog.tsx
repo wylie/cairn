@@ -210,7 +210,7 @@ export function ProgramCatalog({
             <article key={program.id} className="rounded-lg border p-3">
               <div className="flex items-center justify-between gap-2">
                 <p className="font-medium">{program.title}</p>
-                <Badge variant={program.active === false ? "outline" : "secondary"}>{program.active === false ? "inactive" : program.category}</Badge>
+                <Badge tone={program.active === false ? "muted" : "default"}>{program.active === false ? "inactive" : program.category}</Badge>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">{count} session(s) • {formatAgeRange(program)}</p>
               <p className="text-sm text-muted-foreground">Default session capacity: {program.defaultCapacity ?? 12}</p>

@@ -114,10 +114,10 @@ export default function ProductsPage() {
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
-                <Badge variant={product.active === false ? "secondary" : "success"}>{product.active === false ? "Inactive" : "Active"}</Badge>
-                {product.showAsQuickButton ? <Badge variant="secondary">Quick Button</Badge> : null}
-                <Badge variant="secondary">Color: {colorLabel}</Badge>
-                {product.waiverRequired ? <Badge variant="secondary">Waiver Required</Badge> : null}
+                <Badge tone={product.active === false ? "muted" : "success"}>{product.active === false ? "Inactive" : "Active"}</Badge>
+                {product.showAsQuickButton ? <Badge tone="muted">Quick Button</Badge> : null}
+                <Badge tone="muted">Color: {colorLabel}</Badge>
+                {product.waiverRequired ? <Badge tone="muted">Waiver Required</Badge> : null}
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2">

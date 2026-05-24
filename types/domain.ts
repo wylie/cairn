@@ -11,26 +11,72 @@ export interface Location {
   id: string;
   organizationId: string;
   name: string;
+  shortName?: string;
+  addressLine1?: string;
   city: string;
   state: string;
+  postalCode?: string;
+  phone?: string;
+  active?: boolean;
+  isDefault?: boolean;
   capacity?: number;
 }
 
-export type StaffRole = "owner" | "manager" | "front_desk" | "instructor";
+export interface FacilityProfile {
+  organizationId: string;
+  facilityName: string;
+  shortName?: string;
+  businessType?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  timezone: string;
+}
+
+export interface StaffRoleDefinition {
+  id: string;
+  name: string;
+  description?: string;
+  permissions: StaffPermission[];
+  active: boolean;
+  isSystem: boolean;
+}
+
+export type StaffRole = "owner" | "manager" | "front_desk" | "instructor" | "volunteer_limited";
 
 export type StaffPermission =
+  | "viewCustomers"
   | "checkInCustomer"
   | "checkOutCustomer"
   | "overrideAccess"
+  | "compAccess"
   | "editCustomer"
   | "createCustomer"
+  | "mergeCustomer"
+  | "deactivateCustomer"
   | "manageProducts"
+  | "deactivateProduct"
   | "viewReports"
+  | "viewAttendanceReports"
+  | "viewFinancialReports"
+  | "viewMembershipReports"
   | "usePOS"
   | "refundTransaction"
+  | "discountTransaction"
   | "editPrograms"
+  | "cancelPrograms"
+  | "rosterAccess"
   | "manageSettings"
+  | "manageBillingSettings"
+  | "managePlatformSettings"
   | "manageStaff"
+  | "manageRoles"
+  | "inviteStaff"
   | "grantCompAccess";
 
 export interface StaffUser {
@@ -40,14 +86,37 @@ export interface StaffUser {
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string;
+  pronouns?: string;
+  dateOfBirth?: string;
   role: StaffRole;
   initials: string;
   pin: string;
   active: boolean;
+  status?: "active" | "inactive" | "on_leave";
+  startDate?: string;
+  lastActiveAt?: string;
+  assignedProgramIds?: string[];
+  certifications?: string[];
+  notes?: string;
   canTeach?: boolean;
   activeInstructor?: boolean;
   instructorBio?: string;
   permissions: StaffPermission[];
+}
+
+export interface AuditLogEntry {
+  id: string;
+  organizationId: string;
+  locationId: string;
+  action: string;
+  actorStaffId: string;
+  actorStaffName?: string;
+  targetType?: "customer" | "session" | "product" | "registration" | "waiver" | "transaction" | "household" | "system";
+  targetId?: string;
+  reason?: string;
+  metadata?: Record<string, string | number | boolean | null>;
+  createdAt: string;
 }
 
 export type MembershipState = "active" | "expiring" | "inactive" | "trial";
@@ -98,6 +167,12 @@ export interface CustomerAccessRecord {
   notes?: string;
   grantedByStaffId?: string;
   grantedByStaffName?: string;
+  updatedAt?: string;
+  updatedByStaffId?: string;
+  updatedByStaffName?: string;
+  pausedAt?: string;
+  cancelledAt?: string;
+  archivedAt?: string;
 }
 
 export interface Customer {
@@ -135,6 +210,28 @@ export interface Customer {
   notes?: string;
   relatedCustomers?: CustomerRelationship[];
   paymentMethods?: CustomerPaymentMethod[];
+  staffProfile?: StaffProfile;
+}
+
+export interface StaffProfile {
+  isStaff: boolean;
+  staffId: string;
+  role: StaffRole;
+  status: "active" | "inactive" | "on_leave";
+  staffPin: string;
+  locations: string[];
+  assignedPrograms: string[];
+  permissions: StaffPermission[];
+  startDate?: string;
+  certifications?: string[];
+  staffNotes?: string;
+  lastActive?: string;
+  activityTimeline?: Array<{
+    id: string;
+    action: string;
+    occurredAt: string;
+    detail?: string;
+  }>;
 }
 
 export type CustomerRelationshipType =
@@ -182,17 +279,21 @@ export type HouseholdMemberRole =
 
 export type HouseholdRelationship =
   | "parent"
+  | "parent_guardian"
   | "child"
   | "spouse"
   | "partner"
+  | "spouse_partner"
   | "sibling"
   | "guardian"
   | "dependent"
+  | "emergency_contact_only"
   | "other";
 
 export interface HouseholdMember {
   householdId: string;
   customerId: string;
+  memberType: "adult" | "child";
   role: HouseholdMemberRole;
   relationship: HouseholdRelationship;
   canCheckInOthers: boolean;
@@ -255,13 +356,26 @@ export interface Program {
   title: string;
   description?: string;
   category: "class" | "camp" | "clinic" | "course";
+  programType?: "recurring_class" | "one_time_event" | "camp" | "clinic" | "team_league" | "appointment_session";
   active?: boolean;
   colorToken?: "blue" | "green" | "amber" | "purple" | "orange" | "slate" | "gray" | "red";
   defaultCapacity?: number;
   requiresWaiver?: boolean;
+  guardianRequired?: boolean;
+  dropInAllowed?: boolean;
+  memberRequired?: boolean;
+  skillLevel?: string;
+  prerequisites?: string;
+  locationId?: string;
+  instructorIds?: string[];
+  pricingModel?: "free" | "included_membership" | "paid_registration" | "drop_in_fee";
+  dropInFeeCents?: number;
+  basePriceCents?: number;
+  waitlistEnabled?: boolean;
   minimumAge?: number;
   maximumAge?: number;
   ageRange?: string;
+  tags?: string[];
 }
 
 export interface ClassCampSession {
@@ -289,7 +403,13 @@ export interface Registration {
   id: string;
   customerId: string;
   sessionId: string;
-  status: "confirmed" | "waitlisted" | "cancelled";
+  status: "confirmed" | "waitlisted" | "cancelled" | "attended" | "absent" | "late" | "excused" | "no_show" | "checked_in" | "completed";
+  waitlistPosition?: number;
+  registeredAt?: string;
+  updatedAt?: string;
+  updatedByStaffId?: string;
+  notes?: string;
+  paymentStatus?: "paid" | "unpaid" | "included" | "comped";
 }
 
 export interface PosProduct {
@@ -299,7 +419,8 @@ export interface PosProduct {
   description?: string;
   category: "day_passes" | "memberships" | "punch_passes" | "classes" | "camps" | "retail" | "comps" | "misc";
   priceCents: number;
-  type?: "access" | "membership" | "punch-pass" | "class" | "camp" | "retail" | "comp";
+  type?: "access" | "membership" | "punch-pass" | "class" | "camp" | "registration" | "retail" | "comp";
+  displayType?: string;
   productCategory?:
     | "day_passes"
     | "memberships"
@@ -313,6 +434,7 @@ export interface PosProduct {
   colorLabel?: string;
   categoryColorToken?: "blue" | "green" | "amber" | "purple" | "orange" | "gray";
   showAsQuickButton?: boolean;
+  quickButtonRank?: number;
   accessScope?: "facility" | "class" | "camp";
   accessBehavior?: "single_entry" | "punch_decrement" | "recurring_membership" | "registration_access" | "manual_comp" | "retail_placeholder";
   expirationBehavior?: "end_of_day" | "fixed_date" | "rolling_30_days" | "monthly";
@@ -320,6 +442,21 @@ export interface PosProduct {
   punchQuantity?: number;
   expirationDays?: number;
   waiverRequired?: boolean;
+  taxable?: boolean;
+  minimumAge?: number;
+  maximumAge?: number;
+  guardianRequired?: boolean;
+  householdEligible?: boolean;
+  simultaneousAccessAllowed?: boolean;
+  eligibleLocationIds?: string[];
+  internalNotes?: string;
+  tags?: string[];
+  archivedAt?: string;
+  createdByStaffId?: string;
+  createdByStaffName?: string;
+  updatedByStaffId?: string;
+  updatedByStaffName?: string;
+  updatedAt?: string;
   active?: boolean;
 }
 

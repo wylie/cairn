@@ -13,6 +13,15 @@ export function StaffPinModal() {
     if (pinModalOpen) setPin("");
   }, [pinModalOpen]);
 
+  useEffect(() => {
+    if (!pinModalOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeStaffSwitch();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [pinModalOpen, closeStaffSwitch]);
+
   if (!pinModalOpen) return null;
 
   const submit = () => {
@@ -20,8 +29,14 @@ export function StaffPinModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4" role="dialog" aria-modal="true" aria-label="Staff PIN">
-      <div className="w-full max-w-sm rounded-xl border bg-card p-4 shadow-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Staff PIN"
+      onMouseDown={closeStaffSwitch}
+    >
+      <div className="w-full max-w-sm rounded-xl border bg-card p-4 shadow-sm" onMouseDown={(event) => event.stopPropagation()}>
         <h3 className="text-lg font-semibold">{pinTitle}</h3>
         <p className="mt-1 text-sm text-muted-foreground">Enter 4-digit PIN</p>
 

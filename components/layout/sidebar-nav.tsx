@@ -1,24 +1,38 @@
 import Link from "next/link";
-import { LayoutDashboard, Users, ScanLine, Calendar, Boxes, CreditCard, BarChart3, Settings, Tags } from "lucide-react";
+import { LayoutDashboard, Users, ScanLine, Calendar, Boxes, CreditCard, BarChart3, Settings, Tags, UserCog } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { StaffPermission } from "@/types/domain";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/customers", label: "Customers", icon: Users },
+  { href: "/customers", label: "Customers", icon: Users, permissions: ["viewCustomers"] as StaffPermission[] },
   { href: "/check-in", label: "Check-in", icon: ScanLine },
   { href: "/calendar", label: "Calendar", icon: Calendar },
-  { href: "/programs", label: "Programs", icon: Boxes },
-  { href: "/products", label: "Products", icon: Tags },
-  { href: "/pos", label: "POS", icon: CreditCard },
-  { href: "/reports", label: "Reports", icon: BarChart3 },
-  { href: "/settings", label: "Settings", icon: Settings }
+  { href: "/programs", label: "Programs", icon: Boxes, permissions: ["editPrograms", "rosterAccess"] as StaffPermission[] },
+  { href: "/products", label: "Products", icon: Tags, permissions: ["manageProducts"] as StaffPermission[] },
+  { href: "/pos", label: "POS", icon: CreditCard, permissions: ["usePOS"] as StaffPermission[] },
+  { href: "/reports", label: "Reports", icon: BarChart3, permissions: ["viewReports", "viewAttendanceReports", "viewFinancialReports"] as StaffPermission[] },
+  { href: "/staff", label: "Staff", icon: UserCog, permissions: ["manageStaff", "inviteStaff", "manageRoles"] as StaffPermission[] },
+  {
+    href: "/settings",
+    label: "Settings",
+    icon: Settings,
+    permissions: ["manageSettings", "manageStaff", "manageProducts"] as StaffPermission[]
+  }
 ];
 
-export function SidebarNav({ pathname }: { pathname: string }) {
+export function SidebarNav({
+  pathname,
+  canAccessPermissions
+}: {
+  pathname: string;
+  canAccessPermissions?: (permissions?: StaffPermission[]) => boolean;
+}) {
+  const visibleItems = navItems.filter((item) => (canAccessPermissions ? canAccessPermissions(item.permissions) : true));
   return (
     <nav className="space-y-1">
-      {navItems.map((item) => {
-        const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+      {visibleItems.map((item) => {
+        const isActive = pathname === item.href || Boolean(pathname?.startsWith(`${item.href}/`));
         return (
           <Link
             key={item.href}

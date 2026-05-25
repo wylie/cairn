@@ -1,19 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { data } from "@/lib/data";
 import { useCustomerState } from "@/lib/state/customer-state";
+import { useSettingsState } from "@/lib/state/settings-state";
 import { ActiveStaffIndicator } from "@/components/staff/active-staff-indicator";
 
 export function TopBar() {
-  const location = data.locations[0];
+  const { settings, activeLocationId } = useSettingsState();
+  const location =
+    settings.locations.find((entry) => entry.id === activeLocationId) ??
+    settings.locations.find((entry) => entry.isDefault) ??
+    settings.locations[0];
   const { occupancyCount } = useCustomerState();
 
   return (
     <header className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4">
       <div>
         <p className="text-xs uppercase tracking-wide text-muted-foreground">Active Location</p>
-        <p className="font-semibold">{location.name}</p>
+        <p className="font-semibold">{location?.name ?? "Unknown Location"}</p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Link

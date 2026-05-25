@@ -22,6 +22,7 @@ export function PermissionGate({
   return (
     <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
       <p className="text-sm text-amber-800">You do not have permission to perform this action.</p>
+      <p className="mt-1 text-xs text-amber-700">Ask a manager for assistance.</p>
       <div className="mt-3">
         <StaffSwitcher label="Switch Staff" />
       </div>

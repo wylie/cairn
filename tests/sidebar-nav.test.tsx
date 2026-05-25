@@ -5,7 +5,7 @@ describe("SidebarNav", () => {
   it("renders expected primary navigation links", () => {
     render(<SidebarNav pathname="/dashboard" />);
 
-    ["Dashboard", "Customers", "Check-in", "Calendar", "Programs", "Products", "POS", "Reports", "Settings"].forEach((label) => {
+    ["Dashboard", "Customers", "Check-in", "Calendar", "Programs", "Products", "POS", "Reports", "Staff", "Settings"].forEach((label) => {
       expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
     });
   });

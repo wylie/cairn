@@ -4,9 +4,18 @@ import { usePathname } from "next/navigation";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { TopBar } from "@/components/layout/top-bar";
 import { defaultOrganization } from "@/lib/data";
+import { useWorkstationState } from "@/lib/state/workstation-state";
+import type { StaffPermission } from "@/types/domain";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { hasAnyPermission, activeStaff } = useWorkstationState();
+
+  const canAccessPermissions = (permissions?: StaffPermission[]) => {
+    if (!activeStaff) return true;
+    if (!permissions || permissions.length === 0) return true;
+    return hasAnyPermission(permissions);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -16,7 +25,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <h1 className="mt-1 text-lg font-semibold">{defaultOrganization.name}</h1>
           <p className="mt-1 text-xs text-muted-foreground">{defaultOrganization.facilityType.replace("_", " ")}</p>
           <div className="mt-5">
-            <SidebarNav pathname={pathname} />
+            <SidebarNav pathname={pathname} canAccessPermissions={canAccessPermissions} />
           </div>
         </aside>
         <main className="space-y-4">

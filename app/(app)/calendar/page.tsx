@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { InteractiveCalendar } from "@/components/calendar/interactive-calendar";
 import { ScheduleFilters } from "@/components/calendar/schedule-filters";
 import { SessionDetailPanel } from "@/components/calendar/session-detail-panel";
 import { SessionFormPanel } from "@/components/calendar/session-form-panel";
-import { SessionScheduleCard } from "@/components/calendar/session-schedule-card";
 import { ScheduleViewToggle } from "@/components/calendar/schedule-view-toggle";
 import { SellAccessModal } from "@/components/pos/sell-access-modal";
 import { PageHeader } from "@/components/shared/page-header";
@@ -12,9 +12,6 @@ import { Button } from "@/components/ui/button";
 import {
   buildSessionCards,
   filterScheduleSessions,
-  sessionsForMonth,
-  sessionsForDay,
-  sessionsForWeek,
   sortSessionsByStart,
   type ScheduleView
 } from "@/lib/data/session-schedule";
@@ -87,6 +84,7 @@ export default function CalendarPage() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [sellCustomerId, setSellCustomerId] = useState<string | null>(null);
   const [conflictWarning, setConflictWarning] = useState("");
+  const [createPrefill, setCreatePrefill] = useState<{ date: string; startTime: string; endTime: string } | null>(null);
 
   const instructors = staffUsers.filter((entry) => (entry.role === "instructor" || entry.canTeach) && entry.activeInstructor !== false);
   const activePrograms = useMemo(() => programs.filter((entry) => entry.active !== false), [programs]);
@@ -110,14 +108,10 @@ export default function CalendarPage() {
     [sessionCards, search, locationId, category, programType, ageGroup, instructor, status, dateKey]
   );
 
-  const visibleCards = useMemo(() => {
+  const scopedEntries = useMemo(() => {
     const sorted = sortSessionsByStart(filtered);
-    const scoped = activeStaff?.role === "instructor" ? sorted.filter((entry) => entry.session.instructorStaffId === activeStaff.id) : sorted;
-    if (view === "day") return sessionsForDay(scoped, dateKey);
-    if (view === "week") return sessionsForWeek(scoped, dateKey);
-    if (view === "month") return sessionsForMonth(scoped, dateKey);
-    return scoped;
-  }, [filtered, view, dateKey, activeStaff?.id, activeStaff?.role]);
+    return activeStaff?.role === "instructor" ? sorted.filter((entry) => entry.session.instructorStaffId === activeStaff.id) : sorted;
+  }, [filtered, activeStaff?.id, activeStaff?.role]);
 
   const activeSession = activeSessionId ? sessions.find((entry) => entry.id === activeSessionId) ?? null : null;
   const sellCustomer = sellCustomerId ? customers.find((entry) => entry.id === sellCustomerId) ?? null : null;
@@ -252,6 +246,7 @@ export default function CalendarPage() {
               }
               setShowCreate(true);
               setEditingSessionId(null);
+              setCreatePrefill(null);
             }}
           >
             Create Session
@@ -284,26 +279,37 @@ export default function CalendarPage() {
         instructors={instructors}
       />
 
-      <div className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
+      <div className="grid gap-4 xl:grid-cols-[1.45fr_1fr]">
         <div className="space-y-3" aria-label="schedule-results">
-          {visibleCards.length === 0 ? <p className="rounded-xl border bg-card px-4 py-6 text-sm text-muted-foreground">No sessions found.</p> : null}
-          {visibleCards.map((entry) => (
-            <SessionScheduleCard
-              key={entry.session.id}
-              entry={entry}
-              onOpen={(sessionId) => setActiveSessionId(sessionId)}
-              onEdit={(sessionId) => {
-                const allowed = requireScheduleEditPermission();
-                if (!allowed.ok) {
-                  setWarning(allowed.message);
-                  setFeedback("");
-                  return;
-                }
-                setEditingSessionId(sessionId);
-                setShowCreate(false);
-              }}
-            />
-          ))}
+          <InteractiveCalendar
+            view={view}
+            dateKey={dateKey}
+            entries={scopedEntries}
+            onViewChange={setView}
+            onDateKeyChange={setDateKey}
+            onOpenSession={(sessionId) => setActiveSessionId(sessionId)}
+            onEditSession={(sessionId) => {
+              const allowed = requireScheduleEditPermission();
+              if (!allowed.ok) {
+                setWarning(allowed.message);
+                setFeedback("");
+                return;
+              }
+              setEditingSessionId(sessionId);
+              setShowCreate(false);
+            }}
+            onCreateAtSlot={(prefill) => {
+              const allowed = requireScheduleEditPermission();
+              if (!allowed.ok) {
+                setWarning(allowed.message);
+                setFeedback("");
+                return;
+              }
+              setCreatePrefill(prefill);
+              setShowCreate(true);
+              setEditingSessionId(null);
+            }}
+          />
         </div>
 
         <div className="space-y-4">
@@ -315,10 +321,16 @@ export default function CalendarPage() {
               instructors={instructors}
               warning={warning}
               conflictWarning={conflictWarning}
+              initialValues={
+                createPrefill
+                  ? { date: createPrefill.date, startTime: createPrefill.startTime, endTime: createPrefill.endTime }
+                  : undefined
+              }
               onCancel={() => {
                 setShowCreate(false);
                 setWarning("");
                 setConflictWarning("");
+                setCreatePrefill(null);
               }}
               onSave={(values) => {
                 const allowed = requireScheduleEditPermission();
@@ -384,6 +396,7 @@ export default function CalendarPage() {
                 setWarning("");
                 setShowCreate(false);
                 setConflictWarning("");
+                setCreatePrefill(null);
               }}
             />
           ) : null}

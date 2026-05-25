@@ -70,7 +70,8 @@ export function SessionFormPanel({
   conflictWarning,
   onSave,
   onCancel,
-  onCancelSession
+  onCancelSession,
+  initialValues
 }: {
   mode: "create" | "edit";
   session?: ClassCampSession | null;
@@ -82,6 +83,7 @@ export function SessionFormPanel({
   onSave: (values: SessionFormValues) => void;
   onCancel: () => void;
   onCancelSession?: () => void;
+  initialValues?: Partial<SessionFormValues>;
 }) {
   const defaultProgramId = programs[0]?.id ?? "";
   const defaultCapacity = String(programs[0]?.defaultCapacity ?? 12);
@@ -104,12 +106,13 @@ export function SessionFormPanel({
       ...emptyValues,
       programId: defaultProgramId,
       locationId: locations[0]?.id ?? "",
-      capacity: defaultCapacity
+      capacity: defaultCapacity,
+      ...initialValues
     };
     setValues(next);
     lastProgramIdRef.current = next.programId;
     setCapacityEdited(false);
-  }, [session, defaultProgramId, defaultCapacity, locations]);
+  }, [session, defaultProgramId, defaultCapacity, locations, initialValues]);
 
   useEffect(() => {
     if (mode !== "create") return;

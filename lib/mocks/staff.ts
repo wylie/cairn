@@ -200,5 +200,25 @@ export const staffUsers: StaffUser[] = [
     certifications: ["Front Desk Onboarding"],
     notes: "Assigned to Summit Uptown only.",
     permissions: ["checkInCustomer", "checkOutCustomer", "usePOS", "createCustomer", "viewCustomers", "rosterAccess"]
+  },
+  {
+    id: "staff_f_001",
+    organizationId: "org_fiddlehead",
+    locationIds: ["loc_101", "loc_102"],
+    firstName: "Avery",
+    lastName: "Morgan",
+    email: "owner@fiddlehead.example",
+    phone: "(828) 555-4201",
+    pronouns: "She/her",
+    role: "owner",
+    initials: "AM",
+    pin: "9111",
+    active: true,
+    status: "active",
+    startDate: "2023-07-01",
+    lastActiveAt: "2026-05-24T10:00:00Z",
+    certifications: ["Wilderness First Aid"],
+    notes: "Fiddlehead owner.",
+    permissions: ["viewCustomers", "editCustomer", "createCustomer", "checkInCustomer", "checkOutCustomer", "overrideAccess", "compAccess", "manageProducts", "deactivateProduct", "viewReports", "viewAttendanceReports", "viewFinancialReports", "viewMembershipReports", "usePOS", "refundTransaction", "discountTransaction", "editPrograms", "cancelPrograms", "rosterAccess", "manageSettings", "manageBillingSettings", "managePlatformSettings", "manageStaff", "manageRoles", "inviteStaff", "grantCompAccess"]
   }
 ];

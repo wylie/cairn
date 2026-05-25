@@ -21,6 +21,13 @@ const navItems = [
   }
 ];
 
+function buildOrgHref(pathname: string, href: string) {
+  const match = pathname.match(/^\/o\/([^/]+)/);
+  const slug = match?.[1];
+  if (!slug) return href;
+  return `/o/${slug}${href}`;
+}
+
 export function SidebarNav({
   pathname,
   canAccessPermissions
@@ -32,11 +39,16 @@ export function SidebarNav({
   return (
     <nav className="space-y-1">
       {visibleItems.map((item) => {
-        const isActive = pathname === item.href || Boolean(pathname?.startsWith(`${item.href}/`));
+        const orgHref = buildOrgHref(pathname, item.href);
+        const isActive =
+          pathname === item.href ||
+          Boolean(pathname?.startsWith(`${item.href}/`)) ||
+          pathname === orgHref ||
+          Boolean(pathname?.startsWith(`${orgHref}/`));
         return (
           <Link
             key={item.href}
-            href={item.href}
+            href={orgHref}
             prefetch
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",

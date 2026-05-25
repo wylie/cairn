@@ -2,6 +2,7 @@ export type FacilityType = "climbing" | "yoga" | "fitness" | "camp" | "bike_park
 
 export interface Organization {
   id: string;
+  slug: string;
   name: string;
   facilityType: FacilityType;
   timezone: string;

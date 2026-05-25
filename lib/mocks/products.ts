@@ -233,5 +233,39 @@ export const posProducts: PosProduct[] = [
     accessBehavior: "retail_placeholder",
     waiverRequired: true,
     active: true
+  },
+  {
+    id: "prd_f_001",
+    organizationId: "org_fiddlehead",
+    name: "Forest Day Pass",
+    description: "Single-day trail access.",
+    category: "day_passes",
+    priceCents: 2200,
+    type: "access",
+    productCategory: "day_passes",
+    categoryColorToken: "blue",
+    showAsQuickButton: true,
+    accessScope: "facility",
+    accessBehavior: "single_entry",
+    expirationBehavior: "end_of_day",
+    waiverRequired: true,
+    active: true
+  },
+  {
+    id: "prd_f_002",
+    organizationId: "org_fiddlehead",
+    name: "Fiddlehead Membership",
+    description: "Monthly unlimited access at Fiddlehead locations.",
+    category: "memberships",
+    priceCents: 9900,
+    type: "membership",
+    productCategory: "memberships",
+    categoryColorToken: "green",
+    showAsQuickButton: true,
+    accessScope: "facility",
+    accessBehavior: "recurring_membership",
+    expirationBehavior: "monthly",
+    waiverRequired: true,
+    active: true
   }
 ];

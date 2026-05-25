@@ -1,22 +1,71 @@
-import Link from "next/link";
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const next = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("next") : null;
+  const [email, setEmail] = useState("taylor@summitrec.co");
+  const [password, setPassword] = useState("dev1234");
+  const [error, setError] = useState("");
+  const [pending, setPending] = useState(false);
+
+  const onSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setPending(true);
+    setError("");
+    try {
+      const response = await fetch("/api/auth/mock-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.ok) {
+        setError(payload.message ?? "Unable to sign in.");
+        return;
+      }
+
+      if (next && next.startsWith("/o/")) {
+        router.push(next);
+      } else {
+        const orgs: string[] = payload.user?.organizations ?? [];
+        if (orgs.length > 1) router.push("/org-chooser");
+        else router.push(`/o/${orgs[0] ?? "summit"}/dashboard`);
+      }
+      router.refresh();
+    } catch {
+      setError("Unable to sign in.");
+    } finally {
+      setPending(false);
+    }
+  };
+
   return (
     <div className="mx-auto flex min-h-screen max-w-md items-center p-4">
       <Card className="w-full">
         <CardHeader>
           <CardTitle>Staff Login</CardTitle>
-          <CardDescription>Placeholder screen for authenticated staff access.</CardDescription>
+          <CardDescription>Password-protected multi-organization access.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            TODO(auth): Replace with Supabase Auth + role-based routing for front desk, manager, and admin.
-          </p>
-          <Link href="/dashboard">
-            <Button className="w-full">Continue to MVP</Button>
-          </Link>
+        <CardContent className="space-y-4">
+          <p className="text-xs text-muted-foreground">Mock login for local development.</p>
+          <form className="space-y-3" onSubmit={onSubmit}>
+            <label className="block space-y-1 text-sm">
+              <span>Email</span>
+              <Input value={email} onChange={(event) => setEmail(event.target.value)} type="email" />
+            </label>
+            <label className="block space-y-1 text-sm">
+              <span>Password</span>
+              <Input value={password} onChange={(event) => setPassword(event.target.value)} type="password" />
+            </label>
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            <Button className="w-full" type="submit" disabled={pending}>{pending ? "Signing in..." : "Sign in"}</Button>
+          </form>
         </CardContent>
       </Card>
     </div>

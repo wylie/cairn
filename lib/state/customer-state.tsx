@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { checkInRecords as seedCheckInRecords } from "@/lib/mocks/checkins";
 import { accessRecords as seedAccessRecords } from "@/lib/mocks/access-records";
 import { customers as seedCustomers } from "@/lib/mocks/customers";
@@ -47,6 +48,7 @@ import type {
   StaffRole,
   Waiver
 } from "@/types/domain";
+import { resolveTenant } from "@/lib/tenant/resolve";
 
 const BASE_DATE = "2026-05-20";
 
@@ -120,8 +122,8 @@ function normalizeProgramForState(program: Program): Program {
   return program;
 }
 
-function normalizeCustomersForState(customers: Customer[]): Customer[] {
-  const seededById = new Map(seedCustomers.map((customer) => [customer.id, customer]));
+function normalizeCustomersForState(customers: Customer[], seededCustomers: Customer[]): Customer[] {
+  const seededById = new Map(seededCustomers.map((customer) => [customer.id, customer]));
   return customers.map((customer) => {
     const seeded = seededById.get(customer.id);
     if (!seeded) return customer;
@@ -146,10 +148,10 @@ function normalizeCustomersForState(customers: Customer[]): Customer[] {
   });
 }
 
-function mergeSeedCustomers(stored: Customer[]) {
+function mergeSeedCustomers(stored: Customer[], seededCustomers: Customer[]) {
   const byId = new Map(stored.map((customer) => [customer.id, customer]));
   const merged: Customer[] = [...stored];
-  for (const seeded of seedCustomers) {
+  for (const seeded of seededCustomers) {
     if (!byId.has(seeded.id)) {
       merged.push(seeded);
     }
@@ -473,52 +475,68 @@ interface CustomerStateContextValue {
 const CustomerStateContext = createContext<CustomerStateContextValue | null>(null);
 
 export function CustomerStateProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const orgSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? "summit";
+  const tenant = resolveTenant(orgSlug);
+  const activeOrgId = tenant?.organizationId ?? "org_summit";
+  const activeLocationId = tenant?.currentLocationId ?? "loc_001";
+  const seededCustomersForOrg = seedCustomers.filter((entry) => entry.organizationId === activeOrgId);
+  const seededProductsForOrg = seedPosProducts.filter((entry) => entry.organizationId === activeOrgId).map(normalizeProductForState);
+  const seededProgramsForOrg = seedPrograms.filter((entry) => entry.organizationId === activeOrgId).map(normalizeProgramForState);
+  const seededSessionsForOrg = seedSessions.filter((entry) => seededProgramsForOrg.some((program) => program.id === entry.programId));
+  const seededRegistrationsForOrg = seedRegistrations.filter((entry) => seededSessionsForOrg.some((session) => session.id === entry.sessionId));
+  const seededMembershipsForOrg = seedMemberships.filter((entry) => seededCustomersForOrg.some((customer) => customer.id === entry.customerId));
+  const seededPunchPassesForOrg = seedPunchPasses.filter((entry) => seededCustomersForOrg.some((customer) => customer.id === entry.customerId));
+  const seededTransactionsForOrg = seedPosTransactions.filter((entry) => entry.organizationId === activeOrgId);
+  const seededAccessRecordsForOrg = seedAccessRecords.filter((entry) => seededCustomersForOrg.some((customer) => customer.id === entry.customerId));
+  const seededWaiversForOrg = seedWaivers.filter((entry) => seededCustomersForOrg.some((customer) => customer.id === entry.customerId));
+  const orgLocationIds = seedLocations.filter((entry) => entry.organizationId === activeOrgId).map((entry) => entry.id);
+  const seededHouseholdsForOrg = seedHouseholds.filter((entry) => orgLocationIds.includes(entry.locationId));
+  const seededHouseholdMembersForOrg = seedHouseholdMembers.filter((entry) => seededHouseholdsForOrg.some((household) => household.id === entry.householdId));
+
   const storageKeys = {
-    customers: buildScopedMockKey("org_summit", "loc_001", "customers"),
-    passes: buildScopedMockKey("org_summit", "loc_001", "punchPasses"),
-    checkins: buildScopedMockKey("org_summit", "loc_001", "checkIns"),
-    memberships: buildScopedMockKey("org_summit", "loc_001", "memberships"),
-    transactions: buildScopedMockKey("org_summit", "loc_001", "transactions"),
-    products: buildScopedMockKey("org_summit", "loc_001", "products"),
-    programs: buildScopedMockKey("org_summit", "loc_001", "programs"),
-    sessions: buildScopedMockKey("org_summit", "loc_001", "sessions"),
-    registrations: buildScopedMockKey("org_summit", "loc_001", "registrations"),
-    accessRecords: buildScopedMockKey("org_summit", "loc_001", "accessRecords"),
-    waivers: buildScopedMockKey("org_summit", "loc_001", "waivers"),
-    households: buildScopedMockKey("org_summit", "loc_001", "households"),
-    householdMembers: buildScopedMockKey("org_summit", "loc_001", "householdMembers")
+    customers: buildScopedMockKey(activeOrgId, activeLocationId, "customers"),
+    passes: buildScopedMockKey(activeOrgId, activeLocationId, "punchPasses"),
+    checkins: buildScopedMockKey(activeOrgId, activeLocationId, "checkIns"),
+    memberships: buildScopedMockKey(activeOrgId, activeLocationId, "memberships"),
+    transactions: buildScopedMockKey(activeOrgId, activeLocationId, "transactions"),
+    products: buildScopedMockKey(activeOrgId, activeLocationId, "products"),
+    programs: buildScopedMockKey(activeOrgId, activeLocationId, "programs"),
+    sessions: buildScopedMockKey(activeOrgId, activeLocationId, "sessions"),
+    registrations: buildScopedMockKey(activeOrgId, activeLocationId, "registrations"),
+    accessRecords: buildScopedMockKey(activeOrgId, activeLocationId, "accessRecords"),
+    waivers: buildScopedMockKey(activeOrgId, activeLocationId, "waivers"),
+    households: buildScopedMockKey(activeOrgId, activeLocationId, "households"),
+    householdMembers: buildScopedMockKey(activeOrgId, activeLocationId, "householdMembers")
   };
 
-  const seededProducts = seedPosProducts.map(normalizeProductForState);
-  const seededPrograms = seedPrograms.map(normalizeProgramForState);
-  const seededCheckIns = seedCheckInRecords.map((record) => ({
+  const seededCheckIns = seedCheckInRecords.filter((entry) => entry.organizationId === activeOrgId).map((record) => ({
     ...record,
     checkedInByStaffId: record.checkedInByStaffId ?? record.staffUserId ?? "",
     checkedInByStaffName: record.checkedInByStaffName
   }));
 
-  const [customers, setCustomers] = useState<Customer[]>(normalizeCustomersForState(seedCustomers));
-  const [memberships, setMemberships] = useState<Membership[]>(seedMemberships);
-  const [punchPasses, setPunchPasses] = useState<PunchPass[]>(seedPunchPasses);
+  const [customers, setCustomers] = useState<Customer[]>(normalizeCustomersForState(seededCustomersForOrg, seededCustomersForOrg));
+  const [memberships, setMemberships] = useState<Membership[]>(seededMembershipsForOrg);
+  const [punchPasses, setPunchPasses] = useState<PunchPass[]>(seededPunchPassesForOrg);
   const [transactions, setTransactions] = useState<PosTransaction[]>(
-    normalizeTransactions(seedPosTransactions as Partial<PosTransaction>[], seededProducts)
+    normalizeTransactions(seededTransactionsForOrg as Partial<PosTransaction>[], seededProductsForOrg)
   );
-  const [accessProducts, setAccessProducts] = useState<PosProduct[]>(seededProducts);
-  const [programs, setPrograms] = useState<Program[]>(seededPrograms);
+  const [accessProducts, setAccessProducts] = useState<PosProduct[]>(seededProductsForOrg);
+  const [programs, setPrograms] = useState<Program[]>(seededProgramsForOrg);
   const [sessions, setSessions] = useState<ClassCampSession[]>(
-    seedSessions.map((session) => normalizeSessionForState(session, seededPrograms))
+    seededSessionsForOrg.map((session) => normalizeSessionForState(session, seededProgramsForOrg))
   );
-  const [registrations, setRegistrations] = useState<Registration[]>(seedRegistrations);
-  const [customerAccessRecords, setCustomerAccessRecords] = useState<CustomerAccessRecord[]>(seedAccessRecords);
-  const [waivers, setWaivers] = useState<Waiver[]>(seedWaivers);
-  const [households, setHouseholds] = useState<Household[]>(seedHouseholds);
+  const [registrations, setRegistrations] = useState<Registration[]>(seededRegistrationsForOrg);
+  const [customerAccessRecords, setCustomerAccessRecords] = useState<CustomerAccessRecord[]>(seededAccessRecordsForOrg);
+  const [waivers, setWaivers] = useState<Waiver[]>(seededWaiversForOrg);
+  const [households, setHouseholds] = useState<Household[]>(seededHouseholdsForOrg);
   const [householdMembers, setHouseholdMembers] = useState<HouseholdMember[]>(
-    seedHouseholdMembers.map(normalizeHouseholdMemberForState)
+    seededHouseholdMembersForOrg.map(normalizeHouseholdMemberForState)
   );
   const [checkInLogRecords, setCheckInLogRecords] = useState<CheckInLogRecord[]>(seededCheckIns);
   const [hydrated, setHydrated] = useState(false);
   const [activeDateKey, setActiveDateKey] = useState<string>(BASE_DATE);
-  const activeLocationId = "loc_001";
 
   const todayLogRecords = useMemo(
     () =>
@@ -564,41 +582,68 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
   };
 
   useEffect(() => {
-    const products = (loadMockState(storageKeys.products, seedPosProducts) as PosProduct[]).map(normalizeProductForState);
-    const storedPrograms = (loadMockState(storageKeys.programs, seedPrograms) as Program[]).map(normalizeProgramForState);
-    const storedCheckIns = loadMockState(storageKeys.checkins, seedCheckInRecords).map((record) => ({
+    const products = (loadMockState(storageKeys.products, seededProductsForOrg) as PosProduct[]).map(normalizeProductForState);
+    const storedPrograms = (loadMockState(storageKeys.programs, seededProgramsForOrg) as Program[]).map(normalizeProgramForState);
+    const storedCheckIns = loadMockState(storageKeys.checkins, seededCheckIns).map((record) => ({
       ...record,
       checkedInByStaffId: record.checkedInByStaffId ?? record.staffUserId ?? "",
       checkedInByStaffName: record.checkedInByStaffName
     }));
 
-    const loadedCustomers = loadMockState(storageKeys.customers, seedCustomers) as Customer[];
-    setCustomers(normalizeCustomersForState(mergeSeedCustomers(loadedCustomers)));
-    setMemberships(loadMockState(storageKeys.memberships, seedMemberships));
-    setPunchPasses(loadMockState(storageKeys.passes, seedPunchPasses));
+    const loadedCustomers = loadMockState(storageKeys.customers, seededCustomersForOrg) as Customer[];
+    setCustomers(normalizeCustomersForState(mergeSeedCustomers(loadedCustomers, seededCustomersForOrg), seededCustomersForOrg));
+    setMemberships(loadMockState(storageKeys.memberships, seededMembershipsForOrg));
+    setPunchPasses(loadMockState(storageKeys.passes, seededPunchPassesForOrg));
     setAccessProducts(products);
     setPrograms(storedPrograms);
     setSessions(
-      (loadMockState(storageKeys.sessions, seedSessions) as ClassCampSession[]).map((session) =>
+      (loadMockState(storageKeys.sessions, seededSessionsForOrg) as ClassCampSession[]).map((session) =>
         normalizeSessionForState(session, storedPrograms)
       )
     );
-    setRegistrations(loadMockState(storageKeys.registrations, seedRegistrations));
-    setCustomerAccessRecords(loadMockState(storageKeys.accessRecords, seedAccessRecords) as CustomerAccessRecord[]);
-    setWaivers(loadMockState(storageKeys.waivers, seedWaivers) as Waiver[]);
-    setHouseholds(loadMockState(storageKeys.households, seedHouseholds) as Household[]);
+    setRegistrations(loadMockState(storageKeys.registrations, seededRegistrationsForOrg));
+    setCustomerAccessRecords(loadMockState(storageKeys.accessRecords, seededAccessRecordsForOrg) as CustomerAccessRecord[]);
+    setWaivers(loadMockState(storageKeys.waivers, seededWaiversForOrg) as Waiver[]);
+    setHouseholds(loadMockState(storageKeys.households, seededHouseholdsForOrg) as Household[]);
     setHouseholdMembers(
-      (loadMockState(storageKeys.householdMembers, seedHouseholdMembers) as HouseholdMember[]).map(
+      (loadMockState(storageKeys.householdMembers, seededHouseholdMembersForOrg) as HouseholdMember[]).map(
         normalizeHouseholdMemberForState
       )
     );
     setTransactions(
-      normalizeTransactions(loadMockState(storageKeys.transactions, seedPosTransactions) as Partial<PosTransaction>[], products)
+      normalizeTransactions(loadMockState(storageKeys.transactions, seededTransactionsForOrg) as Partial<PosTransaction>[], products)
     );
     setCheckInLogRecords(storedCheckIns);
     setHydrated(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [
+    activeOrgId,
+    seededAccessRecordsForOrg,
+    seededCheckIns,
+    seededCustomersForOrg,
+    seededHouseholdMembersForOrg,
+    seededHouseholdsForOrg,
+    seededMembershipsForOrg,
+    seededProductsForOrg,
+    seededProgramsForOrg,
+    seededPunchPassesForOrg,
+    seededRegistrationsForOrg,
+    seededSessionsForOrg,
+    seededTransactionsForOrg,
+    seededWaiversForOrg,
+    storageKeys.accessRecords,
+    storageKeys.checkins,
+    storageKeys.customers,
+    storageKeys.householdMembers,
+    storageKeys.households,
+    storageKeys.memberships,
+    storageKeys.passes,
+    storageKeys.products,
+    storageKeys.programs,
+    storageKeys.registrations,
+    storageKeys.sessions,
+    storageKeys.transactions,
+    storageKeys.waivers
+  ]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -1310,7 +1355,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     const newCustomer: Customer = {
       id,
       memberId: `M-${maxMemberNumber + 1}`,
-      organizationId: "org_summit",
+      organizationId: activeOrgId,
       locationId: activeLocationId,
       firstName,
       lastName,
@@ -1996,7 +2041,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     const id = `prog_${Math.random().toString(36).slice(2, 9)}`;
     const next: Program = {
       id,
-      organizationId: "org_summit",
+      organizationId: activeOrgId,
       title,
       description: input.description?.trim() || undefined,
       category: input.category,
@@ -2102,7 +2147,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     const next: PosProduct = normalizeProductForState({
       ...parsed.product,
       id,
-      organizationId: "org_summit",
+      organizationId: activeOrgId,
       quickButtonRank: parsed.product.showAsQuickButton ? maxQuickRank + 1 : undefined,
       updatedAt: new Date().toISOString()
     });
@@ -2476,22 +2521,22 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       familyCheckIn,
       toggleCheckIn,
       resetMockState() {
-        setCustomers(seedCustomers);
-        setMemberships(seedMemberships);
-        setPunchPasses(seedPunchPasses);
-        setCheckInLogRecords(seedCheckInRecords);
-        setAccessProducts(seedPosProducts.map(normalizeProductForState));
-        setTransactions(normalizeTransactions(seedPosTransactions, seedPosProducts.map(normalizeProductForState)));
-        setPrograms(seedPrograms);
-        setSessions(seedSessions.map((session) => normalizeSessionForState(session, seedPrograms)));
-        setRegistrations(seedRegistrations);
-        setCustomerAccessRecords(seedAccessRecords);
-        setWaivers(seedWaivers);
-        setHouseholds(seedHouseholds);
-        setHouseholdMembers(seedHouseholdMembers.map(normalizeHouseholdMemberForState));
+        setCustomers(seededCustomersForOrg);
+        setMemberships(seededMembershipsForOrg);
+        setPunchPasses(seededPunchPassesForOrg);
+        setCheckInLogRecords(seededCheckIns);
+        setAccessProducts(seededProductsForOrg.map(normalizeProductForState));
+        setTransactions(normalizeTransactions(seededTransactionsForOrg, seededProductsForOrg.map(normalizeProductForState)));
+        setPrograms(seededProgramsForOrg);
+        setSessions(seededSessionsForOrg.map((session) => normalizeSessionForState(session, seededProgramsForOrg)));
+        setRegistrations(seededRegistrationsForOrg);
+        setCustomerAccessRecords(seededAccessRecordsForOrg);
+        setWaivers(seededWaiversForOrg);
+        setHouseholds(seededHouseholdsForOrg);
+        setHouseholdMembers(seededHouseholdMembersForOrg.map(normalizeHouseholdMemberForState));
         clearScopedMockState(
-          "org_summit",
-          "loc_001",
+          activeOrgId,
+          activeLocationId,
           ["customers", "punchPasses", "checkIns", "memberships", "transactions", "products", "programs", "sessions", "registrations", "accessRecords", "waivers", "households", "householdMembers"]
         );
       }

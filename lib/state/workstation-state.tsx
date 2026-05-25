@@ -1,21 +1,18 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { staffUsers as seedStaffUsers } from "@/lib/mocks/staff";
 import { data } from "@/lib/data";
 import { buildScopedMockKey, loadMockState, saveMockState } from "@/lib/mock-storage";
 import { staffHasAnyPermission, staffHasPermission } from "@/lib/staff/permissions";
 import type { AuditLogEntry, StaffPermission, StaffUser } from "@/types/domain";
+import { resolveTenant } from "@/lib/tenant/resolve";
 
-const ACTIVE_STAFF_STORAGE_KEY = buildScopedMockKey("org_summit", "loc_001", "activeStaff");
-const STAFF_USERS_STORAGE_KEY = buildScopedMockKey("org_summit", "loc_001", "staffUsers");
-const AUDIT_LOG_STORAGE_KEY = buildScopedMockKey("org_summit", "loc_001", "auditLog");
-const ACTIVE_LOCATION_ID = data.locations[0]?.id ?? "loc_001";
-
-function mergeSeedStaffUsers(stored: StaffUser[]) {
+function mergeSeedStaffUsers(stored: StaffUser[], seededStaffUsers: StaffUser[]) {
   const byId = new Map(stored.map((staff) => [staff.id, staff]));
   const merged: StaffUser[] = [...stored];
-  for (const seeded of seedStaffUsers) {
+  for (const seeded of seededStaffUsers) {
     if (!byId.has(seeded.id)) merged.push(seeded);
   }
   return merged;
@@ -73,7 +70,17 @@ interface WorkstationStateContextValue {
 const WorkstationStateContext = createContext<WorkstationStateContextValue | null>(null);
 
 export function WorkstationStateProvider({ children }: { children: React.ReactNode }) {
-  const [staffUsers, setStaffUsers] = useState<StaffUser[]>(seedStaffUsers);
+  const pathname = usePathname();
+  const orgSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? "summit";
+  const tenant = resolveTenant(orgSlug);
+  const activeOrgId = tenant?.organizationId ?? "org_summit";
+  const activeLocationId = tenant?.currentLocationId ?? data.locations[0]?.id ?? "loc_001";
+  const ACTIVE_STAFF_STORAGE_KEY = buildScopedMockKey(activeOrgId, activeLocationId, "activeStaff");
+  const STAFF_USERS_STORAGE_KEY = buildScopedMockKey(activeOrgId, activeLocationId, "staffUsers");
+  const AUDIT_LOG_STORAGE_KEY = buildScopedMockKey(activeOrgId, activeLocationId, "auditLog");
+  const orgSeedStaffUsers = seedStaffUsers.filter((entry) => entry.organizationId === activeOrgId);
+
+  const [staffUsers, setStaffUsers] = useState<StaffUser[]>(orgSeedStaffUsers);
   const [activeStaffId, setActiveStaffId] = useState<string | null>(null);
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [hydrated, setHydrated] = useState(false);
@@ -87,7 +94,7 @@ export function WorkstationStateProvider({ children }: { children: React.ReactNo
   );
 
   useEffect(() => {
-    const storedStaffUsers = mergeSeedStaffUsers(loadMockState(STAFF_USERS_STORAGE_KEY, seedStaffUsers) as StaffUser[]);
+    const storedStaffUsers = mergeSeedStaffUsers(loadMockState(STAFF_USERS_STORAGE_KEY, orgSeedStaffUsers) as StaffUser[], orgSeedStaffUsers);
     const savedActiveStaffId = loadMockState<string | null>(ACTIVE_STAFF_STORAGE_KEY, null);
     const storedAuditLog = loadMockState<AuditLogEntry[]>(AUDIT_LOG_STORAGE_KEY, []);
 
@@ -97,7 +104,7 @@ export function WorkstationStateProvider({ children }: { children: React.ReactNo
     );
     setAuditLog(storedAuditLog);
     setHydrated(true);
-  }, []);
+  }, [AUDIT_LOG_STORAGE_KEY, ACTIVE_STAFF_STORAGE_KEY, STAFF_USERS_STORAGE_KEY, activeOrgId]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -160,7 +167,7 @@ export function WorkstationStateProvider({ children }: { children: React.ReactNo
       return { ok: false as const, message: "You do not have permission to perform this action." };
     }
 
-    if (!activeStaff.locationIds.includes(ACTIVE_LOCATION_ID)) {
+    if (!activeStaff.locationIds.includes(activeLocationId)) {
       return { ok: false as const, message: "You do not have access to this location." };
     }
 
@@ -186,8 +193,8 @@ export function WorkstationStateProvider({ children }: { children: React.ReactNo
   const logAuditEvent = (entry: Omit<AuditLogEntry, "id" | "createdAt" | "organizationId" | "locationId">) => {
     const nextEntry: AuditLogEntry = {
       id: `audit_${Math.random().toString(36).slice(2, 9)}`,
-      organizationId: "org_summit",
-      locationId: ACTIVE_LOCATION_ID,
+      organizationId: activeOrgId,
+      locationId: activeLocationId,
       createdAt: new Date().toISOString(),
       ...entry
     };
@@ -201,8 +208,8 @@ export function WorkstationStateProvider({ children }: { children: React.ReactNo
     const id = `staff_${Math.random().toString(36).slice(2, 9)}`;
     const instructor: StaffUser = {
       id,
-      organizationId: "org_summit",
-      locationIds: ["loc_001"],
+      organizationId: activeOrgId,
+      locationIds: [activeLocationId],
       firstName,
       lastName,
       email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@example.com`,
@@ -272,7 +279,7 @@ export function WorkstationStateProvider({ children }: { children: React.ReactNo
     const pin = `${Math.floor(1000 + Math.random() * 9000)}`;
     const staff: StaffUser = {
       id,
-      organizationId: "org_summit",
+      organizationId: activeOrgId,
       locationIds: input.locationIds,
       firstName,
       lastName,

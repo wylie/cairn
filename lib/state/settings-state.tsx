@@ -1,12 +1,13 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { data } from "@/lib/data";
 import { buildScopedMockKey, loadMockState, saveMockState } from "@/lib/mock-storage";
 import { ROLE_PERMISSION_PRESETS } from "@/lib/staff/permissions";
 import type { FacilityProfile, Location, StaffPermission, StaffRoleDefinition, StaffUser } from "@/types/domain";
+import { resolveTenant } from "@/lib/tenant/resolve";
 
-const SETTINGS_STORAGE_KEY = buildScopedMockKey("org_summit", "settings", "v1");
 const DEFAULT_ORGANIZATION_NAME = "Summit Rec Collective";
 const DEFAULT_ORGANIZATION_TIMEZONE = "America/New_York";
 const defaultOrganization = data.organizations?.[0];
@@ -266,37 +267,53 @@ type SettingsContextValue = {
 const SettingsStateContext = createContext<SettingsContextValue | null>(null);
 
 export function SettingsStateProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const orgSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? "summit";
+  const tenant = resolveTenant(orgSlug);
+  const activeOrgId = tenant?.organizationId ?? "org_summit";
+  const settingsStorageKey = buildScopedMockKey(activeOrgId, "settings", "v1");
+  const defaultSettingsForOrg: SettingsStateSnapshot = {
+    ...defaultSettings,
+    facilityProfile: {
+      ...defaultSettings.facilityProfile,
+      organizationId: activeOrgId,
+      facilityName: tenant?.organizationName ?? defaultSettings.facilityProfile.facilityName
+    },
+    locations: defaultSettings.locations.filter((entry) => entry.organizationId === activeOrgId)
+  };
+
   const [settings, setSettings] = useState<SettingsStateSnapshot>(() => {
     const stored = loadMockState<{
       settings: SettingsStateSnapshot;
       activeLocationId: string;
-    } | null>(SETTINGS_STORAGE_KEY, null);
-    return stored?.settings ?? defaultSettings;
+    } | null>(settingsStorageKey, null);
+    return stored?.settings ?? defaultSettingsForOrg;
   });
   const [activeLocationId, setActiveLocationIdState] = useState<string>(() => {
     const stored = loadMockState<{
       settings: SettingsStateSnapshot;
       activeLocationId: string;
-    } | null>(SETTINGS_STORAGE_KEY, null);
+    } | null>(settingsStorageKey, null);
     return (
       stored?.activeLocationId ??
       stored?.settings?.locations.find((entry) => entry.isDefault)?.id ??
-      defaultSettings.locations.find((entry) => entry.isDefault)?.id ??
-      defaultSettings.locations[0]?.id ??
+      defaultSettingsForOrg.locations.find((entry) => entry.isDefault)?.id ??
+      defaultSettingsForOrg.locations[0]?.id ??
+      tenant?.currentLocationId ??
       "loc_001"
     );
   });
 
   useEffect(() => {
-    saveMockState(SETTINGS_STORAGE_KEY, { settings, activeLocationId });
-  }, [settings, activeLocationId]);
+    saveMockState(settingsStorageKey, { settings, activeLocationId });
+  }, [settings, activeLocationId, settingsStorageKey]);
 
   const setActiveLocationId = (locationId: string) => setActiveLocationIdState(locationId);
 
   const applySettings = (updater: (previous: SettingsStateSnapshot) => SettingsStateSnapshot) => {
     setSettings((previous) => {
       const next = updater(previous);
-      saveMockState(SETTINGS_STORAGE_KEY, { settings: next, activeLocationId });
+      saveMockState(settingsStorageKey, { settings: next, activeLocationId });
       return next;
     });
   };

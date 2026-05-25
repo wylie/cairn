@@ -4,7 +4,8 @@ import { AppShell } from "@/components/layout/app-shell";
 import { TestProviders } from "@/tests/test-providers";
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/dashboard"
+  usePathname: () => "/o/summit/dashboard",
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() })
 }));
 
 describe("AppShell", () => {

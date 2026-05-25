@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CheckboxField, FormField, FormGrid, SelectInput, TextInput, TextareaInput } from "@/components/shared/form-layout";
+import { FileUploadField } from "@/components/shared/file-upload-field";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { PermissionGate } from "@/components/staff/permission-gate";
 import { Badge } from "@/components/ui/badge";
@@ -712,43 +713,44 @@ export default function SettingsPage() {
                     <FormField label="Primary brand color"><TextInput value={brandingDraft.primaryColor} onChange={(e) => setBrandingDraft((p) => ({ ...p, primaryColor: e.target.value }))} /></FormField>
                     <FormField label="Secondary brand color"><TextInput value={brandingDraft.secondaryColor} onChange={(e) => setBrandingDraft((p) => ({ ...p, secondaryColor: e.target.value }))} /></FormField>
                     <FormField label="Facility nickname"><TextInput value={brandingDraft.facilityNickname} onChange={(e) => setBrandingDraft((p) => ({ ...p, facilityNickname: e.target.value }))} /></FormField>
-                    <FormField label="Upload logo" helperText={brandingFiles.logo ? `Selected: ${brandingFiles.logo}` : "No file selected"}>
-                      <TextInput type="file" accept="image/*" onChange={(e) => void handleBrandFileUpload("logoUrl", e.currentTarget.files?.[0])} />
-                    </FormField>
-                    <FormField label="Upload favicon" helperText={brandingFiles.favicon ? `Selected: ${brandingFiles.favicon}` : "No file selected"}>
-                      <TextInput type="file" accept="image/*" onChange={(e) => void handleBrandFileUpload("faviconUrl", e.currentTarget.files?.[0])} />
-                    </FormField>
-                    <FormField label="Upload dark mode logo (optional)" helperText={brandingFiles.darkMode ? `Selected: ${brandingFiles.darkMode}` : "No file selected"} className="md:col-span-2">
-                      <TextInput type="file" accept="image/*" onChange={(e) => void handleBrandFileUpload("darkModeLogoUrl", e.currentTarget.files?.[0])} />
-                    </FormField>
+                    <FileUploadField
+                      label="Upload logo"
+                      accept="image/*"
+                      filename={brandingFiles.logo}
+                      helperText="Upload the primary facility logo."
+                      onFileSelect={(file) => void handleBrandFileUpload("logoUrl", file)}
+                      onRemove={() => clearBrandFile("logoUrl")}
+                    />
+                    <FileUploadField
+                      label="Upload favicon"
+                      accept="image/*"
+                      filename={brandingFiles.favicon}
+                      helperText="Upload a square favicon image."
+                      onFileSelect={(file) => void handleBrandFileUpload("faviconUrl", file)}
+                      onRemove={() => clearBrandFile("faviconUrl")}
+                    />
+                    <FileUploadField
+                      className="md:col-span-2"
+                      label="Upload dark mode logo (optional)"
+                      accept="image/*"
+                      filename={brandingFiles.darkMode}
+                      helperText="Optional dark theme variant."
+                      onFileSelect={(file) => void handleBrandFileUpload("darkModeLogoUrl", file)}
+                      onRemove={() => clearBrandFile("darkModeLogoUrl")}
+                    />
                   </FormGrid>
                   <div className="grid gap-3 md:grid-cols-3">
                     <Card>
                       <CardHeader><CardTitle className="text-sm">Logo preview</CardTitle></CardHeader>
-                      <CardContent className="space-y-2">{brandingDraft.logoUrl ? <img src={brandingDraft.logoUrl} alt="Logo preview" className="h-10 w-auto object-contain" /> : <p className="text-sm text-muted-foreground">No logo selected</p>}
-                        <div className="flex gap-2">
-                          <Button variant="secondary" className="h-9">Replace</Button>
-                          <Button variant="secondary" className="h-9" onClick={() => clearBrandFile("logoUrl")}>Remove</Button>
-                        </div>
-                      </CardContent>
+                      <CardContent>{brandingDraft.logoUrl ? <img src={brandingDraft.logoUrl} alt="Logo preview" className="h-10 w-auto object-contain" /> : <p className="text-sm text-muted-foreground">No logo selected</p>}</CardContent>
                     </Card>
                     <Card>
                       <CardHeader><CardTitle className="text-sm">Favicon preview</CardTitle></CardHeader>
-                      <CardContent className="space-y-2">{brandingDraft.faviconUrl ? <img src={brandingDraft.faviconUrl} alt="Favicon preview" className="h-8 w-8 rounded-sm object-contain" /> : <p className="text-sm text-muted-foreground">No favicon selected</p>}
-                        <div className="flex gap-2">
-                          <Button variant="secondary" className="h-9">Replace</Button>
-                          <Button variant="secondary" className="h-9" onClick={() => clearBrandFile("faviconUrl")}>Remove</Button>
-                        </div>
-                      </CardContent>
+                      <CardContent>{brandingDraft.faviconUrl ? <img src={brandingDraft.faviconUrl} alt="Favicon preview" className="h-8 w-8 rounded-sm object-contain" /> : <p className="text-sm text-muted-foreground">No favicon selected</p>}</CardContent>
                     </Card>
                     <Card>
                       <CardHeader><CardTitle className="text-sm">Dark mode logo preview</CardTitle></CardHeader>
-                      <CardContent className="space-y-2">{brandingDraft.darkModeLogoUrl ? <img src={brandingDraft.darkModeLogoUrl} alt="Dark mode logo preview" className="h-10 w-auto object-contain" /> : <p className="text-sm text-muted-foreground">No dark mode logo selected</p>}
-                        <div className="flex gap-2">
-                          <Button variant="secondary" className="h-9">Replace</Button>
-                          <Button variant="secondary" className="h-9" onClick={() => clearBrandFile("darkModeLogoUrl")}>Remove</Button>
-                        </div>
-                      </CardContent>
+                      <CardContent>{brandingDraft.darkModeLogoUrl ? <img src={brandingDraft.darkModeLogoUrl} alt="Dark mode logo preview" className="h-10 w-auto object-contain" /> : <p className="text-sm text-muted-foreground">No dark mode logo selected</p>}</CardContent>
                     </Card>
                   </div>
                   <Card>

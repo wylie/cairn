@@ -235,12 +235,8 @@ describe("Settings system MVP", () => {
     await switchStaff(user, "1111");
     await user.click(screen.getByRole("button", { name: "Branding" }));
 
-    const logoLabel = screen.getByText("Upload logo").closest("label");
-    const faviconLabel = screen.getByText("Upload favicon").closest("label");
-    const logoInput = logoLabel?.querySelector("input[type='file']") as HTMLInputElement;
-    const faviconInput = faviconLabel?.querySelector("input[type='file']") as HTMLInputElement;
-    expect(logoInput).toBeTruthy();
-    expect(faviconInput).toBeTruthy();
+    const logoInput = screen.getByLabelText("Upload logo", { selector: "input" }) as HTMLInputElement;
+    const faviconInput = screen.getByLabelText("Upload favicon", { selector: "input" }) as HTMLInputElement;
     const logoFile = new File(["logo"], "logo.png", { type: "image/png" });
     const faviconFile = new File(["icon"], "favicon.png", { type: "image/png" });
     await user.upload(logoInput, logoFile);

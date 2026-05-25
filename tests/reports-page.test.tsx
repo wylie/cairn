@@ -1,0 +1,181 @@
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { vi } from "vitest";
+import ReportsPage from "@/app/(app)/reports/page";
+import { TopBar } from "@/components/layout/top-bar";
+import { buildScopedMockKey } from "@/lib/mock-storage";
+import { TestProviders } from "@/tests/test-providers";
+
+function installStorageMock() {
+  const store = new Map<string, string>();
+  const original = window.localStorage;
+  const localStorageMock = {
+    getItem: vi.fn((key: string) => store.get(key) ?? null),
+    setItem: vi.fn((key: string, value: string) => {
+      store.set(key, value);
+    }),
+    removeItem: vi.fn((key: string) => {
+      store.delete(key);
+    }),
+    clear: vi.fn(() => store.clear())
+  } as Storage;
+  Object.defineProperty(window, "localStorage", {
+    configurable: true,
+    writable: true,
+    value: localStorageMock
+  });
+  return {
+    restore: () => {
+      Object.defineProperty(window, "localStorage", {
+        configurable: true,
+        writable: true,
+        value: original
+      });
+    }
+  };
+}
+
+async function switchStaff(user: ReturnType<typeof userEvent.setup>, pin: string) {
+  await user.click(screen.getByRole("button", { name: "Switch" }));
+  await user.type(screen.getByLabelText("Staff PIN input"), pin);
+  await user.click(screen.getByRole("button", { name: "Confirm" }));
+}
+
+describe("Reports dashboards", () => {
+  it("shows front desk operational dashboard and hides owner financial cards", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <ReportsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "3333");
+
+    expect(screen.getByRole("heading", { name: "Reports" })).toBeInTheDocument();
+    expect(screen.getByText("Today's Check-Ins")).toBeInTheDocument();
+    expect(screen.queryByText("Revenue (Range)")).not.toBeInTheDocument();
+  });
+
+  it("owner sees financial cards", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <ReportsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "1111");
+
+    expect(screen.getByText("Revenue (Range)")).toBeInTheDocument();
+    expect(screen.getByText("Comp Transactions")).toBeInTheDocument();
+  });
+
+  it("instructor is blocked from Reports", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <ReportsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "4444");
+
+    expect(screen.getByText("You do not have permission to perform this action.")).toBeInTheDocument();
+  });
+
+  it("renders filters and chart containers", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <ReportsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "2222");
+    expect(screen.getByLabelText("report-filters")).toBeInTheDocument();
+    expect(screen.getByLabelText("Search reports")).toBeInTheDocument();
+    expect(screen.getByTestId("trend-line-chart")).toBeInTheDocument();
+  });
+
+  it("exports CSV from report data", async () => {
+    const storage = installStorageMock();
+    window.localStorage.setItem(
+      buildScopedMockKey("org_summit", "loc_001", "transactions"),
+      JSON.stringify([
+        {
+          id: "txn_test_1",
+          organizationId: "org_summit",
+          locationId: "loc_001",
+          customerId: "cust_001",
+          customerName: "Maya Patel",
+          transactionType: "sale",
+          returnStatus: "none",
+          soldByStaffId: "staff_001",
+          soldByStaffName: "Taylor Nguyen",
+          items: [
+            {
+              productId: "prod_daypass",
+              productName: "Day Pass",
+              category: "day_passes",
+              type: "access",
+              quantity: 1,
+              unitPrice: 2800,
+              lineTotal: 2800
+            }
+          ],
+          subtotal: 2800,
+          total: 2800,
+          completedAt: new Date().toISOString(),
+          paymentType: "mock",
+          checkInTriggered: false,
+          receiptNumber: "R-TEST"
+        }
+      ])
+    );
+    const user = userEvent.setup();
+    const originalCreate = URL.createObjectURL;
+    const originalRevoke = URL.revokeObjectURL;
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      writable: true,
+      value: vi.fn(() => "blob://mock")
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      writable: true,
+      value: vi.fn()
+    });
+    render(
+      <TestProviders>
+        <TopBar />
+        <ReportsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "1111");
+    await user.click(screen.getByRole("button", { name: "Export CSV" }));
+    expect(URL.createObjectURL).toHaveBeenCalled();
+    expect(URL.revokeObjectURL).toHaveBeenCalled();
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, writable: true, value: originalCreate });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, writable: true, value: originalRevoke });
+    storage.restore();
+  });
+
+  it("shows graceful empty state for product chart when no transactions exist", async () => {
+    const storage = installStorageMock();
+    window.localStorage.setItem(
+      buildScopedMockKey("org_summit", "loc_001", "transactions"),
+      JSON.stringify([])
+    );
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <ReportsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "2222");
+    expect(screen.getByText("No bar data available.")).toBeInTheDocument();
+    storage.restore();
+  });
+});

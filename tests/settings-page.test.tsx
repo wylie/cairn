@@ -83,6 +83,9 @@ describe("Settings system MVP", () => {
     const dialog = screen.getByRole("dialog", { name: "Create Role" });
     await user.type(within(dialog).getByLabelText("Role name"), "Camp Counselor");
     await user.type(within(dialog).getByLabelText("Description"), "Supports youth camp check-ins.");
+    const colorSelect = within(dialog).getByRole("combobox");
+    await user.selectOptions(colorSelect, "purple");
+    expect(colorSelect).toHaveValue("purple");
     await user.click(within(dialog).getByLabelText("Check in customers"));
     await user.click(within(dialog).getByRole("button", { name: "Create Role" }));
     expect(await screen.findByText("Camp Counselor")).toBeInTheDocument();
@@ -232,8 +235,12 @@ describe("Settings system MVP", () => {
     await switchStaff(user, "1111");
     await user.click(screen.getByRole("button", { name: "Branding" }));
 
-    const logoInput = screen.getByLabelText("Upload logo");
-    const faviconInput = screen.getByLabelText("Upload favicon");
+    const logoLabel = screen.getByText("Upload logo").closest("label");
+    const faviconLabel = screen.getByText("Upload favicon").closest("label");
+    const logoInput = logoLabel?.querySelector("input[type='file']") as HTMLInputElement;
+    const faviconInput = faviconLabel?.querySelector("input[type='file']") as HTMLInputElement;
+    expect(logoInput).toBeTruthy();
+    expect(faviconInput).toBeTruthy();
     const logoFile = new File(["logo"], "logo.png", { type: "image/png" });
     const faviconFile = new File(["icon"], "favicon.png", { type: "image/png" });
     await user.upload(logoInput, logoFile);
@@ -241,5 +248,46 @@ describe("Settings system MVP", () => {
 
     expect(await screen.findByAltText("Logo preview")).toBeInTheDocument();
     expect(await screen.findByAltText("Favicon preview")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Logo URL (fallback)")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Favicon URL (fallback)")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Dark mode logo URL (fallback)")).not.toBeInTheDocument();
+  });
+
+  it("renders waiver roadmap and payment processor planning panels", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <SettingsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "1111");
+    await user.click(screen.getByRole("button", { name: "Waivers" }));
+    expect(screen.getByText("Waiver builder and digital signing will be added in a future phase.")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "POS & Payments" }));
+    expect(screen.getByText("Status:")).toBeInTheDocument();
+    expect(screen.getByText("Not connected")).toBeInTheDocument();
+    expect(screen.getByText("Card payments require a payment processor connection.")).toBeInTheDocument();
+  });
+
+  it("renders notification categories and renamed system controls language", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <SettingsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "1111");
+    await user.click(screen.getByRole("button", { name: "Notifications" }));
+    expect(screen.getByText("Customer notifications")).toBeInTheDocument();
+    expect(screen.getByText("Staff notifications")).toBeInTheDocument();
+    expect(screen.getByText("Admin notifications")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "System Controls" }));
+    expect(screen.getByRole("heading", { name: "System Controls" })).toBeInTheDocument();
+    expect(screen.getByText("Enforce role permissions")).toBeInTheDocument();
+    expect(screen.getByText("When enabled, staff can only access actions allowed by their assigned role.")).toBeInTheDocument();
   });
 });

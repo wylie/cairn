@@ -34,8 +34,19 @@ const settingsSections: Array<{ id: SettingsSection; label: string }> = [
   { id: "pos_payments", label: "POS & Payments" },
   { id: "branding", label: "Branding" },
   { id: "notifications", label: "Notifications" },
-  { id: "advanced", label: "Advanced" }
+  { id: "advanced", label: "System Controls" }
 ];
+
+const roleColorOptions = [
+  { value: "slate", label: "Slate" },
+  { value: "blue", label: "Blue" },
+  { value: "green", label: "Green" },
+  { value: "amber", label: "Amber" },
+  { value: "purple", label: "Purple" },
+  { value: "orange", label: "Orange" },
+  { value: "red", label: "Red" },
+  { value: "gray", label: "Gray" }
+] as const;
 
 const permissionGroups: Array<{ label: string; permissions: StaffPermission[] }> = [
   { label: "Customers", permissions: ["viewCustomers", "editCustomer", "createCustomer", "mergeCustomer", "deactivateCustomer"] },
@@ -80,6 +91,7 @@ export default function SettingsPage() {
   const [waiverDraft, setWaiverDraft] = useState(settings.waiver);
   const [posDraft, setPosDraft] = useState(settings.posPayments);
   const [brandingDraft, setBrandingDraft] = useState(settings.branding);
+  const [brandingFiles, setBrandingFiles] = useState<{ logo?: string; favicon?: string; darkMode?: string }>({});
   const [notificationDraft, setNotificationDraft] = useState(settings.notifications);
   const [advancedDraft, setAdvancedDraft] = useState(settings.advanced);
 
@@ -152,6 +164,7 @@ export default function SettingsPage() {
     setWaiverDraft(settings.waiver);
     setPosDraft(settings.posPayments);
     setBrandingDraft(settings.branding);
+    setBrandingFiles({});
     setNotificationDraft(settings.notifications);
     setAdvancedDraft(settings.advanced);
   }, [settings, hasUnsavedChanges]);
@@ -199,8 +212,24 @@ export default function SettingsPage() {
       const result = typeof reader.result === "string" ? reader.result : "";
       if (!result) return;
       setBrandingDraft((prev) => ({ ...prev, [field]: result }));
+      setBrandingFiles((prev) => ({
+        ...prev,
+        ...(field === "logoUrl" ? { logo: file.name } : {}),
+        ...(field === "faviconUrl" ? { favicon: file.name } : {}),
+        ...(field === "darkModeLogoUrl" ? { darkMode: file.name } : {})
+      }));
     };
     reader.readAsDataURL(file);
+  };
+
+  const clearBrandFile = (field: "logoUrl" | "faviconUrl" | "darkModeLogoUrl") => {
+    setBrandingDraft((prev) => ({ ...prev, [field]: "" }));
+    setBrandingFiles((prev) => ({
+      ...prev,
+      ...(field === "logoUrl" ? { logo: "" } : {}),
+      ...(field === "faviconUrl" ? { favicon: "" } : {}),
+      ...(field === "darkModeLogoUrl" ? { darkMode: "" } : {})
+    }));
   };
 
   const openCreateLocation = () => {
@@ -315,6 +344,7 @@ export default function SettingsPage() {
       const result = updateRole(editingRole.id, {
         name: roleForm.name.trim(),
         description: roleForm.description.trim(),
+        color: roleForm.color,
         permissions: roleForm.permissions,
         active: roleForm.active
       });
@@ -331,6 +361,7 @@ export default function SettingsPage() {
     const result = createRole({
       name: roleForm.name,
       description: roleForm.description,
+      color: roleForm.color,
       permissions: roleForm.permissions,
       active: roleForm.active
     });
@@ -495,6 +526,7 @@ export default function SettingsPage() {
                           <p className="text-sm text-muted-foreground">{role.description || "No description"}</p>
                         </div>
                         <div className="flex flex-wrap gap-2">
+                          <Badge tone="muted">Color: {roleColorOptions.find((option) => option.value === role.color)?.label ?? "Slate"}</Badge>
                           {role.isSystem ? <Badge tone="muted">System role</Badge> : null}
                           <Badge tone={role.active ? "success" : "muted"}>{role.active ? "Active" : "Archived"}</Badge>
                         </div>
@@ -584,6 +616,20 @@ export default function SettingsPage() {
               <Card>
                 <CardHeader><CardTitle>Waiver Settings</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
+                  <Card>
+                    <CardHeader><CardTitle className="text-base">Waiver roadmap</CardTitle></CardHeader>
+                    <CardContent className="space-y-2 text-sm text-muted-foreground">
+                      <p>Waiver builder and digital signing will be added in a future phase.</p>
+                      <ul className="list-disc space-y-1 pl-5">
+                        <li>Create and version waiver text</li>
+                        <li>Digital and guardian signatures</li>
+                        <li>Signed waiver history and PDF export</li>
+                        <li>Waiver requirements by product and program</li>
+                        <li>Expiration rules by waiver version</li>
+                      </ul>
+                      <p className="text-xs">Planned record fields: `waiverVersionId`, `customerId`, `signedByCustomerId`, `guardianId`, `signedAt`, `expiresAt`, `signatureData`, `pdfUrl`.</p>
+                    </CardContent>
+                  </Card>
                   <FormGrid>
                     <FormField label="Active waiver version"><TextInput value={waiverDraft.activeWaiverVersion} onChange={(e) => setWaiverDraft((p) => ({ ...p, activeWaiverVersion: e.target.value }))} /></FormField>
                     <FormField label="Effective date"><TextInput type="date" value={waiverDraft.effectiveDate} onChange={(e) => setWaiverDraft((p) => ({ ...p, effectiveDate: e.target.value }))} /></FormField>
@@ -595,7 +641,6 @@ export default function SettingsPage() {
                     <BooleanField label="Allow digital signatures" value={waiverDraft.allowDigitalSignature} onChange={(value) => setWaiverDraft((p) => ({ ...p, allowDigitalSignature: value }))} />
                     <BooleanField label="Require guardian signatures for minors" value={waiverDraft.requireGuardianForMinors} onChange={(value) => setWaiverDraft((p) => ({ ...p, requireGuardianForMinors: value }))} />
                   </FormGrid>
-                  <Card><CardContent className="p-3 text-sm text-muted-foreground">Waiver upload area: link the current signed waiver PDF and version metadata in a future phase.</CardContent></Card>
                   <div className="flex justify-end"><Button onClick={() => saveSection("waivers", () => updateWaiverSettings(waiverDraft), "Waiver settings saved.")} disabled={!sectionDirtyMap.waivers || savingSection === "waivers"}>{savingSection === "waivers" ? "Saving..." : "Save Waiver Settings"}</Button></div>
                 </CardContent>
               </Card>
@@ -605,6 +650,20 @@ export default function SettingsPage() {
               <Card>
                 <CardHeader><CardTitle>POS & Payments</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
+                  <Card>
+                    <CardHeader><CardTitle className="text-base">Payment Processor</CardTitle></CardHeader>
+                    <CardContent className="space-y-2 text-sm text-muted-foreground">
+                      <p>Status: <span className="font-medium text-foreground">Not connected</span></p>
+                      <p>Stripe integration is planned for a future phase.</p>
+                      <ul className="list-disc space-y-1 pl-5">
+                        <li>Connect Stripe</li>
+                        <li>Manage terminals</li>
+                        <li>Webhook status</li>
+                        <li>Test mode / Live mode</li>
+                      </ul>
+                      <p>Card payments require a payment processor connection.</p>
+                    </CardContent>
+                  </Card>
                   <FormGrid>
                     <FormField label="Sales tax %"><TextInput type="number" step="0.001" value={posDraft.salesTaxPercent} onChange={(e) => setPosDraft((p) => ({ ...p, salesTaxPercent: Number(e.target.value) || 0 }))} /></FormField>
                     <BooleanField label="Taxable products by default" value={posDraft.taxableProductsByDefault} onChange={(value) => setPosDraft((p) => ({ ...p, taxableProductsByDefault: value }))} />
@@ -650,34 +709,46 @@ export default function SettingsPage() {
                 <CardHeader><CardTitle>Branding</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                   <FormGrid>
-                    <FormField label="Logo URL (fallback)"><TextInput value={brandingDraft.logoUrl} onChange={(e) => setBrandingDraft((p) => ({ ...p, logoUrl: e.target.value }))} /></FormField>
-                    <FormField label="Favicon URL (fallback)"><TextInput value={brandingDraft.faviconUrl} onChange={(e) => setBrandingDraft((p) => ({ ...p, faviconUrl: e.target.value }))} /></FormField>
                     <FormField label="Primary brand color"><TextInput value={brandingDraft.primaryColor} onChange={(e) => setBrandingDraft((p) => ({ ...p, primaryColor: e.target.value }))} /></FormField>
                     <FormField label="Secondary brand color"><TextInput value={brandingDraft.secondaryColor} onChange={(e) => setBrandingDraft((p) => ({ ...p, secondaryColor: e.target.value }))} /></FormField>
                     <FormField label="Facility nickname"><TextInput value={brandingDraft.facilityNickname} onChange={(e) => setBrandingDraft((p) => ({ ...p, facilityNickname: e.target.value }))} /></FormField>
-                    <FormField label="Dark mode logo URL (fallback)"><TextInput value={brandingDraft.darkModeLogoUrl} onChange={(e) => setBrandingDraft((p) => ({ ...p, darkModeLogoUrl: e.target.value }))} /></FormField>
-                    <FormField label="Upload logo">
+                    <FormField label="Upload logo" helperText={brandingFiles.logo ? `Selected: ${brandingFiles.logo}` : "No file selected"}>
                       <TextInput type="file" accept="image/*" onChange={(e) => void handleBrandFileUpload("logoUrl", e.currentTarget.files?.[0])} />
                     </FormField>
-                    <FormField label="Upload favicon">
+                    <FormField label="Upload favicon" helperText={brandingFiles.favicon ? `Selected: ${brandingFiles.favicon}` : "No file selected"}>
                       <TextInput type="file" accept="image/*" onChange={(e) => void handleBrandFileUpload("faviconUrl", e.currentTarget.files?.[0])} />
                     </FormField>
-                    <FormField label="Upload dark mode logo" className="md:col-span-2">
+                    <FormField label="Upload dark mode logo (optional)" helperText={brandingFiles.darkMode ? `Selected: ${brandingFiles.darkMode}` : "No file selected"} className="md:col-span-2">
                       <TextInput type="file" accept="image/*" onChange={(e) => void handleBrandFileUpload("darkModeLogoUrl", e.currentTarget.files?.[0])} />
                     </FormField>
                   </FormGrid>
                   <div className="grid gap-3 md:grid-cols-3">
                     <Card>
                       <CardHeader><CardTitle className="text-sm">Logo preview</CardTitle></CardHeader>
-                      <CardContent>{brandingDraft.logoUrl ? <img src={brandingDraft.logoUrl} alt="Logo preview" className="h-10 w-auto object-contain" /> : <p className="text-sm text-muted-foreground">No logo selected</p>}</CardContent>
+                      <CardContent className="space-y-2">{brandingDraft.logoUrl ? <img src={brandingDraft.logoUrl} alt="Logo preview" className="h-10 w-auto object-contain" /> : <p className="text-sm text-muted-foreground">No logo selected</p>}
+                        <div className="flex gap-2">
+                          <Button variant="secondary" className="h-9">Replace</Button>
+                          <Button variant="secondary" className="h-9" onClick={() => clearBrandFile("logoUrl")}>Remove</Button>
+                        </div>
+                      </CardContent>
                     </Card>
                     <Card>
                       <CardHeader><CardTitle className="text-sm">Favicon preview</CardTitle></CardHeader>
-                      <CardContent>{brandingDraft.faviconUrl ? <img src={brandingDraft.faviconUrl} alt="Favicon preview" className="h-8 w-8 rounded-sm object-contain" /> : <p className="text-sm text-muted-foreground">No favicon selected</p>}</CardContent>
+                      <CardContent className="space-y-2">{brandingDraft.faviconUrl ? <img src={brandingDraft.faviconUrl} alt="Favicon preview" className="h-8 w-8 rounded-sm object-contain" /> : <p className="text-sm text-muted-foreground">No favicon selected</p>}
+                        <div className="flex gap-2">
+                          <Button variant="secondary" className="h-9">Replace</Button>
+                          <Button variant="secondary" className="h-9" onClick={() => clearBrandFile("faviconUrl")}>Remove</Button>
+                        </div>
+                      </CardContent>
                     </Card>
                     <Card>
                       <CardHeader><CardTitle className="text-sm">Dark mode logo preview</CardTitle></CardHeader>
-                      <CardContent>{brandingDraft.darkModeLogoUrl ? <img src={brandingDraft.darkModeLogoUrl} alt="Dark mode logo preview" className="h-10 w-auto object-contain" /> : <p className="text-sm text-muted-foreground">No dark mode logo selected</p>}</CardContent>
+                      <CardContent className="space-y-2">{brandingDraft.darkModeLogoUrl ? <img src={brandingDraft.darkModeLogoUrl} alt="Dark mode logo preview" className="h-10 w-auto object-contain" /> : <p className="text-sm text-muted-foreground">No dark mode logo selected</p>}
+                        <div className="flex gap-2">
+                          <Button variant="secondary" className="h-9">Replace</Button>
+                          <Button variant="secondary" className="h-9" onClick={() => clearBrandFile("darkModeLogoUrl")}>Remove</Button>
+                        </div>
+                      </CardContent>
                     </Card>
                   </div>
                   <Card>
@@ -697,18 +768,37 @@ export default function SettingsPage() {
               <Card>
                 <CardHeader><CardTitle>Notifications</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
-                  <FormGrid>
-                    <BooleanField label="Waiver expiring alerts" value={notificationDraft.waiverExpiring} onChange={(value) => setNotificationDraft((p) => ({ ...p, waiverExpiring: value }))} />
-                    <BooleanField label="Membership expiring alerts" value={notificationDraft.membershipExpiring} onChange={(value) => setNotificationDraft((p) => ({ ...p, membershipExpiring: value }))} />
-                    <BooleanField label="Staff invited alerts" value={notificationDraft.staffInvited} onChange={(value) => setNotificationDraft((p) => ({ ...p, staffInvited: value }))} />
-                    <BooleanField label="Registration reminders" value={notificationDraft.registrationReminder} onChange={(value) => setNotificationDraft((p) => ({ ...p, registrationReminder: value }))} />
-                    <BooleanField label="Unpaid account alerts" value={notificationDraft.unpaidAccount} onChange={(value) => setNotificationDraft((p) => ({ ...p, unpaidAccount: value }))} />
-                  </FormGrid>
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium">Customer notifications</p>
+                    <FormGrid>
+                      <BooleanField label="Waiver expiring" value={notificationDraft.waiverExpiring} onChange={(value) => setNotificationDraft((p) => ({ ...p, waiverExpiring: value }))} />
+                      <BooleanField label="Membership expiring" value={notificationDraft.membershipExpiring} onChange={(value) => setNotificationDraft((p) => ({ ...p, membershipExpiring: value }))} />
+                      <BooleanField label="Registration reminders" value={notificationDraft.registrationReminder} onChange={(value) => setNotificationDraft((p) => ({ ...p, registrationReminder: value }))} />
+                      <CheckboxField label="Payment receipts (future)" checked={false} onChange={() => undefined} />
+                    </FormGrid>
+                  </div>
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium">Staff notifications</p>
+                    <FormGrid>
+                      <BooleanField label="Staff invited" value={notificationDraft.staffInvited} onChange={(value) => setNotificationDraft((p) => ({ ...p, staffInvited: value }))} />
+                      <CheckboxField label="Schedule reminders (future)" checked={false} onChange={() => undefined} />
+                      <CheckboxField label="Override alerts (future)" checked={false} onChange={() => undefined} />
+                    </FormGrid>
+                  </div>
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium">Admin notifications</p>
+                    <FormGrid>
+                      <BooleanField label="Unpaid account" value={notificationDraft.unpaidAccount} onChange={(value) => setNotificationDraft((p) => ({ ...p, unpaidAccount: value }))} />
+                      <CheckboxField label="Failed payment (future)" checked={false} onChange={() => undefined} />
+                      <CheckboxField label="Low attendance (future)" checked={false} onChange={() => undefined} />
+                      <CheckboxField label="High capacity warning (future)" checked={false} onChange={() => undefined} />
+                    </FormGrid>
+                  </div>
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Channels</p>
                     <div className="grid gap-2 sm:grid-cols-3">
-                      <BooleanField label="Email" value={notificationDraft.channels.email} onChange={(value) => setNotificationDraft((p) => ({ ...p, channels: { ...p.channels, email: value } }))} />
-                      <BooleanField label="SMS" value={notificationDraft.channels.sms} onChange={(value) => setNotificationDraft((p) => ({ ...p, channels: { ...p.channels, sms: value } }))} />
+                      <BooleanField label="Email (future)" value={notificationDraft.channels.email} onChange={(value) => setNotificationDraft((p) => ({ ...p, channels: { ...p.channels, email: value } }))} />
+                      <BooleanField label="SMS (future)" value={notificationDraft.channels.sms} onChange={(value) => setNotificationDraft((p) => ({ ...p, channels: { ...p.channels, sms: value } }))} />
                       <BooleanField label="In-app" value={notificationDraft.channels.inApp} onChange={(value) => setNotificationDraft((p) => ({ ...p, channels: { ...p.channels, inApp: value } }))} />
                     </div>
                   </div>
@@ -719,14 +809,14 @@ export default function SettingsPage() {
 
             {activeSection === "advanced" ? (
               <Card>
-                <CardHeader><CardTitle>Advanced</CardTitle></CardHeader>
+                <CardHeader><CardTitle>System Controls</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                   <FormGrid>
-                    <BooleanField label="Strict role checks" value={advancedDraft.strictRoleChecks} onChange={(value) => setAdvancedDraft((p) => ({ ...p, strictRoleChecks: value }))} />
-                    <FormField label="Audit log retention (days)"><TextInput type="number" value={advancedDraft.auditLogRetentionDays} onChange={(e) => setAdvancedDraft((p) => ({ ...p, auditLogRetentionDays: Number(e.target.value) || 0 }))} /></FormField>
-                    <BooleanField label="Require reason for manager overrides" value={advancedDraft.requireReasonForOverrides} onChange={(value) => setAdvancedDraft((p) => ({ ...p, requireReasonForOverrides: value }))} />
+                    <CheckboxField label="Enforce role permissions" helperText="When enabled, staff can only access actions allowed by their assigned role." checked={advancedDraft.strictRoleChecks} onChange={(value) => setAdvancedDraft((p) => ({ ...p, strictRoleChecks: value }))} />
+                    <FormField label="Audit log retention (days)" helperText="How long staff activity and system events are retained."><TextInput type="number" value={advancedDraft.auditLogRetentionDays} onChange={(e) => setAdvancedDraft((p) => ({ ...p, auditLogRetentionDays: Number(e.target.value) || 0 }))} /></FormField>
+                    <CheckboxField label="Require reason for manager overrides" helperText="Staff must enter a reason when bypassing access, waiver, or guardian restrictions." checked={advancedDraft.requireReasonForOverrides} onChange={(value) => setAdvancedDraft((p) => ({ ...p, requireReasonForOverrides: value }))} />
                   </FormGrid>
-                  <div className="flex justify-end"><Button onClick={() => saveSection("advanced", () => updateAdvanced(advancedDraft), "Advanced settings saved.")} disabled={!sectionDirtyMap.advanced || savingSection === "advanced"}>{savingSection === "advanced" ? "Saving..." : "Save Advanced"}</Button></div>
+                  <div className="flex justify-end"><Button onClick={() => saveSection("advanced", () => updateAdvanced(advancedDraft), "System controls saved.")} disabled={!sectionDirtyMap.advanced || savingSection === "advanced"}>{savingSection === "advanced" ? "Saving..." : "Save System Controls"}</Button></div>
                 </CardContent>
               </Card>
             ) : null}
@@ -833,7 +923,16 @@ export default function SettingsPage() {
         >
           <FormGrid>
             <FormField label="Role name"><TextInput value={roleForm.name} onChange={(e) => setRoleForm((p) => ({ ...p, name: e.target.value }))} /></FormField>
-            <FormField label="Color"><TextInput value={roleForm.color} onChange={(e) => setRoleForm((p) => ({ ...p, color: e.target.value }))} /></FormField>
+            <FormField label="Color">
+              <div className="flex items-center gap-2">
+                <SelectInput value={roleForm.color} onChange={(e) => setRoleForm((p) => ({ ...p, color: e.target.value }))}>
+                  {roleColorOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </SelectInput>
+                <Badge tone="muted">{roleColorOptions.find((option) => option.value === roleForm.color)?.label ?? "Slate"}</Badge>
+              </div>
+            </FormField>
             <FormField label="Description" className="md:col-span-2"><TextareaInput value={roleForm.description} onChange={(e) => setRoleForm((p) => ({ ...p, description: e.target.value }))} /></FormField>
             <BooleanField label="Active role" value={roleForm.active} onChange={(value) => setRoleForm((p) => ({ ...p, active: value }))} />
           </FormGrid>

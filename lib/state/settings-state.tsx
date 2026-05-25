@@ -110,6 +110,7 @@ const defaultRoleDefinitions: StaffRoleDefinition[] = [
     id: "role_owner",
     name: "Owner",
     description: "Full facility and system access.",
+    color: "slate",
     permissions: ROLE_PERMISSION_PRESETS.owner,
     active: true,
     isSystem: true
@@ -118,6 +119,7 @@ const defaultRoleDefinitions: StaffRoleDefinition[] = [
     id: "role_manager",
     name: "Manager",
     description: "Operational management across staff, products, and programs.",
+    color: "blue",
     permissions: ROLE_PERMISSION_PRESETS.manager,
     active: true,
     isSystem: true
@@ -126,6 +128,7 @@ const defaultRoleDefinitions: StaffRoleDefinition[] = [
     id: "role_front_desk",
     name: "Front Desk",
     description: "Daily check-in, POS, and customer operations.",
+    color: "green",
     permissions: ROLE_PERMISSION_PRESETS.front_desk,
     active: true,
     isSystem: true
@@ -134,6 +137,7 @@ const defaultRoleDefinitions: StaffRoleDefinition[] = [
     id: "role_instructor",
     name: "Instructor / Coach",
     description: "Rosters and attendance for assigned sessions.",
+    color: "purple",
     permissions: ROLE_PERMISSION_PRESETS.instructor,
     active: true,
     isSystem: true
@@ -142,6 +146,7 @@ const defaultRoleDefinitions: StaffRoleDefinition[] = [
     id: "role_volunteer",
     name: "Volunteer",
     description: "Limited roster and attendance support.",
+    color: "gray",
     permissions: ROLE_PERMISSION_PRESETS.volunteer_limited,
     active: true,
     isSystem: true
@@ -245,7 +250,7 @@ type SettingsContextValue = {
   updateLocation: (locationId: string, patch: Partial<Location>) => { ok: boolean; message: string };
   archiveLocation: (locationId: string) => { ok: boolean; message: string };
   setDefaultLocation: (locationId: string) => { ok: boolean; message: string };
-  createRole: (input: { name: string; description?: string; permissions: StaffPermission[]; active?: boolean }) => { ok: boolean; message: string; roleId?: string };
+  createRole: (input: { name: string; description?: string; color?: string; permissions: StaffPermission[]; active?: boolean }) => { ok: boolean; message: string; roleId?: string };
   updateRole: (roleId: string, patch: Partial<StaffRoleDefinition>) => { ok: boolean; message: string };
   duplicateRole: (roleId: string) => { ok: boolean; message: string; roleId?: string };
   archiveRole: (roleId: string, staffUsers?: StaffUser[]) => { ok: boolean; message: string };
@@ -373,6 +378,7 @@ export function SettingsStateProvider({ children }: { children: React.ReactNode 
           id,
           name,
           description: input.description?.trim() || "",
+          color: input.color || "slate",
           permissions: Array.from(new Set(input.permissions)),
           active: input.active ?? true,
           isSystem: false
@@ -429,6 +435,7 @@ export function SettingsStateProvider({ children }: { children: React.ReactNode 
           ...source,
           id,
           name,
+          color: source.color || "slate",
           isSystem: false,
           active: true
         }

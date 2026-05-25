@@ -42,6 +42,7 @@ export interface StaffRoleDefinition {
   id: string;
   name: string;
   description?: string;
+  color?: string;
   permissions: StaffPermission[];
   active: boolean;
   isSystem: boolean;

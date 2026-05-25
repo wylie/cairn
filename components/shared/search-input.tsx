@@ -21,7 +21,7 @@ export function SearchInput({
   autoFocus?: boolean;
   className?: string;
   onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
-  inputRef?: RefObject<HTMLInputElement>;
+  inputRef?: RefObject<HTMLInputElement | null>;
 }) {
   return (
     <div className="space-y-1">

@@ -153,12 +153,72 @@ Why: cards should separate workflow chunks without looking like old desktop wind
 
 Why: badges are status beacons, not decorative tags.
 
-## Forms
-- Inputs are keyboard-first and scanner-friendly.
-- Labels always present (visible or SR-only).
-- Use clear placeholder hints for search/scan workflows.
+## Form Standards
+All Cairn forms use one consistent pattern across pages and modals.
 
-Why: front desk speed depends on low-friction typing/scanning.
+### Field layout (default)
+- Label above control.
+- Control directly below label.
+- Optional helper/error text below control.
+
+Structure:
+- Label
+- `[ input / select / textarea ]`
+- Helper/error text
+
+Rule:
+- Do not place labels inline beside inputs.
+- Inline label/control is allowed only for checkbox and radio fields.
+
+### Form components
+Use shared components for consistency:
+- `FormSection`
+- `FormGrid`
+- `FormField`
+- `TextInput`
+- `SelectInput`
+- `TextareaInput`
+- `CheckboxField`
+- `RadioField`
+- `FieldGroup`
+- `FormActions`
+
+### Input/select/date styling
+- Same control height: `44px` (`h-11`).
+- Same padding, border, radius, text size.
+- Same focus ring.
+- Same disabled opacity/state.
+- Error/helper text always beneath control.
+
+### Textarea styling
+- Matches input/select visual style.
+- Default `min-height`: about `96px` (`min-h-24`).
+- Same border/radius/focus styling.
+- `resize-y` only.
+
+### Checkbox/radio styling
+- Default pattern: `[ ] Label`.
+- Optional helper text below.
+- Do not style default checkbox/radio rows like full text inputs.
+- Card-style toggle groups are allowed only when intentionally grouped settings need emphasis.
+
+### Form grid rules
+- Desktop: two equal columns by default (`md:grid-cols-2`).
+- Mobile: single column (`grid-cols-1`).
+- Full-width fields span both columns (`md:col-span-2`).
+- Textareas usually span both columns.
+- Use consistent `gap` across all rows/columns.
+
+### Form actions
+- Actions live in a single `FormActions` row.
+- Primary action first in flow.
+- Secondary/cancel actions adjacent.
+- Keep actions reachable in modal footers (sticky footer in long forms).
+
+Why:
+- Fast data entry during front-desk flow.
+- Lower cognitive load for staff switching between screens.
+- Fewer malformed or misaligned forms.
 
 ## Tables/lists
 - Prefer responsive list/cards for operations views first.

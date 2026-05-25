@@ -8,6 +8,7 @@ import { buildScopedMockKey, loadMockState, saveMockState } from "@/lib/mock-sto
 import { staffHasAnyPermission, staffHasPermission } from "@/lib/staff/permissions";
 import type { AuditLogEntry, StaffPermission, StaffUser } from "@/types/domain";
 import { resolveTenant } from "@/lib/tenant/resolve";
+import { getCurrentOrgSlugClient } from "@/lib/tenant/client";
 
 function mergeSeedStaffUsers(stored: StaffUser[], seededStaffUsers: StaffUser[]) {
   const byId = new Map(stored.map((staff) => [staff.id, staff]));
@@ -71,7 +72,12 @@ const WorkstationStateContext = createContext<WorkstationStateContextValue | nul
 
 export function WorkstationStateProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const orgSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? "summit";
+  const fallbackSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? "summit";
+  const [orgSlug, setOrgSlug] = useState(fallbackSlug);
+  useEffect(() => {
+    const cookieSlug = getCurrentOrgSlugClient(fallbackSlug);
+    if (cookieSlug !== orgSlug) setOrgSlug(cookieSlug);
+  }, [fallbackSlug, orgSlug]);
   const tenant = resolveTenant(orgSlug);
   const activeOrgId = tenant?.organizationId ?? "org_summit";
   const activeLocationId = tenant?.currentLocationId ?? data.locations[0]?.id ?? "loc_001";

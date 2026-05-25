@@ -7,6 +7,7 @@ import { buildScopedMockKey, loadMockState, saveMockState } from "@/lib/mock-sto
 import { ROLE_PERMISSION_PRESETS } from "@/lib/staff/permissions";
 import type { FacilityProfile, Location, StaffPermission, StaffRoleDefinition, StaffUser } from "@/types/domain";
 import { resolveTenant } from "@/lib/tenant/resolve";
+import { getCurrentOrgSlugClient } from "@/lib/tenant/client";
 
 const DEFAULT_ORGANIZATION_NAME = "Summit Rec Collective";
 const DEFAULT_ORGANIZATION_TIMEZONE = "America/New_York";
@@ -268,7 +269,12 @@ const SettingsStateContext = createContext<SettingsContextValue | null>(null);
 
 export function SettingsStateProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const orgSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? "summit";
+  const fallbackSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? "summit";
+  const [orgSlug, setOrgSlug] = useState(fallbackSlug);
+  useEffect(() => {
+    const cookieSlug = getCurrentOrgSlugClient(fallbackSlug);
+    if (cookieSlug !== orgSlug) setOrgSlug(cookieSlug);
+  }, [fallbackSlug, orgSlug]);
   const tenant = resolveTenant(orgSlug);
   const activeOrgId = tenant?.organizationId ?? "org_summit";
   const settingsStorageKey = buildScopedMockKey(activeOrgId, "settings", "v1");

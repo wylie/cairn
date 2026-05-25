@@ -49,6 +49,7 @@ import type {
   Waiver
 } from "@/types/domain";
 import { resolveTenant } from "@/lib/tenant/resolve";
+import { getCurrentOrgSlugClient } from "@/lib/tenant/client";
 
 const BASE_DATE = "2026-05-20";
 
@@ -476,7 +477,12 @@ const CustomerStateContext = createContext<CustomerStateContextValue | null>(nul
 
 export function CustomerStateProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const orgSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? "summit";
+  const fallbackSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? "summit";
+  const [orgSlug, setOrgSlug] = useState(fallbackSlug);
+  useEffect(() => {
+    const cookieSlug = getCurrentOrgSlugClient(fallbackSlug);
+    if (cookieSlug !== orgSlug) setOrgSlug(cookieSlug);
+  }, [fallbackSlug, orgSlug]);
   const tenant = resolveTenant(orgSlug);
   const activeOrgId = tenant?.organizationId ?? "org_summit";
   const activeLocationId = tenant?.currentLocationId ?? "loc_001";
@@ -615,35 +621,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     );
     setCheckInLogRecords(storedCheckIns);
     setHydrated(true);
-  }, [
-    activeOrgId,
-    seededAccessRecordsForOrg,
-    seededCheckIns,
-    seededCustomersForOrg,
-    seededHouseholdMembersForOrg,
-    seededHouseholdsForOrg,
-    seededMembershipsForOrg,
-    seededProductsForOrg,
-    seededProgramsForOrg,
-    seededPunchPassesForOrg,
-    seededRegistrationsForOrg,
-    seededSessionsForOrg,
-    seededTransactionsForOrg,
-    seededWaiversForOrg,
-    storageKeys.accessRecords,
-    storageKeys.checkins,
-    storageKeys.customers,
-    storageKeys.householdMembers,
-    storageKeys.households,
-    storageKeys.memberships,
-    storageKeys.passes,
-    storageKeys.products,
-    storageKeys.programs,
-    storageKeys.registrations,
-    storageKeys.sessions,
-    storageKeys.transactions,
-    storageKeys.waivers
-  ]);
+  }, [activeOrgId, activeLocationId]);
 
   useEffect(() => {
     if (!hydrated) return;

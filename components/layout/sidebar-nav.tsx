@@ -30,16 +30,18 @@ function buildOrgHref(pathname: string, href: string) {
 
 export function SidebarNav({
   pathname,
+  currentOrgSlug,
   canAccessPermissions
 }: {
   pathname: string;
+  currentOrgSlug?: string;
   canAccessPermissions?: (permissions?: StaffPermission[]) => boolean;
 }) {
   const visibleItems = navItems.filter((item) => (canAccessPermissions ? canAccessPermissions(item.permissions) : true));
   return (
     <nav className="space-y-1">
       {visibleItems.map((item) => {
-        const orgHref = buildOrgHref(pathname, item.href);
+        const orgHref = currentOrgSlug ? `/o/${currentOrgSlug}${item.href}` : buildOrgHref(pathname, item.href);
         const isActive =
           pathname === item.href ||
           Boolean(pathname?.startsWith(`${item.href}/`)) ||

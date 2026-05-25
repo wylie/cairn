@@ -9,4 +9,11 @@ describe("SidebarNav", () => {
       expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
     });
   });
+
+  it("prefixes links with organization slug when provided", () => {
+    render(<SidebarNav pathname="/o/summit/dashboard" currentOrgSlug="summit" />);
+    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("href", "/o/summit/dashboard");
+    expect(screen.getByRole("link", { name: "Customers" })).toHaveAttribute("href", "/o/summit/customers");
+    expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("href", "/o/summit/reports");
+  });
 });

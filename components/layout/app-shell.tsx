@@ -1,16 +1,23 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { TopBar } from "@/components/layout/top-bar";
 import { data } from "@/lib/data";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import type { StaffPermission } from "@/types/domain";
+import { getCurrentOrgSlugClient } from "@/lib/tenant/client";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const organizations = data.organizations;
-  const currentSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? organizations[0]?.slug ?? "summit";
+  const fallbackSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? organizations[0]?.slug ?? "summit";
+  const [currentSlug, setCurrentSlug] = useState(fallbackSlug);
+  useEffect(() => {
+    const slugFromCookie = getCurrentOrgSlugClient(fallbackSlug);
+    if (slugFromCookie !== currentSlug) setCurrentSlug(slugFromCookie);
+  }, [fallbackSlug, currentSlug]);
   const currentOrganization = organizations.find((entry) => entry.slug === currentSlug) ?? organizations[0];
   const { hasAnyPermission, activeStaff } = useWorkstationState();
 
@@ -28,7 +35,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <h1 className="mt-1 text-lg font-semibold">{currentOrganization?.name}</h1>
           <p className="mt-1 text-xs text-muted-foreground">{currentOrganization?.facilityType.replace("_", " ")}</p>
           <div className="mt-5">
-            <SidebarNav pathname={pathname} canAccessPermissions={canAccessPermissions} />
+            <SidebarNav pathname={pathname} currentOrgSlug={currentSlug} canAccessPermissions={canAccessPermissions} />
           </div>
         </aside>
         <main className="space-y-4">

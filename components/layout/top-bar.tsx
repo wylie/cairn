@@ -2,34 +2,27 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useSettingsState } from "@/lib/state/settings-state";
 import { ActiveStaffIndicator } from "@/components/staff/active-staff-indicator";
 import { data } from "@/lib/data";
 import { Button } from "@/components/ui/button";
-
-function decodeAllowedOrgSlugsFromCookie(): string[] | null {
-  if (typeof document === "undefined") return null;
-  const raw = document.cookie
-    .split("; ")
-    .find((entry) => entry.startsWith("cairn_mock_auth="))
-    ?.split("=")[1];
-  if (!raw) return null;
-  try {
-    const json = atob(raw.replaceAll("-", "+").replaceAll("_", "/"));
-    const parsed = JSON.parse(json) as { organizationSlugs?: string[] };
-    return Array.isArray(parsed.organizationSlugs) ? parsed.organizationSlugs : null;
-  } catch {
-    return null;
-  }
-}
+import { getAllowedOrgSlugsFromSessionCookie, getCurrentOrgSlugClient } from "@/lib/tenant/client";
 
 export function TopBar() {
   const pathname = usePathname();
   const router = useRouter();
   const organizations = data.organizations;
-  const currentSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? organizations[0]?.slug ?? "summit";
-  const allowedOrgSlugs = decodeAllowedOrgSlugsFromCookie() ?? organizations.map((entry) => entry.slug);
+  const fallbackSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? organizations[0]?.slug ?? "summit";
+  const [currentSlug, setCurrentSlug] = useState(fallbackSlug);
+  const [allowedOrgSlugs, setAllowedOrgSlugs] = useState<string[]>(organizations.map((entry) => entry.slug));
+  useEffect(() => {
+    const cookieSlug = getCurrentOrgSlugClient(fallbackSlug);
+    if (cookieSlug !== currentSlug) setCurrentSlug(cookieSlug);
+    const allowed = getAllowedOrgSlugsFromSessionCookie();
+    if (allowed?.length) setAllowedOrgSlugs(allowed);
+  }, [fallbackSlug, currentSlug]);
   const selectableOrgs = organizations.filter((entry) => allowedOrgSlugs.includes(entry.slug));
   const org = selectableOrgs.find((entry) => entry.slug === currentSlug) ?? selectableOrgs[0] ?? organizations[0];
   const { settings, activeLocationId } = useSettingsState();

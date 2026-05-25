@@ -9,6 +9,7 @@ describe("Button variants", () => {
         <Button variant="secondary">Secondary</Button>
         <Button variant="caution">Caution</Button>
         <Button variant="destructive">Destructive</Button>
+        <Button variant="destructiveSubtle">Destructive Subtle</Button>
         <Button variant="ghost">Ghost</Button>
       </div>
     );
@@ -17,7 +18,7 @@ describe("Button variants", () => {
     expect(screen.getByRole("button", { name: "Secondary" }).className).toContain("border");
     expect(screen.getByRole("button", { name: "Caution" }).className).toContain("amber");
     expect(screen.getByRole("button", { name: "Destructive" }).className).toContain("rose");
+    expect(screen.getByRole("button", { name: "Destructive Subtle" }).className).toContain("border-rose");
     expect(screen.getByRole("button", { name: "Ghost" }).className).toContain("hover:bg-secondary");
   });
 });
-

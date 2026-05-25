@@ -1,9 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ProductFormModal } from "@/components/products/product-form-modal";
-import { CreateProductModal } from "@/components/products/create-product-modal";
-import { ProductCard } from "@/components/products/product-card";
 import { CheckboxField, FormField, FormGrid, SelectInput, TextInput, TextareaInput } from "@/components/shared/form-layout";
 import { FileUploadField } from "@/components/shared/file-upload-field";
 import { ColorPickerField, normalizeHexColor } from "@/components/shared/color-picker-field";
@@ -12,19 +9,16 @@ import { PermissionGate } from "@/components/staff/permission-gate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { categoryLabels, getProductCategory, mapTypeToCategory, typeLabels } from "@/lib/products/catalog";
-import { useCustomerState } from "@/lib/state/customer-state";
 import { useSettingsState } from "@/lib/state/settings-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import { PERMISSION_DESCRIPTIONS, PERMISSION_LABELS } from "@/lib/staff/permissions";
-import type { Location, PosProduct, StaffPermission, StaffRoleDefinition } from "@/types/domain";
+import type { Location, StaffPermission, StaffRole, StaffRoleDefinition } from "@/types/domain";
 
 type SettingsSection =
   | "facility"
   | "locations"
   | "staff_roles"
   | "permissions"
-  | "membership_products"
   | "membership_access"
   | "waivers"
   | "pos_payments"
@@ -37,7 +31,6 @@ const settingsSections: Array<{ id: SettingsSection; label: string }> = [
   { id: "locations", label: "Locations" },
   { id: "staff_roles", label: "Staff Roles" },
   { id: "permissions", label: "Permissions" },
-  { id: "membership_products", label: "Membership Products" },
   { id: "membership_access", label: "Membership & Access" },
   { id: "waivers", label: "Waivers" },
   { id: "pos_payments", label: "POS & Payments" },
@@ -57,6 +50,37 @@ const roleColorOptions = [
   { value: "gray", label: "Gray" }
 ] as const;
 
+const timezoneOptions = [
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Phoenix",
+  "America/Anchorage",
+  "Pacific/Honolulu"
+] as const;
+
+const roleColorChipClass: Record<string, string> = {
+  slate: "border-slate-300 bg-slate-100 text-slate-800",
+  blue: "border-sky-300 bg-sky-100 text-sky-800",
+  green: "border-emerald-300 bg-emerald-100 text-emerald-800",
+  amber: "border-amber-300 bg-amber-100 text-amber-900",
+  purple: "border-violet-300 bg-violet-100 text-violet-800",
+  orange: "border-orange-300 bg-orange-100 text-orange-800",
+  red: "border-rose-300 bg-rose-100 text-rose-800",
+  gray: "border-zinc-300 bg-zinc-100 text-zinc-800"
+};
+
+function mapRoleNameToStaffRole(name: string): StaffRole | null {
+  const normalized = name.trim().toLowerCase();
+  if (normalized === "owner") return "owner";
+  if (normalized === "manager") return "manager";
+  if (normalized === "front desk") return "front_desk";
+  if (normalized === "instructor / coach" || normalized === "instructor" || normalized === "coach") return "instructor";
+  if (normalized === "volunteer") return "volunteer_limited";
+  return null;
+}
+
 const permissionGroups: Array<{ label: string; permissions: StaffPermission[] }> = [
   { label: "Customers", permissions: ["viewCustomers", "editCustomer", "createCustomer", "mergeCustomer", "deactivateCustomer"] },
   { label: "Check-in", permissions: ["checkInCustomer", "checkOutCustomer", "overrideAccess", "compAccess"] },
@@ -70,7 +94,6 @@ const permissionGroups: Array<{ label: string; permissions: StaffPermission[] }>
 
 export default function SettingsPage() {
   const { activeStaff, staffUsers } = useWorkstationState();
-  const { accessProducts, createProduct, updateProduct, toggleProductActive } = useCustomerState();
   const {
     settings,
     updateFacilityProfile,
@@ -82,6 +105,7 @@ export default function SettingsPage() {
     updateRole,
     duplicateRole,
     archiveRole,
+    deleteRole,
     updateMembershipAccess,
     updateWaiverSettings,
     updatePosPayments,
@@ -139,13 +163,8 @@ export default function SettingsPage() {
     permissions: [] as StaffPermission[]
   });
   const [archiveTargetRoleId, setArchiveTargetRoleId] = useState<string | null>(null);
+  const [deleteTargetRoleId, setDeleteTargetRoleId] = useState<string | null>(null);
   const [savingSection, setSavingSection] = useState<SettingsSection | null>(null);
-  const [membershipTab, setMembershipTab] = useState<"memberships" | "punch_passes" | "day_passes" | "programs" | "rentals">("memberships");
-  const [membershipSearch, setMembershipSearch] = useState("");
-  const [membershipStatusFilter, setMembershipStatusFilter] = useState<"all" | "active" | "inactive">("active");
-  const [membershipLocationFilter, setMembershipLocationFilter] = useState("all");
-  const [showCreateProductModal, setShowCreateProductModal] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<PosProduct | null>(null);
 
   const canManageSettings = activeStaff?.role === "owner" || activeStaff?.permissions.includes("manageSettings");
   const canManageRoles = activeStaff?.role === "owner";
@@ -159,7 +178,6 @@ export default function SettingsPage() {
       locations: false,
       staff_roles: false,
       permissions: false,
-      membership_products: false,
       membership_access: JSON.stringify(membershipDraft) !== JSON.stringify(settings.membershipAccess),
       waivers: JSON.stringify(waiverDraft) !== JSON.stringify(settings.waiver),
       pos_payments: JSON.stringify(posDraft) !== JSON.stringify(settings.posPayments),
@@ -171,49 +189,6 @@ export default function SettingsPage() {
   );
 
   const hasUnsavedChanges = Object.values(sectionDirtyMap).some(Boolean);
-
-  const locationOptions = useMemo(() => settings.locations.filter((entry) => entry.active !== false), [settings.locations]);
-
-  const membershipProducts = useMemo(() => {
-    const q = membershipSearch.trim().toLowerCase();
-    return accessProducts.filter((product) => {
-      const category = getProductCategory(product);
-      const inTab =
-        membershipTab === "memberships"
-          ? category === "memberships"
-          : membershipTab === "punch_passes"
-            ? category === "punch_passes"
-            : membershipTab === "day_passes"
-              ? category === "day_passes"
-              : membershipTab === "programs"
-                ? ["classes", "camps"].includes(category)
-                : ["retail", "misc"].includes(category);
-      if (!inTab) return false;
-      if (membershipStatusFilter === "active" && product.active === false) return false;
-      if (membershipStatusFilter === "inactive" && product.active !== false) return false;
-      if (membershipLocationFilter !== "all") {
-        const eligible = product.eligibleLocationIds ?? [];
-        if (!eligible.includes(membershipLocationFilter)) return false;
-      }
-      if (!q) return true;
-      return [product.name, product.description ?? "", product.type ? typeLabels[product.type] : "", categoryLabels[category]].join(" ").toLowerCase().includes(q);
-    });
-  }, [accessProducts, membershipLocationFilter, membershipSearch, membershipStatusFilter, membershipTab]);
-
-  const nextDuplicateName = (baseName: string) => {
-    const escaped = baseName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const regex = new RegExp(`^${escaped} - Copy(?: (\\d+))?$`);
-    const taken = new Set(accessProducts.map((product) => product.name));
-    if (!taken.has(`${baseName} - Copy`)) return `${baseName} - Copy`;
-    let max = 1;
-    accessProducts.forEach((product) => {
-      const match = product.name.match(regex);
-      if (!match) return;
-      const n = match[1] ? Number(match[1]) : 1;
-      if (Number.isFinite(n)) max = Math.max(max, n);
-    });
-    return `${baseName} - Copy ${max + 1}`;
-  };
 
   useEffect(() => {
     if (hasUnsavedChanges) {
@@ -490,7 +465,13 @@ export default function SettingsPage() {
                     <FormField label="Phone number"><TextInput value={facilityDraft.phone ?? ""} onChange={(e) => setFacilityDraft((p) => ({ ...p, phone: e.target.value }))} /></FormField>
                     <FormField label="Website"><TextInput value={facilityDraft.website ?? ""} onChange={(e) => setFacilityDraft((p) => ({ ...p, website: e.target.value }))} /></FormField>
                     <FormField label="Tax ID (optional)"><TextInput value={facilityDraft.taxId ?? ""} onChange={(e) => setFacilityDraft((p) => ({ ...p, taxId: e.target.value }))} /></FormField>
-                    <FormField label="Timezone"><TextInput value={facilityDraft.timezone} onChange={(e) => setFacilityDraft((p) => ({ ...p, timezone: e.target.value }))} /></FormField>
+                    <FormField label="Timezone">
+                      <SelectInput value={facilityDraft.timezone} onChange={(e) => setFacilityDraft((p) => ({ ...p, timezone: e.target.value }))}>
+                        {timezoneOptions.map((zone) => (
+                          <option key={zone} value={zone}>{zone}</option>
+                        ))}
+                      </SelectInput>
+                    </FormField>
                     <FormField label="Currency"><TextInput value={facilityDraft.currency} onChange={(e) => setFacilityDraft((p) => ({ ...p, currency: e.target.value }))} /></FormField>
                     <FormField label="Business type">
                       <SelectInput value={facilityDraft.businessType} onChange={(e) => setFacilityDraft((p) => ({ ...p, businessType: e.target.value }))}>
@@ -501,7 +482,6 @@ export default function SettingsPage() {
                     <FormField label="City"><TextInput value={facilityDraft.city ?? ""} onChange={(e) => setFacilityDraft((p) => ({ ...p, city: e.target.value }))} /></FormField>
                     <FormField label="State"><TextInput value={facilityDraft.state ?? ""} onChange={(e) => setFacilityDraft((p) => ({ ...p, state: e.target.value.toUpperCase().slice(0, 2) }))} /></FormField>
                     <FormField label="ZIP/postal code"><TextInput value={facilityDraft.postalCode ?? ""} onChange={(e) => setFacilityDraft((p) => ({ ...p, postalCode: e.target.value }))} /></FormField>
-                    <FormField label="Logo URL"><TextInput value={facilityDraft.logoUrl ?? ""} onChange={(e) => setFacilityDraft((p) => ({ ...p, logoUrl: e.target.value }))} /></FormField>
                     <FormField label="Emergency contact info"><TextInput value={facilityDraft.emergencyContact ?? ""} onChange={(e) => setFacilityDraft((p) => ({ ...p, emergencyContact: e.target.value }))} /></FormField>
                     <FormField label="Facility description" className="md:col-span-2"><TextareaInput value={facilityDraft.description ?? ""} onChange={(e) => setFacilityDraft((p) => ({ ...p, description: e.target.value }))} /></FormField>
                   </FormGrid>
@@ -543,14 +523,38 @@ export default function SettingsPage() {
                             <p className="font-medium">{location.name}</p>
                             <p className="text-sm text-muted-foreground">{location.shortName || "No code"} • {location.city}, {location.state}</p>
                           </div>
-                          <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             <Badge tone={location.active ? "success" : "muted"}>{location.active ? "Active" : "Archived"}</Badge>
                             {location.isDefault ? <Badge tone="muted">Default</Badge> : null}
                           </div>
                         </div>
-                        <div className="mt-2 text-sm text-muted-foreground">
-                          <p>Capacity: {location.capacity ?? "Not set"} • Check-in: enabled • POS: enabled • Programs: enabled</p>
-                          <p>Address: {location.addressLine1 ?? "—"} • Phone: {location.phone ?? "—"}</p>
+                        <div className="mt-2" data-testid="location-detail-list">
+                          <dl className="space-y-1 text-sm">
+                            <div className="grid grid-cols-[110px_1fr] gap-2">
+                              <dt className="text-muted-foreground">Capacity</dt>
+                              <dd>{location.capacity ?? "Not set"}</dd>
+                            </div>
+                            <div className="grid grid-cols-[110px_1fr] gap-2">
+                              <dt className="text-muted-foreground">Check-in</dt>
+                              <dd>Enabled</dd>
+                            </div>
+                            <div className="grid grid-cols-[110px_1fr] gap-2">
+                              <dt className="text-muted-foreground">POS</dt>
+                              <dd>Enabled</dd>
+                            </div>
+                            <div className="grid grid-cols-[110px_1fr] gap-2">
+                              <dt className="text-muted-foreground">Programs</dt>
+                              <dd>Enabled</dd>
+                            </div>
+                            <div className="grid grid-cols-[110px_1fr] gap-2">
+                              <dt className="text-muted-foreground">Address</dt>
+                              <dd>{location.addressLine1 ?? "—"}</dd>
+                            </div>
+                            <div className="grid grid-cols-[110px_1fr] gap-2">
+                              <dt className="text-muted-foreground">Phone</dt>
+                              <dd>{location.phone ?? "—"}</dd>
+                            </div>
+                          </dl>
                         </div>
                         <div className="mt-3 flex flex-wrap gap-2">
                           <Button variant="secondary" className="h-9" onClick={() => openEditLocation(location)} disabled={!canManageSettings}>Edit location</Button>
@@ -559,7 +563,7 @@ export default function SettingsPage() {
                             setFeedback(result.message);
                             setWarning(result.ok ? "" : result.message);
                           }} disabled={!canManageSettings}>Set default</Button> : null}
-                          {location.active ? <Button variant="destructive" className="h-9" onClick={() => setArchiveTargetLocationId(location.id)} disabled={!canManageSettings}>Archive</Button> : null}
+                          {location.active ? <Button variant="destructiveSubtle" className="h-9" onClick={() => setArchiveTargetLocationId(location.id)} disabled={!canManageSettings}>Archive</Button> : null}
                         </div>
                       </div>
                     ))}
@@ -584,13 +588,20 @@ export default function SettingsPage() {
                   <FormField label="Search roles"><TextInput value={roleQuery} onChange={(e) => setRoleQuery(e.target.value)} placeholder="Search role name" /></FormField>
                   {roleFiltered.map((role) => (
                     <div key={role.id} className="rounded-lg border p-3">
+                      {(() => {
+                        const mappedRole = mapRoleNameToStaffRole(role.name);
+                        const roleInUse = mappedRole ? staffUsers.some((staff) => staff.role === mappedRole) : false;
+                        return (
+                          <>
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
                           <p className="font-medium">{role.name}</p>
                           <p className="text-sm text-muted-foreground">{role.description || "No description"}</p>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          <Badge tone="muted">Color: {roleColorOptions.find((option) => option.value === role.color)?.label ?? "Slate"}</Badge>
+                          <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${roleColorChipClass[role.color ?? "slate"]}`}>
+                            {roleColorOptions.find((option) => option.value === role.color)?.label ?? "Slate"}
+                          </span>
                           {role.isSystem ? <Badge tone="muted">System role</Badge> : null}
                           <Badge tone={role.active ? "success" : "muted"}>{role.active ? "Active" : "Archived"}</Badge>
                         </div>
@@ -606,8 +617,12 @@ export default function SettingsPage() {
                           setFeedback(result.message);
                           setWarning(result.ok ? "" : result.message);
                         }} disabled={!canManageRoles}>Duplicate role</Button>
-                        {!role.isSystem ? <Button variant="destructive" className="h-9" onClick={() => setArchiveTargetRoleId(role.id)} disabled={!canManageRoles}>Archive role</Button> : null}
+                        {!role.isSystem ? <Button variant="destructiveSubtle" className="h-9" onClick={() => setArchiveTargetRoleId(role.id)} disabled={!canManageRoles}>Archive role</Button> : null}
+                        {!role.isSystem && !roleInUse ? <Button variant="destructiveSubtle" className="h-9" onClick={() => setDeleteTargetRoleId(role.id)} disabled={!canManageRoles}>Delete role</Button> : null}
                       </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   ))}
                   {roleFiltered.length === 0 ? <p className="text-sm text-muted-foreground">No roles match your search.</p> : null}
@@ -651,112 +666,6 @@ export default function SettingsPage() {
                       );
                     })}
                   </div>
-                </CardContent>
-              </Card>
-            ) : null}
-
-            {activeSection === "membership_products" ? (
-              <Card>
-                <CardHeader>
-                  <div className="flex flex-wrap items-end justify-between gap-3">
-                    <div>
-                      <CardTitle>Membership Products</CardTitle>
-                      <CardDescription>Manage memberships, passes, program access products, and rentals.</CardDescription>
-                    </div>
-                    <Button onClick={() => setShowCreateProductModal(true)}>Create product</Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      ["memberships", "Memberships"],
-                      ["punch_passes", "Punch Passes"],
-                      ["day_passes", "Day Passes"],
-                      ["programs", "Programs"],
-                      ["rentals", "Rentals / Add-ons"]
-                    ].map(([id, label]) => (
-                      <Button
-                        key={id}
-                        size="sm"
-                        variant={membershipTab === id ? "primary" : "secondary"}
-                        onClick={() => setMembershipTab(id as "memberships" | "punch_passes" | "day_passes" | "programs" | "rentals")}
-                      >
-                        {label}
-                      </Button>
-                    ))}
-                  </div>
-
-                  <div className="grid gap-3 [grid-template-columns:minmax(220px,2fr)_repeat(auto-fit,minmax(160px,1fr))]">
-                    <FormField label="Search products">
-                      <TextInput
-                        aria-label="Search membership products"
-                        value={membershipSearch}
-                        onChange={(e) => setMembershipSearch(e.target.value)}
-                        placeholder="Search name, type, or description"
-                      />
-                    </FormField>
-                    <FormField label="Status">
-                      <SelectInput
-                        aria-label="Filter membership products by status"
-                        value={membershipStatusFilter}
-                        onChange={(e) => setMembershipStatusFilter(e.target.value as "all" | "active" | "inactive")}
-                      >
-                        <option value="all">All</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                      </SelectInput>
-                    </FormField>
-                    <FormField label="Location">
-                      <SelectInput
-                        aria-label="Filter membership products by location"
-                        value={membershipLocationFilter}
-                        onChange={(e) => setMembershipLocationFilter(e.target.value)}
-                      >
-                        <option value="all">All locations</option>
-                        {locationOptions.map((location) => (
-                          <option key={location.id} value={location.id}>{location.name}</option>
-                        ))}
-                      </SelectInput>
-                    </FormField>
-                  </div>
-
-                  <div className="grid gap-3 lg:grid-cols-2">
-                    {membershipProducts.map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        onEdit={() => setEditingProduct(product)}
-                        onDuplicate={() => {
-                          const duplicateName = nextDuplicateName(product.name);
-                          const result = createProduct({
-                            ...product,
-                            name: duplicateName,
-                            category: mapTypeToCategory(product.type ?? "access"),
-                            price: (product.priceCents / 100).toFixed(2),
-                            active: true
-                          });
-                          if (result.ok) {
-                            setFeedback(result.message);
-                            setWarning("");
-                          } else {
-                            setWarning(result.message);
-                            setFeedback("");
-                          }
-                        }}
-                        onArchive={() => {
-                          const result = toggleProductActive(product.id);
-                          if (result.ok) {
-                            setFeedback(result.message);
-                            setWarning("");
-                          } else {
-                            setWarning(result.message);
-                            setFeedback("");
-                          }
-                        }}
-                      />
-                    ))}
-                  </div>
-                  {membershipProducts.length === 0 ? <p className="text-sm text-muted-foreground">No products match your current filters.</p> : null}
                 </CardContent>
               </Card>
             ) : null}
@@ -881,7 +790,7 @@ export default function SettingsPage() {
                   <FormGrid>
                     <ColorPickerField label="Primary brand color" value={brandingDraft.primaryColor} onChange={(value) => updateBrandColor("primaryColor", value)} helperText="Custom brand color for primary actions and active states." />
                     <ColorPickerField label="Secondary brand color" value={brandingDraft.secondaryColor} onChange={(value) => updateBrandColor("secondaryColor", value)} helperText="Custom secondary color used in supporting brand elements." />
-                    <FormField label="Facility nickname"><TextInput value={brandingDraft.facilityNickname} onChange={(e) => setBrandingDraft((p) => ({ ...p, facilityNickname: e.target.value }))} /></FormField>
+                    <FormField label="Facility nickname" className="md:col-span-2"><TextInput value={brandingDraft.facilityNickname} onChange={(e) => setBrandingDraft((p) => ({ ...p, facilityNickname: e.target.value }))} /></FormField>
                     <FileUploadField
                       label="Upload logo"
                       accept="image/*"
@@ -1023,32 +932,6 @@ export default function SettingsPage() {
           <p className="text-sm text-muted-foreground">This section has edits that are not saved.</p>
         </ModalShell>
 
-        <CreateProductModal
-          open={showCreateProductModal}
-          onClose={() => setShowCreateProductModal(false)}
-          onCreated={(message) => {
-            setFeedback(message);
-            setWarning("");
-          }}
-        />
-        <ProductFormModal
-          open={Boolean(editingProduct)}
-          title="Edit Product"
-          product={editingProduct}
-          onClose={() => setEditingProduct(null)}
-          onSubmit={(input) => {
-            if (!editingProduct) return { ok: false as const, message: "Product not found." };
-            const result = updateProduct(editingProduct.id, input);
-            if (result.ok) {
-              setFeedback(result.message);
-              setWarning("");
-            } else {
-              setWarning(result.message);
-              setFeedback("");
-            }
-            return result;
-          }}
-        />
 
         <ModalShell
           open={showLocationModal}
@@ -1073,9 +956,18 @@ export default function SettingsPage() {
             <FormField label="Phone"><TextInput value={locationForm.phone} onChange={(e) => setLocationForm((p) => ({ ...p, phone: e.target.value }))} /></FormField>
             <FormField label="Email"><TextInput value={locationForm.email} onChange={(e) => setLocationForm((p) => ({ ...p, email: e.target.value }))} /></FormField>
             <FormField label="Capacity"><TextInput type="number" value={locationForm.capacity} onChange={(e) => setLocationForm((p) => ({ ...p, capacity: Number(e.target.value) || 0 }))} /></FormField>
-            <FormField label="Timezone override"><TextInput value={locationForm.timezoneOverride} onChange={(e) => setLocationForm((p) => ({ ...p, timezoneOverride: e.target.value }))} /></FormField>
+            <FormField label="Timezone override">
+              <SelectInput value={locationForm.timezoneOverride} onChange={(e) => setLocationForm((p) => ({ ...p, timezoneOverride: e.target.value }))}>
+                <option value="">Use facility timezone</option>
+                {timezoneOptions.map((zone) => (
+                  <option key={zone} value={zone}>{zone}</option>
+                ))}
+              </SelectInput>
+            </FormField>
             <FormField label="Manager"><TextInput value={locationForm.manager} onChange={(e) => setLocationForm((p) => ({ ...p, manager: e.target.value }))} /></FormField>
-            <FormField label="Allowed staff"><TextInput value={locationForm.allowedStaff} onChange={(e) => setLocationForm((p) => ({ ...p, allowedStaff: e.target.value }))} /></FormField>
+            <FormField label="Staff with access" helperText="Staff who can work from or be assigned to this location.">
+              <TextInput value={locationForm.allowedStaff} onChange={(e) => setLocationForm((p) => ({ ...p, allowedStaff: e.target.value }))} />
+            </FormField>
             <BooleanField label="Active location" value={locationForm.active} onChange={(value) => setLocationForm((p) => ({ ...p, active: value }))} />
             <BooleanField label="Check-in enabled" value={locationForm.checkInEnabled} onChange={(value) => setLocationForm((p) => ({ ...p, checkInEnabled: value }))} />
             <BooleanField label="POS enabled" value={locationForm.posEnabled} onChange={(value) => setLocationForm((p) => ({ ...p, posEnabled: value }))} />
@@ -1128,7 +1020,9 @@ export default function SettingsPage() {
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </SelectInput>
-                <Badge tone="muted">{roleColorOptions.find((option) => option.value === roleForm.color)?.label ?? "Slate"}</Badge>
+                <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${roleColorChipClass[roleForm.color]}`}>
+                  {roleColorOptions.find((option) => option.value === roleForm.color)?.label ?? "Slate"}
+                </span>
               </div>
             </FormField>
             <FormField label="Description" className="md:col-span-2"><TextareaInput value={roleForm.description} onChange={(e) => setRoleForm((p) => ({ ...p, description: e.target.value }))} /></FormField>
@@ -1183,6 +1077,29 @@ export default function SettingsPage() {
           }
         >
           <p className="text-sm text-muted-foreground">System roles cannot be archived, and roles currently in use stay protected.</p>
+        </ModalShell>
+
+        <ModalShell
+          open={deleteTargetRoleId !== null}
+          ariaLabel="Delete role confirmation"
+          title="Delete role?"
+          description="This permanently removes the role. Staff cannot be assigned to it afterward."
+          onClose={() => setDeleteTargetRoleId(null)}
+          maxWidthClassName="max-w-md"
+          footer={
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setDeleteTargetRoleId(null)}>Cancel</Button>
+              <Button variant="destructive" onClick={() => {
+                if (!deleteTargetRoleId) return;
+                const result = deleteRole(deleteTargetRoleId, staffUsers);
+                setFeedback(result.ok ? result.message : "");
+                setWarning(result.ok ? "" : result.message);
+                setDeleteTargetRoleId(null);
+              }}>Delete Role</Button>
+            </div>
+          }
+        >
+          <p className="text-sm text-muted-foreground">Use archive for roles that should remain available in historical records.</p>
         </ModalShell>
       </section>
     </PermissionGate>

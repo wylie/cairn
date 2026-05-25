@@ -254,6 +254,7 @@ type SettingsContextValue = {
   updateRole: (roleId: string, patch: Partial<StaffRoleDefinition>) => { ok: boolean; message: string };
   duplicateRole: (roleId: string) => { ok: boolean; message: string; roleId?: string };
   archiveRole: (roleId: string, staffUsers?: StaffUser[]) => { ok: boolean; message: string };
+  deleteRole: (roleId: string, staffUsers?: StaffUser[]) => { ok: boolean; message: string };
   updateMembershipAccess: (patch: Partial<MembershipAccessSettings>) => void;
   updateWaiverSettings: (patch: Partial<WaiverSettings>) => void;
   updatePosPayments: (patch: Partial<PosPaymentSettings>) => void;
@@ -461,6 +462,23 @@ export function SettingsStateProvider({ children }: { children: React.ReactNode 
     return { ok: true, message: `${role.name} archived.` };
   };
 
+  const deleteRole: SettingsContextValue["deleteRole"] = (roleId, staffUsers = []) => {
+    const role = settings.roleDefinitions.find((entry) => entry.id === roleId);
+    if (!role) return { ok: false, message: "Role not found." };
+    if (role.isSystem) return { ok: false, message: "System roles cannot be deleted." };
+
+    const linkedSystemRole = mapRoleNameToSystemRoleId(role.name);
+    if (linkedSystemRole && staffUsers.some((staff) => staff.role === linkedSystemRole)) {
+      return { ok: false, message: "Role is currently assigned to staff and cannot be deleted." };
+    }
+
+    applySettings((prev) => ({
+      ...prev,
+      roleDefinitions: prev.roleDefinitions.filter((entry) => entry.id !== roleId)
+    }));
+    return { ok: true, message: `${role.name} deleted.` };
+  };
+
   const updateMembershipAccess = (patch: Partial<MembershipAccessSettings>) => {
     applySettings((prev) => ({ ...prev, membershipAccess: { ...prev.membershipAccess, ...patch } }));
   };
@@ -494,6 +512,7 @@ export function SettingsStateProvider({ children }: { children: React.ReactNode 
       updateRole,
       duplicateRole,
       archiveRole,
+      deleteRole,
       updateMembershipAccess,
       updateWaiverSettings,
       updatePosPayments,

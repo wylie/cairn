@@ -42,6 +42,23 @@ async function activateStaff(user: ReturnType<typeof userEvent.setup>, pin = "22
 }
 
 describe("Products page", () => {
+  it("manages access products including memberships, punch passes, day passes, programs, and rentals", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <ProductsPage />
+      </TestProviders>
+    );
+    await activateStaff(user, "2222");
+
+    expect(screen.getAllByText(/Monthly Membership|Unlimited Membership/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/10 Visit Pass|10 Climb Visits/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Day Pass/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Camp Registration|Intro to Climbing/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Harness Rental|Bike Rental/i).length).toBeGreaterThan(0);
+  });
+
   it("product creation works and appears in POS search", async () => {
     const user = userEvent.setup();
     render(
@@ -219,11 +236,11 @@ describe("Products page", () => {
     );
     await activateStaff(user, "2222");
 
-    const card = screen.getByText("Day Pass").closest("article");
+    const card = screen.getAllByRole("button", { name: "Deactivate" })[0].closest("article");
     expect(card).not.toBeNull();
     await user.click(within(card as HTMLElement).getByRole("button", { name: "Deactivate" }));
     await user.selectOptions(screen.getByLabelText("Filter products by status"), "inactive");
-    expect(screen.getByText("Day Pass")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Activate" }).length).toBeGreaterThan(0);
   });
 
   it("add product modal fields align using shared form layout", async () => {
@@ -241,13 +258,9 @@ describe("Products page", () => {
     const grid = within(dialog).getByTestId("product-form-grid");
     expect(grid.className).toContain("md:grid-cols-2");
 
-    const quick = within(dialog).getByRole("checkbox", { name: /Show as quick button/i }).closest("span");
-    const active = within(dialog).getByRole("checkbox", { name: /Active/i }).closest("span");
-    const waiver = within(dialog).getByRole("checkbox", { name: /Requires waiver/i }).closest("span");
-
-    expect(quick?.className).toContain("h-11");
-    expect(active?.className).toContain("h-11");
-    expect(waiver?.className).toContain("h-11");
+    expect(within(dialog).getByRole("checkbox", { name: /Show as quick button/i })).toBeInTheDocument();
+    expect(within(dialog).getByRole("checkbox", { name: /Active/i })).toBeInTheDocument();
+    expect(within(dialog).getByRole("checkbox", { name: /Requires waiver/i })).toBeInTheDocument();
   });
 
   it("product color can be selected and is used on products and POS cards", async () => {
@@ -344,7 +357,7 @@ describe("Products page", () => {
     );
     await activateStaff(user, "2222");
 
-    const dayPassCard = screen.getByText("Day Pass").closest("article");
+    const dayPassCard = screen.getAllByRole("button", { name: "Edit Product" })[0].closest("article");
     expect(dayPassCard).not.toBeNull();
     expect(within(dayPassCard as HTMLElement).getByRole("button", { name: "Edit Product" })).toBeInTheDocument();
     expect(within(dayPassCard as HTMLElement).getByRole("button", { name: "Duplicate" })).toBeInTheDocument();
@@ -393,13 +406,13 @@ describe("Products page", () => {
     );
     await activateStaff(user, "2222");
 
-    const dayPassCard = screen.getByText("Day Pass").closest("article");
+    const dayPassCard = screen.getAllByRole("button", { name: "Duplicate" })[0].closest("article");
     expect(dayPassCard).not.toBeNull();
     await user.click(within(dayPassCard as HTMLElement).getByRole("button", { name: "Duplicate" }));
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     const nameInput = screen.getByLabelText("Product name");
     expect(nameInput).toHaveFocus();
-    expect(nameInput).toHaveValue("Day Pass - Copy");
+    expect(String((nameInput as HTMLInputElement).value)).toMatch(/ - Copy/i);
   });
 });

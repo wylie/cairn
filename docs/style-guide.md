@@ -132,18 +132,28 @@ Why: consistent spacing improves learnability and makes screens feel predictable
 
 Why: cards should separate workflow chunks without looking like old desktop window frames.
 
-## Buttons
-- Primary: filled `#0693C2`, white text
-- Secondary: white with border
-- Danger: red text/border only when needed
-- Keep labels action-first: `Check In`, `Save`, `Add Customer`
+## Button Standards
+- Primary: main action only, filled brand color.
+- Secondary: normal actions, white/outline.
+- Destructive: final dangerous action, filled red after explicit confirmation.
+- Destructive subtle: archive/deactivate/remove, red border/text with light hover.
+- Ghost: low-emphasis utility action.
+- Keep labels action-first: `Check In`, `Save`, `Add Customer`.
 
 ### Button decision rules
 | Scenario | Button type |
 |---|---|
 | Only one obvious next step | Primary |
-| Companion action | Secondary/outline |
-| Irreversible or risky action | Danger style + confirmation |
+| Companion action | Secondary |
+| Archive/deactivate in dense cards | Destructive subtle |
+| Final irreversible action in confirm modal | Destructive |
+| Low-emphasis utility action | Ghost |
+
+### Button usage rules
+- Archive actions use `destructiveSubtle` by default, not filled red.
+- Delete actions use filled destructive in confirmation modals.
+- Avoid multiple filled destructive buttons in dense cards.
+- Icons are optional and should not create clutter.
 
 ## Badges
 - Success: green tint

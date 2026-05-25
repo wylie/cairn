@@ -305,4 +305,112 @@ describe("Settings system MVP", () => {
     expect(colorSelect).toBeInTheDocument();
     expect(within(dialog).queryByLabelText("Color picker")).not.toBeInTheDocument();
   });
+
+  it("uses timezone dropdown and removes logo URL from Facility Profile", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <SettingsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "1111");
+    const timezone = screen.getByLabelText("Timezone");
+    expect(timezone.tagName.toLowerCase()).toBe("select");
+    expect(screen.queryByLabelText("Logo URL")).not.toBeInTheDocument();
+  });
+
+  it("location cards render scannable detail list layout", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <SettingsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "1111");
+    await user.click(screen.getByRole("button", { name: "Locations" }));
+    const detailList = screen.getAllByTestId("location-detail-list")[0];
+    expect(within(detailList).getByText("Capacity")).toBeInTheDocument();
+    expect(within(detailList).getByText("Check-in")).toBeInTheDocument();
+    expect(within(detailList).getByText("Address")).toBeInTheDocument();
+  });
+
+  it("add location uses timezone dropdown and staff with access label", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <SettingsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "1111");
+    await user.click(screen.getByRole("button", { name: "Locations" }));
+    await user.click(screen.getByRole("button", { name: "Add Location" }));
+    const dialog = screen.getByRole("dialog", { name: "Add Location" });
+    const timezone = within(dialog).getByLabelText("Timezone override");
+    expect(timezone.tagName.toLowerCase()).toBe("select");
+    expect(within(dialog).getByText("Staff with access")).toBeInTheDocument();
+  });
+
+  it("system roles cannot be deleted and custom role can be deleted when unused", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <SettingsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "1111");
+    await user.click(screen.getByRole("button", { name: "Staff Roles" }));
+    const ownerCard = screen.getByText("Owner").closest(".rounded-lg") as HTMLElement;
+    expect(within(ownerCard).queryByRole("button", { name: "Delete role" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Create Role" }));
+    const dialog = screen.getByRole("dialog", { name: "Create Role" });
+    await user.type(within(dialog).getByLabelText("Role name"), "Temp Role");
+    await user.click(within(dialog).getByRole("button", { name: "Create Role" }));
+    const roleCard = (await screen.findByText("Temp Role")).closest(".rounded-lg") as HTMLElement;
+    const deleteButton = within(roleCard).getByRole("button", { name: "Delete role" });
+    expect(deleteButton).toBeInTheDocument();
+    await user.click(deleteButton);
+    await user.click(screen.getByRole("button", { name: "Delete Role" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("deleted");
+  });
+
+  it("archive role uses subtle destructive variant and role color chip reflects selected color", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <SettingsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "1111");
+    await user.click(screen.getByRole("button", { name: "Staff Roles" }));
+    await user.click(screen.getByRole("button", { name: "Create Role" }));
+    const firstDialog = screen.getByRole("dialog", { name: "Create Role" });
+    await user.type(within(firstDialog).getByLabelText("Role name"), "Archive Test Role");
+    await user.click(within(firstDialog).getByRole("button", { name: "Create Role" }));
+    const customRoleArchiveButton = (await screen.findAllByRole("button", { name: "Archive role" })).at(0) as HTMLElement;
+    expect(customRoleArchiveButton.className).toContain("border-rose");
+
+    await user.click(screen.getByRole("button", { name: "Create Role" }));
+    const dialog = screen.getByRole("dialog", { name: "Create Role" });
+    await user.selectOptions(within(dialog).getByRole("combobox"), "amber");
+    const amberChip = within(dialog).getAllByText("Amber").find((el) => el.className.includes("border-amber"));
+    expect(amberChip).toBeTruthy();
+  });
+
+  it("removes Membership Products from Settings navigation", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <SettingsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "1111");
+    expect(screen.queryByRole("button", { name: "Membership Products" })).not.toBeInTheDocument();
+  });
 });

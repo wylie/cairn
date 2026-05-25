@@ -11,6 +11,7 @@ const buttonVariants = cva(
         secondary: "border border-border bg-transparent hover:bg-secondary",
         caution: "border border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-200",
         destructive: "bg-rose-600 text-white hover:bg-rose-700",
+        destructiveSubtle: "border border-rose-300 bg-transparent text-rose-700 hover:bg-rose-50",
         ghost: "hover:bg-secondary",
         // Back-compat aliases for existing usage while migrating.
         default: "bg-primary text-primary-foreground hover:opacity-90",

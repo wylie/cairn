@@ -5,7 +5,6 @@ import { InteractiveCalendar } from "@/components/calendar/interactive-calendar"
 import { ScheduleFilters } from "@/components/calendar/schedule-filters";
 import { SessionDetailPanel } from "@/components/calendar/session-detail-panel";
 import { SessionFormPanel } from "@/components/calendar/session-form-panel";
-import { ScheduleViewToggle } from "@/components/calendar/schedule-view-toggle";
 import { SellAccessModal } from "@/components/pos/sell-access-modal";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -234,7 +233,6 @@ export default function CalendarPage() {
           description="Schedule operations: create sessions from Program templates, manage registrations, and run day-to-day class flow."
         />
         <div className="flex items-center gap-2">
-          <ScheduleViewToggle view={view} onChange={setView} />
           <Button
             disabled={!canEditSchedule}
             onClick={() => {
@@ -279,8 +277,8 @@ export default function CalendarPage() {
         instructors={instructors}
       />
 
-      <div className="grid gap-4 xl:grid-cols-[1.45fr_1fr]">
-        <div className="space-y-3" aria-label="schedule-results">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_400px]" data-testid="calendar-layout">
+        <div className="space-y-3 min-w-0" aria-label="schedule-results">
           <InteractiveCalendar
             view={view}
             dateKey={dateKey}
@@ -312,7 +310,7 @@ export default function CalendarPage() {
           />
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4 xl:w-[400px]" data-testid="calendar-sidebar">
           {showCreate ? (
             <SessionFormPanel
               mode="create"

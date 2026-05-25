@@ -117,8 +117,8 @@ export function InteractiveCalendar({
 
   return (
     <div className="space-y-3 rounded-xl border bg-card p-3" aria-label="interactive-calendar">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2" data-testid="calendar-nav-controls">
           <Button variant="secondary" className="h-9" onClick={() => onDateKeyChange(shiftDate(dateKey, view, -1))}>Previous</Button>
           <Button variant="secondary" className="h-9" onClick={() => onDateKeyChange(toDateKey(new Date()))}>Today</Button>
           <Button variant="secondary" className="h-9" onClick={() => onDateKeyChange(shiftDate(dateKey, view, 1))}>Next</Button>
@@ -132,9 +132,9 @@ export function InteractiveCalendar({
             onChange={(event) => onDateKeyChange(event.target.value)}
             className="h-9 rounded-md border border-input bg-white px-2 text-sm"
           />
-          <div className="flex items-center gap-1">
+          <div className="inline-flex items-center gap-1 rounded-md border border-border bg-secondary/30 p-1" data-testid="calendar-view-toggle">
             {(["day", "week", "month", "agenda"] as ScheduleView[]).map((entry) => (
-              <Button key={entry} className="h-9" variant={entry === view ? "primary" : "secondary"} onClick={() => onViewChange(entry)}>
+              <Button key={entry} className="h-8 min-w-16" variant={entry === view ? "primary" : "ghost"} onClick={() => onViewChange(entry)}>
                 {entry[0].toUpperCase() + entry.slice(1)}
               </Button>
             ))}

@@ -61,6 +61,36 @@ describe("Calendar interactive workstation", () => {
     expect(screen.getByRole("button", { name: "Today" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Next" })).toBeInTheDocument();
     expect(screen.getByLabelText("Calendar jump date")).toBeInTheDocument();
+    expect(screen.getByTestId("calendar-view-toggle")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Day" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Week" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Month" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Agenda" })).toHaveLength(1);
+  });
+
+  it("uses consistent calendar/sidebar layout sizing hooks", () => {
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+
+    expect(screen.getByTestId("calendar-layout")).toBeInTheDocument();
+    expect(screen.getByTestId("calendar-sidebar")).toBeInTheDocument();
+  });
+
+  it("applies button hierarchy in calendar controls", () => {
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+
+    expect(screen.getByRole("button", { name: "Create Session" }).className).toContain("bg-primary");
+    expect(screen.getByRole("button", { name: "Previous" }).className).toContain("border");
+    expect(screen.getByRole("button", { name: "Week" }).className).toContain("bg-primary");
   });
 
   it("switches between day, week, month, and agenda views", async () => {

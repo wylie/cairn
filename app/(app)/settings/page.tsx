@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ProductFormModal } from "@/components/products/product-form-modal";
+import { CreateProductModal } from "@/components/products/create-product-modal";
+import { ProductCard } from "@/components/products/product-card";
 import { CheckboxField, FormField, FormGrid, SelectInput, TextInput, TextareaInput } from "@/components/shared/form-layout";
 import { FileUploadField } from "@/components/shared/file-upload-field";
 import { ColorPickerField, normalizeHexColor } from "@/components/shared/color-picker-field";
@@ -9,16 +12,19 @@ import { PermissionGate } from "@/components/staff/permission-gate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { categoryLabels, getProductCategory, mapTypeToCategory, typeLabels } from "@/lib/products/catalog";
+import { useCustomerState } from "@/lib/state/customer-state";
 import { useSettingsState } from "@/lib/state/settings-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import { PERMISSION_DESCRIPTIONS, PERMISSION_LABELS } from "@/lib/staff/permissions";
-import type { Location, StaffPermission, StaffRoleDefinition } from "@/types/domain";
+import type { Location, PosProduct, StaffPermission, StaffRoleDefinition } from "@/types/domain";
 
 type SettingsSection =
   | "facility"
   | "locations"
   | "staff_roles"
   | "permissions"
+  | "membership_products"
   | "membership_access"
   | "waivers"
   | "pos_payments"
@@ -31,6 +37,7 @@ const settingsSections: Array<{ id: SettingsSection; label: string }> = [
   { id: "locations", label: "Locations" },
   { id: "staff_roles", label: "Staff Roles" },
   { id: "permissions", label: "Permissions" },
+  { id: "membership_products", label: "Membership Products" },
   { id: "membership_access", label: "Membership & Access" },
   { id: "waivers", label: "Waivers" },
   { id: "pos_payments", label: "POS & Payments" },
@@ -63,6 +70,7 @@ const permissionGroups: Array<{ label: string; permissions: StaffPermission[] }>
 
 export default function SettingsPage() {
   const { activeStaff, staffUsers } = useWorkstationState();
+  const { accessProducts, createProduct, updateProduct, toggleProductActive } = useCustomerState();
   const {
     settings,
     updateFacilityProfile,
@@ -132,6 +140,12 @@ export default function SettingsPage() {
   });
   const [archiveTargetRoleId, setArchiveTargetRoleId] = useState<string | null>(null);
   const [savingSection, setSavingSection] = useState<SettingsSection | null>(null);
+  const [membershipTab, setMembershipTab] = useState<"memberships" | "punch_passes" | "day_passes" | "programs" | "rentals">("memberships");
+  const [membershipSearch, setMembershipSearch] = useState("");
+  const [membershipStatusFilter, setMembershipStatusFilter] = useState<"all" | "active" | "inactive">("active");
+  const [membershipLocationFilter, setMembershipLocationFilter] = useState("all");
+  const [showCreateProductModal, setShowCreateProductModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<PosProduct | null>(null);
 
   const canManageSettings = activeStaff?.role === "owner" || activeStaff?.permissions.includes("manageSettings");
   const canManageRoles = activeStaff?.role === "owner";
@@ -145,6 +159,7 @@ export default function SettingsPage() {
       locations: false,
       staff_roles: false,
       permissions: false,
+      membership_products: false,
       membership_access: JSON.stringify(membershipDraft) !== JSON.stringify(settings.membershipAccess),
       waivers: JSON.stringify(waiverDraft) !== JSON.stringify(settings.waiver),
       pos_payments: JSON.stringify(posDraft) !== JSON.stringify(settings.posPayments),
@@ -156,6 +171,49 @@ export default function SettingsPage() {
   );
 
   const hasUnsavedChanges = Object.values(sectionDirtyMap).some(Boolean);
+
+  const locationOptions = useMemo(() => settings.locations.filter((entry) => entry.active !== false), [settings.locations]);
+
+  const membershipProducts = useMemo(() => {
+    const q = membershipSearch.trim().toLowerCase();
+    return accessProducts.filter((product) => {
+      const category = getProductCategory(product);
+      const inTab =
+        membershipTab === "memberships"
+          ? category === "memberships"
+          : membershipTab === "punch_passes"
+            ? category === "punch_passes"
+            : membershipTab === "day_passes"
+              ? category === "day_passes"
+              : membershipTab === "programs"
+                ? ["classes", "camps"].includes(category)
+                : ["retail", "misc"].includes(category);
+      if (!inTab) return false;
+      if (membershipStatusFilter === "active" && product.active === false) return false;
+      if (membershipStatusFilter === "inactive" && product.active !== false) return false;
+      if (membershipLocationFilter !== "all") {
+        const eligible = product.eligibleLocationIds ?? [];
+        if (!eligible.includes(membershipLocationFilter)) return false;
+      }
+      if (!q) return true;
+      return [product.name, product.description ?? "", product.type ? typeLabels[product.type] : "", categoryLabels[category]].join(" ").toLowerCase().includes(q);
+    });
+  }, [accessProducts, membershipLocationFilter, membershipSearch, membershipStatusFilter, membershipTab]);
+
+  const nextDuplicateName = (baseName: string) => {
+    const escaped = baseName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(`^${escaped} - Copy(?: (\\d+))?$`);
+    const taken = new Set(accessProducts.map((product) => product.name));
+    if (!taken.has(`${baseName} - Copy`)) return `${baseName} - Copy`;
+    let max = 1;
+    accessProducts.forEach((product) => {
+      const match = product.name.match(regex);
+      if (!match) return;
+      const n = match[1] ? Number(match[1]) : 1;
+      if (Number.isFinite(n)) max = Math.max(max, n);
+    });
+    return `${baseName} - Copy ${max + 1}`;
+  };
 
   useEffect(() => {
     if (hasUnsavedChanges) {
@@ -597,6 +655,112 @@ export default function SettingsPage() {
               </Card>
             ) : null}
 
+            {activeSection === "membership_products" ? (
+              <Card>
+                <CardHeader>
+                  <div className="flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                      <CardTitle>Membership Products</CardTitle>
+                      <CardDescription>Manage memberships, passes, program access products, and rentals.</CardDescription>
+                    </div>
+                    <Button onClick={() => setShowCreateProductModal(true)}>Create product</Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      ["memberships", "Memberships"],
+                      ["punch_passes", "Punch Passes"],
+                      ["day_passes", "Day Passes"],
+                      ["programs", "Programs"],
+                      ["rentals", "Rentals / Add-ons"]
+                    ].map(([id, label]) => (
+                      <Button
+                        key={id}
+                        size="sm"
+                        variant={membershipTab === id ? "primary" : "secondary"}
+                        onClick={() => setMembershipTab(id as "memberships" | "punch_passes" | "day_passes" | "programs" | "rentals")}
+                      >
+                        {label}
+                      </Button>
+                    ))}
+                  </div>
+
+                  <div className="grid gap-3 [grid-template-columns:minmax(220px,2fr)_repeat(auto-fit,minmax(160px,1fr))]">
+                    <FormField label="Search products">
+                      <TextInput
+                        aria-label="Search membership products"
+                        value={membershipSearch}
+                        onChange={(e) => setMembershipSearch(e.target.value)}
+                        placeholder="Search name, type, or description"
+                      />
+                    </FormField>
+                    <FormField label="Status">
+                      <SelectInput
+                        aria-label="Filter membership products by status"
+                        value={membershipStatusFilter}
+                        onChange={(e) => setMembershipStatusFilter(e.target.value as "all" | "active" | "inactive")}
+                      >
+                        <option value="all">All</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </SelectInput>
+                    </FormField>
+                    <FormField label="Location">
+                      <SelectInput
+                        aria-label="Filter membership products by location"
+                        value={membershipLocationFilter}
+                        onChange={(e) => setMembershipLocationFilter(e.target.value)}
+                      >
+                        <option value="all">All locations</option>
+                        {locationOptions.map((location) => (
+                          <option key={location.id} value={location.id}>{location.name}</option>
+                        ))}
+                      </SelectInput>
+                    </FormField>
+                  </div>
+
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    {membershipProducts.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        onEdit={() => setEditingProduct(product)}
+                        onDuplicate={() => {
+                          const duplicateName = nextDuplicateName(product.name);
+                          const result = createProduct({
+                            ...product,
+                            name: duplicateName,
+                            category: mapTypeToCategory(product.type ?? "access"),
+                            price: (product.priceCents / 100).toFixed(2),
+                            active: true
+                          });
+                          if (result.ok) {
+                            setFeedback(result.message);
+                            setWarning("");
+                          } else {
+                            setWarning(result.message);
+                            setFeedback("");
+                          }
+                        }}
+                        onArchive={() => {
+                          const result = toggleProductActive(product.id);
+                          if (result.ok) {
+                            setFeedback(result.message);
+                            setWarning("");
+                          } else {
+                            setWarning(result.message);
+                            setFeedback("");
+                          }
+                        }}
+                      />
+                    ))}
+                  </div>
+                  {membershipProducts.length === 0 ? <p className="text-sm text-muted-foreground">No products match your current filters.</p> : null}
+                </CardContent>
+              </Card>
+            ) : null}
+
             {activeSection === "membership_access" ? (
               <Card>
                 <CardHeader><CardTitle>Membership & Access Defaults</CardTitle></CardHeader>
@@ -858,6 +1022,33 @@ export default function SettingsPage() {
         >
           <p className="text-sm text-muted-foreground">This section has edits that are not saved.</p>
         </ModalShell>
+
+        <CreateProductModal
+          open={showCreateProductModal}
+          onClose={() => setShowCreateProductModal(false)}
+          onCreated={(message) => {
+            setFeedback(message);
+            setWarning("");
+          }}
+        />
+        <ProductFormModal
+          open={Boolean(editingProduct)}
+          title="Edit Product"
+          product={editingProduct}
+          onClose={() => setEditingProduct(null)}
+          onSubmit={(input) => {
+            if (!editingProduct) return { ok: false as const, message: "Product not found." };
+            const result = updateProduct(editingProduct.id, input);
+            if (result.ok) {
+              setFeedback(result.message);
+              setWarning("");
+            } else {
+              setWarning(result.message);
+              setFeedback("");
+            }
+            return result;
+          }}
+        />
 
         <ModalShell
           open={showLocationModal}

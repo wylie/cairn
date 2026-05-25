@@ -74,6 +74,50 @@ const EMPTY_REPORT_MODEL = {
   occupancy: { current: 0, busiestHour: "0:00", busiestHourCount: 0, busiestDay: "Sun", busiestDayCount: 0 },
   households: { total: 0, averageSize: 0, youthMembers: 0, adultMembers: 0 },
   financial: { revenueCents: 0, refunds: 0, comps: 0 },
+  sales: {
+    grossCents: 0,
+    netCents: 0,
+    refundsCents: 0,
+    discountsCents: 0,
+    compsCents: 0,
+    taxCents: 0,
+    transactionCount: 0,
+    averageTransactionCents: 0,
+    byCategory: [] as Array<{ category: string; quantity: number; revenueCents: number }>,
+    byProduct: [] as Array<{ productId: string; productName: string; category: string; quantity: number; revenueCents: number }>,
+    byStaff: [] as Array<{ staffId: string; staffName: string; transactionCount: number; revenueCents: number }>,
+    byPaymentMethod: [] as Array<{ paymentMethod: string; transactionCount: number; revenueCents: number }>,
+    transactions: [] as Array<{
+      id: string;
+      receipt: string;
+      date: string;
+      customer: string;
+      staff: string;
+      paymentMethod: string;
+      subtotalCents: number;
+      discountCents: number;
+      totalCents: number;
+      itemCount: number;
+    }>
+  },
+  members: {
+    newMembers: 0,
+    cancelledMembers: 0,
+    pausedMembers: 0,
+    expiredMembers: 0,
+    renewals: 0,
+    churnRate: 0,
+    retentionRate: 0,
+    averageMembershipLengthDays: 0,
+    inactiveMemberCount: 0
+  },
+  attendance: {
+    totalVisits: 0,
+    uniqueVisitors: 0,
+    repeatVisitors: 0,
+    averageVisitDurationMinutes: 0,
+    topVisitors: [] as Array<{ customerId: string; customerName: string; visits: number }>
+  },
   csvRows: [] as Array<{ receipt: string; date: string; customer: string; staff: string; total: string; items: string }>
 };
 
@@ -370,6 +414,67 @@ export function buildReportModel(input: ReportInput) {
   const compTxCount = scopedTransactions.filter((entry) => safeItems(entry).some((item) => item.type === "comp")).length;
   const grossRevenue = scopedTransactions.reduce((sum, entry) => sum + entry.total, 0);
   const refundCount = scopedTransactions.filter((entry) => entry.transactionType === "return").length;
+  const refundsCents = scopedTransactions
+    .filter((entry) => entry.transactionType === "return")
+    .reduce((sum, entry) => sum + Math.abs(entry.total), 0);
+  const discountsCents = scopedTransactions.reduce((sum, entry) => sum + Math.max(0, entry.subtotal - entry.total), 0);
+  const taxCents = 0;
+  const netCents = grossRevenue - refundsCents;
+
+  const categoryMap = new Map<string, { category: string; quantity: number; revenueCents: number }>();
+  const productMap = new Map<string, { productId: string; productName: string; category: string; quantity: number; revenueCents: number }>();
+  const staffSalesMap = new Map<string, { staffId: string; staffName: string; transactionCount: number; revenueCents: number }>();
+  const paymentMethodMap = new Map<string, { paymentMethod: string; transactionCount: number; revenueCents: number }>();
+
+  scopedTransactions.forEach((entry) => {
+    const staffId = entry.soldByStaffId ?? "staff_unknown";
+    const staffName = entry.soldByStaffName ?? "Staff not recorded";
+    const staffBucket = staffSalesMap.get(staffId) ?? { staffId, staffName, transactionCount: 0, revenueCents: 0 };
+    staffBucket.transactionCount += 1;
+    staffBucket.revenueCents += entry.total;
+    staffSalesMap.set(staffId, staffBucket);
+
+    const paymentMethod = entry.paymentType || "mock";
+    const paymentBucket = paymentMethodMap.get(paymentMethod) ?? { paymentMethod, transactionCount: 0, revenueCents: 0 };
+    paymentBucket.transactionCount += 1;
+    paymentBucket.revenueCents += entry.total;
+    paymentMethodMap.set(paymentMethod, paymentBucket);
+
+    safeItems(entry).forEach((item) => {
+      const category = item.category ?? "uncategorized";
+      const categoryBucket = categoryMap.get(category) ?? { category, quantity: 0, revenueCents: 0 };
+      categoryBucket.quantity += item.quantity;
+      categoryBucket.revenueCents += item.lineTotal;
+      categoryMap.set(category, categoryBucket);
+
+      const productBucket = productMap.get(item.productId) ?? {
+        productId: item.productId,
+        productName: item.productName,
+        category,
+        quantity: 0,
+        revenueCents: 0
+      };
+      productBucket.quantity += item.quantity;
+      productBucket.revenueCents += item.lineTotal;
+      productMap.set(item.productId, productBucket);
+    });
+  });
+
+  const transactionsTable = scopedTransactions
+    .slice()
+    .sort((a, b) => b.completedAt.localeCompare(a.completedAt))
+    .map((entry) => ({
+      id: entry.id,
+      receipt: entry.receiptNumber,
+      date: entry.completedAt,
+      customer: entry.customerName || "Unknown customer",
+      staff: entry.soldByStaffName ?? "Staff not recorded",
+      paymentMethod: entry.paymentType || "mock",
+      subtotalCents: entry.subtotal,
+      discountCents: Math.max(0, entry.subtotal - entry.total),
+      totalCents: entry.total,
+      itemCount: safeItems(entry).reduce((sum, item) => sum + item.quantity, 0)
+    }));
 
   const householdSizeMap = new Map<string, number>();
   input.householdMembers.forEach((member) => {
@@ -393,6 +498,65 @@ export function buildReportModel(input: ReportInput) {
     total: (txn.total / 100).toFixed(2),
     items: safeItems(txn).map((item) => `${item.productName} x${item.quantity}`).join("; ")
   }));
+
+  const membersInactiveThreshold = addDays(input.now, -30);
+  const membersByCustomerId = new Set(
+    input.memberships.filter((entry) => entry.status === "active" || entry.status === "expiring" || entry.status === "trial").map((entry) => entry.customerId)
+  );
+  const memberVisitCounts = new Map<string, number>();
+  scopedCheckIns.forEach((entry) => {
+    if (!membersByCustomerId.has(entry.customerId)) return;
+    memberVisitCounts.set(entry.customerId, (memberVisitCounts.get(entry.customerId) ?? 0) + 1);
+  });
+
+  const inactiveMemberCount = Array.from(membersByCustomerId).filter((customerId) => {
+    const visits = input.checkIns.filter((entry) => entry.customerId === customerId && new Date(entry.checkInTime) >= membersInactiveThreshold);
+    return visits.length === 0;
+  }).length;
+
+  const membershipRenewalDates = input.memberships.reduce<Date[]>((dates, entry) => {
+    if (!entry.renewalDate) return dates;
+    const date = new Date(entry.renewalDate);
+    if (Number.isFinite(date.getTime())) dates.push(date);
+    return dates;
+  }, []);
+  const averageMembershipLengthDays = membershipRenewalDates.length > 0 ? 30 : 0;
+
+  const cancelledMembers = input.memberships.filter((entry) => entry.status === "inactive").length;
+  const pausedMembers = 0;
+  const expiredMembers = input.memberships.filter((entry) => entry.status === "inactive").length;
+  const newMembers = membershipMetrics.newSold;
+  const renewals = input.memberships.filter((entry) => entry.renewalDate && inRange(entry.renewalDate, start, end)).length;
+  const activeMemberCount = membershipMetrics.active + membershipMetrics.expiring + membershipMetrics.trial;
+  const churnRate = activeMemberCount > 0 ? Number(((cancelledMembers / Math.max(activeMemberCount + cancelledMembers, 1)) * 100).toFixed(1)) : 0;
+  const retentionRate = Number((100 - churnRate).toFixed(1));
+
+  const visitDurations = scopedCheckIns
+    .filter((entry) => entry.checkOutTime)
+    .map((entry) => {
+      const checkIn = new Date(entry.checkInTime).getTime();
+      const checkOut = new Date(entry.checkOutTime as string).getTime();
+      return checkOut > checkIn ? Math.round((checkOut - checkIn) / (1000 * 60)) : 0;
+    })
+    .filter((duration) => duration > 0);
+  const averageVisitDurationMinutes =
+    visitDurations.length > 0 ? Math.round(visitDurations.reduce((sum, duration) => sum + duration, 0) / visitDurations.length) : 0;
+
+  const topVisitors = Array.from(
+    scopedCheckIns.reduce((map, entry) => {
+      map.set(entry.customerId, (map.get(entry.customerId) ?? 0) + 1);
+      return map;
+    }, new Map<string, number>())
+  )
+    .map(([customerId, visits]) => ({
+      customerId,
+      customerName: customersById.get(customerId)
+        ? `${customersById.get(customerId)?.firstName} ${customersById.get(customerId)?.lastName}`
+        : "Unknown customer",
+      visits
+    }))
+    .sort((a, b) => b.visits - a.visits)
+    .slice(0, 8);
 
   return {
     range: { start, end },
@@ -447,6 +611,39 @@ export function buildReportModel(input: ReportInput) {
       revenueCents: grossRevenue,
       refunds: refundCount,
       comps: compTxCount
+    },
+    sales: {
+      grossCents: grossRevenue,
+      netCents,
+      refundsCents,
+      discountsCents,
+      compsCents: compTxCount * 100,
+      taxCents,
+      transactionCount: scopedTransactions.length,
+      averageTransactionCents: scopedTransactions.length > 0 ? Math.round(grossRevenue / scopedTransactions.length) : 0,
+      byCategory: Array.from(categoryMap.values()).sort((a, b) => b.revenueCents - a.revenueCents),
+      byProduct: Array.from(productMap.values()).sort((a, b) => b.revenueCents - a.revenueCents),
+      byStaff: Array.from(staffSalesMap.values()).sort((a, b) => b.revenueCents - a.revenueCents),
+      byPaymentMethod: Array.from(paymentMethodMap.values()).sort((a, b) => b.revenueCents - a.revenueCents),
+      transactions: transactionsTable
+    },
+    members: {
+      newMembers,
+      cancelledMembers,
+      pausedMembers,
+      expiredMembers,
+      renewals,
+      churnRate,
+      retentionRate,
+      averageMembershipLengthDays,
+      inactiveMemberCount
+    },
+    attendance: {
+      totalVisits: scopedCheckIns.length,
+      uniqueVisitors,
+      repeatVisitors: repeatVisits,
+      averageVisitDurationMinutes,
+      topVisitors
     },
     csvRows
   };

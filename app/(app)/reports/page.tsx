@@ -10,6 +10,18 @@ import { ReportFiltersBar } from "@/components/reports/report-filters";
 import { AlertCard, ListCard, MetricCard, StatusCard } from "@/components/reports/dashboard-cards";
 import { BarBreakdownCard, TrendLineCard } from "@/components/reports/charts";
 
+type ReportCategory =
+  | "sales"
+  | "products"
+  | "memberships"
+  | "attendance"
+  | "customers"
+  | "programs"
+  | "households"
+  | "staff"
+  | "waivers"
+  | "financial";
+
 function formatCurrency(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
 }
@@ -37,6 +49,19 @@ function downloadCsv(filename: string, rows: Array<Record<string, string>>) {
   URL.revokeObjectURL(link.href);
 }
 
+const CATEGORY_LABELS: Record<ReportCategory, string> = {
+  sales: "Sales",
+  products: "Products",
+  memberships: "Memberships",
+  attendance: "Attendance",
+  customers: "Customers",
+  programs: "Programs",
+  households: "Households",
+  staff: "Staff Activity",
+  waivers: "Waivers",
+  financial: "Financial Summary"
+};
+
 export default function ReportsPage() {
   const {
     customers,
@@ -51,7 +76,11 @@ export default function ReportsPage() {
     householdMembers
   } = useCustomerState();
   const { activeStaff, hasPermission, staffUsers } = useWorkstationState();
+
   const [search, setSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState<ReportCategory>("sales");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedProduct, setSelectedProduct] = useState<string>("all");
   const [filters, setFilters] = useState<ReportFilters>({
     rangeKey: "today",
     locationId: undefined,
@@ -103,31 +132,28 @@ export default function ReportsPage() {
     return report.products.topProducts.filter((entry) => entry.name.toLowerCase().includes(q));
   }, [report.products.topProducts, search]);
 
+  const categoryRows = report.sales.byCategory.filter((row) => selectedCategory === "all" || row.category === selectedCategory);
+  const productRows = report.sales.byProduct.filter((row) => {
+    if (selectedCategory !== "all" && row.category !== selectedCategory) return false;
+    if (selectedProduct !== "all" && row.productId !== selectedProduct) return false;
+    return true;
+  });
+  const transactionRows = report.sales.transactions.filter((row) => {
+    if (selectedProduct === "all") return true;
+    const product = report.sales.byProduct.find((entry) => entry.productId === selectedProduct);
+    return product ? row.itemCount > 0 : true;
+  });
+
   const staffOperationalRows = useMemo(() => {
     if (!(activeStaff?.role === "manager" || activeStaff?.role === "owner")) return [];
-    const rows = staffUsers.map((staff) => {
-      const checkInsCompleted = checkInRecords.filter(
-        (entry) => entry.checkedInByStaffId === staff.id || entry.checkedOutByStaffId === staff.id
-      ).length;
-      const sales = transactions.filter((entry) => entry.soldByStaffId === staff.id);
-      const refunds = sales.filter((entry) => entry.transactionType === "return").length;
-      const attendanceMarked = registrations.filter((entry) => entry.updatedByStaffId === staff.id).length;
-      const registrationsProcessed = registrations.filter((entry) => entry.updatedByStaffId === staff.id).length;
-      return {
-        id: staff.id,
-        primary: `${staff.firstName} ${staff.lastName}`,
-        secondary: `${checkInsCompleted} check-ins • ${sales.length} sales • ${refunds} refunds • ${attendanceMarked} attendance • ${registrationsProcessed} registrations`
-      };
-    });
-    return rows.sort((a, b) => b.secondary.localeCompare(a.secondary)).slice(0, 8);
-  }, [activeStaff?.role, checkInRecords, registrations, staffUsers, transactions]);
+    return report.sales.byStaff.map((entry) => ({
+      id: entry.staffId,
+      primary: entry.staffName,
+      secondary: `${entry.transactionCount} transactions · ${formatCurrency(entry.revenueCents)}`
+    }));
+  }, [activeStaff?.role, report.sales.byStaff]);
 
   const showFinancial = hasPermission("viewFinancialReports") || activeStaff?.role === "owner";
-  const showManagerMetrics = hasPermission("viewReports") && (activeStaff?.role === "manager" || activeStaff?.role === "owner");
-  const isFrontDesk = activeStaff?.role === "front_desk";
-  const isInstructor = activeStaff?.role === "instructor";
-
-  const sparkline = report.trends.daily.slice(-7).map((entry) => ({ value: entry.checkIns }));
 
   return (
     <PermissionGate permission="viewReports">
@@ -135,13 +161,13 @@ export default function ReportsPage() {
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-2xl font-semibold">Reports</h2>
-            <p className="text-sm text-muted-foreground">Actionable operational reporting for staff, managers, and owners.</p>
+            <p className="text-sm text-muted-foreground">Operational command center for sales, memberships, attendance, and customer behavior.</p>
           </div>
           <Button
             variant="secondary"
             onClick={() =>
               downloadCsv(
-                "cairn-sales-export.csv",
+                "cairn-reports-export.csv",
                 report.csvRows.map((row) => ({
                   receipt: row.receipt,
                   date: row.date,
@@ -156,6 +182,7 @@ export default function ReportsPage() {
             Export CSV
           </Button>
         </header>
+
         {reportError ? <AlertCard title="Report Data Warning" message={reportError} tone="warning" /> : null}
 
         <ReportFiltersBar
@@ -171,117 +198,270 @@ export default function ReportsPage() {
           onSearchChange={setSearch}
         />
 
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <MetricCard title="Currently Checked In" value={report.totals.currentlyIn} sparkline={sparkline} />
-          <MetricCard title="Today's Check-Ins" value={report.totals.todayCheckIns} changeLabel={`${report.totals.uniqueVisitors} unique visitors`} sparkline={sparkline} />
-          <MetricCard title="Waivers Missing" value={report.totals.waiversMissing} />
-          <MetricCard title="Today's Registrations" value={report.totals.registrationsToday} />
+        <div className="grid gap-2 lg:grid-cols-5" aria-label="report-categories">
+          {(Object.keys(CATEGORY_LABELS) as ReportCategory[]).map((key) => (
+            <button
+              key={key}
+              type="button"
+              className={`rounded-md border px-3 py-2 text-left text-sm transition ${activeCategory === key ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:bg-muted"}`}
+              onClick={() => setActiveCategory(key)}
+            >
+              {CATEGORY_LABELS[key]}
+            </button>
+          ))}
         </div>
-        {isFrontDesk ? (
+
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <MetricCard title="Gross Sales" value={formatCurrency(report.sales.grossCents)} />
+          <MetricCard title="Net Sales" value={formatCurrency(report.sales.netCents)} />
+          <MetricCard title="Transactions" value={report.sales.transactionCount} />
+          <MetricCard title="Avg Transaction" value={formatCurrency(report.sales.averageTransactionCents)} />
+        </div>
+
+        {activeCategory === "sales" ? (
+          <div className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <StatusCard title="Refunds" value={formatCurrency(report.sales.refundsCents)} />
+              <StatusCard title="Discounts" value={formatCurrency(report.sales.discountsCents)} />
+              <StatusCard title="Comps" value={formatCurrency(report.sales.compsCents)} />
+              <StatusCard title="Tax Collected" value={formatCurrency(report.sales.taxCents)} />
+            </div>
+
+            <div className="grid gap-3 lg:grid-cols-2">
+              <TrendLineCard title="Revenue Over Time" data={trendData} lines={[{ key: "revenue", color: "hsl(var(--primary))", name: "Revenue ($)" }]} />
+              <BarBreakdownCard
+                title="Sales by Category"
+                data={report.sales.byCategory.map((row) => ({ label: row.category.replaceAll("_", " "), revenue: row.revenueCents / 100 }))}
+                bars={[{ key: "revenue", color: "#0ea5e9", name: "Revenue ($)" }]}
+              />
+            </div>
+
+            <div className="grid gap-3 lg:grid-cols-2">
+              <BarBreakdownCard
+                title="Sales by Product"
+                data={report.sales.byProduct.slice(0, 8).map((row) => ({ label: row.productName, revenue: row.revenueCents / 100 }))}
+                bars={[{ key: "revenue", color: "#16a34a", name: "Revenue ($)" }]}
+              />
+              <BarBreakdownCard
+                title="Sales by Staff"
+                data={report.sales.byStaff.map((row) => ({ label: row.staffName, revenue: row.revenueCents / 100 }))}
+                bars={[{ key: "revenue", color: "#2563eb", name: "Revenue ($)" }]}
+              />
+            </div>
+
+            <div className="rounded-xl border bg-card p-4">
+              <h3 className="text-base font-semibold">Product / Category Drill-Down</h3>
+              <div className="mt-3 grid gap-2 md:grid-cols-3">
+                <label className="space-y-1 text-sm">
+                  <span className="text-muted-foreground">Category</span>
+                  <select className="h-10 w-full rounded-md border bg-background px-3" value={selectedCategory} onChange={(event) => setSelectedCategory(event.target.value)}>
+                    <option value="all">All categories</option>
+                    {report.sales.byCategory.map((row) => (
+                      <option key={row.category} value={row.category}>{row.category.replaceAll("_", " ")}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="space-y-1 text-sm">
+                  <span className="text-muted-foreground">Product</span>
+                  <select className="h-10 w-full rounded-md border bg-background px-3" value={selectedProduct} onChange={(event) => setSelectedProduct(event.target.value)}>
+                    <option value="all">All products</option>
+                    {report.sales.byProduct
+                      .filter((row) => selectedCategory === "all" || row.category === selectedCategory)
+                      .map((row) => (
+                        <option key={row.productId} value={row.productId}>{row.productName}</option>
+                      ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="mt-4 overflow-x-auto" aria-label="sales-drilldown-table">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-muted-foreground">
+                      <th className="py-2 pr-3">Product</th>
+                      <th className="py-2 pr-3">Category</th>
+                      <th className="py-2 pr-3">Quantity</th>
+                      <th className="py-2 pr-3">Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {productRows.length === 0 ? (
+                      <tr><td colSpan={4} className="py-3 text-muted-foreground">No product sales in this range.</td></tr>
+                    ) : (
+                      productRows.map((row) => (
+                        <tr key={row.productId} className="border-b last:border-b-0">
+                          <td className="py-2 pr-3">{row.productName}</td>
+                          <td className="py-2 pr-3">{row.category.replaceAll("_", " ")}</td>
+                          <td className="py-2 pr-3">{row.quantity}</td>
+                          <td className="py-2 pr-3">{formatCurrency(row.revenueCents)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-4 overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-muted-foreground">
+                      <th className="py-2 pr-3">Receipt</th>
+                      <th className="py-2 pr-3">Date</th>
+                      <th className="py-2 pr-3">Customer</th>
+                      <th className="py-2 pr-3">Staff</th>
+                      <th className="py-2 pr-3">Payment</th>
+                      <th className="py-2 pr-3">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transactionRows.slice(0, 20).map((row) => (
+                      <tr key={row.id} className="border-b last:border-b-0">
+                        <td className="py-2 pr-3">{row.receipt}</td>
+                        <td className="py-2 pr-3">{new Date(row.date).toLocaleString()}</td>
+                        <td className="py-2 pr-3">{row.customer}</td>
+                        <td className="py-2 pr-3">{row.staff}</td>
+                        <td className="py-2 pr-3">{row.paymentMethod}</td>
+                        <td className="py-2 pr-3">{formatCurrency(row.totalCents)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {activeCategory === "products" ? (
           <div className="grid gap-3 lg:grid-cols-2">
-            <ListCard
-              title="Upcoming Programs"
-              emptyText="No upcoming programs."
-              items={report.programs.upcomingSessions.map((session) => ({
-                id: session.id,
-                primary: session.title,
-                secondary: `${new Date(session.startsAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · ${session.registered}/${session.capacity} registered`
-              }))}
+            <BarBreakdownCard
+              title="Top Product Revenue"
+              data={report.sales.byProduct.slice(0, 10).map((row) => ({ label: row.productName, revenue: row.revenueCents / 100 }))}
+              bars={[{ key: "revenue", color: "#0ea5e9", name: "Revenue ($)" }]}
             />
             <ListCard
-              title="Birthdays Today"
-              emptyText="No birthdays today."
-              items={customers
-                .filter((entry) => {
-                  if (!entry.dateOfBirth) return false;
-                  const dob = new Date(`${entry.dateOfBirth}T00:00:00`);
-                  const now = new Date();
-                  return dob.getMonth() === now.getMonth() && dob.getDate() === now.getDate();
-                })
-                .map((entry) => ({
-                  id: entry.id,
-                  primary: `${entry.firstName} ${entry.lastName}`,
-                  secondary: entry.memberId
-                }))}
+              title="Product Sales Table"
+              emptyText="No products sold in this range."
+              items={report.sales.byProduct.slice(0, 10).map((row) => ({
+                id: row.productId,
+                primary: row.productName,
+                secondary: `${row.quantity} sold · ${formatCurrency(row.revenueCents)}`
+              }))}
             />
           </div>
         ) : null}
 
-        {(showManagerMetrics || isInstructor) && (
-          <div className="grid gap-3 lg:grid-cols-2">
-            <TrendLineCard
-              title="Attendance Trend"
-              data={trendData}
-              lines={[{ key: "checkIns", color: "hsl(var(--primary))", name: "Check-ins" }]}
-            />
-            <BarBreakdownCard
-              title="Busiest Hours"
-              data={report.trends.byHour.map((entry) => ({ label: entry.label, checkIns: entry.count }))}
-              bars={[{ key: "checkIns", color: "#0284c7", name: "Check-ins" }]}
+        {activeCategory === "memberships" ? (
+          <div className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+              <StatusCard title="Active Members" value={`${report.membership.active}`} />
+              <StatusCard title="New Members" value={`${report.members.newMembers}`} />
+              <StatusCard title="Cancelled" value={`${report.members.cancelledMembers}`} />
+              <StatusCard title="Retention Rate" value={`${report.members.retentionRate}%`} />
+              <StatusCard title="Churn Rate" value={`${report.members.churnRate}%`} />
+            </div>
+            <TrendLineCard title="Membership Growth Trend" data={trendData} lines={[{ key: "memberships", color: "#16a34a", name: "Memberships Sold" }]} />
+            <div className="grid gap-3 md:grid-cols-3">
+              <StatusCard title="Renewals" value={`${report.members.renewals}`} />
+              <StatusCard title="Avg Membership Length" value={`${report.members.averageMembershipLengthDays} days`} />
+              <StatusCard title="Members Not Seen Recently" value={`${report.members.inactiveMemberCount}`} />
+            </div>
+          </div>
+        ) : null}
+
+        {activeCategory === "attendance" ? (
+          <div className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <MetricCard title="Total Visits" value={report.attendance.totalVisits} />
+              <MetricCard title="Unique Visitors" value={report.attendance.uniqueVisitors} />
+              <MetricCard title="Repeat Visitors" value={report.attendance.repeatVisitors} />
+              <MetricCard title="Avg Visit Duration" value={`${report.attendance.averageVisitDurationMinutes} min`} />
+            </div>
+            <div className="grid gap-3 lg:grid-cols-2">
+              <BarBreakdownCard title="Visits by Hour" data={report.trends.byHour.map((row) => ({ label: row.label, visits: row.count }))} bars={[{ key: "visits", color: "#2563eb", name: "Visits" }]} />
+              <BarBreakdownCard title="Visits by Day" data={report.trends.byDay.map((row) => ({ label: row.label, visits: row.count }))} bars={[{ key: "visits", color: "#7c3aed", name: "Visits" }]} />
+            </div>
+            <ListCard
+              title="Top Visitors"
+              emptyText="No attendance data available."
+              items={report.attendance.topVisitors.map((entry) => ({
+                id: entry.customerId,
+                primary: entry.customerName,
+                secondary: `${entry.visits} visits`
+              }))}
             />
           </div>
-        )}
+        ) : null}
 
-        {showManagerMetrics && !isInstructor ? (
-          <>
-            <div className="grid gap-3 lg:grid-cols-2">
-              <BarBreakdownCard
-                title="Product Sales"
-                data={topProducts.map((entry) => ({ label: entry.name, quantity: entry.quantity, revenue: entry.revenue }))}
-                bars={[
-                  { key: "quantity", color: "#0ea5e9", name: "Quantity" },
-                  { key: "revenue", color: "#16a34a", name: "Revenue ($)" }
-                ]}
-              />
-              <BarBreakdownCard
-                title="Youth vs Adult Attendance"
-                data={[{ label: "Attendance", youth: report.trends.youthAdult[1].value, adults: report.trends.youthAdult[0].value }]}
-                bars={[
-                  { key: "youth", color: "#f59e0b", name: "Youth", stackId: "attendance" },
-                  { key: "adults", color: "#2563eb", name: "Adults", stackId: "attendance" }
-                ]}
-              />
-            </div>
+        {activeCategory === "customers" ? (
+          <ListCard
+            title="Customer Behavior"
+            emptyText="No customer activity in this range."
+            items={report.attendance.topVisitors.map((entry) => ({
+              id: entry.customerId,
+              primary: entry.customerName,
+              secondary: `${entry.visits} visits in selected range`
+            }))}
+          />
+        ) : null}
 
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <StatusCard title="Memberships Active" value={`${report.membership.active}`} />
-              <StatusCard title="Expiring Memberships" value={`${report.membership.expiring}`} />
-              <StatusCard title="Households" value={`${report.households.total} total · avg ${report.households.averageSize}`} />
-              <StatusCard title="Comps / Discounts" value={`${report.products.compTxCount} comps · ${report.products.discountsUsed} discounted`} />
-            </div>
-
+        {activeCategory === "programs" ? (
+          <div className="space-y-3">
             <ListCard
               title="Program Performance"
-              emptyText="No program performance data available."
-              items={report.programs.rows.slice(0, 6).map((row) => ({
+              emptyText="No program data available."
+              items={report.programs.rows.map((row) => ({
                 id: row.id,
                 primary: row.name,
                 secondary: `${row.enrolled}/${row.capacity || 0} enrolled · waitlist ${row.waitlisted} · ${row.utilization}% utilization`
               }))}
             />
             <ListCard
-              title="Staff Operational Metrics"
-              emptyText="No staff activity yet."
-              items={staffOperationalRows}
+              title="Upcoming Sessions"
+              emptyText="No upcoming sessions."
+              items={report.programs.upcomingSessions.map((row) => ({
+                id: row.id,
+                primary: row.title,
+                secondary: `${new Date(row.startsAt).toLocaleString()} · ${row.registered}/${row.capacity} registered`
+              }))}
             />
-          </>
-        ) : null}
-
-        {showFinancial && !isInstructor ? (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <MetricCard title="Revenue (Range)" value={formatCurrency(report.financial.revenueCents)} />
-            <MetricCard title="Revenue (Today)" value={formatCurrency(report.totals.revenueTodayCents)} />
-            <StatusCard title="Refunds" value={`${report.financial.refunds}`} />
-            <StatusCard title="Comp Transactions" value={`${report.financial.comps}`} />
           </div>
         ) : null}
 
-        {isInstructor ? (
-          <AlertCard
-            title="Instructor View"
-            message="This dashboard is scoped to your assigned programs, rosters, and attendance operations."
-            tone="info"
-          />
+        {activeCategory === "households" ? (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <StatusCard title="Total Households" value={`${report.households.total}`} />
+            <StatusCard title="Average Household Size" value={`${report.households.averageSize}`} />
+            <StatusCard title="Youth Members" value={`${report.households.youthMembers}`} />
+            <StatusCard title="Adult Members" value={`${report.households.adultMembers}`} />
+          </div>
+        ) : null}
+
+        {activeCategory === "staff" ? (
+          <ListCard title="Staff Activity" emptyText="No staff operational activity yet." items={staffOperationalRows} />
+        ) : null}
+
+        {activeCategory === "waivers" ? (
+          <div className="grid gap-3 md:grid-cols-2">
+            <StatusCard title="Waivers Missing" value={`${report.totals.waiversMissing}`} />
+            <StatusCard title="Waiver Risk Customers" value={`${report.totals.waiversMissing}`} />
+          </div>
+        ) : null}
+
+        {activeCategory === "financial" ? (
+          showFinancial ? (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <MetricCard title="Gross Revenue" value={formatCurrency(report.sales.grossCents)} />
+              <MetricCard title="Net Revenue" value={formatCurrency(report.sales.netCents)} />
+              <StatusCard title="Refund Count" value={`${report.financial.refunds}`} />
+              <StatusCard title="Comp Transactions" value={`${report.financial.comps}`} />
+            </div>
+          ) : (
+            <AlertCard title="Restricted" tone="warning" message="Financial summary is available to manager and owner roles." />
+          )
+        ) : null}
+
+        {report.sales.transactions.length === 0 ? (
+          <AlertCard title="No report data" tone="info" message="No data found for this filter range. Try expanding date range or clearing filters." />
         ) : null}
       </section>
     </PermissionGate>

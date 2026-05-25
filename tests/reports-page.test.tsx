@@ -53,8 +53,8 @@ describe("Reports dashboards", () => {
     await switchStaff(user, "3333");
 
     expect(screen.getByRole("heading", { name: "Reports" })).toBeInTheDocument();
-    expect(screen.getByText("Today's Check-Ins")).toBeInTheDocument();
-    expect(screen.queryByText("Revenue (Range)")).not.toBeInTheDocument();
+    expect(screen.getByText("Gross Sales")).toBeInTheDocument();
+    expect(screen.queryByText("Restricted")).not.toBeInTheDocument();
   });
 
   it("owner sees financial cards", async () => {
@@ -67,7 +67,8 @@ describe("Reports dashboards", () => {
     );
     await switchStaff(user, "1111");
 
-    expect(screen.getByText("Revenue (Range)")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Financial Summary" }));
+    expect(screen.getByText("Gross Revenue")).toBeInTheDocument();
     expect(screen.getByText("Comp Transactions")).toBeInTheDocument();
   });
 
@@ -95,6 +96,7 @@ describe("Reports dashboards", () => {
     await switchStaff(user, "2222");
     expect(screen.getByLabelText("report-filters")).toBeInTheDocument();
     expect(screen.getByLabelText("Search reports")).toBeInTheDocument();
+    expect(screen.getByLabelText("report-categories")).toBeInTheDocument();
     expect(screen.getByTestId("trend-line-chart")).toBeInTheDocument();
   });
 
@@ -175,7 +177,20 @@ describe("Reports dashboards", () => {
       </TestProviders>
     );
     await switchStaff(user, "2222");
-    expect(screen.getByText("No bar data available.")).toBeInTheDocument();
+    expect(screen.getByText("No data found for this filter range. Try expanding date range or clearing filters.")).toBeInTheDocument();
     storage.restore();
+  });
+
+  it("supports sales category drill-down table", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <ReportsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "1111");
+    expect(screen.getByLabelText("sales-drilldown-table")).toBeInTheDocument();
+    expect(screen.getByText("Product / Category Drill-Down")).toBeInTheDocument();
   });
 });

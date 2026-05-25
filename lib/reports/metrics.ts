@@ -7,6 +7,7 @@ import type {
   Membership,
   PosProduct,
   PosTransaction,
+  ProductCategoryRecord,
   Program,
   Registration,
   StaffRole
@@ -39,6 +40,7 @@ export interface ReportInput {
   registrations: Registration[];
   memberships: Membership[];
   products: PosProduct[];
+  productCategories: ProductCategoryRecord[];
   households: Household[];
   householdMembers: HouseholdMember[];
 }
@@ -94,10 +96,24 @@ const EMPTY_REPORT_MODEL = {
       customer: string;
       staff: string;
       paymentMethod: string;
+      locationId: string;
       subtotalCents: number;
       discountCents: number;
+      compCents: number;
+      taxCents: number;
       totalCents: number;
       itemCount: number;
+      items: Array<{
+        productId: string;
+        productName: string;
+        productCategory: string;
+        productType: string;
+        quantity: number;
+        unitPriceCents: number;
+        discountCents: number;
+        taxCents: number;
+        lineTotalCents: number;
+      }>;
     }>
   },
   members: {
@@ -118,7 +134,7 @@ const EMPTY_REPORT_MODEL = {
     averageVisitDurationMinutes: 0,
     topVisitors: [] as Array<{ customerId: string; customerName: string; visits: number }>
   },
-  csvRows: [] as Array<{ receipt: string; date: string; customer: string; staff: string; total: string; items: string }>
+  csvRows: [] as Array<{ receipt: string; date: string; customer: string; staff: string; category: string; total: string; items: string }>
 };
 
 function startOfDay(date: Date) {
@@ -201,6 +217,7 @@ export function buildReportModel(input: ReportInput) {
   const customersById = new Map(input.customers.map((entry) => [entry.id, entry]));
   const programsById = new Map(input.programs.map((entry) => [entry.id, entry]));
   const sessionsById = new Map(input.sessions.map((entry) => [entry.id, entry]));
+  const categoryByKey = new Map(input.productCategories.map((entry) => [entry.key, entry.label]));
 
   const scopedSessions = input.sessions.filter((session) => {
     if (input.filters.locationId && session.locationId !== input.filters.locationId) return false;
@@ -470,10 +487,26 @@ export function buildReportModel(input: ReportInput) {
       customer: entry.customerName || "Unknown customer",
       staff: entry.soldByStaffName ?? "Staff not recorded",
       paymentMethod: entry.paymentType || "mock",
+      locationId: entry.locationId,
       subtotalCents: entry.subtotal,
       discountCents: Math.max(0, entry.subtotal - entry.total),
+      compCents: safeItems(entry)
+        .filter((item) => item.type === "comp")
+        .reduce((sum, item) => sum + item.lineTotal, 0),
+      taxCents: 0,
       totalCents: entry.total,
-      itemCount: safeItems(entry).reduce((sum, item) => sum + item.quantity, 0)
+      itemCount: safeItems(entry).reduce((sum, item) => sum + item.quantity, 0),
+      items: safeItems(entry).map((item) => ({
+        productId: item.productId,
+        productName: item.productName,
+        productCategory: categoryByKey.get(item.category) ?? item.category.replaceAll("_", " "),
+        productType: item.type,
+        quantity: item.quantity,
+        unitPriceCents: item.unitPrice,
+        discountCents: 0,
+        taxCents: 0,
+        lineTotalCents: item.lineTotal
+      }))
     }));
 
   const householdSizeMap = new Map<string, number>();
@@ -495,8 +528,11 @@ export function buildReportModel(input: ReportInput) {
     date: txn.completedAt,
     customer: txn.customerName,
     staff: txn.soldByStaffName ?? "Staff not recorded",
+    category: safeItems(txn)[0]?.category ?? "uncategorized",
     total: (txn.total / 100).toFixed(2),
-    items: safeItems(txn).map((item) => `${item.productName} x${item.quantity}`).join("; ")
+    items: safeItems(txn)
+      .map((item) => `${item.productName} (${categoryByKey.get(item.category) ?? item.category}) x${item.quantity}`)
+      .join("; ")
   }));
 
   const membersInactiveThreshold = addDays(input.now, -30);

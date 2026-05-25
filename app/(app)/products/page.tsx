@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Ban, Copy, GripVertical, Pencil, Plus } from "lucide-react";
+import { ArrowDown, ArrowUp, Archive, Ban, Copy, GripVertical, Pencil, Plus } from "lucide-react";
 import { ProductFormModal } from "@/components/products/product-form-modal";
 import { FormField } from "@/components/shared/form-layout";
 import { PageHeader } from "@/components/shared/page-header";
@@ -10,10 +10,10 @@ import { StaffSwitcher } from "@/components/staff/staff-switcher";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ProductPriceLabel } from "@/components/pos/product-price-label";
-import { categoryLabels, getProductCategory, typeLabels } from "@/lib/products/catalog";
+import { categoryLabels, colorTokenLabels, getProductCategory, productColorTokens, typeLabels } from "@/lib/products/catalog";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
-import type { PosProduct } from "@/types/domain";
+import type { PosProduct, ProductCategoryRecord } from "@/types/domain";
 import { QuickButtonLayoutModal } from "@/components/products/quick-button-layout-modal";
 
 type LifecycleFilter = "all" | "active" | "inactive";
@@ -35,7 +35,17 @@ function nextDuplicateName(baseName: string, products: PosProduct[]) {
 }
 
 export default function ProductsPage() {
-  const { accessProducts, createProduct, updateProduct, toggleProductActive } = useCustomerState();
+  const {
+    accessProducts,
+    productCategories,
+    createProduct,
+    updateProduct,
+    toggleProductActive,
+    createProductCategory,
+    updateProductCategory,
+    archiveProductCategory,
+    reorderProductCategory
+  } = useCustomerState();
   const { hasPermission } = useWorkstationState();
 
   const [query, setQuery] = useState("");
@@ -49,24 +59,35 @@ export default function ProductsPage() {
   const [layoutModalOpen, setLayoutModalOpen] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [pendingDuplicateProductId, setPendingDuplicateProductId] = useState<string | null>(null);
+  const [newCategoryLabel, setNewCategoryLabel] = useState("");
+  const [newCategoryColor, setNewCategoryColor] = useState<ProductCategoryRecord["colorToken"]>("slate");
+  const orderedCategories = useMemo(
+    () => [...productCategories].sort((a, b) => a.displayOrder - b.displayOrder),
+    [productCategories]
+  );
+  const categoryLabelByKey = useMemo(
+    () => new Map(orderedCategories.map((entry) => [entry.key, entry.label])),
+    [orderedCategories]
+  );
 
   const canManageProducts = hasPermission("manageProducts");
   const displayGroups = useMemo(() => {
     const groups = new Set<string>();
-    accessProducts.forEach((product) => groups.add(product.displayType?.trim() || categoryLabels[getProductCategory(product)]));
+    accessProducts.forEach((product) =>
+      groups.add(product.displayType?.trim() || categoryLabelByKey.get(getProductCategory(product)) || categoryLabels[getProductCategory(product)] || "Uncategorized")
+    );
     return ["all", ...[...groups].sort((a, b) => a.localeCompare(b))];
-  }, [accessProducts]);
+  }, [accessProducts, categoryLabelByKey]);
   const knownTags = useMemo(() => {
     const tags = new Set<string>();
     accessProducts.forEach((product) => (product.tags ?? []).forEach((tag) => tags.add(tag)));
     return [...tags].sort((a, b) => a.localeCompare(b));
   }, [accessProducts]);
-
   const filteredProducts = useMemo(() => {
     const q = query.trim().toLowerCase();
     return accessProducts.filter((product) => {
       const category = getProductCategory(product);
-      const group = product.displayType?.trim() || categoryLabels[category];
+      const group = product.displayType?.trim() || categoryLabelByKey.get(category) || categoryLabels[category] || "Uncategorized";
       if (groupTab !== "all" && group !== groupTab) return false;
       const tagMatch = tagFilter === "all" || (product.tags ?? []).includes(tagFilter);
       if (!tagMatch) return false;
@@ -80,7 +101,7 @@ export default function ProductsPage() {
       const haystack = [
         product.name,
         product.description ?? "",
-        categoryLabels[category],
+        categoryLabelByKey.get(category) || categoryLabels[category] || "Uncategorized",
         product.type ? typeLabels[product.type] : "",
         product.accessBehavior ?? "",
         ...(product.tags ?? [])
@@ -90,7 +111,7 @@ export default function ProductsPage() {
 
       return haystack.includes(q);
     });
-  }, [accessProducts, groupTab, lifecycleFilter, query, quickOnly, tagFilter, waiverOnly]);
+  }, [accessProducts, categoryLabelByKey, groupTab, lifecycleFilter, query, quickOnly, tagFilter, waiverOnly]);
 
   useEffect(() => {
     if (!pendingDuplicateProductId) return;
@@ -199,7 +220,7 @@ export default function ProductsPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-base font-semibold">{product.name}</p>
-                  <p className="text-sm text-muted-foreground">{categoryLabels[category]} • {product.type ? typeLabels[product.type] : "Access"}</p>
+                  <p className="text-sm text-muted-foreground">{categoryLabelByKey.get(category) || categoryLabels[category] || "Uncategorized"} • {product.type ? typeLabels[product.type] : "Access"}</p>
                   {product.description ? <p className="mt-1 text-sm text-muted-foreground">{product.description}</p> : null}
                 </div>
                 <ProductPriceLabel cents={product.priceCents} />
@@ -255,6 +276,131 @@ export default function ProductsPage() {
         })}
       </div>
 
+      <div className="rounded-xl border bg-card p-4">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-base font-semibold">Categories</h3>
+          <p className="text-xs text-muted-foreground">Category controls reporting groups. Type controls product behavior.</p>
+        </div>
+        <div className="mt-3 grid gap-2 md:grid-cols-[2fr_1fr_auto]">
+          <FormField label="New category">
+            <input
+              aria-label="New category"
+              value={newCategoryLabel}
+              onChange={(event) => setNewCategoryLabel(event.target.value)}
+              className="flex h-11 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+              placeholder="Example: Parties"
+            />
+          </FormField>
+          <FormField label="Color">
+            <select
+              aria-label="New category color"
+              value={newCategoryColor}
+              onChange={(event) => setNewCategoryColor(event.target.value as ProductCategoryRecord["colorToken"])}
+              className="flex h-11 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+            >
+              {productColorTokens.map((token) => (
+                <option key={token} value={token}>{colorTokenLabels[token]}</option>
+              ))}
+            </select>
+          </FormField>
+          <div className="flex items-end">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                const result = createProductCategory({ label: newCategoryLabel, colorToken: newCategoryColor });
+                setFeedback(result.message);
+                if (result.ok) setNewCategoryLabel("");
+              }}
+              disabled={!canManageProducts}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Category
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-4 overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-muted-foreground">
+                <th className="py-2 pr-3">Category</th>
+                <th className="py-2 pr-3">Key</th>
+                <th className="py-2 pr-3">Color</th>
+                <th className="py-2 pr-3">Status</th>
+                <th className="py-2 pr-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orderedCategories.map((category) => (
+                <tr key={category.id} className="border-b last:border-b-0">
+                  <td className="py-2 pr-3">
+                    <input
+                      aria-label={`Category name ${category.key}`}
+                      defaultValue={category.label}
+                      className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm"
+                      onBlur={(event) => {
+                        if (event.target.value.trim() === category.label) return;
+                        const result = updateProductCategory(category.id, { label: event.target.value });
+                        setFeedback(result.message);
+                      }}
+                      disabled={!canManageProducts}
+                    />
+                  </td>
+                  <td className="py-2 pr-3 font-mono text-xs">{category.key}</td>
+                  <td className="py-2 pr-3">
+                    <select
+                      aria-label={`Category color ${category.key}`}
+                      value={category.colorToken ?? "slate"}
+                      onChange={(event) => {
+                        const result = updateProductCategory(category.id, {
+                          colorToken: event.target.value as ProductCategoryRecord["colorToken"]
+                        });
+                        setFeedback(result.message);
+                      }}
+                      className="h-9 rounded-md border border-input bg-white px-2 text-sm"
+                      disabled={!canManageProducts}
+                    >
+                      {productColorTokens.map((token) => (
+                        <option key={token} value={token}>{colorTokenLabels[token]}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="py-2 pr-3">
+                    <Badge tone={category.active ? "success" : "muted"}>
+                      {category.active ? (category.isSystem ? "System" : "Custom") : "Archived"}
+                    </Badge>
+                  </td>
+                  <td className="py-2 pr-3">
+                    <div className="flex justify-end gap-1">
+                      <Button size="sm" variant="ghost" aria-label={`Move ${category.label} up`} onClick={() => reorderProductCategory(category.id, "up")} disabled={!canManageProducts}>
+                        <ArrowUp className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" aria-label={`Move ${category.label} down`} onClick={() => reorderProductCategory(category.id, "down")} disabled={!canManageProducts}>
+                        <ArrowDown className="h-4 w-4" />
+                      </Button>
+                      {!category.isSystem ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          aria-label={`Archive ${category.label}`}
+                          onClick={() => {
+                            const result = archiveProductCategory(category.id);
+                            setFeedback(result.message);
+                          }}
+                          disabled={!canManageProducts || !category.active}
+                        >
+                          <Archive className="h-4 w-4 text-rose-700" />
+                        </Button>
+                      ) : null}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {filteredProducts.length === 0 ? (
         <div className="rounded-xl border border-dashed bg-card p-6 text-center">
           <p className="font-medium">No products found.</p>
@@ -265,6 +411,7 @@ export default function ProductsPage() {
       <ProductFormModal
         open={showCreate}
         title="Add Product"
+        categories={orderedCategories}
         onClose={() => setShowCreate(false)}
         onSubmit={(input) => {
           const result = createProduct(input);
@@ -277,6 +424,7 @@ export default function ProductsPage() {
         open={Boolean(editingProduct)}
         title="Edit Product"
         product={editingProduct}
+        categories={orderedCategories}
         onClose={() => setEditingProduct(null)}
         onSubmit={(input) => {
           if (!editingProduct) return { ok: false, message: "Product not found." };

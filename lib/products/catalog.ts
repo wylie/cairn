@@ -1,14 +1,15 @@
 import type { PosProduct } from "@/types/domain";
 
-export const productCategoryOptions: Array<PosProduct["category"]> = [
+export const productCategoryOptions: string[] = [
   "day_passes",
   "memberships",
   "punch_passes",
   "classes",
   "camps",
+  "rentals",
   "retail",
   "comps",
-  "misc"
+  "other"
 ];
 
 export const productTypeOptions: Array<NonNullable<PosProduct["type"]>> = [
@@ -28,9 +29,12 @@ export const categoryLabels: Record<string, string> = {
   punch_passes: "Punch Passes",
   classes: "Classes",
   camps: "Camps",
+  rentals: "Rentals",
   retail: "Retail",
-  comps: "Staff Comp",
-  misc: "Misc"
+  comps: "Comps",
+  misc: "Other",
+  other: "Other",
+  uncategorized: "Uncategorized"
 };
 
 export const typeLabels: Record<string, string> = {
@@ -69,23 +73,24 @@ export const colorTokenTone: Record<ProductColorToken, string> = {
   red: "bg-rose-50 border-rose-200 hover:bg-rose-100"
 };
 
-export const defaultCategoryColor: Record<PosProduct["category"], ProductColorToken> = {
+export const defaultCategoryColor: Record<string, ProductColorToken> = {
   day_passes: "blue",
   memberships: "green",
   punch_passes: "amber",
   classes: "purple",
   camps: "orange",
+  rentals: "slate",
   comps: "gray",
   retail: "slate",
-  misc: "slate"
+  other: "slate",
+  misc: "slate",
+  uncategorized: "slate"
 };
 
-export function getProductCategory(product: PosProduct): PosProduct["category"] {
-  if (product.category) return product.category;
-  if (product.productCategory && productCategoryOptions.includes(product.productCategory as PosProduct["category"])) {
-    return product.productCategory as PosProduct["category"];
-  }
-  return "misc";
+export function getProductCategory(product: PosProduct): string {
+  if (product.productCategory?.trim()) return product.productCategory.trim();
+  if (product.category?.trim()) return product.category.trim();
+  return "uncategorized";
 }
 
 export function isCompProduct(product: PosProduct) {
@@ -97,14 +102,14 @@ export function resolveProductColorToken(product: PosProduct): ProductColorToken
   if (product.categoryColorToken && product.categoryColorToken in colorTokenLabels) {
     return product.categoryColorToken as ProductColorToken;
   }
-  return defaultCategoryColor[getProductCategory(product)];
+  return defaultCategoryColor[getProductCategory(product)] ?? "slate";
 }
 
 export function getProductToneClass(product: PosProduct) {
   return colorTokenTone[resolveProductColorToken(product)];
 }
 
-export function mapTypeToCategory(type: PosProduct["type"]): PosProduct["category"] {
+export function mapTypeToCategory(type: PosProduct["type"]): string {
   switch (type) {
     case "membership":
       return "memberships";

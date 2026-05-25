@@ -419,22 +419,14 @@ export interface PosProduct {
   organizationId: string;
   name: string;
   description?: string;
-  category: "day_passes" | "memberships" | "punch_passes" | "classes" | "camps" | "retail" | "comps" | "misc";
+  category: string;
   priceCents: number;
   type?: "access" | "membership" | "punch-pass" | "class" | "camp" | "registration" | "retail" | "comp";
   displayType?: string;
-  productCategory?:
-    | "day_passes"
-    | "memberships"
-    | "punch_passes"
-    | "classes"
-    | "camps"
-    | "comps"
-    | "retail"
-    | "misc";
+  productCategory?: string;
   colorToken?: "blue" | "green" | "amber" | "purple" | "orange" | "slate" | "gray" | "red";
   colorLabel?: string;
-  categoryColorToken?: "blue" | "green" | "amber" | "purple" | "orange" | "gray";
+  categoryColorToken?: "blue" | "green" | "amber" | "purple" | "orange" | "slate" | "gray" | "red";
   showAsQuickButton?: boolean;
   quickButtonRank?: number;
   accessScope?: "facility" | "class" | "camp";
@@ -462,10 +454,22 @@ export interface PosProduct {
   active?: boolean;
 }
 
+export interface ProductCategoryRecord {
+  id: string;
+  organizationId: string;
+  key: string;
+  label: string;
+  colorToken?: "blue" | "green" | "amber" | "purple" | "orange" | "slate" | "gray" | "red";
+  displayOrder: number;
+  isSystem: boolean;
+  active: boolean;
+  archivedAt?: string;
+}
+
 export interface PosTransactionItem {
   productId: string;
   productName: string;
-  category: PosProduct["category"];
+  category: string;
   type: NonNullable<PosProduct["type"]>;
   quantity: number;
   unitPrice: number;

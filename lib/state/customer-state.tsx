@@ -15,6 +15,7 @@ import { posTransactions as seedPosTransactions } from "@/lib/mocks/transactions
 import { waivers as seedWaivers } from "@/lib/mocks/waivers";
 import { households as seedHouseholds, householdMembers as seedHouseholdMembers } from "@/lib/mocks/households";
 import { buildScopedMockKey, clearScopedMockState, loadMockState, saveMockState } from "@/lib/mock-storage";
+import { buildSystemProductCategories, normalizeCategoryKey } from "@/lib/products/categories";
 import { isValidUsState, normalizeCity, normalizeStateInput, normalizeStreetAddress } from "@/lib/customer-input-format";
 import {
   calculateTransactionTotals,
@@ -41,6 +42,7 @@ import type {
   PosTransactionItem,
   PostSaleCheckInSlot,
   Program,
+  ProductCategoryRecord,
   PunchPass,
   ClassCampSession,
   Registration,
@@ -202,6 +204,7 @@ interface CustomerStateContextValue {
   memberships: Membership[];
   punchPasses: PunchPass[];
   accessProducts: PosProduct[];
+  productCategories: ProductCategoryRecord[];
   transactions: PosTransaction[];
   programs: Program[];
   sessions: ClassCampSession[];
@@ -421,6 +424,10 @@ interface CustomerStateContextValue {
     productId: string,
     input: Omit<PosProduct, "id" | "organizationId"> & { price: string | number }
   ) => { ok: boolean; message: string };
+  createProductCategory: (input: { label: string; colorToken?: ProductCategoryRecord["colorToken"] }) => { ok: boolean; message: string; categoryId?: string };
+  updateProductCategory: (categoryId: string, updates: { label?: string; colorToken?: ProductCategoryRecord["colorToken"] }) => { ok: boolean; message: string };
+  archiveProductCategory: (categoryId: string) => { ok: boolean; message: string };
+  reorderProductCategory: (categoryId: string, direction: "up" | "down") => { ok: boolean; message: string };
   toggleProductActive: (productId: string) => { ok: boolean; message: string };
   reorderQuickButtonProduct: (productId: string, direction: "up" | "down") => { ok: boolean; message: string };
   updateCustomerAccessRecord: (accessId: string, updates: Partial<CustomerAccessRecord>) => { ok: boolean; message: string };
@@ -476,7 +483,7 @@ interface CustomerStateContextValue {
 const CustomerStateContext = createContext<CustomerStateContextValue | null>(null);
 
 export function CustomerStateProvider({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const fallbackSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? "summit";
   const [orgSlug, setOrgSlug] = useState(fallbackSlug);
   useEffect(() => {
@@ -488,6 +495,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
   const activeLocationId = tenant?.currentLocationId ?? "loc_001";
   const seededCustomersForOrg = seedCustomers.filter((entry) => entry.organizationId === activeOrgId);
   const seededProductsForOrg = seedPosProducts.filter((entry) => entry.organizationId === activeOrgId).map(normalizeProductForState);
+  const seededProductCategoriesForOrg = buildSystemProductCategories(activeOrgId);
   const seededProgramsForOrg = seedPrograms.filter((entry) => entry.organizationId === activeOrgId).map(normalizeProgramForState);
   const seededSessionsForOrg = seedSessions.filter((entry) => seededProgramsForOrg.some((program) => program.id === entry.programId));
   const seededRegistrationsForOrg = seedRegistrations.filter((entry) => seededSessionsForOrg.some((session) => session.id === entry.sessionId));
@@ -507,6 +515,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     memberships: buildScopedMockKey(activeOrgId, activeLocationId, "memberships"),
     transactions: buildScopedMockKey(activeOrgId, activeLocationId, "transactions"),
     products: buildScopedMockKey(activeOrgId, activeLocationId, "products"),
+    productCategories: buildScopedMockKey(activeOrgId, activeLocationId, "productCategories"),
     programs: buildScopedMockKey(activeOrgId, activeLocationId, "programs"),
     sessions: buildScopedMockKey(activeOrgId, activeLocationId, "sessions"),
     registrations: buildScopedMockKey(activeOrgId, activeLocationId, "registrations"),
@@ -529,6 +538,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     normalizeTransactions(seededTransactionsForOrg as Partial<PosTransaction>[], seededProductsForOrg)
   );
   const [accessProducts, setAccessProducts] = useState<PosProduct[]>(seededProductsForOrg);
+  const [productCategories, setProductCategories] = useState<ProductCategoryRecord[]>(seededProductCategoriesForOrg);
   const [programs, setPrograms] = useState<Program[]>(seededProgramsForOrg);
   const [sessions, setSessions] = useState<ClassCampSession[]>(
     seededSessionsForOrg.map((session) => normalizeSessionForState(session, seededProgramsForOrg))
@@ -589,6 +599,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     const products = (loadMockState(storageKeys.products, seededProductsForOrg) as PosProduct[]).map(normalizeProductForState);
+    const categories = loadMockState(storageKeys.productCategories, seededProductCategoriesForOrg) as ProductCategoryRecord[];
     const storedPrograms = (loadMockState(storageKeys.programs, seededProgramsForOrg) as Program[]).map(normalizeProgramForState);
     const storedCheckIns = loadMockState(storageKeys.checkins, seededCheckIns).map((record) => ({
       ...record,
@@ -601,6 +612,11 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     setMemberships(loadMockState(storageKeys.memberships, seededMembershipsForOrg));
     setPunchPasses(loadMockState(storageKeys.passes, seededPunchPassesForOrg));
     setAccessProducts(products);
+    setProductCategories(
+      [...categories]
+        .sort((a, b) => a.displayOrder - b.displayOrder)
+        .map((entry, index) => ({ ...entry, displayOrder: index + 1 }))
+    );
     setPrograms(storedPrograms);
     setSessions(
       (loadMockState(storageKeys.sessions, seededSessionsForOrg) as ClassCampSession[]).map((session) =>
@@ -644,6 +660,10 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     if (!hydrated) return;
     saveMockState(storageKeys.products, accessProducts);
   }, [accessProducts, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
+    saveMockState(storageKeys.productCategories, productCategories);
+  }, [productCategories, hydrated]);
   useEffect(() => {
     if (!hydrated) return;
     saveMockState(storageKeys.programs, programs);
@@ -2102,6 +2122,8 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     if (!name) return { ok: false as const, message: "Product name is required." };
     if (!type) return { ok: false as const, message: "Product type is required." };
     if (!category) return { ok: false as const, message: "Product category is required." };
+    const categoryExists = productCategories.some((entry) => entry.key === category && entry.active);
+    if (!categoryExists) return { ok: false as const, message: "Select a valid product category." };
 
     const priceNumber = typeof input.price === "number" ? input.price : Number(input.price);
     if (!Number.isFinite(priceNumber) || priceNumber < 0) return { ok: false as const, message: "Enter a valid price." };
@@ -2186,6 +2208,86 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       )
     );
     return { ok: true as const, message: "Quick button order updated." };
+  };
+
+  const createProductCategory = (input: { label: string; colorToken?: ProductCategoryRecord["colorToken"] }) => {
+    const label = input.label.trim();
+    if (!label) return { ok: false as const, message: "Category name is required." };
+    const key = normalizeCategoryKey(label);
+    if (!key) return { ok: false as const, message: "Category name is required." };
+    const exists = productCategories.some((entry) => entry.key === key && !entry.archivedAt);
+    if (exists) return { ok: false as const, message: "Category already exists." };
+    const next: ProductCategoryRecord = {
+      id: `pcat_${Math.random().toString(36).slice(2, 9)}`,
+      organizationId: activeOrgId,
+      key,
+      label,
+      colorToken: input.colorToken ?? "slate",
+      displayOrder: productCategories.length + 1,
+      isSystem: false,
+      active: true
+    };
+    setProductCategories((prev) => [...prev, next]);
+    return { ok: true as const, message: `Category created: ${label}.`, categoryId: next.id };
+  };
+
+  const updateProductCategory = (categoryId: string, updates: { label?: string; colorToken?: ProductCategoryRecord["colorToken"] }) => {
+    const existing = productCategories.find((entry) => entry.id === categoryId);
+    if (!existing) return { ok: false as const, message: "Category not found." };
+    const nextLabel = updates.label?.trim() || existing.label;
+    const nextKey = normalizeCategoryKey(nextLabel) || existing.key;
+    if (nextKey !== existing.key && productCategories.some((entry) => entry.id !== categoryId && entry.key === nextKey && !entry.archivedAt)) {
+      return { ok: false as const, message: "Category already exists." };
+    }
+    setProductCategories((prev) =>
+      prev.map((entry) =>
+        entry.id === categoryId
+          ? {
+              ...entry,
+              key: entry.isSystem ? entry.key : nextKey,
+              label: nextLabel,
+              colorToken: updates.colorToken ?? entry.colorToken
+            }
+          : entry
+      )
+    );
+    setAccessProducts((prev) =>
+      prev.map((entry) =>
+        entry.category === existing.key
+          ? { ...entry, category: existing.isSystem ? existing.key : nextKey }
+          : entry
+      )
+    );
+    return { ok: true as const, message: `Category updated: ${nextLabel}.` };
+  };
+
+  const archiveProductCategory = (categoryId: string) => {
+    const existing = productCategories.find((entry) => entry.id === categoryId);
+    if (!existing) return { ok: false as const, message: "Category not found." };
+    if (existing.isSystem) return { ok: false as const, message: "System categories cannot be archived." };
+    const inUse = accessProducts.some((entry) => entry.category === existing.key && entry.active !== false);
+    if (inUse) return { ok: false as const, message: "Archive products in this category first." };
+    setProductCategories((prev) =>
+      prev.map((entry) =>
+        entry.id === categoryId ? { ...entry, active: false, archivedAt: new Date().toISOString() } : entry
+      )
+    );
+    return { ok: true as const, message: `${existing.label} archived.` };
+  };
+
+  const reorderProductCategory = (categoryId: string, direction: "up" | "down") => {
+    const sorted = [...productCategories].sort((a, b) => a.displayOrder - b.displayOrder);
+    const idx = sorted.findIndex((entry) => entry.id === categoryId);
+    if (idx < 0) return { ok: false as const, message: "Category not found." };
+    const target = direction === "up" ? idx - 1 : idx + 1;
+    if (target < 0 || target >= sorted.length) return { ok: true as const, message: "No change." };
+    const swapped = [...sorted];
+    const temp = swapped[idx];
+    swapped[idx] = swapped[target];
+    swapped[target] = temp;
+    const rank = new Map(swapped.map((entry, index) => [entry.id, index + 1]));
+    setProductCategories((prev) => prev.map((entry) => ({ ...entry, displayOrder: rank.get(entry.id) ?? entry.displayOrder })));
+    return { ok: true as const, message: "Category order updated." };
   };
 
   const updateCustomerAccessRecord = (accessId: string, updates: Partial<CustomerAccessRecord>) => {
@@ -2425,6 +2527,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       memberships,
       punchPasses,
       accessProducts,
+      productCategories,
       transactions,
       programs,
       sessions,
@@ -2487,6 +2590,10 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       updateProgram,
       createProduct,
       updateProduct,
+      createProductCategory,
+      updateProductCategory,
+      archiveProductCategory,
+      reorderProductCategory,
       toggleProductActive,
       reorderQuickButtonProduct,
       updateCustomerAccessRecord,
@@ -2504,6 +2611,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         setPunchPasses(seededPunchPassesForOrg);
         setCheckInLogRecords(seededCheckIns);
         setAccessProducts(seededProductsForOrg.map(normalizeProductForState));
+        setProductCategories(seededProductCategoriesForOrg);
         setTransactions(normalizeTransactions(seededTransactionsForOrg, seededProductsForOrg.map(normalizeProductForState)));
         setPrograms(seededProgramsForOrg);
         setSessions(seededSessionsForOrg.map((session) => normalizeSessionForState(session, seededProgramsForOrg)));
@@ -2515,7 +2623,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         clearScopedMockState(
           activeOrgId,
           activeLocationId,
-          ["customers", "punchPasses", "checkIns", "memberships", "transactions", "products", "programs", "sessions", "registrations", "accessRecords", "waivers", "households", "householdMembers"]
+          ["customers", "punchPasses", "checkIns", "memberships", "transactions", "products", "productCategories", "programs", "sessions", "registrations", "accessRecords", "waivers", "households", "householdMembers"]
         );
       }
     }),
@@ -2524,6 +2632,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       memberships,
       punchPasses,
       accessProducts,
+      productCategories,
       customerAccessRecords,
       waivers,
       households,

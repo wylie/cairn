@@ -261,6 +261,26 @@ describe("Products page", () => {
     expect(within(dialog).getByRole("checkbox", { name: /Show as quick button/i })).toBeInTheDocument();
     expect(within(dialog).getByRole("checkbox", { name: /Active/i })).toBeInTheDocument();
     expect(within(dialog).getByRole("checkbox", { name: /Requires waiver/i })).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Product category")).toBeInTheDocument();
+  });
+
+  it("supports category management and uses category dropdown for products", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <ProductsPage />
+      </TestProviders>
+    );
+    await activateStaff(user, "2222");
+
+    await user.type(screen.getByLabelText("New category"), "Parties");
+    await user.click(screen.getByRole("button", { name: "Add Category" }));
+    expect(screen.getByRole("status")).toHaveTextContent(/Category created: Parties/i);
+
+    await user.click(screen.getAllByRole("button", { name: "Add Product" })[0]);
+    const categorySelect = screen.getByLabelText("Product category");
+    expect(within(categorySelect).getByRole("option", { name: "Parties" })).toBeInTheDocument();
   });
 
   it("product color can be selected and is used on products and POS cards", async () => {

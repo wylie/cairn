@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useSettingsState } from "@/lib/state/settings-state";
@@ -11,8 +11,7 @@ import { Button } from "@/components/ui/button";
 import { getAllowedOrgSlugsFromSessionCookie, getCurrentOrgSlugClient } from "@/lib/tenant/client";
 
 export function TopBar() {
-  const pathname = usePathname();
-  const router = useRouter();
+  const pathname = usePathname() ?? "";
   const organizations = data.organizations;
   const fallbackSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? organizations[0]?.slug ?? "summit";
   const [currentSlug, setCurrentSlug] = useState(fallbackSlug);
@@ -31,12 +30,11 @@ export function TopBar() {
     settings.locations.find((entry) => entry.isDefault) ??
     settings.locations[0];
   const { occupancyCount } = useCustomerState();
-  const suffixPath = pathname.startsWith(`/o/${currentSlug}`) ? pathname.replace(`/o/${currentSlug}`, "") || "/dashboard" : pathname;
+  const suffixPath = pathname.startsWith(`/o/${currentSlug}`) ? pathname.replace(`/o/${currentSlug}`, "") || "/dashboard" : "/dashboard";
 
   const handleSignOut = async () => {
     await fetch("/api/auth/mock-logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
+    window.location.assign("/login");
   };
 
   return (
@@ -62,7 +60,7 @@ export function TopBar() {
             aria-label="Switch organization"
             className="h-10 rounded-md border bg-background px-2 text-sm"
             value={currentSlug}
-            onChange={(event) => router.push(`/o/${event.target.value}${suffixPath}`)}
+            onChange={(event) => window.location.assign(`/o/${event.target.value}${suffixPath}`)}
           >
             {selectableOrgs.map((entry) => (
               <option key={entry.id} value={entry.slug}>{entry.name}</option>

@@ -21,6 +21,7 @@ export default function DashboardPage() {
     registrations,
     memberships,
     accessProducts,
+    productCategories,
     households,
     householdMembers
   } = useCustomerState();
@@ -38,6 +39,7 @@ export default function DashboardPage() {
     registrations,
     memberships,
     products: accessProducts,
+    productCategories,
     households,
     householdMembers
   });

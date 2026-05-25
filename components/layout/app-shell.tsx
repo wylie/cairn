@@ -10,7 +10,7 @@ import type { StaffPermission } from "@/types/domain";
 import { getCurrentOrgSlugClient } from "@/lib/tenant/client";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const organizations = data.organizations;
   const fallbackSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? organizations[0]?.slug ?? "summit";
   const [currentSlug, setCurrentSlug] = useState(fallbackSlug);

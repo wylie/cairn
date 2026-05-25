@@ -193,4 +193,53 @@ describe("Reports dashboards", () => {
     expect(screen.getByLabelText("sales-drilldown-table")).toBeInTheDocument();
     expect(screen.getByText("Product / Category Drill-Down")).toBeInTheDocument();
   });
+
+  it("expands receipt rows to show receipt details and line items", async () => {
+    const storage = installStorageMock();
+    window.localStorage.setItem(
+      buildScopedMockKey("org_summit", "loc_001", "transactions"),
+      JSON.stringify([
+        {
+          id: "txn_expand_1",
+          organizationId: "org_summit",
+          locationId: "loc_001",
+          customerId: "cust_004",
+          customerName: "Sam Noaccess",
+          transactionType: "sale",
+          returnStatus: "none",
+          soldByStaffId: "staff_002",
+          soldByStaffName: "Maya Lopez",
+          items: [
+            {
+              productId: "prd_001",
+              productName: "Day Pass",
+              category: "day_passes",
+              type: "access",
+              quantity: 2,
+              unitPrice: 2800,
+              lineTotal: 5600
+            }
+          ],
+          subtotal: 5600,
+          total: 5600,
+          completedAt: new Date().toISOString(),
+          paymentType: "mock",
+          checkInTriggered: false,
+          receiptNumber: "R-123ABC"
+        }
+      ])
+    );
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <ReportsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "1111");
+    await user.click(screen.getByRole("button", { name: "R-123ABC" }));
+    expect(screen.getByText("Receipt ID:")).toBeInTheDocument();
+    expect(screen.getByText("Line Total")).toBeInTheDocument();
+    storage.restore();
+  });
 });

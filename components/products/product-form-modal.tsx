@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRef } from "react";
 import type { PosProduct } from "@/types/domain";
+import type { ProductCategoryRecord } from "@/types/domain";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ModalShell } from "@/components/ui/modal-shell";
@@ -61,13 +62,15 @@ export function ProductFormModal({
   title,
   product,
   onClose,
-  onSubmit
+  onSubmit,
+  categories = []
 }: {
   open: boolean;
   title: string;
   product?: PosProduct | null;
   onClose: () => void;
   onSubmit: (input: ProductFormInput) => { ok: boolean; message: string };
+  categories?: ProductCategoryRecord[];
 }) {
   const [form, setForm] = useState<ProductFormInput>(() => toFormState(product));
   const [error, setError] = useState("");
@@ -95,6 +98,11 @@ export function ProductFormModal({
   const isPunchPass = form.category === "punch_passes" || form.type === "punch-pass";
   const isDayPass = form.category === "day_passes";
   const isMembership = form.category === "memberships" || form.type === "membership";
+
+  const sortedCategories = [...categories]
+    .filter((entry) => entry.active)
+    .sort((a, b) => a.displayOrder - b.displayOrder);
+  const hasCategory = sortedCategories.some((entry) => entry.key === form.category);
 
   const submit = () => {
     const result = onSubmit(form);
@@ -159,6 +167,18 @@ export function ProductFormModal({
                 <option key={option} value={option}>{typeLabels[option]}</option>
               ))}
             </SelectInput>
+          </FormField>
+          <FormField label="Category">
+            <SelectInput
+              aria-label="Product category"
+              value={form.category}
+              onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
+            >
+              {sortedCategories.map((category) => (
+                <option key={category.id} value={category.key}>{category.label}</option>
+              ))}
+            </SelectInput>
+            {!hasCategory ? <p className="text-xs text-amber-700">Uncategorized product. Select a category for reporting.</p> : null}
           </FormField>
           <FormField label="Display group">
             <Input

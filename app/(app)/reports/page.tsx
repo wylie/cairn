@@ -72,6 +72,7 @@ export default function ReportsPage() {
     registrations,
     memberships,
     accessProducts,
+    productCategories,
     households,
     householdMembers
   } = useCustomerState();
@@ -107,6 +108,7 @@ export default function ReportsPage() {
           registrations,
           memberships,
           products: accessProducts,
+          productCategories,
           households,
           householdMembers
         }),
@@ -118,7 +120,12 @@ export default function ReportsPage() {
         reportError: "Some older local mock data could not be parsed. Reports are showing a safe fallback."
       };
     }
-  }, [activeStaff?.id, activeStaff?.role, filters, customers, checkInRecords, transactions, programs, sessions, registrations, memberships, accessProducts, households, householdMembers]);
+  }, [activeStaff?.id, activeStaff?.role, filters, customers, checkInRecords, transactions, programs, sessions, registrations, memberships, accessProducts, productCategories, households, householdMembers]);
+  const categoryLabelByKey = useMemo(
+    () => new Map(productCategories.map((entry) => [entry.key, entry.label])),
+    [productCategories]
+  );
+  const [expandedReceiptId, setExpandedReceiptId] = useState<string | null>(null);
 
   const trendData = useMemo(() => {
     if (!search.trim()) return report.trends.daily;
@@ -140,8 +147,7 @@ export default function ReportsPage() {
   });
   const transactionRows = report.sales.transactions.filter((row) => {
     if (selectedProduct === "all") return true;
-    const product = report.sales.byProduct.find((entry) => entry.productId === selectedProduct);
-    return product ? row.itemCount > 0 : true;
+    return row.items.some((item) => item.productId === selectedProduct);
   });
 
   const staffOperationalRows = useMemo(() => {
@@ -173,6 +179,7 @@ export default function ReportsPage() {
                   date: row.date,
                   customer: row.customer,
                   staff: row.staff,
+                  category: row.category,
                   total: row.total,
                   items: row.items
                 }))
@@ -231,7 +238,7 @@ export default function ReportsPage() {
               <TrendLineCard title="Revenue Over Time" data={trendData} lines={[{ key: "revenue", color: "hsl(var(--primary))", name: "Revenue ($)" }]} />
               <BarBreakdownCard
                 title="Sales by Category"
-                data={report.sales.byCategory.map((row) => ({ label: row.category.replaceAll("_", " "), revenue: row.revenueCents / 100 }))}
+                data={report.sales.byCategory.map((row) => ({ label: categoryLabelByKey.get(row.category) ?? row.category.replaceAll("_", " "), revenue: row.revenueCents / 100 }))}
                 bars={[{ key: "revenue", color: "#0ea5e9", name: "Revenue ($)" }]}
               />
             </div>
@@ -257,7 +264,7 @@ export default function ReportsPage() {
                   <select className="h-10 w-full rounded-md border bg-background px-3" value={selectedCategory} onChange={(event) => setSelectedCategory(event.target.value)}>
                     <option value="all">All categories</option>
                     {report.sales.byCategory.map((row) => (
-                      <option key={row.category} value={row.category}>{row.category.replaceAll("_", " ")}</option>
+                      <option key={row.category} value={row.category}>{categoryLabelByKey.get(row.category) ?? row.category.replaceAll("_", " ")}</option>
                     ))}
                   </select>
                 </label>
@@ -291,7 +298,7 @@ export default function ReportsPage() {
                       productRows.map((row) => (
                         <tr key={row.productId} className="border-b last:border-b-0">
                           <td className="py-2 pr-3">{row.productName}</td>
-                          <td className="py-2 pr-3">{row.category.replaceAll("_", " ")}</td>
+                          <td className="py-2 pr-3">{categoryLabelByKey.get(row.category) ?? row.category.replaceAll("_", " ")}</td>
                           <td className="py-2 pr-3">{row.quantity}</td>
                           <td className="py-2 pr-3">{formatCurrency(row.revenueCents)}</td>
                         </tr>
@@ -314,16 +321,77 @@ export default function ReportsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {transactionRows.slice(0, 20).map((row) => (
-                      <tr key={row.id} className="border-b last:border-b-0">
-                        <td className="py-2 pr-3">{row.receipt}</td>
-                        <td className="py-2 pr-3">{new Date(row.date).toLocaleString()}</td>
-                        <td className="py-2 pr-3">{row.customer}</td>
-                        <td className="py-2 pr-3">{row.staff}</td>
-                        <td className="py-2 pr-3">{row.paymentMethod}</td>
-                        <td className="py-2 pr-3">{formatCurrency(row.totalCents)}</td>
-                      </tr>
-                    ))}
+                    {transactionRows.slice(0, 20).flatMap((row) => {
+                      const summaryRow = (
+                        <tr key={row.id} className="border-b last:border-b-0">
+                          <td className="py-2 pr-3">
+                            <button
+                              type="button"
+                              className="font-medium text-primary hover:underline"
+                              onClick={() => setExpandedReceiptId((prev) => (prev === row.id ? null : row.id))}
+                            >
+                              {row.receipt}
+                            </button>
+                          </td>
+                          <td className="py-2 pr-3">{new Date(row.date).toLocaleString()}</td>
+                          <td className="py-2 pr-3">{row.customer}</td>
+                          <td className="py-2 pr-3">{row.staff}</td>
+                          <td className="py-2 pr-3">{row.paymentMethod}</td>
+                          <td className="py-2 pr-3">{formatCurrency(row.totalCents)}</td>
+                        </tr>
+                      );
+                      const detailRow = expandedReceiptId === row.id ? (
+                          <tr key={`${row.id}_detail`} className="border-b bg-muted/20">
+                            <td colSpan={6} className="p-3">
+                              <div className="space-y-3">
+                                <div className="grid gap-2 text-xs md:grid-cols-4">
+                                  <p><span className="font-semibold">Receipt ID:</span> {row.receipt}</p>
+                                  <p><span className="font-semibold">Customer:</span> {row.customer}</p>
+                                  <p><span className="font-semibold">Staff:</span> {row.staff}</p>
+                                  <p><span className="font-semibold">Payment:</span> {row.paymentMethod}</p>
+                                  <p><span className="font-semibold">Location:</span> {row.locationId}</p>
+                                  <p><span className="font-semibold">Subtotal:</span> {formatCurrency(row.subtotalCents)}</p>
+                                  <p><span className="font-semibold">Discounts:</span> {formatCurrency(row.discountCents)}</p>
+                                  <p><span className="font-semibold">Comps:</span> {formatCurrency(row.compCents)}</p>
+                                  <p><span className="font-semibold">Tax:</span> {formatCurrency(row.taxCents)}</p>
+                                  <p><span className="font-semibold">Total:</span> {formatCurrency(row.totalCents)}</p>
+                                </div>
+                                <div className="overflow-x-auto">
+                                  <table className="min-w-full text-xs">
+                                    <thead>
+                                      <tr className="border-b text-left text-muted-foreground">
+                                        <th className="py-1 pr-2">Product</th>
+                                        <th className="py-1 pr-2">Category</th>
+                                        <th className="py-1 pr-2">Type</th>
+                                        <th className="py-1 pr-2">Qty</th>
+                                        <th className="py-1 pr-2">Unit</th>
+                                        <th className="py-1 pr-2">Discount</th>
+                                        <th className="py-1 pr-2">Tax</th>
+                                        <th className="py-1 pr-2">Line Total</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {row.items.map((item, index) => (
+                                        <tr key={`${row.id}_${item.productName}_${index}`} className="border-b last:border-b-0">
+                                          <td className="py-1 pr-2">{item.productName}</td>
+                                          <td className="py-1 pr-2">{item.productCategory}</td>
+                                          <td className="py-1 pr-2">{item.productType}</td>
+                                          <td className="py-1 pr-2">{item.quantity}</td>
+                                          <td className="py-1 pr-2">{formatCurrency(item.unitPriceCents)}</td>
+                                          <td className="py-1 pr-2">{formatCurrency(item.discountCents)}</td>
+                                          <td className="py-1 pr-2">{formatCurrency(item.taxCents)}</td>
+                                          <td className="py-1 pr-2">{formatCurrency(item.lineTotalCents)}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : null;
+                      return detailRow ? [summaryRow, detailRow] : [summaryRow];
+                    })}
                   </tbody>
                 </table>
               </div>

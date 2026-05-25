@@ -268,7 +268,7 @@ type SettingsContextValue = {
 const SettingsStateContext = createContext<SettingsContextValue | null>(null);
 
 export function SettingsStateProvider({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const fallbackSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? "summit";
   const [orgSlug, setOrgSlug] = useState(fallbackSlug);
   useEffect(() => {

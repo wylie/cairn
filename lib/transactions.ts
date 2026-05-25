@@ -142,7 +142,18 @@ export function normalizeTransaction(entry: Partial<PosTransaction>, products: P
     items,
     subtotal: Number(normalizedSubtotal.toFixed(2)),
     total: Number(normalizedTotal.toFixed(2)),
-    paymentType: "mock",
+    paymentType:
+      entry.paymentType === "card" ||
+      entry.paymentType === "cash" ||
+      entry.paymentType === "comp" ||
+      entry.paymentType === "gift_card" ||
+      entry.paymentType === "account_credit"
+        ? entry.paymentType
+        : "mock",
+    paymentProcessor: entry.paymentProcessor,
+    paymentApprovalCode: entry.paymentApprovalCode,
+    paymentCardLast4: entry.paymentCardLast4,
+    refundReason: entry.refundReason,
     completedAt: entry.completedAt ?? new Date().toISOString(),
     checkInTriggered: Boolean(entry.checkInTriggered),
     receiptNumber: entry.receiptNumber ?? `R-LEGACY`,

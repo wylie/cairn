@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { filterCustomers } from "@/lib/data/customer-search";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
+import { mockPaymentProvider, type PaymentMethod } from "@/lib/payments/provider";
 
 export default function PosPage() {
   const {
@@ -48,7 +49,7 @@ export default function PosPage() {
   const [showQuickButtonsModal, setShowQuickButtonsModal] = useState(false);
   const [purchaseTarget, setPurchaseTarget] = useState<"self" | "member" | "household">("self");
   const [purchaseMemberId, setPurchaseMemberId] = useState<string>("");
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "cash" | "comp" | "account_balance">("card");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
   const [emailReceipt, setEmailReceipt] = useState(true);
   const [printReceipt, setPrintReceipt] = useState(false);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
@@ -172,6 +173,20 @@ export default function PosPage() {
       setWarning("Waiver missing or expired. Sale can continue, but check-in will remain blocked until waiver is valid.");
     }
 
+    const paymentResult = mockPaymentProvider.charge({
+      amountCents: totalOwedCents,
+      method: paymentMethod,
+      customerId: checkoutCustomer.customerId,
+      locationId: selectedCustomer?.locationId ?? "loc_001",
+      organizationId: selectedCustomer?.organizationId ?? "org_summit",
+      initiatedByStaffId: activeStaff.id
+    });
+    if (!paymentResult.ok) {
+      setWarning(paymentResult.message);
+      setFeedback("");
+      return;
+    }
+
     const result = sellAccessProducts({
       customerId: checkoutCustomer.customerId,
       purchaseForCustomerIds:
@@ -183,6 +198,10 @@ export default function PosPage() {
       productIds: cart,
       soldByStaffId: activeStaff.id,
       soldByStaffName: `${activeStaff.firstName} ${activeStaff.lastName}`,
+      paymentType: paymentMethod,
+      paymentProcessor: paymentResult.processorName,
+      paymentApprovalCode: paymentResult.approvalCode,
+      paymentCardLast4: paymentResult.last4,
       checkInAfterSale
     });
 
@@ -193,7 +212,7 @@ export default function PosPage() {
     }
 
     setWarning("");
-    setFeedback(result.message);
+    setFeedback(`${result.message} ${paymentResult.message}`.trim());
     setReceipt(result.transaction ?? null);
     setActiveFulfillmentTransactionId(result.transaction?.id ?? null);
     if ((result.transaction?.checkInSlots?.length ?? 0) > 0) setFulfillmentOpen(true);
@@ -222,6 +241,12 @@ export default function PosPage() {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         customerSearchInputRef.current?.focus();
+        return;
+      }
+      if (event.key === "/" && !isTypingTarget) {
+        event.preventDefault();
+        const productInput = document.querySelector<HTMLInputElement>("input[aria-label='Search products']");
+        productInput?.focus();
         return;
       }
       if (event.key === "Enter" && checkoutModalOpen && canCheckout) {

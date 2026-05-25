@@ -495,7 +495,11 @@ export interface PosTransaction {
   subtotal: number;
   total: number;
   completedAt: string;
-  paymentType: "mock";
+  paymentType: "mock" | "card" | "cash" | "comp" | "gift_card" | "account_credit";
+  paymentProcessor?: string;
+  paymentApprovalCode?: string;
+  paymentCardLast4?: string;
+  refundReason?: string;
   checkInTriggered: boolean;
   receiptNumber: string;
   checkInSlots?: PostSaleCheckInSlot[];

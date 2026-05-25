@@ -23,6 +23,7 @@ import {
   normalizeCartItem,
   normalizeProductPriceCents
 } from "@/lib/pos-transactions";
+import type { PaymentMethod } from "@/lib/payments/provider";
 import { normalizeTransactions } from "@/lib/transactions";
 import { evaluateCustomerAccess, getEligibleAccess, type AccessDecision } from "@/lib/access-rules";
 import type {
@@ -250,8 +251,20 @@ interface CustomerStateContextValue {
     productIds: string[];
     soldByStaffId: string;
     soldByStaffName?: string;
+    paymentType?: PaymentMethod;
+    paymentProcessor?: string;
+    paymentApprovalCode?: string;
+    paymentCardLast4?: string;
     checkInAfterSale?: boolean;
   }) => { ok: boolean; message: string; transactionId?: string; transaction?: PosTransaction };
+  refundTransaction: (options: {
+    transactionId: string;
+    amount?: number;
+    itemProductIds?: string[];
+    reason: string;
+    staffId: string;
+    staffName?: string;
+  }) => { ok: boolean; message: string; refundTransaction?: PosTransaction };
   assignSaleCheckInSlotCustomer: (
     transactionId: string,
     slotId: string,
@@ -1044,6 +1057,10 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     productIds: string[];
     soldByStaffId: string;
     soldByStaffName?: string;
+    paymentType?: PaymentMethod;
+    paymentProcessor?: string;
+    paymentApprovalCode?: string;
+    paymentCardLast4?: string;
     checkInAfterSale?: boolean;
   }) => {
     const customer = customers.find((entry) => entry.id === options.customerId);
@@ -1186,7 +1203,10 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       subtotal,
       total,
       completedAt: `${activeDateKey}T15:30:00Z`,
-      paymentType: "mock",
+      paymentType: options.paymentType ?? "mock",
+      paymentProcessor: options.paymentProcessor,
+      paymentApprovalCode: options.paymentApprovalCode,
+      paymentCardLast4: options.paymentCardLast4,
       checkInTriggered: Boolean(options.checkInAfterSale),
       receiptNumber,
       checkInSlots: saleCheckInSlots
@@ -1253,6 +1273,78 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       transactionId: transaction.id,
       transaction
     };
+  };
+
+  const refundTransaction = (options: {
+    transactionId: string;
+    amount?: number;
+    itemProductIds?: string[];
+    reason: string;
+    staffId: string;
+    staffName?: string;
+  }) => {
+    const reason = options.reason.trim();
+    if (!reason) return { ok: false, message: "Refund reason is required." };
+    const original = transactions.find((entry) => entry.id === options.transactionId);
+    if (!original) return { ok: false, message: "Transaction not found." };
+    if (original.transactionType !== "sale") return { ok: false, message: "Only sale transactions can be refunded." };
+
+    const targetItems = (options.itemProductIds?.length
+      ? original.items.filter((item) => options.itemProductIds?.includes(item.productId))
+      : original.items
+    ).map((item) => ({ ...item }));
+
+    if (targetItems.length === 0) return { ok: false, message: "No refundable items selected." };
+    const maxRefund = Number(targetItems.reduce((sum, item) => sum + item.lineTotal, 0).toFixed(2));
+    const requested = typeof options.amount === "number" && Number.isFinite(options.amount) && options.amount > 0
+      ? Number(options.amount.toFixed(2))
+      : maxRefund;
+    if (requested > maxRefund) return { ok: false, message: "Refund amount exceeds selected line items." };
+
+    const refundId = `txn_ref_${Math.random().toString(36).slice(2, 9)}`;
+    const refundReceipt = `R-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const refundTx: PosTransaction = {
+      id: refundId,
+      organizationId: original.organizationId,
+      locationId: original.locationId,
+      customerId: original.customerId,
+      customerName: original.customerName,
+      customerEmail: original.customerEmail,
+      customerMemberId: original.customerMemberId,
+      transactionType: "return",
+      originalTransactionId: original.id,
+      returnStatus: "none",
+      soldByStaffId: options.staffId,
+      soldByStaffName: options.staffName,
+      items: targetItems,
+      subtotal: -requested,
+      total: -requested,
+      completedAt: new Date().toISOString(),
+      paymentType: original.paymentType,
+      paymentProcessor: original.paymentProcessor,
+      paymentApprovalCode: original.paymentApprovalCode,
+      paymentCardLast4: original.paymentCardLast4,
+      checkInTriggered: false,
+      receiptNumber: refundReceipt,
+      refundReason: reason
+    };
+
+    setTransactions((prev) => {
+      const next = prev.map((entry) => {
+        if (entry.id !== original.id) return entry;
+        const totalRefunded = Number(((entry.refundedTotal ?? 0) + requested).toFixed(2));
+        return {
+          ...entry,
+          refundedTotal: totalRefunded,
+          returnStatus: (totalRefunded >= entry.total ? "fully_returned" : "partially_returned") as
+            | "fully_returned"
+            | "partially_returned"
+        };
+      });
+      return [refundTx, ...next];
+    });
+
+    return { ok: true, message: `Refunded $${requested.toFixed(2)}.`, refundTransaction: refundTx };
   };
 
   const assignSaleCheckInSlotCustomer = (transactionId: string, slotId: string, customerId: string) => {
@@ -2618,6 +2710,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       checkOutRecord,
       runCustomerCheckInAction,
       sellAccessProducts,
+      refundTransaction,
       assignSaleCheckInSlotCustomer,
       fulfillSaleCheckInSlot,
       addCustomer,

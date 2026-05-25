@@ -20,8 +20,8 @@ export function CheckoutModal({
 }: {
   open: boolean;
   totalLabel: string;
-  paymentMethod: "card" | "cash" | "comp" | "account_balance";
-  onPaymentMethodChange: (method: "card" | "cash" | "comp" | "account_balance") => void;
+  paymentMethod: "card" | "cash" | "comp" | "gift_card" | "account_credit";
+  onPaymentMethodChange: (method: "card" | "cash" | "comp" | "gift_card" | "account_credit") => void;
   emailReceipt: boolean;
   onEmailReceiptChange: (value: boolean) => void;
   printReceipt: boolean;
@@ -61,12 +61,13 @@ export function CheckoutModal({
             id="checkout-payment-method"
             aria-label="Checkout payment method"
             value={paymentMethod}
-            onChange={(event) => onPaymentMethodChange(event.target.value as "card" | "cash" | "comp" | "account_balance")}
+            onChange={(event) => onPaymentMethodChange(event.target.value as "card" | "cash" | "comp" | "gift_card" | "account_credit")}
           >
             <option value="card">Card</option>
             <option value="cash">Cash</option>
             <option value="comp">Comp</option>
-            <option value="account_balance">Account Balance (placeholder)</option>
+            <option value="gift_card">Gift Card (placeholder)</option>
+            <option value="account_credit">Account Credit (placeholder)</option>
           </SelectInput>
         </FormField>
 

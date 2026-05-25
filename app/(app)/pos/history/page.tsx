@@ -111,6 +111,7 @@ export default function PosHistoryPage() {
                   </div>
                   <div>
                     <p className="text-sm">Sold by {displayStaffName}</p>
+                    <p className="text-xs text-muted-foreground">Payment: {transaction.paymentType.replace(/_/g, " ")}</p>
                     <ul className="mt-1 space-y-1 text-xs text-muted-foreground">
                       {items.map((item, index) => (
                         <li key={`${transaction.id}-${item.productId}-${index}`}>
@@ -140,6 +141,12 @@ export default function PosHistoryPage() {
                   <div className="text-left md:text-right">
                     <p className="font-medium">Total: {formatCurrency(displayTotal)}</p>
                     <p className="text-xs text-muted-foreground">{items.length} item(s)</p>
+                    <Link
+                      href={`/pos/receipts/${transaction.id}`}
+                      className="mt-1 inline-block text-xs text-primary underline"
+                    >
+                      View receipt
+                    </Link>
                   </div>
                 </CardContent>
               </Card>

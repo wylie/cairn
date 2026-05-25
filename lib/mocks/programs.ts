@@ -7,6 +7,7 @@ export const programs: Program[] = [
     title: "Morning Mobility Flow",
     description: "Low-impact movement and recovery.",
     category: "class",
+    programType: "recurring_class",
     active: true,
     colorToken: "green",
     defaultCapacity: 12,
@@ -18,10 +19,14 @@ export const programs: Program[] = [
     title: "Youth Adventure Camp",
     description: "Camp sessions for youth recreation.",
     category: "camp",
+    programType: "camp",
     active: true,
     colorToken: "orange",
     defaultCapacity: 24,
     requiresWaiver: true,
+    guardianRequired: true,
+    memberRequired: false,
+    waitlistEnabled: true,
     minimumAge: 8,
     maximumAge: 14
   }

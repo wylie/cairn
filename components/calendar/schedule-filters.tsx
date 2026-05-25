@@ -12,6 +12,10 @@ export function ScheduleFilters({
   onLocationChange,
   category,
   onCategoryChange,
+  programType,
+  onProgramTypeChange,
+  ageGroup,
+  onAgeGroupChange,
   instructor,
   onInstructorChange,
   status,
@@ -28,6 +32,10 @@ export function ScheduleFilters({
   onLocationChange: (value: string) => void;
   category: string;
   onCategoryChange: (value: string) => void;
+  programType: string;
+  onProgramTypeChange: (value: string) => void;
+  ageGroup: string;
+  onAgeGroupChange: (value: string) => void;
   instructor: string;
   onInstructorChange: (value: string) => void;
   status: string;
@@ -79,6 +87,24 @@ export function ScheduleFilters({
               <option key={entry.id} value={`${entry.firstName} ${entry.lastName}`}>{entry.firstName} {entry.lastName}</option>
             ))}
             <option value="unassigned">Unassigned</option>
+          </select>
+        </FormField>
+        <FormField label="Program Type" className="schedule-filter-field">
+          <select aria-label="Filter program type" value={programType} onChange={(event) => onProgramTypeChange(event.target.value)} className="h-11 w-full rounded-md border border-input bg-white px-3 py-2 text-sm">
+            <option value="all">All program types</option>
+            <option value="recurring_class">Recurring class</option>
+            <option value="one_time_event">Single event</option>
+            <option value="camp">Multi-day camp</option>
+            <option value="clinic">Clinic</option>
+            <option value="appointment_session">Appointment/lesson</option>
+            <option value="team_league">Seasonal/team</option>
+          </select>
+        </FormField>
+        <FormField label="Age Group" className="schedule-filter-field">
+          <select aria-label="Filter age group" value={ageGroup} onChange={(event) => onAgeGroupChange(event.target.value)} className="h-11 w-full rounded-md border border-input bg-white px-3 py-2 text-sm">
+            <option value="all">All age groups</option>
+            <option value="youth">Youth-focused</option>
+            <option value="adult">Adult-focused</option>
           </select>
         </FormField>
         <FormField label="Status" className="schedule-filter-field">

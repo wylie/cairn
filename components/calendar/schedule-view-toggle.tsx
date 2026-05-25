@@ -7,6 +7,7 @@ export function ScheduleViewToggle({ view, onChange }: { view: ScheduleView; onC
       {([
         ["day", "Day"],
         ["week", "Week"],
+        ["month", "Month"],
         ["agenda", "Agenda"]
       ] as const).map(([value, label]) => (
         <Button

@@ -29,6 +29,7 @@ export function SessionScheduleCard({
           <p className="font-medium">{session.title ?? entry.program?.title ?? "Untitled Session"}</p>
           <p className="text-sm text-muted-foreground">{entry.program?.title ?? "Unknown Program"}</p>
           <p className="text-sm text-muted-foreground">{formatTimeRange(session.startsAt, session.endsAt)}</p>
+          <p className="text-xs text-muted-foreground">Location: {session.locationId}</p>
           <p className="text-sm text-muted-foreground">{entry.registrationCount} / {session.capacity} registered</p>
           <p className="text-xs text-muted-foreground">{entry.waitlistCount} waitlisted</p>
           <p className="text-xs text-muted-foreground">Instructor: {session.instructorName ?? "Unassigned"}</p>

@@ -1,6 +1,6 @@
 import type { ClassCampSession, Program, Registration } from "@/types/domain";
 
-export type ScheduleView = "day" | "week" | "agenda";
+export type ScheduleView = "day" | "week" | "month" | "agenda";
 
 export interface SessionScheduleCardModel {
   session: ClassCampSession;
@@ -13,6 +13,8 @@ export interface SessionFilterValues {
   search: string;
   locationId: string;
   category: "all" | Program["category"];
+  programType: "all" | NonNullable<Program["programType"]>;
+  ageGroup: "all" | "youth" | "adult";
   instructor: string;
   status: "all" | "scheduled" | "cancelled" | "completed";
   dateKey: string;
@@ -37,6 +39,13 @@ export function filterScheduleSessions(cards: SessionScheduleCardModel[], filter
   return cards.filter((entry) => {
     const locationMatch = filters.locationId === "all" || entry.session.locationId === filters.locationId;
     const categoryMatch = filters.category === "all" || entry.program?.category === filters.category;
+    const typeMatch = filters.programType === "all" || entry.program?.programType === filters.programType;
+    const ageGroupMatch =
+      filters.ageGroup === "all"
+        ? true
+        : filters.ageGroup === "youth"
+          ? typeof entry.program?.maximumAge === "number" || typeof entry.program?.minimumAge === "number"
+          : typeof entry.program?.minimumAge !== "number" || entry.program.minimumAge >= 18;
     const instructorMatch = filters.instructor === "all" || (entry.session.instructorName ?? "unassigned") === filters.instructor;
     const status = entry.session.status ?? "scheduled";
     const statusMatch = filters.status === "all" || status === filters.status;
@@ -52,7 +61,7 @@ export function filterScheduleSessions(cards: SessionScheduleCardModel[], filter
       .toLowerCase();
     const searchMatch = !search || searchHaystack.includes(search);
 
-    return locationMatch && categoryMatch && instructorMatch && statusMatch && searchMatch;
+    return locationMatch && categoryMatch && typeMatch && ageGroupMatch && instructorMatch && statusMatch && searchMatch;
   });
 }
 
@@ -75,5 +84,15 @@ export function sessionsForWeek(cards: SessionScheduleCardModel[], dateKey: stri
   return cards.filter((entry) => {
     const startsAtDate = new Date(entry.session.startsAt);
     return startsAtDate >= weekStart && startsAtDate < weekEnd;
+  });
+}
+
+export function sessionsForMonth(cards: SessionScheduleCardModel[], dateKey: string) {
+  const selectedDate = new Date(`${dateKey}T00:00:00`);
+  const year = selectedDate.getFullYear();
+  const month = selectedDate.getMonth();
+  return cards.filter((entry) => {
+    const startsAtDate = new Date(entry.session.startsAt);
+    return startsAtDate.getFullYear() === year && startsAtDate.getMonth() === month;
   });
 }

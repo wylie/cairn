@@ -56,10 +56,12 @@ describe("Calendar schedule foundation", () => {
     expect(screen.getByLabelText("Filter location")).toHaveClass("h-11");
     expect(screen.getByLabelText("Filter category")).toHaveClass("h-11");
     expect(screen.getByLabelText("Filter instructor")).toHaveClass("h-11");
+    expect(screen.getByLabelText("Filter program type")).toHaveClass("h-11");
+    expect(screen.getByLabelText("Filter age group")).toHaveClass("h-11");
     expect(screen.getByLabelText("Filter status")).toHaveClass("h-11");
     expect(screen.getByTestId("schedule-filter-grid").className).toContain("[grid-template-columns:repeat(auto-fit,minmax(140px,1fr))]");
     expect(screen.getByTestId("schedule-filter-grid").className).not.toContain("xl:grid-cols-[");
-    expect(toolbar.querySelectorAll(".schedule-filter-field")).toHaveLength(6);
+    expect(toolbar.querySelectorAll(".schedule-filter-field")).toHaveLength(8);
   });
 
   it("renders schedule and week view by default", () => {
@@ -85,6 +87,9 @@ describe("Calendar schedule foundation", () => {
 
     await user.click(screen.getByRole("tab", { name: "Day" }));
     expect(screen.getByRole("tab", { name: "Day" })).toHaveAttribute("aria-selected", "true");
+
+    await user.click(screen.getByRole("tab", { name: "Month" }));
+    expect(screen.getByRole("tab", { name: "Month" })).toHaveAttribute("aria-selected", "true");
 
     await user.click(screen.getByRole("tab", { name: "Agenda" }));
     expect(screen.getByRole("tab", { name: "Agenda" })).toHaveAttribute("aria-selected", "true");
@@ -282,11 +287,98 @@ describe("Calendar schedule foundation", () => {
     await activateStaff(user);
 
     await user.click(screen.getAllByRole("button", { name: "View Details" })[0]);
-    await user.type(screen.getByLabelText("Session customer search"), "Alex");
+    await user.type(screen.getByLabelText("Session customer search"), "Maya");
     await user.keyboard("{ArrowDown}{Enter}");
 
-    expect(screen.getByText(/Registration confirmed for Alex Rivera/i)).toBeInTheDocument();
+    expect(screen.getByText(/Registration confirmed for Maya Patel/i)).toBeInTheDocument();
     expect(screen.getByText(/15 \/ 20 registered/i)).toBeInTheDocument();
+  });
+
+  it("front desk can manage roster actions but cannot create sessions", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    await activateStaff(user, "3333");
+
+    expect(screen.getByRole("button", { name: "Create Session" })).toBeDisabled();
+
+    await user.click(screen.getAllByRole("button", { name: "View Details" })[0]);
+    await user.type(screen.getByLabelText("Session customer search"), "Maya");
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect(screen.getByText(/Registration confirmed for Maya Patel/i)).toBeInTheDocument();
+  });
+
+  it("moves a registration to waitlist from roster actions", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    await activateStaff(user, "2222");
+
+    await user.click(screen.getAllByRole("button", { name: "View Details" })[0]);
+    await user.click(screen.getAllByRole("button", { name: "Move to Waitlist" })[0]);
+
+    expect(screen.getByText(/Registration moved to waitlist\./i)).toBeInTheDocument();
+    expect(screen.getByText("Waitlist")).toBeInTheDocument();
+  });
+
+  it("marks roster participant as checked_in from session detail", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    await activateStaff(user, "2222");
+
+    await user.click(screen.getAllByRole("button", { name: "View Details" })[0]);
+    await user.click(screen.getAllByRole("button", { name: "Check In" })[0]);
+
+    expect(screen.getByText(/Marked checked_in\./i)).toBeInTheDocument();
+  });
+
+  it("supports household quick register flow and reports duplicate eligibility", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    await activateStaff(user);
+
+    await user.click(screen.getAllByRole("button", { name: "View Details" })[0]);
+    await user.type(screen.getByLabelText("Session customer search"), "Alex");
+    await user.click(screen.getByLabelText("Jordan Kim"));
+    await user.click(screen.getByRole("button", { name: "Register Selected Household" }));
+    expect(screen.getByText(/Registered 0 household participants/i)).toBeInTheDocument();
+    expect(screen.getByText(/Jordan Kim is already registered/i)).toBeInTheDocument();
+  });
+
+  it("shows blocked warning when household member fails waiver rules", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    await activateStaff(user);
+
+    await user.click(screen.getAllByRole("button", { name: "View Details" })[0]);
+    await user.type(screen.getByLabelText("Session customer search"), "Alex");
+    await user.click(screen.getByLabelText("Sam Noaccess"));
+    await user.click(screen.getByRole("button", { name: "Register Selected Household" }));
+    expect(screen.getByText(/Registered 0 household participants/i)).toBeInTheDocument();
+    expect(screen.getByText(/Blocked: Waiver missing or expired/i)).toBeInTheDocument();
   });
 
   it("persists created sessions after refresh", async () => {

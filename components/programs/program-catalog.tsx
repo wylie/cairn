@@ -12,24 +12,40 @@ interface ProgramFormValues {
   title: string;
   description: string;
   category: Program["category"];
+  programType: NonNullable<Program["programType"]>;
   active: boolean;
   colorToken: NonNullable<Program["colorToken"]>;
   defaultCapacity: string;
   requiresWaiver: boolean;
+  guardianRequired: boolean;
+  memberRequired: boolean;
+  dropInAllowed: boolean;
+  pricingModel: NonNullable<Program["pricingModel"]>;
+  basePriceCents: string;
+  waitlistEnabled: boolean;
   minimumAge: string;
   maximumAge: string;
+  tags: string;
 }
 
 const defaultForm: ProgramFormValues = {
   title: "",
   description: "",
   category: "class",
+  programType: "recurring_class",
   active: true,
   colorToken: "blue",
   defaultCapacity: "12",
   requiresWaiver: true,
+  guardianRequired: false,
+  memberRequired: false,
+  dropInAllowed: true,
+  pricingModel: "paid_registration",
+  basePriceCents: "0",
+  waitlistEnabled: true,
   minimumAge: "",
-  maximumAge: ""
+  maximumAge: "",
+  tags: ""
 };
 
 function formatAgeRange(program: Program) {
@@ -58,8 +74,15 @@ export function ProgramCatalog({
     colorToken?: Program["colorToken"];
     defaultCapacity?: number;
     requiresWaiver?: boolean;
+    guardianRequired?: boolean;
+    memberRequired?: boolean;
+    dropInAllowed?: boolean;
+    pricingModel?: Program["pricingModel"];
+    basePriceCents?: number;
+    waitlistEnabled?: boolean;
     minimumAge?: number;
     maximumAge?: number;
+    tags?: string[];
   }) => { ok: boolean; message: string };
   onUpdateProgram: (input: {
     id: string;
@@ -70,8 +93,15 @@ export function ProgramCatalog({
     colorToken?: Program["colorToken"];
     defaultCapacity?: number;
     requiresWaiver?: boolean;
+    guardianRequired?: boolean;
+    memberRequired?: boolean;
+    dropInAllowed?: boolean;
+    pricingModel?: Program["pricingModel"];
+    basePriceCents?: number;
+    waitlistEnabled?: boolean;
     minimumAge?: number;
     maximumAge?: number;
+    tags?: string[];
   }) => { ok: boolean; message: string };
 }) {
   const [form, setForm] = useState<ProgramFormValues>(defaultForm);
@@ -91,12 +121,20 @@ export function ProgramCatalog({
       title: program.title,
       description: program.description ?? "",
       category: program.category,
+      programType: program.programType ?? "recurring_class",
       active: program.active !== false,
       colorToken: program.colorToken ?? "blue",
       defaultCapacity: String(program.defaultCapacity ?? 12),
       requiresWaiver: program.requiresWaiver ?? true,
+      guardianRequired: Boolean(program.guardianRequired),
+      memberRequired: Boolean(program.memberRequired),
+      dropInAllowed: program.dropInAllowed !== false,
+      pricingModel: program.pricingModel ?? "paid_registration",
+      basePriceCents: String(program.basePriceCents ?? 0),
+      waitlistEnabled: program.waitlistEnabled !== false,
       minimumAge: typeof program.minimumAge === "number" ? String(program.minimumAge) : "",
-      maximumAge: typeof program.maximumAge === "number" ? String(program.maximumAge) : ""
+      maximumAge: typeof program.maximumAge === "number" ? String(program.maximumAge) : "",
+      tags: (program.tags ?? []).join(", ")
     });
     setFormOpen(true);
   };
@@ -122,12 +160,23 @@ export function ProgramCatalog({
       title: form.title,
       description: form.description,
       category: form.category,
+      programType: form.programType,
       active: form.active,
       colorToken: form.colorToken,
       defaultCapacity: Number(form.defaultCapacity),
       requiresWaiver: form.requiresWaiver,
+      guardianRequired: form.guardianRequired,
+      memberRequired: form.memberRequired,
+      dropInAllowed: form.dropInAllowed,
+      pricingModel: form.pricingModel,
+      basePriceCents: Number(form.basePriceCents || "0"),
+      waitlistEnabled: form.waitlistEnabled,
       minimumAge: minAge,
-      maximumAge: maxAge
+      maximumAge: maxAge,
+      tags: form.tags
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter(Boolean)
     };
 
     const result = editingId ? onUpdateProgram({ id: editingId, ...payload }) : onCreateProgram(payload);
@@ -172,6 +221,16 @@ export function ProgramCatalog({
                   <option value="course">Course</option>
                 </select>
               </FormField>
+              <FormField label="Program type">
+                <select aria-label="Program type" value={form.programType} onChange={(event) => setForm((prev) => ({ ...prev, programType: event.target.value as NonNullable<Program["programType"]> }))} className="h-11 w-full rounded-md border border-input bg-white px-3 py-2 text-sm">
+                  <option value="recurring_class">Recurring Class</option>
+                  <option value="one_time_event">One-time Event</option>
+                  <option value="camp">Camp</option>
+                  <option value="clinic">Clinic</option>
+                  <option value="team_league">Team/League or Seasonal</option>
+                  <option value="appointment_session">Appointment Session</option>
+                </select>
+              </FormField>
               <FormField label="Description" className="md:col-span-2">
                 <Input aria-label="Program description" value={form.description} onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))} />
               </FormField>
@@ -189,6 +248,9 @@ export function ProgramCatalog({
               <FormField label="Default session capacity">
                 <Input aria-label="Program default session capacity" value={form.defaultCapacity} onChange={(event) => setForm((prev) => ({ ...prev, defaultCapacity: event.target.value }))} />
               </FormField>
+              <FormField label="Base price (cents)">
+                <Input aria-label="Program base price cents" value={form.basePriceCents} onChange={(event) => setForm((prev) => ({ ...prev, basePriceCents: event.target.value }))} />
+              </FormField>
               <FormField label="Minimum age">
                 <Input aria-label="Program minimum age" value={form.minimumAge} onChange={(event) => setForm((prev) => ({ ...prev, minimumAge: event.target.value }))} />
               </FormField>
@@ -197,6 +259,21 @@ export function ProgramCatalog({
               </FormField>
               <ToggleField label="Active" checked={form.active} onChange={(checked) => setForm((prev) => ({ ...prev, active: checked }))} ariaLabel="Program active" />
               <ToggleField label="Requires waiver" checked={form.requiresWaiver} onChange={(checked) => setForm((prev) => ({ ...prev, requiresWaiver: checked }))} ariaLabel="Program requires waiver" />
+              <ToggleField label="Guardian required" checked={form.guardianRequired} onChange={(checked) => setForm((prev) => ({ ...prev, guardianRequired: checked }))} ariaLabel="Program guardian required" />
+              <ToggleField label="Member required" checked={form.memberRequired} onChange={(checked) => setForm((prev) => ({ ...prev, memberRequired: checked }))} ariaLabel="Program member required" />
+              <ToggleField label="Drop-ins allowed" checked={form.dropInAllowed} onChange={(checked) => setForm((prev) => ({ ...prev, dropInAllowed: checked }))} ariaLabel="Program drop in allowed" />
+              <ToggleField label="Waitlist enabled" checked={form.waitlistEnabled} onChange={(checked) => setForm((prev) => ({ ...prev, waitlistEnabled: checked }))} ariaLabel="Program waitlist enabled" />
+              <FormField label="Pricing">
+                <select aria-label="Program pricing model" value={form.pricingModel} onChange={(event) => setForm((prev) => ({ ...prev, pricingModel: event.target.value as NonNullable<Program["pricingModel"]> }))} className="h-11 w-full rounded-md border border-input bg-white px-3 py-2 text-sm">
+                  <option value="free">Free</option>
+                  <option value="included_membership">Included with membership</option>
+                  <option value="paid_registration">Paid registration</option>
+                  <option value="drop_in_fee">Drop-in fee</option>
+                </select>
+              </FormField>
+              <FormField label="Tags" className="md:col-span-2">
+                <Input aria-label="Program tags" placeholder="youth, climbing, seasonal" value={form.tags} onChange={(event) => setForm((prev) => ({ ...prev, tags: event.target.value }))} />
+              </FormField>
             </FormGrid>
             <FormActions>
               <Button onClick={submit}>{editingId ? "Save Program" : "Create Program"}</Button>
@@ -213,7 +290,10 @@ export function ProgramCatalog({
                 <Badge tone={program.active === false ? "muted" : "default"}>{program.active === false ? "inactive" : program.category}</Badge>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">{count} session(s) • {formatAgeRange(program)}</p>
+              <p className="text-sm text-muted-foreground">Type: {program.programType?.replace(/_/g, " ") ?? "recurring class"}</p>
               <p className="text-sm text-muted-foreground">Default session capacity: {program.defaultCapacity ?? 12}</p>
+              <p className="text-sm text-muted-foreground">Pricing: {program.pricingModel?.replace(/_/g, " ") ?? "paid registration"}</p>
+              <p className="text-sm text-muted-foreground">Waitlist: {program.waitlistEnabled === false ? "Off" : "On"}</p>
               <div className="mt-2 flex items-center gap-2">
                 <Button className="h-9" variant="outline" onClick={() => openEdit(program)}>Edit Program</Button>
               </div>

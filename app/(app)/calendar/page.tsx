@@ -6,11 +6,13 @@ import { SessionDetailPanel } from "@/components/calendar/session-detail-panel";
 import { SessionFormPanel } from "@/components/calendar/session-form-panel";
 import { SessionScheduleCard } from "@/components/calendar/session-schedule-card";
 import { ScheduleViewToggle } from "@/components/calendar/schedule-view-toggle";
+import { SellAccessModal } from "@/components/pos/sell-access-modal";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import {
   buildSessionCards,
   filterScheduleSessions,
+  sessionsForMonth,
   sessionsForDay,
   sessionsForWeek,
   sortSessionsByStart,
@@ -30,11 +32,19 @@ export default function CalendarPage() {
     sessions,
     registrations,
     customers,
+    accessProducts,
     createSession,
     updateSession,
     cancelSession,
     registerCustomerForSession,
-    cancelRegistration
+    cancelRegistration,
+    promoteWaitlistedRegistration,
+    moveRegistrationToWaitlist,
+    markRegistrationAttendance,
+    sellAccessProducts,
+    updateCustomerWaiver,
+    waivers,
+    householdMembers
   } = useCustomerState();
   const { activeStaff, assertPermission, staffUsers, requestStaffSwitch } = useWorkstationState();
 
@@ -43,6 +53,8 @@ export default function CalendarPage() {
   const [dateKey, setDateKey] = useState("2026-05-21");
   const [locationId, setLocationId] = useState("all");
   const [category, setCategory] = useState<"all" | "class" | "camp" | "clinic" | "course">("all");
+  const [programType, setProgramType] = useState<"all" | "recurring_class" | "one_time_event" | "camp" | "clinic" | "team_league" | "appointment_session">("all");
+  const [ageGroup, setAgeGroup] = useState<"all" | "youth" | "adult">("all");
   const [instructor, setInstructor] = useState("all");
   const [status, setStatus] = useState<"all" | "scheduled" | "cancelled" | "completed">("all");
   const [feedback, setFeedback] = useState("");
@@ -50,31 +62,41 @@ export default function CalendarPage() {
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [sellCustomerId, setSellCustomerId] = useState<string | null>(null);
 
   const instructors = staffUsers.filter((entry) => (entry.role === "instructor" || entry.canTeach) && entry.activeInstructor !== false);
   const activePrograms = useMemo(() => programs.filter((entry) => entry.active !== false), [programs]);
   const sessionCards = useMemo(() => buildSessionCards(sessions, programs, registrations), [sessions, programs, registrations]);
+  const canEditSchedule = Boolean(activeStaff?.permissions.includes("editPrograms"));
+  const canManageRoster = Boolean(
+    activeStaff?.permissions.includes("rosterAccess") || activeStaff?.permissions.includes("editPrograms")
+  );
   const filtered = useMemo(
     () =>
       filterScheduleSessions(sessionCards, {
         search,
         locationId,
         category,
+        programType,
+        ageGroup,
         instructor,
         status,
         dateKey
       }),
-    [sessionCards, search, locationId, category, instructor, status, dateKey]
+    [sessionCards, search, locationId, category, programType, ageGroup, instructor, status, dateKey]
   );
 
   const visibleCards = useMemo(() => {
     const sorted = sortSessionsByStart(filtered);
-    if (view === "day") return sessionsForDay(sorted, dateKey);
-    if (view === "week") return sessionsForWeek(sorted, dateKey);
-    return sorted;
-  }, [filtered, view, dateKey]);
+    const scoped = activeStaff?.role === "instructor" ? sorted.filter((entry) => entry.session.instructorStaffId === activeStaff.id) : sorted;
+    if (view === "day") return sessionsForDay(scoped, dateKey);
+    if (view === "week") return sessionsForWeek(scoped, dateKey);
+    if (view === "month") return sessionsForMonth(scoped, dateKey);
+    return scoped;
+  }, [filtered, view, dateKey, activeStaff?.id, activeStaff?.role]);
 
   const activeSession = activeSessionId ? sessions.find((entry) => entry.id === activeSessionId) ?? null : null;
+  const sellCustomer = sellCustomerId ? customers.find((entry) => entry.id === sellCustomerId) ?? null : null;
   const editingSession = editingSessionId ? sessions.find((entry) => entry.id === editingSessionId) ?? null : null;
   const editingProgramOptions = useMemo(() => {
     if (!editingSession) return activePrograms;
@@ -84,12 +106,95 @@ export default function CalendarPage() {
     return activePrograms;
   }, [editingSession, programs, activePrograms]);
 
-  const requireSchedulePermission = () => {
+  const requireScheduleEditPermission = () => {
     if (!activeStaff) {
       requestStaffSwitch("Staff PIN Required");
       return { ok: false, message: "Select staff PIN to continue." } as const;
     }
     return assertPermission("editPrograms");
+  };
+  const requireRosterPermission = () => {
+    if (!activeStaff) {
+      requestStaffSwitch("Staff PIN Required");
+      return { ok: false, message: "Select staff PIN to continue." } as const;
+    }
+    if (!canManageRoster) {
+      return { ok: false as const, message: "You do not have permission to perform this action." };
+    }
+    return { ok: true as const };
+  };
+  const getRegistrationEligibility = (session: NonNullable<typeof activeSession>, customerId: string) => {
+    const customer = customers.find((entry) => entry.id === customerId);
+    const program = programs.find((entry) => entry.id === session.programId);
+    if (!customer || !program) return { state: "blocked" as const, reasons: ["Customer/program not found."] };
+
+    const reasons: string[] = [];
+    let state: "ready" | "warning" | "blocked" = "ready";
+    const waiver = customer.waiverId ? waivers.find((entry) => entry.id === customer.waiverId) : undefined;
+    const hasValidWaiver = waiver?.status === "valid" && (!waiver.expiresAt || waiver.expiresAt >= session.startsAt.slice(0, 10));
+    if (program.requiresWaiver && !hasValidWaiver) {
+      state = "blocked";
+      reasons.push("Waiver missing or expired");
+    } else {
+      reasons.push("Waiver complete");
+    }
+
+    const dob = customer.dateOfBirth ? new Date(`${customer.dateOfBirth}T00:00:00Z`) : null;
+    const age =
+      dob && !Number.isNaN(dob.getTime())
+        ? Math.max(0, Math.floor((new Date(session.startsAt).getTime() - dob.getTime()) / (1000 * 60 * 60 * 24 * 365.2425)))
+        : undefined;
+    if (typeof program.minimumAge === "number" && typeof age === "number" && age < program.minimumAge) {
+      state = "blocked";
+      reasons.push("Too young");
+    }
+    if (typeof program.maximumAge === "number" && typeof age === "number" && age > program.maximumAge) {
+      state = "blocked";
+      reasons.push("Outside age range");
+    }
+
+    if (session.enrolled >= session.capacity && !session.waitlistEnabled) {
+      state = "blocked";
+      reasons.push("Program full");
+    } else if (session.enrolled >= session.capacity) {
+      if (state !== "blocked") state = "warning";
+      reasons.push("Session full (waitlist available)");
+    }
+
+    if (program.memberRequired) {
+      const hasMembership = customer.checkInStatus === "in" || Boolean(customer.membershipId);
+      if (!hasMembership) {
+        if (state !== "blocked") state = "warning";
+        reasons.push("Not a member (drop-in fee applies)");
+      } else {
+        reasons.push("Membership valid");
+      }
+    }
+
+    let guardianName: string | undefined;
+    if (program.guardianRequired) {
+      const membership = householdMembers.find((entry) => entry.customerId === customer.id);
+      const guardian = membership
+        ? householdMembers.find(
+            (entry) =>
+              entry.householdId === membership.householdId &&
+              entry.customerId !== customer.id &&
+              entry.memberType === "adult" &&
+              (entry.relationship === "parent_guardian" || entry.role === "guardian" || entry.role === "primary-adult")
+          )
+        : undefined;
+      if (!guardian) {
+        state = "blocked";
+        reasons.push("Guardian required");
+      } else {
+        const guardianCustomer = customers.find((entry) => entry.id === guardian.customerId);
+        guardianName = guardianCustomer ? `${guardianCustomer.firstName} ${guardianCustomer.lastName}` : undefined;
+        reasons.push("Guardian approved");
+      }
+    }
+
+    if (reasons.length === 0) reasons.push("Ready to register");
+    return { state, reasons, guardianName };
   };
 
   return (
@@ -102,8 +207,9 @@ export default function CalendarPage() {
         <div className="flex items-center gap-2">
           <ScheduleViewToggle view={view} onChange={setView} />
           <Button
+            disabled={!canEditSchedule}
             onClick={() => {
-              const allowed = requireSchedulePermission();
+              const allowed = requireScheduleEditPermission();
               if (!allowed.ok) {
                 setWarning(allowed.message);
                 setFeedback("");
@@ -130,6 +236,10 @@ export default function CalendarPage() {
         onLocationChange={setLocationId}
         category={category}
         onCategoryChange={(value) => setCategory(value as typeof category)}
+        programType={programType}
+        onProgramTypeChange={(value) => setProgramType(value as typeof programType)}
+        ageGroup={ageGroup}
+        onAgeGroupChange={(value) => setAgeGroup(value as typeof ageGroup)}
         instructor={instructor}
         onInstructorChange={setInstructor}
         status={status}
@@ -148,7 +258,7 @@ export default function CalendarPage() {
               entry={entry}
               onOpen={(sessionId) => setActiveSessionId(sessionId)}
               onEdit={(sessionId) => {
-                const allowed = requireSchedulePermission();
+                const allowed = requireScheduleEditPermission();
                 if (!allowed.ok) {
                   setWarning(allowed.message);
                   setFeedback("");
@@ -174,7 +284,7 @@ export default function CalendarPage() {
                 setWarning("");
               }}
               onSave={(values) => {
-                const allowed = requireSchedulePermission();
+                const allowed = requireScheduleEditPermission();
                 if (!allowed.ok) {
                   setWarning(allowed.message);
                   setFeedback("");
@@ -227,7 +337,7 @@ export default function CalendarPage() {
                 setWarning("");
               }}
               onCancelSession={() => {
-                const allowed = requireSchedulePermission();
+                const allowed = requireScheduleEditPermission();
                 if (!allowed.ok) {
                   setWarning(allowed.message);
                   setFeedback("");
@@ -244,7 +354,7 @@ export default function CalendarPage() {
                 setEditingSessionId(null);
               }}
               onSave={(values) => {
-                const allowed = requireSchedulePermission();
+                const allowed = requireScheduleEditPermission();
                 if (!allowed.ok) {
                   setWarning(allowed.message);
                   setFeedback("");
@@ -285,9 +395,11 @@ export default function CalendarPage() {
               program={programs.find((entry) => entry.id === activeSession.programId)}
               registrations={registrations}
               customers={customers}
+              householdMembers={householdMembers}
+              getEligibility={(customerId) => getRegistrationEligibility(activeSession, customerId)}
               onClose={() => setActiveSessionId(null)}
               onRegister={(customerId) => {
-                const allowed = requireSchedulePermission();
+                const allowed = requireRosterPermission();
                 if (!allowed.ok) {
                   setWarning(allowed.message);
                   setFeedback("");
@@ -302,8 +414,26 @@ export default function CalendarPage() {
                 setFeedback(result.message);
                 setWarning("");
               }}
+              onRegisterHousehold={(customerIds) => {
+                const allowed = requireRosterPermission();
+                if (!allowed.ok) {
+                  setWarning(allowed.message);
+                  setFeedback("");
+                  return;
+                }
+                if (customerIds.length === 0) return;
+                const results = customerIds.map((customerId) => registerCustomerForSession({ customerId, sessionId: activeSession.id }));
+                const failures = results.filter((entry) => !entry.ok);
+                if (failures.length > 0) {
+                  setWarning(failures[0].message);
+                } else {
+                  setWarning("");
+                }
+                const successCount = results.filter((entry) => entry.ok).length;
+                setFeedback(`Registered ${successCount} household participant${successCount === 1 ? "" : "s"}.`);
+              }}
               onCancelRegistration={(registrationId) => {
-                const allowed = requireSchedulePermission();
+                const allowed = requireRosterPermission();
                 if (!allowed.ok) {
                   setWarning(allowed.message);
                   setFeedback("");
@@ -318,12 +448,105 @@ export default function CalendarPage() {
                 setFeedback(result.message);
                 setWarning("");
               }}
+              onMoveToWaitlist={(registrationId) => {
+                const allowed = requireRosterPermission();
+                if (!allowed.ok) {
+                  setWarning(allowed.message);
+                  setFeedback("");
+                  return;
+                }
+                const result = moveRegistrationToWaitlist(registrationId);
+                if (!result.ok) {
+                  setWarning(result.message);
+                  setFeedback("");
+                  return;
+                }
+                setFeedback(result.message);
+                setWarning("");
+              }}
+              onPromoteWaitlist={(registrationId) => {
+                const allowed = requireRosterPermission();
+                if (!allowed.ok) {
+                  setWarning(allowed.message);
+                  return;
+                }
+                const result = promoteWaitlistedRegistration(registrationId);
+                if (!result.ok) setWarning(result.message);
+                else {
+                  setFeedback(result.message);
+                  setWarning("");
+                }
+              }}
+              onMarkAttendance={(registrationId, statusValue) => {
+                const allowed = requireRosterPermission();
+                if (!allowed.ok) {
+                  setWarning(allowed.message);
+                  return;
+                }
+                const result = markRegistrationAttendance(registrationId, statusValue, activeStaff?.id);
+                if (!result.ok) setWarning(result.message);
+                else {
+                  setFeedback(result.message);
+                  setWarning("");
+                }
+              }}
+              onSellAccess={(customerId) => setSellCustomerId(customerId)}
+              onMarkWaiverSigned={(customerId) => {
+                if (!activeStaff) {
+                  requestStaffSwitch("Staff PIN Required");
+                  setWarning("Select staff PIN to continue.");
+                  return;
+                }
+                const result = updateCustomerWaiver(customerId, {
+                  status: "valid",
+                  signedAt: new Date().toISOString(),
+                  expiresAt: "2027-05-20",
+                  signedByStaffId: activeStaff.id,
+                  updatedByStaffId: activeStaff.id,
+                  updatedByStaffName: `${activeStaff.firstName} ${activeStaff.lastName}`
+                });
+                if (!result.ok) setWarning(result.message);
+                else {
+                  setFeedback("Waiver marked signed.");
+                  setWarning("");
+                }
+              }}
             />
           ) : (
             <aside className="rounded-xl border bg-card px-4 py-6 text-sm text-muted-foreground">Select a session to view registrations, waitlist, and quick actions.</aside>
           )}
         </div>
       </div>
+      {sellCustomer ? (
+        <SellAccessModal
+          open
+          onClose={() => setSellCustomerId(null)}
+          customer={sellCustomer}
+          products={accessProducts}
+          canUsePOS={Boolean(activeStaff?.permissions.includes("usePOS"))}
+          canOverrideAccess={Boolean(activeStaff?.permissions.includes("overrideAccess"))}
+          onSubmit={({ productIds, checkInAfterSale }) => {
+            if (!activeStaff) {
+              requestStaffSwitch("Staff PIN Required");
+              return { ok: false, message: "Select staff PIN to continue.", transaction: null };
+            }
+            const result = sellAccessProducts({
+              customerId: sellCustomer.id,
+              productIds,
+              soldByStaffId: activeStaff.id,
+              soldByStaffName: `${activeStaff.firstName} ${activeStaff.lastName}`,
+              checkInAfterSale
+            });
+            if (result.ok) {
+              setFeedback(result.message);
+              setWarning("");
+            } else {
+              setWarning(result.message);
+            }
+            return { ...result, transaction: result.transaction ?? null };
+          }}
+        />
+      ) : null}
     </section>
   );
 }

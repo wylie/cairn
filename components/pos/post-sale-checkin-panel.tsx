@@ -5,6 +5,7 @@ import type { Customer, PosTransaction } from "@/types/domain";
 import { CustomerSearchCombobox } from "@/components/shared/customer-search-combobox";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ModalShell } from "@/components/ui/modal-shell";
 import { filterCustomers } from "@/lib/data/customer-search";
 
 export function PostSaleCheckInPanel({
@@ -60,20 +61,21 @@ export function PostSaleCheckInPanel({
   const hasWaiverBlock = slots.some((slot) => getSlotCheckInState(slot.id).blockedByWaiver);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4" role="dialog" aria-modal="true" aria-label="Post-sale check-in">
-      <section className="max-h-[85vh] w-full max-w-3xl overflow-y-auto space-y-3 rounded-xl border bg-card p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h3 className="text-lg font-semibold">{title}</h3>
-            <p className="text-sm text-muted-foreground">
-              Receipt #{transaction.receiptNumber} • {transaction.customerName} • {eligibleCount} eligible check-in{eligibleCount === 1 ? "" : "s"}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" className="min-h-11" onClick={onClose}>Close</Button>
-            <Button variant="secondary" className="min-h-11" onClick={onDone}>Done</Button>
-          </div>
+    <ModalShell
+      open={open}
+      ariaLabel="Post-sale check-in"
+      title={title}
+      description={`Receipt #${transaction.receiptNumber} • ${transaction.customerName} • ${eligibleCount} eligible check-in${eligibleCount === 1 ? "" : "s"}`}
+      onClose={onClose}
+      maxWidthClassName="max-w-3xl"
+      footer={
+        <div className="flex items-center justify-end gap-2">
+          <Button variant="secondary" className="min-h-11" onClick={onClose}>Close</Button>
+          <Button variant="secondary" className="min-h-11" onClick={onDone}>Done</Button>
         </div>
+      }
+    >
+      <div className="space-y-3">
         {hasWaiverBlock ? (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-900">
             <p className="font-medium">Waiver required before check-in</p>
@@ -173,7 +175,7 @@ export function PostSaleCheckInPanel({
         {feedback ? <p role="status" className="text-sm text-emerald-800">{feedback}</p> : null}
         {warning ? <p role="alert" className="text-sm text-amber-800">{warning}</p> : null}
         {availableSlots.length > 1 ? <p className="text-xs text-muted-foreground">Guest check-in placeholders are disabled for now.</p> : null}
-      </section>
-    </div>
+      </div>
+    </ModalShell>
   );
 }

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { Customer, PosProduct, PosTransaction } from "@/types/domain";
 import { AccessProductPicker } from "@/components/pos/access-product-picker";
 import { Button } from "@/components/ui/button";
+import { ModalShell } from "@/components/ui/modal-shell";
 import { ProductPriceLabel } from "@/components/pos/product-price-label";
 import { MockReceiptPanel } from "@/components/pos/mock-receipt-panel";
 
@@ -65,13 +66,20 @@ export function SellAccessModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4" role="dialog" aria-modal="true" aria-label="Sell Access">
-      <div className="w-full max-w-3xl rounded-xl border bg-card p-4 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Sell Access for {customer.firstName} {customer.lastName}</h3>
-          <Button variant="outline" onClick={onClose}>Close</Button>
+    <ModalShell
+      open={open}
+      ariaLabel="Sell Access"
+      title={`Sell Access for ${customer.firstName} ${customer.lastName}`}
+      onClose={onClose}
+      maxWidthClassName="max-w-3xl"
+      footer={
+        <div className="space-y-2">
+          {feedback ? <p role="status" className="text-sm text-emerald-800">{feedback}</p> : null}
+          {warning ? <p role="alert" className="text-sm text-amber-800">{warning}</p> : null}
         </div>
-
+      }
+    >
+      <div className="space-y-4">
         <AccessProductPicker products={products} onAdd={(id) => setCart((prev) => [...prev, id])} disableStaffComp={!canOverrideAccess} />
 
         <div className="rounded-lg border bg-card p-3">
@@ -105,10 +113,8 @@ export function SellAccessModal({
           </div>
         </div>
 
-        {feedback ? <p role="status" className="text-sm text-emerald-800">{feedback}</p> : null}
-        {warning ? <p role="alert" className="text-sm text-amber-800">{warning}</p> : null}
         <MockReceiptPanel transaction={receipt} />
       </div>
-    </div>
+    </ModalShell>
   );
 }

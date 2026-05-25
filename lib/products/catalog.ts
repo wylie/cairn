@@ -17,6 +17,7 @@ export const productTypeOptions: Array<NonNullable<PosProduct["type"]>> = [
   "punch-pass",
   "class",
   "camp",
+  "registration",
   "retail",
   "comp"
 ];
@@ -33,24 +34,14 @@ export const categoryLabels: Record<string, string> = {
 };
 
 export const typeLabels: Record<string, string> = {
-  access: "Access",
+  access: "Day Pass",
   membership: "Membership",
   "punch-pass": "Punch Pass",
-  class: "Class",
+  class: "Class Pass",
   camp: "Camp",
+  registration: "Registration",
   retail: "Retail",
   comp: "Comp"
-};
-
-export const categoryTone: Record<string, string> = {
-  day_passes: "bg-sky-50 border-sky-200",
-  memberships: "bg-emerald-50 border-emerald-200",
-  punch_passes: "bg-amber-50 border-amber-200",
-  classes: "bg-violet-50 border-violet-200",
-  camps: "bg-orange-50 border-orange-200",
-  retail: "bg-slate-50 border-slate-200",
-  comps: "bg-slate-100 border-slate-300",
-  misc: "bg-slate-50 border-slate-200"
 };
 
 export const productColorTokens = ["blue", "green", "amber", "purple", "orange", "slate", "gray", "red"] as const;
@@ -111,4 +102,25 @@ export function resolveProductColorToken(product: PosProduct): ProductColorToken
 
 export function getProductToneClass(product: PosProduct) {
   return colorTokenTone[resolveProductColorToken(product)];
+}
+
+export function mapTypeToCategory(type: PosProduct["type"]): PosProduct["category"] {
+  switch (type) {
+    case "membership":
+      return "memberships";
+    case "punch-pass":
+      return "punch_passes";
+    case "class":
+    case "registration":
+      return "classes";
+    case "camp":
+      return "camps";
+    case "retail":
+      return "retail";
+    case "comp":
+      return "comps";
+    case "access":
+    default:
+      return "day_passes";
+  }
 }

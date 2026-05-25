@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { KeyboardEventHandler } from "react";
 import type { PosProduct } from "@/types/domain";
 import { ProductPriceLabel } from "@/components/pos/product-price-label";
 import { SearchInput } from "@/components/shared/search-input";
+import { Button } from "@/components/ui/button";
 import { categoryLabels, getProductCategory, getProductToneClass, isCompProduct, typeLabels } from "@/lib/products/catalog";
 
 function normalizeType(type?: string) {
@@ -35,17 +36,37 @@ function ProductButton({ product, blocked, onAdd }: { product: PosProduct; block
 export function AccessProductPicker({
   products,
   onAdd,
-  disableStaffComp
+  disableStaffComp,
+  onQuickProductsChange
 }: {
   products: PosProduct[];
   onAdd: (productId: string) => void;
   disableStaffComp: boolean;
+  onQuickProductsChange?: (products: PosProduct[]) => void;
 }) {
   const [query, setQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState<PosProduct["category"] | "all">("all");
   const [highlightedIndex, setHighlightedIndex] = useState(0);
 
   const activeProducts = useMemo(() => products.filter((product) => product.active !== false), [products]);
-  const quickProducts = useMemo(() => activeProducts.filter((product) => product.showAsQuickButton), [activeProducts]);
+  const quickProducts = useMemo(
+    () =>
+      activeProducts
+        .filter((product) => product.showAsQuickButton)
+        .sort((a, b) => (a.quickButtonRank ?? 999) - (b.quickButtonRank ?? 999)),
+    [activeProducts]
+  );
+  const visibleCategories = useMemo(() => {
+    const keys = new Set(activeProducts.map((product) => getProductCategory(product)));
+    return Array.from(keys);
+  }, [activeProducts]);
+  const categoryFilteredQuickProducts = useMemo(
+    () =>
+      quickProducts.filter((product) =>
+        activeCategory === "all" ? true : getProductCategory(product) === activeCategory
+      ),
+    [quickProducts, activeCategory]
+  );
 
   const filteredProducts = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -93,12 +114,40 @@ export function AccessProductPicker({
     }
   };
 
+  useEffect(() => {
+    onQuickProductsChange?.(quickProducts);
+  }, [quickProducts, onQuickProductsChange]);
+
   return (
     <div className="space-y-3">
       <div>
+        <p className="mb-2 text-sm font-medium">Categories</p>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant={activeCategory === "all" ? "primary" : "secondary"}
+            className="h-10"
+            onClick={() => setActiveCategory("all")}
+          >
+            All
+          </Button>
+          {visibleCategories.map((category) => (
+            <Button
+              key={category}
+              type="button"
+              variant={activeCategory === category ? "primary" : "secondary"}
+              className="h-10"
+              onClick={() => setActiveCategory(category)}
+            >
+              {categoryLabels[category]}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <div>
         <p className="mb-2 text-sm font-medium">Quick Buttons</p>
         <div className="grid gap-2 sm:grid-cols-2">
-          {quickProducts.map((product) => (
+          {categoryFilteredQuickProducts.map((product) => (
             <ProductButton
               key={product.id}
               product={product}
@@ -107,6 +156,9 @@ export function AccessProductPicker({
             />
           ))}
         </div>
+        {categoryFilteredQuickProducts.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">No quick products in this category.</p>
+        ) : null}
       </div>
 
       <div>

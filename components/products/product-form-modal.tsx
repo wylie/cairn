@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRef } from "react";
 import type { PosProduct } from "@/types/domain";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ModalShell } from "@/components/ui/modal-shell";
+import { CheckboxField, FormField, FormGrid, SelectInput } from "@/components/shared/form-layout";
 import {
-  categoryLabels,
   colorTokenLabels,
   colorTokenTone,
   defaultCategoryColor,
-  productCategoryOptions,
+  mapTypeToCategory,
   productColorTokens,
   productTypeOptions,
   typeLabels
@@ -32,6 +34,7 @@ function toFormState(product?: PosProduct | null): ProductFormInput {
       description: "",
       category: "day_passes",
       type: "access",
+      displayType: "Day Passes",
       price: "",
       priceCents: 0,
       active: true,
@@ -69,6 +72,7 @@ export function ProductFormModal({
   const [form, setForm] = useState<ProductFormInput>(() => toFormState(product));
   const [error, setError] = useState("");
   const [colorAuto, setColorAuto] = useState(!product?.colorToken);
+  const nameInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -77,101 +81,149 @@ export function ProductFormModal({
     setColorAuto(!product?.colorToken);
   }, [open, product]);
 
+  useEffect(() => {
+    if (!open) return;
+    const timer = setTimeout(() => {
+      nameInputRef.current?.focus();
+      nameInputRef.current?.select();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [open]);
+
   if (!open) return null;
 
   const isPunchPass = form.category === "punch_passes" || form.type === "punch-pass";
   const isDayPass = form.category === "day_passes";
   const isMembership = form.category === "memberships" || form.type === "membership";
 
-  const ToggleField = ({
-    label,
-    checked,
-    onChange
-  }: {
-    label: string;
-    checked: boolean;
-    onChange: (next: boolean) => void;
-  }) => (
-    <label className="space-y-1 text-sm">
-      <span className="text-sm text-muted-foreground">Option</span>
-      <span className="flex h-11 items-center gap-2 rounded-md border border-input bg-white px-3">
-        <input aria-label={label} type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
-        <span>{label}</span>
-      </span>
-    </label>
-  );
+  const submit = () => {
+    const result = onSubmit(form);
+    if (!result.ok) {
+      setError(result.message);
+      return;
+    }
+    onClose();
+  };
 
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 p-4">
-      <div className="w-full max-w-2xl rounded-xl border bg-card p-4 shadow-xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold">{title}</h3>
-          <Button variant="outline" onClick={onClose}>Close</Button>
+    <ModalShell
+      open={open}
+      ariaLabel={title}
+      title={title}
+      onClose={onClose}
+      maxWidthClassName="max-w-2xl"
+      footer={
+        <div className="space-y-2">
+          {error ? <p role="alert" className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">{error}</p> : null}
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={submit}>Save Product</Button>
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+          </div>
         </div>
+      }
+    >
+      <FormGrid data-testid="product-form-grid">
+          <p className="md:col-span-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Overview</p>
+          <FormField label="Name">
+            <Input
+              ref={nameInputRef}
+              aria-label="Product name"
+              value={form.name}
+              onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+            />
+          </FormField>
 
-        <div data-testid="product-form-grid" className="grid gap-3 md:grid-cols-2">
-          <label className="space-y-1 text-sm">
-            <span>Name</span>
-            <Input aria-label="Product name" value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} />
-          </label>
-
-          <label className="space-y-1 text-sm">
-            <span>Price</span>
+          <FormField label="Price">
             <Input aria-label="Product price" type="number" min="0" step="0.01" value={String(form.price)} onChange={(event) => setForm((prev) => ({ ...prev, price: event.target.value }))} />
-          </label>
+          </FormField>
 
-          <label className="space-y-1 text-sm md:col-span-2">
-            <span>Description</span>
+          <FormField label="Description" className="md:col-span-2">
             <Input aria-label="Product description" value={form.description ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))} />
-          </label>
+          </FormField>
 
-          <label className="space-y-1 text-sm">
-            <span>Category</span>
-            <select
-              aria-label="Product category"
-              value={form.category}
-              onChange={(event) =>
-                setForm((prev) => {
-                  const nextCategory = event.target.value as PosProduct["category"];
-                  if (!colorAuto) return { ...prev, category: nextCategory };
-                  const suggested = defaultCategoryColor[nextCategory];
-                  return { ...prev, category: nextCategory, colorToken: suggested, colorLabel: colorTokenLabels[suggested] };
-                })
-              }
-              className="flex h-11 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
-            >
-              {productCategoryOptions.map((option) => (
-                <option key={option} value={option}>{categoryLabels[option]}</option>
-              ))}
-            </select>
-          </label>
-
-          <label className="space-y-1 text-sm">
-            <span>Type</span>
-            <select
+          <FormField label="Type">
+            <SelectInput
               aria-label="Product type"
               value={form.type}
-              onChange={(event) => setForm((prev) => ({ ...prev, type: event.target.value as NonNullable<PosProduct["type"]> }))}
-              className="flex h-11 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+              onChange={(event) =>
+                setForm((prev) => {
+                  const type = event.target.value as NonNullable<PosProduct["type"]>;
+                  const mapped = mapTypeToCategory(type);
+                  if (!colorAuto) return { ...prev, type, category: mapped };
+                  const suggested = defaultCategoryColor[mapped];
+                  return { ...prev, type, category: mapped, colorToken: suggested, colorLabel: colorTokenLabels[suggested] };
+                })
+              }
             >
               {productTypeOptions.map((option) => (
                 <option key={option} value={option}>{typeLabels[option]}</option>
               ))}
-            </select>
-          </label>
+            </SelectInput>
+          </FormField>
+          <FormField label="Display group">
+            <Input
+              aria-label="Product display type"
+              placeholder="Memberships, Youth Programs, MTB"
+              value={form.displayType ?? ""}
+              onChange={(event) => setForm((prev) => ({ ...prev, displayType: event.target.value }))}
+            />
+          </FormField>
+          <FormField label="Tags">
+            <Input
+              aria-label="Product tags"
+              placeholder="Youth, Climbing, Camp"
+              value={(form.tags ?? []).join(", ")}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  tags: event.target.value
+                    .split(",")
+                    .map((tag) => tag.trim())
+                    .filter(Boolean)
+                }))
+              }
+            />
+          </FormField>
 
-          <label className="space-y-1 text-sm">
-            <span>Access behavior</span>
-            <select
+          <FormField label="Access behavior">
+            <SelectInput
               aria-label="Product access behavior"
               value={form.accessBehavior ?? "single_entry"}
               onChange={(event) => setForm((prev) => ({ ...prev, accessBehavior: event.target.value as NonNullable<PosProduct["accessBehavior"]> }))}
-              className="flex h-11 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
             >
               {accessBehaviorOptions.map((option) => (
                 <option key={option} value={option}>{option.replace(/_/g, " ")}</option>
               ))}
-            </select>
+            </SelectInput>
+          </FormField>
+          <p className="md:col-span-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Access Rules</p>
+          <CheckboxField
+            label="Household eligible"
+            checked={Boolean(form.householdEligible)}
+            onChange={(next) => setForm((prev) => ({ ...prev, householdEligible: next }))}
+          />
+          <CheckboxField
+            label="Guardian required"
+            checked={Boolean(form.guardianRequired)}
+            onChange={(next) => setForm((prev) => ({ ...prev, guardianRequired: next }))}
+          />
+          <CheckboxField
+            label="Simultaneous access allowed"
+            checked={Boolean(form.simultaneousAccessAllowed)}
+            onChange={(next) => setForm((prev) => ({ ...prev, simultaneousAccessAllowed: next }))}
+          />
+          <CheckboxField
+            label="Taxable"
+            checked={Boolean(form.taxable)}
+            onChange={(next) => setForm((prev) => ({ ...prev, taxable: next }))}
+          />
+          <label className="space-y-1 text-sm">
+            <span>Minimum age</span>
+            <Input aria-label="Minimum age" type="number" min="0" value={form.minimumAge ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, minimumAge: event.target.value ? Number(event.target.value) : undefined }))} />
+          </label>
+          <label className="space-y-1 text-sm">
+            <span>Maximum age</span>
+            <Input aria-label="Maximum age" type="number" min="0" value={form.maximumAge ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, maximumAge: event.target.value ? Number(event.target.value) : undefined }))} />
           </label>
 
           <div className="space-y-1 text-sm md:col-span-2">
@@ -220,44 +272,29 @@ export function ProductFormModal({
               <Input aria-label="Expiration days" type="number" min="1" value={form.expirationDays ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, expirationDays: event.target.value ? Number(event.target.value) : undefined }))} />
             </label>
           ) : null}
+          <FormField label="Internal notes" className="md:col-span-2">
+            <Input aria-label="Product internal notes" value={form.internalNotes ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, internalNotes: event.target.value }))} />
+          </FormField>
 
-          <ToggleField
+          <CheckboxField
             label="Show as quick button"
             checked={Boolean(form.showAsQuickButton)}
             onChange={(next) => setForm((prev) => ({ ...prev, showAsQuickButton: next }))}
           />
 
-          <ToggleField
+          <CheckboxField
             label="Active"
             checked={form.active !== false}
             onChange={(next) => setForm((prev) => ({ ...prev, active: next }))}
           />
 
-          <ToggleField
+          <CheckboxField
             label="Requires waiver"
             checked={Boolean(form.waiverRequired)}
             onChange={(next) => setForm((prev) => ({ ...prev, waiverRequired: next }))}
           />
-        </div>
+        </FormGrid>
 
-        {error ? <p role="alert" className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">{error}</p> : null}
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button
-            onClick={() => {
-              const result = onSubmit(form);
-              if (!result.ok) {
-                setError(result.message);
-                return;
-              }
-              onClose();
-            }}
-          >
-            Save Product
-          </Button>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-        </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

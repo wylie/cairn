@@ -367,6 +367,8 @@ interface CustomerStateContextValue {
     waitlistEnabled?: boolean;
     notes?: string;
     updatedByStaffId?: string;
+    seriesId?: string;
+    recurrenceRule?: string;
   }) => { ok: boolean; message: string; sessionId?: string };
   updateSession: (input: {
     sessionId: string;
@@ -1832,6 +1834,8 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     waitlistEnabled?: boolean;
     notes?: string;
     updatedByStaffId?: string;
+    seriesId?: string;
+    recurrenceRule?: string;
   }) => {
     const program = programs.find((entry) => entry.id === input.programId);
     if (!program) return { ok: false, message: "Program not found." };
@@ -1851,6 +1855,8 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       instructorName: input.instructorName,
       instructorStaffId: input.instructorStaffId,
       notes: input.notes?.trim() || undefined,
+      seriesId: input.seriesId,
+      recurrenceRule: input.recurrenceRule,
       status: "scheduled",
       waitlistEnabled: input.waitlistEnabled ?? false,
       waitlistCount: 0,

@@ -26,6 +26,29 @@ function buildIsoDateTime(date: string, time: string) {
   return new Date(`${date}T${time}:00`).toISOString();
 }
 
+function addDays(dateKey: string, days: number) {
+  const base = new Date(`${dateKey}T00:00:00Z`);
+  base.setUTCDate(base.getUTCDate() + days);
+  return base.toISOString().slice(0, 10);
+}
+
+function buildRecurringDates(startDate: string, pattern: "none" | "weekly" | "camp_weekdays", count: number) {
+  if (pattern === "none") return [startDate];
+  const dates: string[] = [];
+  let cursor = startDate;
+  while (dates.length < count) {
+    const day = new Date(`${cursor}T00:00:00Z`).getUTCDay();
+    if (pattern === "weekly") {
+      dates.push(cursor);
+      cursor = addDays(cursor, 7);
+      continue;
+    }
+    if (day !== 0 && day !== 6) dates.push(cursor);
+    cursor = addDays(cursor, 1);
+  }
+  return dates;
+}
+
 export default function CalendarPage() {
   const {
     programs,
@@ -63,6 +86,7 @@ export default function CalendarPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [sellCustomerId, setSellCustomerId] = useState<string | null>(null);
+  const [conflictWarning, setConflictWarning] = useState("");
 
   const instructors = staffUsers.filter((entry) => (entry.role === "instructor" || entry.canTeach) && entry.activeInstructor !== false);
   const activePrograms = useMemo(() => programs.filter((entry) => entry.active !== false), [programs]);
@@ -122,6 +146,17 @@ export default function CalendarPage() {
       return { ok: false as const, message: "You do not have permission to perform this action." };
     }
     return { ok: true as const };
+  };
+  const getInstructorConflict = (input: { instructorStaffId?: string; startsAt: string; endsAt: string; sessionId?: string }) => {
+    if (!input.instructorStaffId) return null;
+    const overlap = sessions.find((entry) => {
+      if (input.sessionId && entry.id === input.sessionId) return false;
+      if (entry.status === "cancelled") return false;
+      if (entry.instructorStaffId !== input.instructorStaffId) return false;
+      return input.startsAt < entry.endsAt && input.endsAt > entry.startsAt;
+    });
+    if (!overlap) return null;
+    return `Instructor conflict detected: ${overlap.title ?? "Session"} at ${new Date(overlap.startsAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}.`;
   };
   const getRegistrationEligibility = (session: NonNullable<typeof activeSession>, customerId: string) => {
     const customer = customers.find((entry) => entry.id === customerId);
@@ -279,9 +314,11 @@ export default function CalendarPage() {
               locations={data.locations}
               instructors={instructors}
               warning={warning}
+              conflictWarning={conflictWarning}
               onCancel={() => {
                 setShowCreate(false);
                 setWarning("");
+                setConflictWarning("");
               }}
               onSave={(values) => {
                 const allowed = requireScheduleEditPermission();
@@ -297,28 +334,56 @@ export default function CalendarPage() {
                 }
                 const startsAt = buildIsoDateTime(values.date, values.startTime);
                 const endsAt = buildIsoDateTime(values.date, values.endTime);
-                const createdInstructor = staffUsers.find((entry) => entry.id === values.instructorStaffId);
-                const createResult = createSession({
-                  programId: values.programId,
+                const conflict = getInstructorConflict({
+                  instructorStaffId: values.instructorStaffId || undefined,
                   startsAt,
-                  endsAt,
-                  capacity: Number(values.capacity),
-                  title: values.title,
-                  locationId: values.locationId,
-                  instructorName: createdInstructor ? `${createdInstructor.firstName} ${createdInstructor.lastName}` : undefined,
-                  instructorStaffId: values.instructorStaffId,
-                  waitlistEnabled: values.waitlistEnabled,
-                  notes: values.notes,
-                  updatedByStaffId: activeStaff?.id
+                  endsAt
                 });
-                if (!createResult.ok) {
-                  setWarning(createResult.message);
+                if (conflict && !activeStaff?.permissions.includes("overrideAccess")) {
+                  setConflictWarning(conflict);
+                  setWarning("Manager override required for instructor conflicts.");
                   setFeedback("");
                   return;
                 }
-                setFeedback("Session created.");
+                setConflictWarning(conflict ?? "");
+                const createdInstructor = staffUsers.find((entry) => entry.id === values.instructorStaffId);
+                const recurrenceCount = Math.max(1, Number(values.recurrenceCount || "1"));
+                const recurringDates = buildRecurringDates(values.date, values.recurrence, recurrenceCount);
+                const seriesId = values.recurrence === "none" ? undefined : `series_${Math.random().toString(36).slice(2, 9)}`;
+                const recurrenceRule =
+                  values.recurrence === "weekly"
+                    ? "FREQ=WEEKLY"
+                    : values.recurrence === "camp_weekdays"
+                      ? "FREQ=DAILY;BYDAY=MO,TU,WE,TH,FR"
+                      : undefined;
+
+                for (const date of recurringDates) {
+                  const createResult = createSession({
+                    programId: values.programId,
+                    startsAt: buildIsoDateTime(date, values.startTime),
+                    endsAt: buildIsoDateTime(date, values.endTime),
+                    capacity: Number(values.capacity),
+                    title: values.title,
+                    locationId: values.locationId,
+                    instructorName: createdInstructor ? `${createdInstructor.firstName} ${createdInstructor.lastName}` : undefined,
+                    instructorStaffId: values.instructorStaffId,
+                    waitlistEnabled: values.waitlistEnabled,
+                    notes: values.notes,
+                    updatedByStaffId: activeStaff?.id,
+                    seriesId,
+                    recurrenceRule
+                  });
+                  if (!createResult.ok) {
+                    setWarning(createResult.message);
+                    setFeedback("");
+                    return;
+                  }
+                }
+
+                setFeedback(recurringDates.length > 1 ? `Created ${recurringDates.length} recurring sessions.` : "Session created.");
                 setWarning("");
                 setShowCreate(false);
+                setConflictWarning("");
               }}
             />
           ) : null}
@@ -332,9 +397,11 @@ export default function CalendarPage() {
               locations={data.locations}
               instructors={instructors}
               warning={warning}
+              conflictWarning={conflictWarning}
               onCancel={() => {
                 setEditingSessionId(null);
                 setWarning("");
+                setConflictWarning("");
               }}
               onCancelSession={() => {
                 const allowed = requireScheduleEditPermission();
@@ -362,29 +429,55 @@ export default function CalendarPage() {
                 }
                 const startsAt = buildIsoDateTime(values.date, values.startTime);
                 const endsAt = buildIsoDateTime(values.date, values.endTime);
-                const instructor = staffUsers.find((entry) => entry.id === values.instructorStaffId);
-                const result = updateSession({
-                  sessionId: editingSession.id,
-                  title: values.title,
-                  programId: values.programId,
-                  locationId: values.locationId,
+                const conflict = getInstructorConflict({
+                  instructorStaffId: values.instructorStaffId || undefined,
                   startsAt,
                   endsAt,
-                  instructorName: instructor ? `${instructor.firstName} ${instructor.lastName}` : undefined,
-                  instructorStaffId: values.instructorStaffId,
-                  capacity: Number(values.capacity),
-                  waitlistEnabled: values.waitlistEnabled,
-                  notes: values.notes,
-                  updatedByStaffId: activeStaff?.id
+                  sessionId: editingSession.id
                 });
-                if (!result.ok) {
-                  setWarning(result.message);
+                if (conflict && !activeStaff?.permissions.includes("overrideAccess")) {
+                  setConflictWarning(conflict);
+                  setWarning("Manager override required for instructor conflicts.");
                   setFeedback("");
                   return;
                 }
-                setFeedback("Session updated.");
+                setConflictWarning(conflict ?? "");
+                const instructor = staffUsers.find((entry) => entry.id === values.instructorStaffId);
+                const seriesSessions = editingSession.seriesId
+                  ? sessions.filter((entry) => entry.seriesId === editingSession.seriesId)
+                  : [editingSession];
+                const targets =
+                  values.editScope === "single"
+                    ? [editingSession]
+                    : values.editScope === "future"
+                      ? seriesSessions.filter((entry) => entry.startsAt >= editingSession.startsAt)
+                      : seriesSessions;
+
+                for (const target of targets) {
+                  const result = updateSession({
+                    sessionId: target.id,
+                    title: values.title,
+                    programId: values.programId,
+                    locationId: values.locationId,
+                    startsAt: target.id === editingSession.id ? startsAt : target.startsAt,
+                    endsAt: target.id === editingSession.id ? endsAt : target.endsAt,
+                    instructorName: instructor ? `${instructor.firstName} ${instructor.lastName}` : undefined,
+                    instructorStaffId: values.instructorStaffId,
+                    capacity: Number(values.capacity),
+                    waitlistEnabled: values.waitlistEnabled,
+                    notes: values.notes,
+                    updatedByStaffId: activeStaff?.id
+                  });
+                  if (!result.ok) {
+                    setWarning(result.message);
+                    setFeedback("");
+                    return;
+                  }
+                }
+                setFeedback(targets.length > 1 ? `Updated ${targets.length} sessions.` : "Session updated.");
                 setWarning("");
                 setEditingSessionId(null);
+                setConflictWarning("");
               }}
             />
           ) : null}
@@ -510,6 +603,71 @@ export default function CalendarPage() {
                   setFeedback("Waiver marked signed.");
                   setWarning("");
                 }
+              }}
+              onEditSession={() => {
+                const allowed = requireScheduleEditPermission();
+                if (!allowed.ok) {
+                  setWarning(allowed.message);
+                  setFeedback("");
+                  return;
+                }
+                setEditingSessionId(activeSession.id);
+                setShowCreate(false);
+              }}
+              onCancelSession={() => {
+                const allowed = requireScheduleEditPermission();
+                if (!allowed.ok) {
+                  setWarning(allowed.message);
+                  setFeedback("");
+                  return;
+                }
+                const result = cancelSession(activeSession.id, activeStaff?.id);
+                if (!result.ok) {
+                  setWarning(result.message);
+                  setFeedback("");
+                  return;
+                }
+                setFeedback(result.message);
+                setWarning("");
+              }}
+              onDuplicateSession={() => {
+                const allowed = requireScheduleEditPermission();
+                if (!allowed.ok) {
+                  setWarning(allowed.message);
+                  setFeedback("");
+                  return;
+                }
+                const nextDate = addDays(activeSession.startsAt.slice(0, 10), 7);
+                const startTime = new Date(activeSession.startsAt).toISOString().slice(11, 16);
+                const endTime = new Date(activeSession.endsAt).toISOString().slice(11, 16);
+                const result = createSession({
+                  programId: activeSession.programId,
+                  startsAt: buildIsoDateTime(nextDate, startTime),
+                  endsAt: buildIsoDateTime(nextDate, endTime),
+                  capacity: activeSession.capacity,
+                  title: `${activeSession.title ?? "Session"} (Copy)`,
+                  locationId: activeSession.locationId,
+                  instructorName: activeSession.instructorName,
+                  instructorStaffId: activeSession.instructorStaffId,
+                  waitlistEnabled: activeSession.waitlistEnabled,
+                  notes: activeSession.notes,
+                  updatedByStaffId: activeStaff?.id,
+                  seriesId: activeSession.seriesId,
+                  recurrenceRule: activeSession.recurrenceRule
+                });
+                if (!result.ok) {
+                  setWarning(result.message);
+                  setFeedback("");
+                  return;
+                }
+                setFeedback("Session duplicated.");
+                setWarning("");
+              }}
+              onTakeAttendance={() => {
+                const confirmed = registrations.filter((entry) => entry.sessionId === activeSession.id && entry.status === "confirmed");
+                confirmed.forEach((entry) => markRegistrationAttendance(entry.id, "attended", activeStaff?.id));
+                setFeedback(`Marked ${confirmed.length} participants present.`);
+                setWarning("");
               }}
             />
           ) : (

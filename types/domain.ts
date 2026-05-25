@@ -395,6 +395,8 @@ export interface ClassCampSession {
   updatedByStaffId?: string;
   cancelledAt?: string;
   cancelledByStaffId?: string;
+  seriesId?: string;
+  recurrenceRule?: string;
   startsAt: string;
   endsAt: string;
   capacity: number;

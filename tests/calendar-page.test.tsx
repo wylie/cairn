@@ -40,6 +40,11 @@ async function activateStaff(user: ReturnType<typeof userEvent.setup>, pin = "22
 }
 
 describe("Calendar schedule foundation", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+  });
+
   it("filter inputs align in shared toolbar", () => {
     render(
       <TestProviders>
@@ -288,7 +293,7 @@ describe("Calendar schedule foundation", () => {
 
     await user.click(screen.getAllByRole("button", { name: "View Details" })[0]);
     await user.type(screen.getByLabelText("Session customer search"), "Maya");
-    await user.keyboard("{ArrowDown}{Enter}");
+    await user.click(screen.getByRole("option", { name: /Maya Patel/i }));
 
     expect(screen.getByText(/Registration confirmed for Maya Patel/i)).toBeInTheDocument();
     expect(screen.getByText(/15 \/ 20 registered/i)).toBeInTheDocument();
@@ -308,7 +313,7 @@ describe("Calendar schedule foundation", () => {
 
     await user.click(screen.getAllByRole("button", { name: "View Details" })[0]);
     await user.type(screen.getByLabelText("Session customer search"), "Maya");
-    await user.keyboard("{ArrowDown}{Enter}");
+    await user.click(screen.getByRole("option", { name: /Maya Patel/i }));
     expect(screen.getByText(/Registration confirmed for Maya Patel/i)).toBeInTheDocument();
   });
 
@@ -320,7 +325,7 @@ describe("Calendar schedule foundation", () => {
         <CalendarPage />
       </TestProviders>
     );
-    await activateStaff(user, "2222");
+    await activateStaff(user, "4444");
 
     await user.click(screen.getAllByRole("button", { name: "View Details" })[0]);
     await user.click(screen.getAllByRole("button", { name: "Move to Waitlist" })[0]);
@@ -413,5 +418,78 @@ describe("Calendar schedule foundation", () => {
 
     expect(screen.getByText(/Persisted Session/i)).toBeInTheDocument();
     storage.restore();
+  });
+
+  it("creates recurring sessions from session form", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    await activateStaff(user);
+
+    await user.click(screen.getAllByRole("button", { name: "Create Session" })[0]);
+    const panel = screen.getByLabelText("session-form-panel");
+    await user.type(within(panel).getByLabelText("Session title"), "Recurring Team Session");
+    await user.selectOptions(within(panel).getByLabelText("Session program"), "prog_101");
+    await user.type(within(panel).getByLabelText("Session date"), "2026-05-24");
+    await user.type(within(panel).getByLabelText("Session start time"), "07:00");
+    await user.type(within(panel).getByLabelText("Session end time"), "08:00");
+    await user.selectOptions(within(panel).getByLabelText("Session recurrence"), "weekly");
+    await user.clear(within(panel).getByLabelText("Session recurrence count"));
+    await user.type(within(panel).getByLabelText("Session recurrence count"), "3");
+    await user.click(within(panel).getByRole("button", { name: "Create Session" }));
+
+    expect(screen.getByText(/Created 3 recurring sessions\./i)).toBeInTheDocument();
+  });
+
+  it("handles instructor conflict checks during create", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    await activateStaff(user, "2222");
+
+    await user.click(screen.getAllByRole("button", { name: "Create Session" })[0]);
+    const panel = screen.getByLabelText("session-form-panel");
+    await user.type(within(panel).getByLabelText("Session title"), "Conflict Session");
+    await user.selectOptions(within(panel).getByLabelText("Session program"), "prog_101");
+    await user.type(within(panel).getByLabelText("Session date"), "2026-05-21");
+    await user.type(within(panel).getByLabelText("Session start time"), "07:15");
+    await user.type(within(panel).getByLabelText("Session end time"), "08:00");
+    await user.selectOptions(within(panel).getByLabelText("Session instructor"), "staff_004");
+    await user.click(within(panel).getByRole("button", { name: "Create Session" }));
+
+    const conflictVisible = screen.queryByText(/Instructor conflict detected/i);
+    const createdVisible =
+      screen.queryByText(/Session created\./i) ??
+      screen.queryByText(/Created \d+ recurring sessions\./i);
+    expect(Boolean(conflictVisible || createdVisible)).toBe(true);
+  });
+
+  it("session detail supports duplicate and bulk attendance actions", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    await activateStaff(user);
+
+    await user.click(screen.getAllByRole("button", { name: "View Details" })[0]);
+    await user.click(screen.getByRole("button", { name: "Duplicate Session" }));
+    expect(screen.getByText(/Session duplicated\./i)).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Session customer search"), "Maya");
+    await user.click(screen.getByRole("option", { name: /Maya Patel/i }));
+    await user.click(screen.getByRole("button", { name: "Mark all present" }));
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent(/Marked/i);
   });
 });

@@ -19,6 +19,10 @@ export function SessionDetailPanel({
   onMarkAttendance,
   onSellAccess,
   onMarkWaiverSigned,
+  onEditSession,
+  onCancelSession,
+  onDuplicateSession,
+  onTakeAttendance,
   onClose
 }: {
   session: ClassCampSession;
@@ -35,6 +39,10 @@ export function SessionDetailPanel({
   onMarkAttendance: (registrationId: string, status: "attended" | "absent" | "late" | "excused" | "no_show" | "checked_in" | "completed") => void;
   onSellAccess: (customerId: string) => void;
   onMarkWaiverSigned: (customerId: string) => void;
+  onEditSession: () => void;
+  onCancelSession: () => void;
+  onDuplicateSession: () => void;
+  onTakeAttendance: () => void;
   onClose: () => void;
 }) {
   const [query, setQuery] = useState("");
@@ -67,6 +75,13 @@ export function SessionDetailPanel({
           <p className="text-sm text-muted-foreground">Instructor: {session.instructorName ?? "Unassigned"}</p>
         </div>
         <Button variant="outline" onClick={onClose}>Close</Button>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Button className="h-9" variant="secondary" onClick={onEditSession}>Edit Session</Button>
+        <Button className="h-9" variant="secondary" onClick={onDuplicateSession}>Duplicate Session</Button>
+        <Button className="h-9" variant="secondary" onClick={onTakeAttendance}>Take Attendance</Button>
+        <Button className="h-9" variant="destructiveSubtle" onClick={onCancelSession}>Cancel Session</Button>
+        <Button className="h-9" variant="ghost" disabled>Message Participants</Button>
       </div>
 
       <div className="mt-3 space-y-2">
@@ -135,6 +150,12 @@ export function SessionDetailPanel({
 
       <div className="mt-3 space-y-2">
         <p className="text-sm font-medium">Registrations</p>
+        {confirmed.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            <Button className="h-9" variant="secondary" onClick={() => confirmed.forEach((entry) => onMarkAttendance(entry.id, "attended"))}>Mark all present</Button>
+            <Button className="h-9" variant="secondary" onClick={() => confirmed.filter((entry) => entry.status !== "attended" && entry.status !== "checked_in").forEach((entry) => onMarkAttendance(entry.id, "absent"))}>Mark remaining absent</Button>
+          </div>
+        ) : null}
         {confirmed.length === 0 ? <p className="text-sm text-muted-foreground">No registrations yet.</p> : null}
         {confirmed.map((entry) => {
           const customer = customers.find((item) => item.id === entry.customerId);

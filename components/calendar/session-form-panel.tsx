@@ -15,6 +15,9 @@ interface SessionFormValues {
   capacity: string;
   waitlistEnabled: boolean;
   notes: string;
+  recurrence: "none" | "weekly" | "camp_weekdays";
+  recurrenceCount: string;
+  editScope: "single" | "future" | "series";
 }
 
 function fromSession(session: ClassCampSession): SessionFormValues {
@@ -30,7 +33,14 @@ function fromSession(session: ClassCampSession): SessionFormValues {
     instructorStaffId: session.instructorStaffId ?? "",
     capacity: String(session.capacity),
     waitlistEnabled: session.waitlistEnabled ?? false,
-    notes: session.notes ?? ""
+    notes: session.notes ?? "",
+    recurrence: session.recurrenceRule?.startsWith("FREQ=WEEKLY")
+      ? "weekly"
+      : session.recurrenceRule?.startsWith("FREQ=DAILY")
+        ? "camp_weekdays"
+        : "none",
+    recurrenceCount: "6",
+    editScope: "single"
   };
 }
 
@@ -44,7 +54,10 @@ const emptyValues: SessionFormValues = {
   instructorStaffId: "",
   capacity: "12",
   waitlistEnabled: true,
-  notes: ""
+  notes: "",
+  recurrence: "none",
+  recurrenceCount: "6",
+  editScope: "single"
 };
 
 export function SessionFormPanel({
@@ -54,6 +67,7 @@ export function SessionFormPanel({
   locations,
   instructors,
   warning,
+  conflictWarning,
   onSave,
   onCancel,
   onCancelSession
@@ -64,6 +78,7 @@ export function SessionFormPanel({
   locations: Array<{ id: string; name: string }>;
   instructors: StaffUser[];
   warning?: string;
+  conflictWarning?: string;
   onSave: (values: SessionFormValues) => void;
   onCancel: () => void;
   onCancelSession?: () => void;
@@ -123,6 +138,7 @@ export function SessionFormPanel({
         </p>
       ) : null}
       {warning ? <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">{warning}</p> : null}
+      {conflictWarning ? <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">{conflictWarning}</p> : null}
       {hasRegistrations && mode === "edit" ? (
         <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
           This session has registrations. Changes affect enrolled and waitlisted customers.
@@ -185,6 +201,44 @@ export function SessionFormPanel({
         <FormField label="Notes" className="md:col-span-2">
           <textarea aria-label="Session notes" value={values.notes} onChange={(event) => setValues((prev) => ({ ...prev, notes: event.target.value }))} className="min-h-20 w-full rounded-md border border-input bg-white px-3 py-2 text-sm" />
         </FormField>
+        {mode === "create" ? (
+          <>
+            <FormField label="Recurrence pattern">
+              <select
+                aria-label="Session recurrence"
+                value={values.recurrence}
+                onChange={(event) => setValues((prev) => ({ ...prev, recurrence: event.target.value as SessionFormValues["recurrence"] }))}
+                className="h-11 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+              >
+                <option value="none">One-time</option>
+                <option value="weekly">Weekly</option>
+                <option value="camp_weekdays">Weekdays (camp)</option>
+              </select>
+            </FormField>
+            {values.recurrence !== "none" ? (
+              <FormField label="Occurrences">
+                <Input
+                  aria-label="Session recurrence count"
+                  value={values.recurrenceCount}
+                  onChange={(event) => setValues((prev) => ({ ...prev, recurrenceCount: event.target.value }))}
+                />
+              </FormField>
+            ) : null}
+          </>
+        ) : (
+          <FormField label="Apply edits to">
+            <select
+              aria-label="Session edit scope"
+              value={values.editScope}
+              onChange={(event) => setValues((prev) => ({ ...prev, editScope: event.target.value as SessionFormValues["editScope"] }))}
+              className="h-11 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+            >
+              <option value="single">This session only</option>
+              <option value="future">This + future</option>
+              <option value="series">Entire series</option>
+            </select>
+          </FormField>
+        )}
       </FormGrid>
       <p className="mt-2 text-xs text-muted-foreground">Instructor preview: {instructorName}</p>
       <FormActions>

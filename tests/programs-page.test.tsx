@@ -111,7 +111,7 @@ describe("Programs page IA", () => {
     );
 
     expect(screen.getByText(/Ages 8-14/i)).toBeInTheDocument();
-    expect(screen.getByText(/All ages/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/All ages/i).length).toBeGreaterThan(0);
   });
 
   it("registration panel no longer appears on Programs page", () => {

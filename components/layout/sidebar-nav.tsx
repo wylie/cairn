@@ -1,3 +1,4 @@
+import { memo } from "react";
 import Link from "next/link";
 import { LayoutDashboard, Users, ScanLine, Calendar, Boxes, CreditCard, BarChart3, Settings, Tags, UserCog } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -28,7 +29,7 @@ function buildOrgHref(pathname: string, href: string) {
   return `/o/${slug}${href}`;
 }
 
-export function SidebarNav({
+function SidebarNavInner({
   pathname,
   currentOrgSlug,
   canAccessPermissions
@@ -65,3 +66,5 @@ export function SidebarNav({
     </nav>
   );
 }
+
+export const SidebarNav = memo(SidebarNavInner);

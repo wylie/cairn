@@ -52,6 +52,7 @@ import type {
 } from "@/types/domain";
 import { resolveTenant } from "@/lib/tenant/resolve";
 import { getCurrentOrgSlugClient } from "@/lib/tenant/client";
+import { parseOrgSlugFromPathname } from "@/lib/tenant/path";
 
 const BASE_DATE = "2026-05-20";
 
@@ -484,31 +485,73 @@ const CustomerStateContext = createContext<CustomerStateContextValue | null>(nul
 
 export function CustomerStateProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
-  const fallbackSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? "summit";
+  const fallbackSlug = parseOrgSlugFromPathname(pathname) ?? "summit";
   const [orgSlug, setOrgSlug] = useState(fallbackSlug);
   useEffect(() => {
     const cookieSlug = getCurrentOrgSlugClient(fallbackSlug);
     if (cookieSlug !== orgSlug) setOrgSlug(cookieSlug);
   }, [fallbackSlug, orgSlug]);
-  const tenant = resolveTenant(orgSlug);
+  const tenant = useMemo(() => resolveTenant(orgSlug), [orgSlug]);
   const activeOrgId = tenant?.organizationId ?? "org_summit";
   const activeLocationId = tenant?.currentLocationId ?? "loc_001";
-  const seededCustomersForOrg = seedCustomers.filter((entry) => entry.organizationId === activeOrgId);
-  const seededProductsForOrg = seedPosProducts.filter((entry) => entry.organizationId === activeOrgId).map(normalizeProductForState);
-  const seededProductCategoriesForOrg = buildSystemProductCategories(activeOrgId);
-  const seededProgramsForOrg = seedPrograms.filter((entry) => entry.organizationId === activeOrgId).map(normalizeProgramForState);
-  const seededSessionsForOrg = seedSessions.filter((entry) => seededProgramsForOrg.some((program) => program.id === entry.programId));
-  const seededRegistrationsForOrg = seedRegistrations.filter((entry) => seededSessionsForOrg.some((session) => session.id === entry.sessionId));
-  const seededMembershipsForOrg = seedMemberships.filter((entry) => seededCustomersForOrg.some((customer) => customer.id === entry.customerId));
-  const seededPunchPassesForOrg = seedPunchPasses.filter((entry) => seededCustomersForOrg.some((customer) => customer.id === entry.customerId));
-  const seededTransactionsForOrg = seedPosTransactions.filter((entry) => entry.organizationId === activeOrgId);
-  const seededAccessRecordsForOrg = seedAccessRecords.filter((entry) => seededCustomersForOrg.some((customer) => customer.id === entry.customerId));
-  const seededWaiversForOrg = seedWaivers.filter((entry) => seededCustomersForOrg.some((customer) => customer.id === entry.customerId));
-  const orgLocationIds = seedLocations.filter((entry) => entry.organizationId === activeOrgId).map((entry) => entry.id);
-  const seededHouseholdsForOrg = seedHouseholds.filter((entry) => orgLocationIds.includes(entry.locationId));
-  const seededHouseholdMembersForOrg = seedHouseholdMembers.filter((entry) => seededHouseholdsForOrg.some((household) => household.id === entry.householdId));
+  const seededCustomersForOrg = useMemo(
+    () => seedCustomers.filter((entry) => entry.organizationId === activeOrgId),
+    [activeOrgId]
+  );
+  const seededProductsForOrg = useMemo(
+    () => seedPosProducts.filter((entry) => entry.organizationId === activeOrgId).map(normalizeProductForState),
+    [activeOrgId]
+  );
+  const seededProductCategoriesForOrg = useMemo(
+    () => buildSystemProductCategories(activeOrgId),
+    [activeOrgId]
+  );
+  const seededProgramsForOrg = useMemo(
+    () => seedPrograms.filter((entry) => entry.organizationId === activeOrgId).map(normalizeProgramForState),
+    [activeOrgId]
+  );
+  const seededSessionsForOrg = useMemo(
+    () => seedSessions.filter((entry) => seededProgramsForOrg.some((program) => program.id === entry.programId)),
+    [seededProgramsForOrg]
+  );
+  const seededRegistrationsForOrg = useMemo(
+    () => seedRegistrations.filter((entry) => seededSessionsForOrg.some((session) => session.id === entry.sessionId)),
+    [seededSessionsForOrg]
+  );
+  const seededMembershipsForOrg = useMemo(
+    () => seedMemberships.filter((entry) => seededCustomersForOrg.some((customer) => customer.id === entry.customerId)),
+    [seededCustomersForOrg]
+  );
+  const seededPunchPassesForOrg = useMemo(
+    () => seedPunchPasses.filter((entry) => seededCustomersForOrg.some((customer) => customer.id === entry.customerId)),
+    [seededCustomersForOrg]
+  );
+  const seededTransactionsForOrg = useMemo(
+    () => seedPosTransactions.filter((entry) => entry.organizationId === activeOrgId),
+    [activeOrgId]
+  );
+  const seededAccessRecordsForOrg = useMemo(
+    () => seedAccessRecords.filter((entry) => seededCustomersForOrg.some((customer) => customer.id === entry.customerId)),
+    [seededCustomersForOrg]
+  );
+  const seededWaiversForOrg = useMemo(
+    () => seedWaivers.filter((entry) => seededCustomersForOrg.some((customer) => customer.id === entry.customerId)),
+    [seededCustomersForOrg]
+  );
+  const orgLocationIds = useMemo(
+    () => seedLocations.filter((entry) => entry.organizationId === activeOrgId).map((entry) => entry.id),
+    [activeOrgId]
+  );
+  const seededHouseholdsForOrg = useMemo(
+    () => seedHouseholds.filter((entry) => orgLocationIds.includes(entry.locationId)),
+    [orgLocationIds]
+  );
+  const seededHouseholdMembersForOrg = useMemo(
+    () => seedHouseholdMembers.filter((entry) => seededHouseholdsForOrg.some((household) => household.id === entry.householdId)),
+    [seededHouseholdsForOrg]
+  );
 
-  const storageKeys = {
+  const storageKeys = useMemo(() => ({
     customers: buildScopedMockKey(activeOrgId, activeLocationId, "customers"),
     passes: buildScopedMockKey(activeOrgId, activeLocationId, "punchPasses"),
     checkins: buildScopedMockKey(activeOrgId, activeLocationId, "checkIns"),
@@ -523,13 +566,19 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     waivers: buildScopedMockKey(activeOrgId, activeLocationId, "waivers"),
     households: buildScopedMockKey(activeOrgId, activeLocationId, "households"),
     householdMembers: buildScopedMockKey(activeOrgId, activeLocationId, "householdMembers")
-  };
+  }), [activeOrgId, activeLocationId]);
 
-  const seededCheckIns = seedCheckInRecords.filter((entry) => entry.organizationId === activeOrgId).map((record) => ({
-    ...record,
-    checkedInByStaffId: record.checkedInByStaffId ?? record.staffUserId ?? "",
-    checkedInByStaffName: record.checkedInByStaffName
-  }));
+  const seededCheckIns = useMemo(
+    () =>
+      seedCheckInRecords
+        .filter((entry) => entry.organizationId === activeOrgId)
+        .map((record) => ({
+          ...record,
+          checkedInByStaffId: record.checkedInByStaffId ?? record.staffUserId ?? "",
+          checkedInByStaffName: record.checkedInByStaffName
+        })),
+    [activeOrgId]
+  );
 
   const [customers, setCustomers] = useState<Customer[]>(normalizeCustomersForState(seededCustomersForOrg, seededCustomersForOrg));
   const [memberships, setMemberships] = useState<Membership[]>(seededMembershipsForOrg);

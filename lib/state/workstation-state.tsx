@@ -9,6 +9,7 @@ import { staffHasAnyPermission, staffHasPermission } from "@/lib/staff/permissio
 import type { AuditLogEntry, StaffPermission, StaffUser } from "@/types/domain";
 import { resolveTenant } from "@/lib/tenant/resolve";
 import { getCurrentOrgSlugClient } from "@/lib/tenant/client";
+import { parseOrgSlugFromPathname } from "@/lib/tenant/path";
 
 function mergeSeedStaffUsers(stored: StaffUser[], seededStaffUsers: StaffUser[]) {
   const byId = new Map(stored.map((staff) => [staff.id, staff]));
@@ -72,19 +73,31 @@ const WorkstationStateContext = createContext<WorkstationStateContextValue | nul
 
 export function WorkstationStateProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
-  const fallbackSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? "summit";
+  const fallbackSlug = parseOrgSlugFromPathname(pathname) ?? "summit";
   const [orgSlug, setOrgSlug] = useState(fallbackSlug);
   useEffect(() => {
     const cookieSlug = getCurrentOrgSlugClient(fallbackSlug);
     if (cookieSlug !== orgSlug) setOrgSlug(cookieSlug);
   }, [fallbackSlug, orgSlug]);
-  const tenant = resolveTenant(orgSlug);
+  const tenant = useMemo(() => resolveTenant(orgSlug), [orgSlug]);
   const activeOrgId = tenant?.organizationId ?? "org_summit";
   const activeLocationId = tenant?.currentLocationId ?? data.locations[0]?.id ?? "loc_001";
-  const ACTIVE_STAFF_STORAGE_KEY = buildScopedMockKey(activeOrgId, activeLocationId, "activeStaff");
-  const STAFF_USERS_STORAGE_KEY = buildScopedMockKey(activeOrgId, activeLocationId, "staffUsers");
-  const AUDIT_LOG_STORAGE_KEY = buildScopedMockKey(activeOrgId, activeLocationId, "auditLog");
-  const orgSeedStaffUsers = seedStaffUsers.filter((entry) => entry.organizationId === activeOrgId);
+  const ACTIVE_STAFF_STORAGE_KEY = useMemo(
+    () => buildScopedMockKey(activeOrgId, activeLocationId, "activeStaff"),
+    [activeOrgId, activeLocationId]
+  );
+  const STAFF_USERS_STORAGE_KEY = useMemo(
+    () => buildScopedMockKey(activeOrgId, activeLocationId, "staffUsers"),
+    [activeOrgId, activeLocationId]
+  );
+  const AUDIT_LOG_STORAGE_KEY = useMemo(
+    () => buildScopedMockKey(activeOrgId, activeLocationId, "auditLog"),
+    [activeOrgId, activeLocationId]
+  );
+  const orgSeedStaffUsers = useMemo(
+    () => seedStaffUsers.filter((entry) => entry.organizationId === activeOrgId),
+    [activeOrgId]
+  );
 
   const [staffUsers, setStaffUsers] = useState<StaffUser[]>(orgSeedStaffUsers);
   const [activeStaffId, setActiveStaffId] = useState<string | null>(null);

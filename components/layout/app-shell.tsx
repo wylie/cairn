@@ -1,34 +1,40 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { TopBar } from "@/components/layout/top-bar";
+import { DevPerfMonitor } from "@/components/dev/dev-perf-monitor";
 import { data } from "@/lib/data";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import type { StaffPermission } from "@/types/domain";
 import { getCurrentOrgSlugClient } from "@/lib/tenant/client";
+import { parseOrgSlugFromPathname } from "@/lib/tenant/path";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
   const organizations = data.organizations;
-  const fallbackSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? organizations[0]?.slug ?? "summit";
+  const fallbackSlug = parseOrgSlugFromPathname(pathname) ?? organizations[0]?.slug ?? "summit";
   const [currentSlug, setCurrentSlug] = useState(fallbackSlug);
   useEffect(() => {
     const slugFromCookie = getCurrentOrgSlugClient(fallbackSlug);
     if (slugFromCookie !== currentSlug) setCurrentSlug(slugFromCookie);
   }, [fallbackSlug, currentSlug]);
-  const currentOrganization = organizations.find((entry) => entry.slug === currentSlug) ?? organizations[0];
+  const currentOrganization = useMemo(
+    () => organizations.find((entry) => entry.slug === currentSlug) ?? organizations[0],
+    [organizations, currentSlug]
+  );
   const { hasAnyPermission, activeStaff } = useWorkstationState();
 
-  const canAccessPermissions = (permissions?: StaffPermission[]) => {
+  const canAccessPermissions = useCallback((permissions?: StaffPermission[]) => {
     if (!activeStaff) return true;
     if (!permissions || permissions.length === 0) return true;
     return hasAnyPermission(permissions);
-  };
+  }, [activeStaff, hasAnyPermission]);
 
   return (
     <div className="min-h-screen bg-background">
+      <DevPerfMonitor />
       <div className="mx-auto grid max-w-[1440px] grid-cols-1 gap-4 p-4 lg:grid-cols-[250px_1fr] lg:p-6">
         <aside className="rounded-xl border bg-card p-4 lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)]">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Facility Ops</p>

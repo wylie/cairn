@@ -2,18 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useSettingsState } from "@/lib/state/settings-state";
 import { ActiveStaffIndicator } from "@/components/staff/active-staff-indicator";
 import { data } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { getAllowedOrgSlugsFromSessionCookie, getCurrentOrgSlugClient } from "@/lib/tenant/client";
+import { parseOrgSlugFromPathname } from "@/lib/tenant/path";
 
-export function TopBar() {
+function TopBarInner() {
   const pathname = usePathname() ?? "";
   const organizations = data.organizations;
-  const fallbackSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? organizations[0]?.slug ?? "summit";
+  const fallbackSlug = parseOrgSlugFromPathname(pathname) ?? organizations[0]?.slug ?? "summit";
   const [currentSlug, setCurrentSlug] = useState(fallbackSlug);
   const [allowedOrgSlugs, setAllowedOrgSlugs] = useState<string[]>(organizations.map((entry) => entry.slug));
   useEffect(() => {
@@ -22,15 +23,24 @@ export function TopBar() {
     const allowed = getAllowedOrgSlugsFromSessionCookie();
     if (allowed?.length) setAllowedOrgSlugs(allowed);
   }, [fallbackSlug, currentSlug]);
-  const selectableOrgs = organizations.filter((entry) => allowedOrgSlugs.includes(entry.slug));
-  const org = selectableOrgs.find((entry) => entry.slug === currentSlug) ?? selectableOrgs[0] ?? organizations[0];
+  const selectableOrgs = useMemo(
+    () => organizations.filter((entry) => allowedOrgSlugs.includes(entry.slug)),
+    [organizations, allowedOrgSlugs]
+  );
+  const org = useMemo(
+    () => selectableOrgs.find((entry) => entry.slug === currentSlug) ?? selectableOrgs[0] ?? organizations[0],
+    [selectableOrgs, currentSlug, organizations]
+  );
   const { settings, activeLocationId } = useSettingsState();
   const location =
     settings.locations.find((entry) => entry.id === activeLocationId) ??
     settings.locations.find((entry) => entry.isDefault) ??
     settings.locations[0];
   const { occupancyCount } = useCustomerState();
-  const suffixPath = pathname.startsWith(`/o/${currentSlug}`) ? pathname.replace(`/o/${currentSlug}`, "") || "/dashboard" : "/dashboard";
+  const suffixPath = useMemo(
+    () => (pathname.startsWith(`/o/${currentSlug}`) ? pathname.replace(`/o/${currentSlug}`, "") || "/dashboard" : "/dashboard"),
+    [pathname, currentSlug]
+  );
 
   const handleSignOut = async () => {
     await fetch("/api/auth/mock-logout", { method: "POST" });
@@ -73,3 +83,5 @@ export function TopBar() {
     </header>
   );
 }
+
+export const TopBar = memo(TopBarInner);

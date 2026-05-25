@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CheckboxField, FormField, FormGrid, SelectInput, TextInput, TextareaInput } from "@/components/shared/form-layout";
 import { FileUploadField } from "@/components/shared/file-upload-field";
+import { ColorPickerField, normalizeHexColor } from "@/components/shared/color-picker-field";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { PermissionGate } from "@/components/staff/permission-gate";
 import { Badge } from "@/components/ui/badge";
@@ -204,6 +205,10 @@ export default function SettingsPage() {
     setFeedback(successMessage);
     setWarning("");
     setTimeout(() => setSavingSection(null), 250);
+  };
+
+  const updateBrandColor = (field: "primaryColor" | "secondaryColor", nextValue: string) => {
+    setBrandingDraft((prev) => ({ ...prev, [field]: nextValue }));
   };
 
   const handleBrandFileUpload = async (field: "logoUrl" | "faviconUrl" | "darkModeLogoUrl", file?: File | null) => {
@@ -710,8 +715,8 @@ export default function SettingsPage() {
                 <CardHeader><CardTitle>Branding</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                   <FormGrid>
-                    <FormField label="Primary brand color"><TextInput value={brandingDraft.primaryColor} onChange={(e) => setBrandingDraft((p) => ({ ...p, primaryColor: e.target.value }))} /></FormField>
-                    <FormField label="Secondary brand color"><TextInput value={brandingDraft.secondaryColor} onChange={(e) => setBrandingDraft((p) => ({ ...p, secondaryColor: e.target.value }))} /></FormField>
+                    <ColorPickerField label="Primary brand color" value={brandingDraft.primaryColor} onChange={(value) => updateBrandColor("primaryColor", value)} helperText="Custom brand color for primary actions and active states." />
+                    <ColorPickerField label="Secondary brand color" value={brandingDraft.secondaryColor} onChange={(value) => updateBrandColor("secondaryColor", value)} helperText="Custom secondary color used in supporting brand elements." />
                     <FormField label="Facility nickname"><TextInput value={brandingDraft.facilityNickname} onChange={(e) => setBrandingDraft((p) => ({ ...p, facilityNickname: e.target.value }))} /></FormField>
                     <FileUploadField
                       label="Upload logo"
@@ -761,7 +766,7 @@ export default function SettingsPage() {
                       <p className="text-sm text-muted-foreground">Nickname: {brandingDraft.facilityNickname || "Not set"}</p>
                     </CardContent>
                   </Card>
-                  <div className="flex justify-end"><Button onClick={() => saveSection("branding", () => updateBranding(brandingDraft), "Branding settings saved.")} disabled={!sectionDirtyMap.branding || savingSection === "branding"}>{savingSection === "branding" ? "Saving..." : "Save Branding"}</Button></div>
+                  <div className="flex justify-end"><Button onClick={() => saveSection("branding", () => updateBranding({ ...brandingDraft, primaryColor: normalizeHexColor(brandingDraft.primaryColor, settings.branding.primaryColor), secondaryColor: normalizeHexColor(brandingDraft.secondaryColor, settings.branding.secondaryColor) }), "Branding settings saved.")} disabled={!sectionDirtyMap.branding || savingSection === "branding"}>{savingSection === "branding" ? "Saving..." : "Save Branding"}</Button></div>
                 </CardContent>
               </Card>
             ) : null}

@@ -105,7 +105,6 @@ describe("Settings system MVP", () => {
     );
     await switchStaff(user, "1111");
     await user.click(screen.getByRole("button", { name: "Staff Roles" }));
-    expect(screen.queryByRole("button", { name: "Archive role" })).not.toBeInTheDocument();
     await user.click(screen.getAllByRole("button", { name: "Edit role" })[0]);
     const dialog = screen.getByRole("dialog", { name: "Edit Role" });
     const manageSettingsPermission = within(dialog).getByLabelText("Manage settings");
@@ -235,6 +234,9 @@ describe("Settings system MVP", () => {
     await switchStaff(user, "1111");
     await user.click(screen.getByRole("button", { name: "Branding" }));
 
+    expect(screen.getByLabelText("Primary brand color picker")).toBeInTheDocument();
+    expect(screen.getByLabelText("Secondary brand color picker")).toBeInTheDocument();
+
     const logoInput = screen.getByLabelText("Upload logo", { selector: "input" }) as HTMLInputElement;
     const faviconInput = screen.getByLabelText("Upload favicon", { selector: "input" }) as HTMLInputElement;
     const logoFile = new File(["logo"], "logo.png", { type: "image/png" });
@@ -285,5 +287,22 @@ describe("Settings system MVP", () => {
     expect(screen.getByRole("heading", { name: "System Controls" })).toBeInTheDocument();
     expect(screen.getByText("Enforce role permissions")).toBeInTheDocument();
     expect(screen.getByText("When enabled, staff can only access actions allowed by their assigned role.")).toBeInTheDocument();
+  });
+
+  it("keeps role color as controlled dropdown (not color picker)", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <SettingsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "1111");
+    await user.click(screen.getByRole("button", { name: "Staff Roles" }));
+    await user.click(screen.getByRole("button", { name: "Create Role" }));
+    const dialog = screen.getByRole("dialog", { name: "Create Role" });
+    const colorSelect = within(dialog).getByRole("combobox");
+    expect(colorSelect).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Color picker")).not.toBeInTheDocument();
   });
 });

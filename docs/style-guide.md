@@ -220,6 +220,32 @@ Why:
 - Lower cognitive load for staff switching between screens.
 - Fewer malformed or misaligned forms.
 
+### Color Inputs
+Use a standard color input pattern for true custom brand colors.
+
+Pattern:
+- Label
+- `[ color swatch ] [ hex input ]`
+- Optional helper/error text below
+
+Behavior:
+- Use browser-native color picker (`input[type=\"color\"]`) plus a synchronized hex input.
+- Swatch and hex value must stay in sync both directions.
+- Color preview is always visible through the swatch.
+- Validate hex values inline and show clear error text for invalid values.
+- Require accessible labels and keyboard support.
+- Match Cairn input sizing, borders, spacing, and focus rings.
+
+Usage rules:
+- Use `ColorPickerField` for true custom brand colors (for example Branding primary/secondary colors).
+- Use dropdowns for controlled palettes (for example role colors, system status colors).
+- Do not use free-text hex-only fields.
+
+Examples:
+- ✅ Branding colors
+- ❌ Staff role system colors (use dropdown)
+- ❌ Product/system status colors (use controlled palette)
+
 ## Tables/lists
 - Prefer responsive list/cards for operations views first.
 - Keep columns minimal and scan-friendly.

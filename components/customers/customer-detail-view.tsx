@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CustomerBadges } from "@/components/customers/customer-badges";
 import { ActivityTimeline } from "@/components/customers/activity-timeline";
 import { CustomerDetailActions } from "@/components/customers/customer-detail-actions";
@@ -9,6 +9,8 @@ import { CustomerSummaryCard } from "@/components/customers/customer-summary-car
 import { CustomerSearchCombobox } from "@/components/shared/customer-search-combobox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ModalShell } from "@/components/ui/modal-shell";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import { filterCustomers } from "@/lib/data/customer-search";
@@ -28,8 +30,6 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     programs,
     evaluateCustomerEntry,
     customerAccessRecords,
-    addCustomerRelationship,
-    removeCustomerRelationship,
     updateCustomerAccessRecord,
     updateCustomerWaiver,
     households,
@@ -37,15 +37,31 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     createHousehold,
     addHouseholdMember,
     removeHouseholdMember,
-    updateHouseholdMember
+    updateHouseholdMember,
+    updateStaffProfileForCustomer
   } = useCustomerState();
-  const { activeStaff } = useWorkstationState();
-  const [relationshipQuery, setRelationshipQuery] = useState("");
-  const [relationshipType, setRelationshipType] = useState<"parent_guardian" | "child" | "spouse_partner" | "sibling" | "emergency_contact" | "other">("parent_guardian");
-  const [relationshipNotes, setRelationshipNotes] = useState("");
+  const {
+    activeStaff,
+    resetStaffPin,
+    resetPasswordPlaceholder,
+    suspendStaffMember,
+    activateStaffMember,
+    updateStaffMember
+  } = useWorkstationState();
   const [householdMemberQuery, setHouseholdMemberQuery] = useState("");
   const [newHouseholdName, setNewHouseholdName] = useState("");
   const [profileFeedback, setProfileFeedback] = useState("");
+  const [activeSection, setActiveSection] = useState("overview");
+  const [showSuspendConfirm, setShowSuspendConfirm] = useState(false);
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
+  const [draftMember, setDraftMember] = useState<{
+    memberType: "adult" | "child";
+    relationship: string;
+    emergencyContactPriority?: number;
+    canCheckInOthers: boolean;
+    canPurchaseForOthers: boolean;
+    canSignWaivers: boolean;
+  } | null>(null);
   const customer = customers.find((entry) => entry.id === customerId);
 
   if (!customer) {
@@ -138,15 +154,9 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     : decision.sessionAccess
       ? `Registered for ${decision.sessionAccess.sessionTitle}`
       : decision.reasons[0] ?? "No valid access found";
-  const relationshipCandidates = useMemo(
-    () =>
-      relationshipQuery.trim().length === 0
-        ? []
-        : filterCustomers(customers.filter((entry) => entry.id !== customer.id), relationshipQuery).slice(0, 8),
-    [customers, customer.id, relationshipQuery]
-  );
   const displayedPronouns = customer.pronouns === "Custom" ? customer.customPronouns ?? "Custom" : customer.pronouns ?? "Not set";
   const notesPreview = customer.notes?.trim() ? customer.notes.trim() : "No notes on file.";
+  const shortNotesPreview = notesPreview.length > 140 ? `${notesPreview.slice(0, 140).trim()}…` : notesPreview;
   const dobDate = customer.dateOfBirth ? new Date(`${customer.dateOfBirth}T00:00:00Z`) : null;
   const hasValidDob = !!dobDate && !Number.isNaN(dobDate.getTime());
   const age = hasValidDob
@@ -170,11 +180,8 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     emergencyContactName: !customer.emergencyContactName?.trim(),
     emergencyContactPhone: !customer.emergencyContactPhone?.trim()
   };
-  const relatedRows = (customer.relatedCustomers ?? []).map((relationship) => ({
-    ...relationship,
-    related: customers.find((entry) => entry.id === relationship.relatedCustomerId)
-  }));
   const householdMembership = householdMembers.find((entry) => entry.customerId === customer.id);
+  const customerStaffProfile = customer.staffProfile?.isStaff ? customer.staffProfile : null;
   const household = householdMembership ? households.find((entry) => entry.id === householdMembership.householdId) : undefined;
   const householdRows = household
     ? householdMembers
@@ -202,6 +209,23 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
           ).slice(0, 8),
     [customers, householdRows, householdMemberQuery]
   );
+
+  const beginEditHouseholdMember = (member: (typeof householdRows)[number]) => {
+    setEditingMemberId(member.customerId);
+    setDraftMember({
+      memberType: member.memberType,
+      relationship: member.relationship,
+      emergencyContactPriority: member.emergencyContactPriority,
+      canCheckInOthers: member.canCheckInOthers,
+      canPurchaseForOthers: member.canPurchaseForOthers,
+      canSignWaivers: member.canSignWaivers
+    });
+  };
+
+  const cancelEditHouseholdMember = () => {
+    setEditingMemberId(null);
+    setDraftMember(null);
+  };
   const timelineEvents = [
     ...recentPurchases.map((entry) => ({
       id: `purchase-${entry.id}`,
@@ -257,6 +281,17 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
       }))
   ].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const syncHash = () => {
+      const id = window.location.hash.replace("#", "").trim();
+      if (id) setActiveSection(id);
+    };
+    syncHash();
+    window.addEventListener("hashchange", syncHash);
+    return () => window.removeEventListener("hashchange", syncHash);
+  }, []);
+
   return (
     <div className="space-y-4">
       <div>
@@ -267,7 +302,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
       <Card aria-label="detail-header">
         <CardContent className="p-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="space-y-3">
+            <div className="space-y-3 flex-1 min-w-[320px]">
               <div className="flex items-start gap-3">
               {customer.profilePhotoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -297,27 +332,49 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                 ) : null}
               </div>
             </div>
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid min-w-0 gap-2 md:grid-cols-2">
                 <HeaderField label="Phone" value={customer.phone || "Not set"} warning={requiredMissing.phone} />
-                <HeaderField label="Email" value={customer.email || "Not set"} />
+                <HeaderField label="Email" value={customer.email || "Not set"} wrapAnywhere />
+                <HeaderField
+                  label="Address"
+                  value={
+                    customer.addressLine1 && customer.city && customer.state && customer.postalCode
+                      ? `${customer.addressLine1}${customer.addressLine2 ? `, ${customer.addressLine2}` : ""}, ${customer.city}, ${customer.state} ${customer.postalCode}`
+                      : "Not set"
+                  }
+                  warning={requiredMissing.addressLine1 || requiredMissing.city || requiredMissing.state || requiredMissing.postalCode}
+                  className="min-w-0"
+                />
                 <HeaderField
                   label="Emergency Contact"
                   value={customer.emergencyContactName ? `${customer.emergencyContactName}${customer.emergencyContactPhone ? ` • ${customer.emergencyContactPhone}` : ""}` : "Not set"}
                   warning={requiredMissing.emergencyContactName || requiredMissing.emergencyContactPhone}
-                  className="sm:col-span-2"
+                  wrapAnywhere
                 />
+                <div className="rounded-md bg-secondary/40 p-2 md:col-span-2">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Notes</p>
+                  <p className="text-sm">{shortNotesPreview}</p>
+                  {notesPreview.length > shortNotesPreview.length ? (
+                    <a href="#notes" className="mt-1 inline-flex text-xs font-medium text-muted-foreground underline">View full notes</a>
+                  ) : null}
+                </div>
               </div>
             </div>
             <CustomerDetailActions customerId={customer.id} />
           </div>
           <div className="mt-3">
-            <CustomerBadges customer={customer} membership={membership} punchPass={pass} waiver={waiver} />
+            <div className="flex flex-wrap items-center gap-2">
+              <CustomerBadges customer={customer} membership={membership} punchPass={pass} waiver={waiver} />
+              {customerStaffProfile ? (
+                <Badge tone="muted">Staff: {customerStaffProfile.role.replace("_", " ")}</Badge>
+              ) : null}
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card aria-label="detail-jump-links" className="sticky top-4 z-20 border shadow-sm">
-        <CardContent className="rounded-xl bg-card/95 p-3 backdrop-blur">
+      <Card aria-label="detail-jump-links" className="sticky top-4 z-20 border border-border/80 bg-background/95 shadow-md backdrop-blur">
+        <CardContent className="rounded-xl p-4">
           <nav aria-label="Customer detail sections" className="flex flex-wrap gap-2">
             {[
               ["overview", "Overview"],
@@ -330,8 +387,19 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
               ["household", "Household"],
               ["notes", "Notes"],
               ["payment", "Payment"]
-            ].map(([id, label]) => (
-              <a key={id} href={`#${id}`} className="rounded-full border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/80">
+            ]
+              .concat(customerStaffProfile ? [["staff-profile", "Staff Profile"] as [string, string]] : [])
+              .map(([id, label]) => (
+              <a
+                key={id}
+                href={`#${id}`}
+                onClick={() => setActiveSection(id)}
+                className={`rounded-full border px-3 py-2 text-xs font-medium transition-colors ${
+                  activeSection === id
+                    ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                    : "border-border bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                }`}
+              >
                 {label}
               </a>
             ))}
@@ -339,7 +407,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
         </CardContent>
       </Card>
 
-      <section id="overview" aria-label="section-overview" className="scroll-mt-40">
+      <section id="overview" aria-label="section-overview" className="scroll-mt-40 space-y-4">
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="detail-summary-cards">
           <CustomerSummaryCard
             title="Access Status"
@@ -364,23 +432,10 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
         </div>
       </section>
 
-      <section id="profile" aria-label="section-profile" className="scroll-mt-40">
+      <section id="profile" aria-label="section-profile" className="scroll-mt-40 space-y-4">
         <Card aria-label="detail-profile-information">
-          <CardHeader><CardTitle>Profile Information</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Full Profile Metadata</CardTitle></CardHeader>
           <CardContent className="grid gap-3 text-sm md:grid-cols-2">
-            <div className="space-y-2 rounded-lg border p-3">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Address</p>
-              <Field label="Address line 1" value={customer.addressLine1 || "Not set"} warning={requiredMissing.addressLine1} />
-              <Field label="Address line 2" value={customer.addressLine2 || "Not set"} />
-              <Field label="City" value={customer.city || "Not set"} warning={requiredMissing.city} />
-              <Field label="State" value={customer.state || "Not set"} warning={requiredMissing.state} />
-              <Field label="ZIP/postal code" value={customer.postalCode || "Not set"} warning={requiredMissing.postalCode} />
-            </div>
-            <div className="space-y-2 rounded-lg border p-3">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Emergency Contact</p>
-              <Field label="Name" value={customer.emergencyContactName || "Not set"} warning={requiredMissing.emergencyContactName} />
-              <Field label="Phone" value={customer.emergencyContactPhone || "Not set"} warning={requiredMissing.emergencyContactPhone} />
-            </div>
             <div className="space-y-2 rounded-lg border p-3">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Photo & Profile Metadata</p>
               {customer.profilePhotoUrl ? (
@@ -393,31 +448,113 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
               <Field label="Updated by" value={customer.updatedByStaffName || "Not set"} />
               <Field label="Last updated" value={customer.updatedAt ? new Date(customer.updatedAt).toLocaleString("en-US") : "Not set"} />
             </div>
-            <div className="space-y-2 rounded-lg border p-3 md:col-span-2">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Notes</p>
-              <p className="text-sm">{notesPreview}</p>
+            <div className="space-y-2 rounded-lg border p-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Data Completeness</p>
+              <Field label="Preferred name" value={customer.preferredName || "Not set"} warning={requiredMissing.preferredName} />
+              <Field label="Pronouns" value={displayedPronouns || "Not set"} warning={requiredMissing.pronouns} />
+              <Field label="DOB" value={hasValidDob ? (dobDate as Date).toLocaleDateString("en-US") : "Not set"} warning={requiredMissing.dateOfBirth} />
             </div>
           </CardContent>
         </Card>
       </section>
 
-      <section id="access" aria-label="section-access" className="scroll-mt-40">
+      <section id="access" aria-label="section-access" className="scroll-mt-40 space-y-4">
       <Card aria-label="detail-access-products">
         <CardHeader><CardTitle>Access Products</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
           {accessRecords.length === 0 ? <p className="text-muted-foreground">No access products yet.</p> : null}
           {accessRecords.map((entry) => (
             <div key={entry.id} className="rounded-lg border p-3">
-              <p className="font-medium">{entry.notes ?? entry.type}</p>
-              <p className="text-muted-foreground">Status: {entry.status}</p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-medium">{entry.notes ?? entry.type}</p>
+                <span className={`rounded-full px-2 py-0.5 text-xs ${
+                  entry.status === "active"
+                    ? "bg-emerald-100 text-emerald-800"
+                    : entry.status === "paused"
+                      ? "bg-amber-100 text-amber-900"
+                      : entry.status === "cancelled"
+                        ? "bg-rose-100 text-rose-800"
+                        : "bg-slate-100 text-slate-700"
+                }`}>
+                  {entry.status}
+                </span>
+              </div>
               <p className="text-muted-foreground">Expiration: {entry.expirationDate ?? "N/A"}</p>
               <p className="text-muted-foreground">Punches: {typeof entry.remainingPunches === "number" ? entry.remainingPunches : "N/A"}</p>
               <p className="text-muted-foreground">Locations: {entry.locationsAllowed?.join(", ") ?? "All"}</p>
+              <p className="text-muted-foreground">Waiver requirement: {accessProducts.find((product) => product.id === entry.productId)?.waiverRequired ? "Required" : "Not required"}</p>
               <p className="text-muted-foreground">Access source: {entry.notes ?? entry.type}</p>
+              <p className="text-muted-foreground">
+                Eligibility preview: {decision.allowed ? "✓ Can use now" : `✕ ${decision.reasons[0] ?? "Blocked"}`}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Updated: {entry.updatedAt ? new Date(entry.updatedAt).toLocaleString("en-US") : "—"}{entry.updatedByStaffName ? ` • ${entry.updatedByStaffName}` : ""}
+              </p>
               <div className="mt-2 flex flex-wrap gap-2">
-                <Button className="h-9" variant="secondary" onClick={() => updateCustomerAccessRecord(entry.id, { status: "paused" })}>Pause</Button>
-                <Button className="h-9" variant="destructive" onClick={() => updateCustomerAccessRecord(entry.id, { status: "cancelled" })}>Cancel</Button>
-                <Button className="h-9" variant="secondary" onClick={() => updateCustomerAccessRecord(entry.id, { expirationDate: "2026-07-20" })}>Extend</Button>
+                {entry.status === "active" ? (
+                  <Button
+                    className="h-9"
+                    variant="secondary"
+                    onClick={() =>
+                      updateCustomerAccessRecord(entry.id, {
+                        status: "paused",
+                        pausedAt: new Date().toISOString(),
+                        updatedByStaffId: activeStaff?.id,
+                        updatedByStaffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
+                      })
+                    }
+                  >
+                    Pause
+                  </Button>
+                ) : null}
+                {entry.status === "paused" ? (
+                  <Button
+                    className="h-9"
+                    variant="secondary"
+                    onClick={() =>
+                      updateCustomerAccessRecord(entry.id, {
+                        status: "active",
+                        updatedByStaffId: activeStaff?.id,
+                        updatedByStaffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
+                      })
+                    }
+                  >
+                    Resume
+                  </Button>
+                ) : null}
+                {entry.status !== "cancelled" ? (
+                  <Button
+                    className="h-9"
+                    variant="secondary"
+                    onClick={() => {
+                      const base = new Date(entry.expirationDate ?? "2026-05-20T00:00:00Z");
+                      base.setDate(base.getDate() + 30);
+                      updateCustomerAccessRecord(entry.id, {
+                        expirationDate: base.toISOString().slice(0, 10),
+                        updatedByStaffId: activeStaff?.id,
+                        updatedByStaffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
+                      });
+                    }}
+                  >
+                    Extend +30d
+                  </Button>
+                ) : null}
+                {entry.status !== "cancelled" ? (
+                  <Button
+                    className="h-9"
+                    variant="destructive"
+                    onClick={() =>
+                      updateCustomerAccessRecord(entry.id, {
+                        status: "cancelled",
+                        cancelledAt: new Date().toISOString(),
+                        updatedByStaffId: activeStaff?.id,
+                        updatedByStaffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
+                      })
+                    }
+                  >
+                    Cancel
+                  </Button>
+                ) : null}
               </div>
             </div>
           ))}
@@ -425,92 +562,114 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
       </Card>
       </section>
 
-      <section id="household" aria-label="section-household" className="scroll-mt-40">
-      <Card aria-label="detail-related-customers">
-        <CardHeader><CardTitle>Related Customers</CardTitle></CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          {relatedRows.length === 0 ? <p className="text-muted-foreground">No related customers linked yet.</p> : null}
-          {relatedRows.map((entry) => (
-            <div key={entry.relatedCustomerId} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
-              <div>
-                <p className="font-medium">{entry.related ? `${entry.related.firstName} ${entry.related.lastName}` : "Unknown customer"}</p>
-                <p className="text-muted-foreground">
-                  {entry.relationshipType.replaceAll("_", "/")}
-                  {entry.notes ? ` • ${entry.notes}` : ""}
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {entry.related ? (
-                  <Link href={`/customers/${entry.related.id}`}>
-                    <Button variant="secondary" className="h-9">View</Button>
-                  </Link>
-                ) : null}
+      {customerStaffProfile ? (
+        <section id="staff-profile" aria-label="section-staff-profile" className="scroll-mt-40 space-y-4">
+          <Card>
+            <CardHeader><CardTitle>Staff Profile</CardTitle></CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <Field label="Role" value={customerStaffProfile.role.replace("_", " ")} />
+              <Field label="Status" value={customerStaffProfile.status} />
+              <Field label="Locations" value={customerStaffProfile.locations.join(", ") || "Not set"} />
+              <Field label="Assigned programs" value={customerStaffProfile.assignedPrograms.join(", ") || "None assigned"} />
+              <Field label="Permissions" value={customerStaffProfile.permissions.join(", ") || "None"} />
+              <Field label="Last active" value={customerStaffProfile.lastActive ? new Date(customerStaffProfile.lastActive).toLocaleString("en-US") : "No recent activity"} />
+              <div className="mt-3 flex flex-wrap gap-2">
                 <Button
-                  variant="destructive"
-                  className="h-9"
+                  variant="secondary"
+                  className="h-10"
                   onClick={() => {
-                    const result = removeCustomerRelationship(customer.id, entry.relatedCustomerId);
+                    const nextRole = customerStaffProfile.role === "front_desk" ? "instructor" : "front_desk";
+                    const next = updateStaffMember({
+                      id: customerStaffProfile.staffId,
+                      firstName: customer.firstName,
+                      lastName: customer.lastName,
+                      role: nextRole,
+                      email: customer.email,
+                      phone: customer.phone,
+                      pronouns: customer.pronouns,
+                      locationIds: customerStaffProfile.locations,
+                      status: customerStaffProfile.status,
+                      startDate: customerStaffProfile.startDate,
+                      notes: customerStaffProfile.staffNotes
+                    });
+                    if (!next.ok) {
+                      setProfileFeedback(next.message);
+                      return;
+                    }
+                    const profileRes = updateStaffProfileForCustomer({
+                      customerId: customer.id,
+                      role: nextRole,
+                      status: customerStaffProfile.status,
+                      staffPin: customerStaffProfile.staffPin,
+                      locations: customerStaffProfile.locations,
+                      assignedPrograms: customerStaffProfile.assignedPrograms,
+                      permissions: customerStaffProfile.permissions,
+                      startDate: customerStaffProfile.startDate,
+                      certifications: customerStaffProfile.certifications,
+                      staffNotes: customerStaffProfile.staffNotes
+                    });
+                    setProfileFeedback(profileRes.ok ? `Staff role updated to ${nextRole.replace("_", " ")}.` : profileRes.message);
+                  }}
+                >
+                  Edit Staff Profile
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="h-10"
+                  onClick={() => {
+                    const result = resetStaffPin(customerStaffProfile.staffId);
+                    setProfileFeedback(result.ok ? `${result.message} New PIN: ${result.pin}` : result.message);
+                  }}
+                >
+                  Reset Staff PIN
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="h-10"
+                  onClick={() => {
+                    const result = resetPasswordPlaceholder(customerStaffProfile.staffId);
                     setProfileFeedback(result.message);
                   }}
                 >
-                  Remove
+                  Reset Password
+                </Button>
+                <Button
+                  variant={customerStaffProfile.status === "active" ? "destructive" : "secondary"}
+                  className="h-10"
+                  onClick={() => {
+                    if (customerStaffProfile.status === "active") {
+                      setShowSuspendConfirm(true);
+                      return;
+                    }
+                    const result = activateStaffMember(customerStaffProfile.staffId);
+                    if (!result.ok) {
+                      setProfileFeedback(result.message);
+                      return;
+                    }
+                    updateStaffProfileForCustomer({
+                      customerId: customer.id,
+                      role: customerStaffProfile.role,
+                      status: "active",
+                      staffPin: customerStaffProfile.staffPin,
+                      locations: customerStaffProfile.locations,
+                      assignedPrograms: customerStaffProfile.assignedPrograms,
+                      permissions: customerStaffProfile.permissions,
+                      startDate: customerStaffProfile.startDate,
+                      certifications: customerStaffProfile.certifications,
+                      staffNotes: customerStaffProfile.staffNotes
+                    });
+                    setProfileFeedback(result.message);
+                  }}
+                >
+                  {customerStaffProfile.status === "active" ? "Suspend Staff" : "Reactivate Staff"}
                 </Button>
               </div>
-            </div>
-          ))}
-          <div className="space-y-2 rounded-lg border p-3">
-            <p className="font-medium">Add Related Customer</p>
-            <CustomerSearchCombobox
-              label="Search existing customer"
-              placeholder="Search by name, member ID, phone, or email"
-              query={relationshipQuery}
-              onQueryChange={setRelationshipQuery}
-              customers={relationshipCandidates}
-              onSelect={(selectedId) => {
-                const result = addCustomerRelationship(customer.id, {
-                  relatedCustomerId: selectedId,
-                  relationshipType,
-                  notes: relationshipNotes
-                });
-                setProfileFeedback(result.message);
-                if (result.ok) {
-                  setRelationshipQuery("");
-                  setRelationshipNotes("");
-                }
-              }}
-              emptyMessage="No customers found"
-            />
-            <div className="grid gap-2 md:grid-cols-2">
-              <label className="space-y-1 text-sm">
-                <span className="text-muted-foreground">Relationship type</span>
-                <select
-                  aria-label="Relationship type"
-                  className="h-11 w-full rounded-md border border-input bg-white px-3 text-sm"
-                  value={relationshipType}
-                  onChange={(event) => setRelationshipType(event.target.value as typeof relationshipType)}
-                >
-                  <option value="parent_guardian">Parent/guardian</option>
-                  <option value="child">Child</option>
-                  <option value="spouse_partner">Spouse/partner</option>
-                  <option value="sibling">Sibling</option>
-                  <option value="emergency_contact">Emergency contact</option>
-                  <option value="other">Other</option>
-                </select>
-              </label>
-              <label className="space-y-1 text-sm">
-                <span className="text-muted-foreground">Notes (optional)</span>
-                <input
-                  aria-label="Relationship notes"
-                  className="h-11 w-full rounded-md border border-input bg-white px-3 text-sm"
-                  value={relationshipNotes}
-                  onChange={(event) => setRelationshipNotes(event.target.value)}
-                />
-              </label>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </section>
+      ) : null}
 
+      <section id="household" aria-label="section-household" className="scroll-mt-40 space-y-4">
       <Card aria-label="detail-household">
         <CardHeader><CardTitle>Household</CardTitle></CardHeader>
         <CardContent className="space-y-3 text-sm">
@@ -545,7 +704,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                 <Button variant="secondary" className="h-10" onClick={() => setProfileFeedback("Search a member below and add to an existing household from their profile.")}>
                   Join Household
                 </Button>
-                <Button variant="secondary" className="h-10" onClick={() => setRelationshipType("parent_guardian")}>
+                <Button variant="secondary" className="h-10" onClick={() => setProfileFeedback("Use member relationship controls below to mark parent/guardian links.")}>
                   Link Guardian
                 </Button>
               </div>
@@ -564,44 +723,157 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
               </div>
               <div className="space-y-2">
                 {householdRows.map((member) => (
-                  <div key={member.customerId} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
-                    <div>
-                      <p className="font-medium">
-                        {member.customer ? `${member.customer.firstName} ${member.customer.lastName}` : "Unknown customer"}
-                      </p>
-                      <p className="text-muted-foreground">
-                        {member.role} • {member.relationship}
-                      </p>
-                      <p className="text-muted-foreground">
-                        {member.canCheckInOthers ? "Can check in dependents" : "Guardian approval required"} • {member.canPurchaseForOthers ? "Can purchase for others" : "Purchases limited"}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {member.customerId !== customer.id ? (
+                  <div key={member.customerId} className="space-y-3 rounded-lg border p-3" aria-label={`household-member-${member.customerId}`}>
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="font-medium">
+                          {member.customer ? `${member.customer.firstName} ${member.customer.lastName}` : "Unknown customer"}
+                        </p>
+                        <p className="text-muted-foreground">
+                          {member.memberType === "adult" ? "Adult" : "Child"} · {formatHouseholdRelationship(member.relationship)} · Priority {member.emergencyContactPriority ?? "—"}
+                          {household?.primaryContactCustomerId === member.customerId ? " · Primary Adult" : ""}
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {member.canCheckInOthers ? <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs text-emerald-800">Check-in others</span> : null}
+                          {member.canPurchaseForOthers ? <span className="rounded-full bg-sky-100 px-2 py-1 text-xs text-sky-800">Purchases</span> : null}
+                          {member.canSignWaivers ? <span className="rounded-full bg-violet-100 px-2 py-1 text-xs text-violet-800">Waivers</span> : null}
+                          {!member.canCheckInOthers && !member.canPurchaseForOthers && !member.canSignWaivers ? (
+                            <span className="text-xs text-muted-foreground">No household permissions</span>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
                         <Button
-                          variant="destructive"
+                          variant="secondary"
                           className="h-9"
-                          onClick={() => {
-                            const result = removeHouseholdMember(household.id, member.customerId);
-                            setProfileFeedback(result.message);
-                          }}
+                          onClick={() => beginEditHouseholdMember(member)}
                         >
-                          Remove
+                          Edit
                         </Button>
-                      ) : null}
-                      <Button
-                        variant="secondary"
-                        className="h-9"
-                        onClick={() => {
-                          const result = updateHouseholdMember(household.id, member.customerId, {
-                            canCheckInOthers: !member.canCheckInOthers
-                          });
-                          setProfileFeedback(result.message);
-                        }}
-                      >
-                        {member.canCheckInOthers ? "Require Guardian" : "Allow Check-in Others"}
-                      </Button>
+                        {member.customerId !== customer.id ? (
+                          <Button
+                            variant="ghost"
+                            className="h-9 text-destructive hover:text-destructive"
+                            onClick={() => {
+                              const result = removeHouseholdMember(household.id, member.customerId);
+                              setProfileFeedback(result.message);
+                              if (editingMemberId === member.customerId) cancelEditHouseholdMember();
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        ) : null}
+                      </div>
                     </div>
+                    {editingMemberId === member.customerId && draftMember ? (
+                      <div className="space-y-3 rounded-md border border-border/70 bg-secondary/30 p-3">
+                        <div className="grid gap-2 md:grid-cols-3">
+                          <label className="space-y-1 text-xs">
+                            <span className="text-muted-foreground">Member type</span>
+                            <select
+                              aria-label={`Member type for ${member.customer?.firstName ?? member.customerId}`}
+                              className="h-10 w-full rounded-md border border-input bg-white px-2 text-sm"
+                              value={draftMember.memberType}
+                              onChange={(event) => setDraftMember((prev) => prev ? { ...prev, memberType: event.target.value as "adult" | "child" } : prev)}
+                            >
+                              <option value="adult">Adult</option>
+                              <option value="child">Child</option>
+                            </select>
+                          </label>
+                          <label className="space-y-1 text-xs">
+                            <span className="text-muted-foreground">Relationship</span>
+                            <select
+                              aria-label={`Relationship for ${member.customer?.firstName ?? member.customerId}`}
+                              className="h-10 w-full rounded-md border border-input bg-white px-2 text-sm"
+                              value={draftMember.relationship}
+                              onChange={(event) => setDraftMember((prev) => prev ? { ...prev, relationship: event.target.value } : prev)}
+                            >
+                              <option value="parent_guardian">Parent/guardian</option>
+                              <option value="child">Child</option>
+                              <option value="spouse_partner">Spouse/partner</option>
+                              <option value="dependent">Dependent</option>
+                              <option value="emergency_contact_only">Emergency contact only</option>
+                              <option value="other">Other</option>
+                            </select>
+                          </label>
+                          <label className="space-y-1 text-xs">
+                            <span className="text-muted-foreground">Emergency priority</span>
+                            <input
+                              aria-label={`Emergency priority for ${member.customer?.firstName ?? member.customerId}`}
+                              type="number"
+                              min={1}
+                              className="h-10 w-full rounded-md border border-input bg-white px-2 text-sm"
+                              value={draftMember.emergencyContactPriority ?? ""}
+                              onChange={(event) => {
+                                const value = Number(event.target.value);
+                                setDraftMember((prev) => (prev ? { ...prev, emergencyContactPriority: Number.isFinite(value) ? value : undefined } : prev));
+                              }}
+                            />
+                          </label>
+                        </div>
+                        <div className="flex w-full flex-wrap gap-3 text-xs text-muted-foreground">
+                          <label className="inline-flex items-center gap-1">
+                            <input
+                              type="checkbox"
+                              checked={draftMember.canCheckInOthers}
+                              onChange={(event) => setDraftMember((prev) => prev ? { ...prev, canCheckInOthers: event.target.checked } : prev)}
+                            />
+                            Can check in others
+                          </label>
+                          <label className="inline-flex items-center gap-1">
+                            <input
+                              type="checkbox"
+                              checked={draftMember.canPurchaseForOthers}
+                              onChange={(event) => setDraftMember((prev) => prev ? { ...prev, canPurchaseForOthers: event.target.checked } : prev)}
+                            />
+                            Can purchase for others
+                          </label>
+                          <label className="inline-flex items-center gap-1">
+                            <input
+                              type="checkbox"
+                              checked={draftMember.canSignWaivers}
+                              onChange={(event) => setDraftMember((prev) => prev ? { ...prev, canSignWaivers: event.target.checked } : prev)}
+                            />
+                            Can sign waivers
+                          </label>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            className="h-9"
+                            onClick={() => {
+                              const result = updateHouseholdMember(household.id, member.customerId, {
+                                memberType: draftMember.memberType,
+                                relationship: draftMember.relationship as typeof member.relationship,
+                                emergencyContactPriority: draftMember.emergencyContactPriority,
+                                canCheckInOthers: draftMember.canCheckInOthers,
+                                canPurchaseForOthers: draftMember.canPurchaseForOthers,
+                                canSignWaivers: draftMember.canSignWaivers
+                              });
+                              setProfileFeedback(result.message);
+                              if (result.ok) cancelEditHouseholdMember();
+                            }}
+                          >
+                            Save
+                          </Button>
+                          <Button variant="secondary" className="h-9" onClick={cancelEditHouseholdMember}>
+                            Cancel
+                          </Button>
+                          {member.customerId !== customer.id ? (
+                            <Button
+                              variant="destructive"
+                              className="h-9"
+                              onClick={() => {
+                                const result = removeHouseholdMember(household.id, member.customerId);
+                                setProfileFeedback(result.message);
+                                cancelEditHouseholdMember();
+                              }}
+                            >
+                              Remove
+                            </Button>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -617,6 +889,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                     const result = addHouseholdMember({
                       householdId: household.id,
                       customerId: selectedId,
+                      memberType: "child",
                       role: "dependent",
                       relationship: "dependent",
                       canCheckInOthers: false,
@@ -636,7 +909,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
       </Card>
       </section>
 
-      <section id="payment" aria-label="section-payment" className="scroll-mt-40">
+      <section id="payment" aria-label="section-payment" className="scroll-mt-40 space-y-4">
       <Card aria-label="detail-payment-methods">
         <CardHeader><CardTitle>Payment Methods</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
@@ -658,9 +931,60 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
         </CardContent>
       </Card>
       </section>
+      {customerStaffProfile ? (
+        <ModalShell
+          open={showSuspendConfirm}
+          ariaLabel="Suspend staff confirmation"
+          title="Suspend staff member?"
+          description={`${customer.firstName} ${customer.lastName} will lose access to staff tools and permissions. Their customer profile and visit history will remain available.`}
+          onClose={() => setShowSuspendConfirm(false)}
+          maxWidthClassName="max-w-lg"
+          footer={
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setShowSuspendConfirm(false)}>Cancel</Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (customerStaffProfile.role === "owner") {
+                    setProfileFeedback(`${customer.firstName} ${customer.lastName} is an Owner and cannot be suspended from this screen.`);
+                    setShowSuspendConfirm(false);
+                    return;
+                  }
+                  const result = suspendStaffMember(customerStaffProfile.staffId);
+                  if (!result.ok) {
+                    setProfileFeedback(result.message);
+                    setShowSuspendConfirm(false);
+                    return;
+                  }
+                  updateStaffProfileForCustomer({
+                    customerId: customer.id,
+                    role: customerStaffProfile.role,
+                    status: "inactive",
+                    staffPin: customerStaffProfile.staffPin,
+                    locations: customerStaffProfile.locations,
+                    assignedPrograms: customerStaffProfile.assignedPrograms,
+                    permissions: customerStaffProfile.permissions,
+                    startDate: customerStaffProfile.startDate,
+                    certifications: customerStaffProfile.certifications,
+                    staffNotes: customerStaffProfile.staffNotes
+                  });
+                  setProfileFeedback(result.message);
+                  setShowSuspendConfirm(false);
+                }}
+              >
+                Suspend Staff
+              </Button>
+            </div>
+          }
+        >
+          <p className="text-sm text-muted-foreground">
+            This action can be reversed later by reactivating staff.
+          </p>
+        </ModalShell>
+      ) : null}
       {profileFeedback ? <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{profileFeedback}</p> : null}
 
-      <section id="visits" aria-label="section-visits" className="scroll-mt-40">
+      <section id="visits" aria-label="section-visits" className="scroll-mt-40 space-y-4">
       <Card aria-label="detail-timeline">
         <CardHeader><CardTitle>Customer Timeline</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
@@ -685,7 +1009,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
       </Card>
       </section>
 
-      <section id="purchases" aria-label="section-purchases" className="scroll-mt-40">
+      <section id="purchases" aria-label="section-purchases" className="scroll-mt-40 space-y-4">
       <Card aria-label="detail-purchases">
         <CardHeader><CardTitle>Purchase History</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
@@ -714,7 +1038,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
       </Card>
       </section>
 
-      <section id="registrations" aria-label="section-registrations" className="scroll-mt-40">
+      <section id="registrations" aria-label="section-registrations" className="scroll-mt-40 space-y-4">
       <Card aria-label="detail-registrations">
         <CardHeader><CardTitle>Registrations</CardTitle></CardHeader>
         <CardContent className="space-y-3 text-sm">
@@ -740,7 +1064,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
       </Card>
       </section>
 
-      <section id="waiver" aria-label="section-waiver" className="scroll-mt-40">
+      <section id="waiver" aria-label="section-waiver" className="scroll-mt-40 space-y-4">
       <Card aria-label="detail-waiver-history">
         <CardHeader><CardTitle>Waiver History</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
@@ -810,7 +1134,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
       </Card>
       </section>
 
-      <section id="notes" aria-label="section-notes" className="scroll-mt-40">
+      <section id="notes" aria-label="section-notes" className="scroll-mt-40 space-y-4">
       <Card aria-label="detail-notes">
         <CardHeader><CardTitle>Notes</CardTitle></CardHeader>
         <CardContent><p className="text-sm text-muted-foreground">{customer.notes ?? "No internal notes yet."}</p></CardContent>
@@ -833,17 +1157,29 @@ function HeaderField({
   label,
   value,
   warning,
-  className
+  className,
+  wrapAnywhere
 }: {
   label: string;
   value: string;
   warning?: boolean;
   className?: string;
+  wrapAnywhere?: boolean;
 }) {
   return (
-    <div className={`rounded-md bg-secondary/35 px-3 py-2 ${className ?? ""}`}>
+    <div className={`min-w-0 rounded-md bg-secondary/35 px-3 py-2 ${className ?? ""}`}>
       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className={`text-sm ${warning ? "text-amber-700" : "text-foreground"}`}>{value}</p>
+      <p className={`text-sm ${warning ? "text-amber-700" : "text-foreground"} break-words ${wrapAnywhere ? "[overflow-wrap:anywhere]" : ""}`}>{value}</p>
     </div>
   );
+}
+
+function formatHouseholdRelationship(value: string) {
+  if (value === "parent_guardian") return "Parent/guardian";
+  if (value === "spouse_partner") return "Spouse/partner";
+  if (value === "emergency_contact_only") return "Emergency contact only";
+  if (value === "child") return "Child";
+  if (value === "dependent") return "Dependent";
+  if (value === "guardian") return "Parent/guardian";
+  return value.replaceAll("_", " ");
 }

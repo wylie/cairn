@@ -57,7 +57,7 @@ describe("CustomerDetailPage", () => {
     expect(screen.getByLabelText("detail-registrations")).toBeInTheDocument();
     expect(screen.getByLabelText("detail-waiver-history")).toBeInTheDocument();
     expect(screen.getByLabelText("detail-profile-information")).toBeInTheDocument();
-    expect(screen.getByLabelText("detail-related-customers")).toBeInTheDocument();
+    expect(screen.queryByLabelText("detail-related-customers")).not.toBeInTheDocument();
     expect(screen.getByLabelText("detail-payment-methods")).toBeInTheDocument();
     expect(screen.queryByLabelText("detail-profile-details")).not.toBeInTheDocument();
   });
@@ -80,15 +80,13 @@ describe("CustomerDetailPage", () => {
     });
   });
 
-  it("profile information displays all collected fields and age", async () => {
+  it("top customer summary card displays address, emergency contact, and notes preview", async () => {
     const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
     render(<TestProviders>{page}</TestProviders>);
-    const profile = screen.getByLabelText("detail-profile-information");
-    expect(within(profile).getByText("Address")).toBeInTheDocument();
-    expect(within(profile).getByText("Emergency Contact")).toBeInTheDocument();
-    expect(within(profile).getByText("Photo & Profile Metadata")).toBeInTheDocument();
-    expect(within(profile).getByText("10012")).toBeInTheDocument();
-    expect(within(profile).getByText("Priya Patel")).toBeInTheDocument();
+    const header = screen.getByLabelText("detail-header");
+    expect(within(header).getByText(/120 Spring St/i)).toBeInTheDocument();
+    expect(within(header).getByText(/Priya Patel/i)).toBeInTheDocument();
+    expect(within(header).getByText(/Prefers morning sessions/i)).toBeInTheDocument();
   });
 
   it("header displays pronouns, dob/age, phone, and emergency contact", async () => {
@@ -115,7 +113,8 @@ describe("CustomerDetailPage", () => {
     render(<TestProviders>{page}</TestProviders>);
     const jumpRow = screen.getByLabelText("detail-jump-links");
     expect(jumpRow.className).toContain("sticky");
-    expect(jumpRow.className).toContain("shadow-sm");
+    expect(jumpRow.className).toContain("shadow-md");
+    expect(jumpRow.className).toContain("bg-background/95");
   });
 
   it("sections include scroll margin for sticky nav offsets", async () => {
@@ -125,10 +124,19 @@ describe("CustomerDetailPage", () => {
       const section = container.querySelector(`#${id}`) as HTMLElement;
       expect(section).toBeTruthy();
       expect(section.className).toContain("scroll-mt-40");
+      expect(section.className).toContain("space-y-4");
     });
   });
 
-  it("missing required profile values show warning style text", async () => {
+  it("summary email and address fields use wrap-safe layout classes", async () => {
+    const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
+    render(<TestProviders>{page}</TestProviders>);
+    const header = screen.getByLabelText("detail-header");
+    expect(header.innerHTML).toContain("[overflow-wrap:anywhere]");
+    expect(header.innerHTML).toContain("min-w-0");
+  });
+
+  it("profile metadata section remains and missing required profile values still show not-set indicators", async () => {
     const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_003" }) });
     render(<TestProviders>{page}</TestProviders>);
     const profile = screen.getByLabelText("detail-profile-information");
@@ -303,7 +311,14 @@ describe("CustomerDetailPage", () => {
     render(<TestProviders>{page}</TestProviders>);
 
     await user.click(screen.getByRole("button", { name: "Edit Profile" }));
-    expect(screen.getByRole("dialog", { name: "Edit Profile" })).toBeInTheDocument();
+    const modal = screen.getByRole("dialog", { name: "Edit Profile" });
+    expect(modal).toBeInTheDocument();
+    const modalPanel = within(modal).getByTestId("modal-panel");
+    expect(modalPanel.className).toContain("max-h-[calc(100dvh-2rem)]");
+    const modalBody = within(modal).getByTestId("modal-body");
+    expect(modalBody.className).toContain("overflow-y-auto");
+    expect(within(modal).getByTestId("modal-footer")).toBeInTheDocument();
+    expect(within(modal).getByRole("button", { name: "Close Edit Profile" })).toBeInTheDocument();
     expect(screen.getByLabelText("First name")).toHaveValue("Maya");
     expect(screen.getByLabelText("Last name")).toHaveValue("Patel");
     expect(screen.getByLabelText("Preferred name")).toHaveValue("Maya");
@@ -415,7 +430,7 @@ describe("CustomerDetailPage", () => {
     expect(header).toHaveTextContent("xe/xem");
   });
 
-  it("address saves and displays in profile information", async () => {
+  it("address saves and displays in top customer summary", async () => {
     const user = userEvent.setup();
     const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
     render(
@@ -436,13 +451,13 @@ describe("CustomerDetailPage", () => {
     await user.type(screen.getByLabelText("ZIP/postal code"), "11211");
     await user.click(screen.getByRole("button", { name: "Save Changes" }));
 
-    const details = screen.getByLabelText("detail-profile-information");
-    expect(details).toHaveTextContent("45 River Rd");
-    expect(details).toHaveTextContent("Brooklyn");
-    expect(details).toHaveTextContent("11211");
+    const header = screen.getByLabelText("detail-header");
+    expect(header).toHaveTextContent("45 River Rd");
+    expect(header).toHaveTextContent("Brooklyn");
+    expect(header).toHaveTextContent("11211");
   });
 
-  it("optional address line 2 only displays when present", async () => {
+  it("optional address line 2 does not render literal Not set in summary address", async () => {
     const user = userEvent.setup();
     const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
     render(
@@ -455,9 +470,8 @@ describe("CustomerDetailPage", () => {
     await user.click(screen.getByRole("button", { name: "Edit Profile" }));
     await user.clear(screen.getByLabelText("Address line 2"));
     await user.click(screen.getByRole("button", { name: "Save Changes" }));
-    const details = screen.getByLabelText("detail-profile-information");
-    expect(details).toHaveTextContent("Address line 2");
-    expect(details).toHaveTextContent("Not set");
+    const header = screen.getByLabelText("detail-header");
+    expect(header).not.toHaveTextContent("Address line 2");
   });
 
   it("edit profile sections render in modal", async () => {
@@ -543,10 +557,10 @@ describe("CustomerDetailPage", () => {
     await user.type(screen.getByLabelText("State"), "mo");
     await user.click(screen.getByRole("button", { name: "Save Changes" }));
 
-    const details = screen.getByLabelText("detail-profile-information");
-    expect(details).toHaveTextContent("123 Main St");
-    expect(details).toHaveTextContent("St. Louis");
-    expect(details).toHaveTextContent("MO");
+    const header = screen.getByLabelText("detail-header");
+    expect(header).toHaveTextContent("123 Main St");
+    expect(header).toHaveTextContent("St. Louis");
+    expect(header).toHaveTextContent("MO");
   });
 
   it("Edit Profile cancel closes without saving", async () => {
@@ -666,7 +680,7 @@ describe("CustomerDetailPage", () => {
     expect(screen.getByText("MP")).toBeInTheDocument();
   });
 
-  it("related customer can be added and duplicate relationship is blocked", async () => {
+  it("household member can be added and duplicate member is blocked", async () => {
     const user = userEvent.setup();
     const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
     render(
@@ -676,19 +690,20 @@ describe("CustomerDetailPage", () => {
       </TestProviders>
     );
     await activateStaff(user, "2222");
-    const relatedSection = screen.getByLabelText("detail-related-customers");
-    const search = within(relatedSection).getByLabelText("Search existing customer");
+    const householdSection = screen.getByLabelText("detail-household");
+    await user.type(within(householdSection).getByLabelText("Household name"), "Patel Family");
+    await user.click(within(householdSection).getByRole("button", { name: "Create Household" }));
+    const search = within(householdSection).getByLabelText("Search customer");
     await user.type(search, "Jordan");
     await user.keyboard("{ArrowDown}{Enter}");
-    expect(screen.getByRole("status")).toHaveTextContent("Related customer added.");
-    expect(relatedSection).toHaveTextContent("Jordan Kim");
+    expect(screen.getByRole("status")).toHaveTextContent("Jordan Kim added to household.");
+    expect(householdSection).toHaveTextContent("Jordan Kim");
 
     await user.type(search, "Jordan");
-    await user.keyboard("{ArrowDown}{Enter}");
-    expect(screen.getByRole("status")).toHaveTextContent("Relationship already exists.");
+    expect(screen.queryByText("Jordan Kim (M-1002)")).not.toBeInTheDocument();
   });
 
-  it("related customer persists after refresh", async () => {
+  it("household member persists after refresh", async () => {
     const storage = installStorageMock();
     const user = userEvent.setup();
     const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
@@ -699,11 +714,13 @@ describe("CustomerDetailPage", () => {
       </TestProviders>
     );
     await activateStaff(user, "2222");
-    const relatedSection = screen.getByLabelText("detail-related-customers");
-    const search = within(relatedSection).getByLabelText("Search existing customer");
+    const householdSection = screen.getByLabelText("detail-household");
+    await user.type(within(householdSection).getByLabelText("Household name"), "Patel Family");
+    await user.click(within(householdSection).getByRole("button", { name: "Create Household" }));
+    const search = within(householdSection).getByLabelText("Search customer");
     await user.type(search, "Dana");
     await user.keyboard("{ArrowDown}{Enter}");
-    expect(relatedSection).toHaveTextContent("Dana Daypass");
+    expect(householdSection).toHaveTextContent("Dana Daypass");
 
     first.unmount();
     const secondPage = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
@@ -713,7 +730,7 @@ describe("CustomerDetailPage", () => {
         {secondPage}
       </TestProviders>
     );
-    expect(screen.getByLabelText("detail-related-customers")).toHaveTextContent("Dana Daypass");
+    expect(screen.getByLabelText("detail-household")).toHaveTextContent("Dana Daypass");
     storage.restore();
   });
 
@@ -736,25 +753,25 @@ describe("CustomerDetailPage", () => {
     expect(screen.queryByLabelText(/card number/i)).not.toBeInTheDocument();
   });
 
-  it("profile details card displays address and emergency contact clearly", async () => {
+  it("header summary displays address and emergency contact clearly", async () => {
     const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
     render(<TestProviders>{page}</TestProviders>);
-    const details = screen.getByLabelText("detail-profile-information");
-    expect(details).toHaveTextContent("120 Spring St");
-    expect(details).toHaveTextContent("New York");
-    expect(details).toHaveTextContent("NY");
-    expect(details).toHaveTextContent("10012");
-    expect(details).toHaveTextContent("Priya Patel");
-    expect(details).toHaveTextContent("(212) 555-9001");
+    const header = screen.getByLabelText("detail-header");
+    expect(header).toHaveTextContent("120 Spring St");
+    expect(header).toHaveTextContent("New York");
+    expect(header).toHaveTextContent("NY");
+    expect(header).toHaveTextContent("10012");
+    expect(header).toHaveTextContent("Priya Patel");
+    expect(header).toHaveTextContent("(212) 555-9001");
   });
 
-  it("profile information avoids duplicating full header identity summary", async () => {
+  it("profile metadata section avoids duplicating address, emergency contact, and notes", async () => {
     const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
     render(<TestProviders>{page}</TestProviders>);
     const details = screen.getByLabelText("detail-profile-information");
-    expect(details).not.toHaveTextContent("Preferred name");
-    expect(details).not.toHaveTextContent("Pronouns");
-    expect(details).not.toHaveTextContent("Date of birth");
+    expect(details).not.toHaveTextContent("Address");
+    expect(details).not.toHaveTextContent("Emergency Contact");
+    expect(details).not.toHaveTextContent("No peanut allergies");
   });
 
   it("shows household placeholder actions and can create household", async () => {
@@ -778,7 +795,45 @@ describe("CustomerDetailPage", () => {
     const household = screen.getByLabelText("detail-household");
     expect(household).toHaveTextContent("Rivera Family");
     expect(household).toHaveTextContent("Primary contact");
-    expect(within(household).getAllByRole("button", { name: /Allow Check-in Others|Require Guardian/i }).length).toBeGreaterThan(0);
+    expect(within(household).getAllByRole("button", { name: "Edit" }).length).toBeGreaterThan(0);
+    expect(household).toHaveTextContent("Adult · Parent/guardian");
+    expect(household).toHaveTextContent("Child · Child");
+    expect(household).toHaveTextContent("Check-in others");
+  });
+
+  it("household member rows are collapsed by default and edit expands one row", async () => {
+    const user = userEvent.setup();
+    const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_003" }) });
+    render(<TestProviders>{page}</TestProviders>);
+    const household = screen.getByLabelText("detail-household");
+
+    expect(within(household).queryByLabelText("Member type for Sam")).not.toBeInTheDocument();
+    const editButtons = within(household).getAllByRole("button", { name: "Edit" });
+    await user.click(editButtons[0]);
+    expect(within(household).getByLabelText(/Member type for/i)).toBeInTheDocument();
+    await user.click(editButtons[1]);
+    expect(within(household).getAllByLabelText(/Member type for/i)).toHaveLength(1);
+  });
+
+  it("household edit save updates member and cancel reverts draft", async () => {
+    const user = userEvent.setup();
+    const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_003" }) });
+    render(<TestProviders>{page}</TestProviders>);
+    const household = screen.getByLabelText("detail-household");
+
+    const samRow = within(household).getByLabelText("household-member-cust_004");
+    await user.click(within(samRow).getByRole("button", { name: "Edit" }));
+    const memberTypeSelect = within(samRow).getByLabelText("Member type for Sam");
+    expect(memberTypeSelect).toHaveValue("child");
+    await user.selectOptions(memberTypeSelect, "adult");
+    await user.click(within(samRow).getByRole("button", { name: "Cancel" }));
+    expect(within(household).queryByLabelText("Member type for Sam")).not.toBeInTheDocument();
+    expect(household).toHaveTextContent("Child · Child");
+
+    await user.click(within(samRow).getByRole("button", { name: "Edit" }));
+    await user.selectOptions(within(samRow).getByLabelText("Member type for Sam"), "adult");
+    await user.click(within(samRow).getByRole("button", { name: "Save" }));
+    expect(household).toHaveTextContent("Adult · Child");
   });
 
   it("comp access grant persists after refresh", async () => {
@@ -807,5 +862,26 @@ describe("CustomerDetailPage", () => {
     const accessCard = screen.getByLabelText("detail-access-products");
     expect(within(accessCard).getAllByText(/Comp access/i).length).toBeGreaterThan(0);
     storage.restore();
+  });
+
+  it("access lifecycle actions pause, resume, extend, and cancel render and update", async () => {
+    const user = userEvent.setup();
+    const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
+    render(
+      <TestProviders>
+        <TopBar />
+        {page}
+      </TestProviders>
+    );
+    await activateStaff(user, "2222");
+    const accessCard = screen.getByLabelText("detail-access-products");
+    await user.click(within(accessCard).getByRole("button", { name: "Pause" }));
+    expect(accessCard).toHaveTextContent("paused");
+    await user.click(within(accessCard).getByRole("button", { name: "Resume" }));
+    expect(accessCard).toHaveTextContent("active");
+    await user.click(within(accessCard).getByRole("button", { name: "Extend +30d" }));
+    expect(accessCard).toHaveTextContent("Expiration:");
+    await user.click(within(accessCard).getByRole("button", { name: "Cancel" }));
+    expect(accessCard).toHaveTextContent("cancelled");
   });
 });

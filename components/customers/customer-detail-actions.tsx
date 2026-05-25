@@ -11,7 +11,7 @@ import { useWorkstationState } from "@/lib/state/workstation-state";
 
 export function CustomerDetailActions({ customerId }: { customerId: string }) {
   const { customers, accessProducts, runCustomerCheckInAction, sellAccessProducts, updateCustomerWaiver, updateCustomerProfile, addCustomerAccessRecord } = useCustomerState();
-  const { activeStaff, assertPermission, requestStaffSwitch, hasPermission } = useWorkstationState();
+  const { activeStaff, assertPermission, requestStaffSwitch, hasPermission, logAuditEvent } = useWorkstationState();
   const [feedback, setFeedback] = useState("");
   const [warning, setWarning] = useState("");
   const [showSwitchPrompt, setShowSwitchPrompt] = useState(false);
@@ -63,6 +63,18 @@ export function CustomerDetailActions({ customerId }: { customerId: string }) {
       setFeedback("Comp access granted.");
       setWarning("");
       setShowSwitchPrompt(false);
+      logAuditEvent({
+        action: "access.comp_granted",
+        actorStaffId: activeStaff.id,
+        actorStaffName: `${activeStaff.firstName} ${activeStaff.lastName}`,
+        targetType: "customer",
+        targetId: customer.id,
+        reason: input.reason,
+        metadata: {
+          accessType: input.accessType,
+          durationType: input.durationType
+        }
+      });
     } else {
       setWarning(result.message);
       setFeedback("");
@@ -131,6 +143,13 @@ export function CustomerDetailActions({ customerId }: { customerId: string }) {
             }
             setFeedback("Waiver marked signed.");
             setWarning("");
+            logAuditEvent({
+              action: "waiver.marked_signed",
+              actorStaffId: activeStaff.id,
+              actorStaffName: `${activeStaff.firstName} ${activeStaff.lastName}`,
+              targetType: "customer",
+              targetId: customer.id
+            });
           }}
         >
           Mark Waiver Signed

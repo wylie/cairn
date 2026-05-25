@@ -3,6 +3,7 @@ import type { Customer, Membership, PunchPass, Waiver } from "@/types/domain";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CustomerBadges } from "@/components/customers/customer-badges";
+import { Badge } from "@/components/ui/badge";
 
 export function CustomerCard({
   customer,
@@ -81,6 +82,9 @@ export function CustomerCard({
         </div>
 
         <CustomerBadges customer={customer} membership={membership} punchPass={punchPass} waiver={waiver} />
+        {customer.staffProfile?.isStaff ? (
+          <Badge tone="muted">Staff: {customer.staffProfile.role.replace("_", " ")}</Badge>
+        ) : null}
 
         <div className="mt-auto">
           <div className="flex flex-wrap gap-2">

@@ -5,6 +5,7 @@ import type { Customer } from "@/types/domain";
 import { FormField, FormGrid } from "@/components/shared/form-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ModalShell } from "@/components/ui/modal-shell";
 import { isValidUsState, normalizeCity, normalizeStateInput, normalizeStreetAddress } from "@/lib/customer-input-format";
 
 export function EditCustomerProfileModal({
@@ -98,14 +99,26 @@ export function EditCustomerProfileModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4" role="dialog" aria-modal="true" aria-label="Edit Profile">
-      <div className="w-full max-w-3xl space-y-4 rounded-xl border bg-card p-4 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Edit Profile</h3>
-          <Button variant="outline" onClick={onClose}>Close</Button>
+    <ModalShell
+      open={open}
+      ariaLabel="Edit Profile"
+      title="Edit Profile"
+      onClose={onClose}
+      maxWidthClassName="max-w-3xl"
+      footer={
+        <div className="space-y-3">
+          {warning ? <p role="alert" className="text-sm text-amber-800">{warning}</p> : null}
+          <p className="text-xs text-muted-foreground">
+            TODO: Future webcam support will capture/preview/retake profile photo before save.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button className="min-h-11" onClick={submit}>Save Changes</Button>
+            <Button className="min-h-11" variant="secondary" onClick={onClose}>Cancel</Button>
+          </div>
         </div>
-
-        <div className="space-y-4">
+      }
+    >
+      <div className="space-y-4">
           <section aria-label="Identity section" className="space-y-2">
             <p className="text-sm font-medium">Identity</p>
             <FormGrid>
@@ -229,18 +242,7 @@ export function EditCustomerProfileModal({
               />
             </FormField>
           </section>
-        </div>
-
-        {warning ? <p role="alert" className="text-sm text-amber-800">{warning}</p> : null}
-        <p className="text-xs text-muted-foreground">
-          TODO: Future webcam support will capture/preview/retake profile photo before save.
-        </p>
-
-        <div className="flex flex-wrap gap-2">
-          <Button className="min-h-11" onClick={submit}>Save Changes</Button>
-          <Button className="min-h-11" variant="secondary" onClick={onClose}>Cancel</Button>
-        </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

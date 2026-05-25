@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { RefObject } from "react";
 import type { Customer } from "@/types/domain";
 import { SearchInput } from "@/components/shared/search-input";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,9 @@ export function CustomerSearchCombobox({
   onAddCustomer,
   getStatusLines,
   autoFocus,
-  emptyMessage = "No customers found."
+  emptyMessage = "No customers found.",
+  inputRef,
+  showLabel = false
 }: {
   label: string;
   placeholder: string;
@@ -27,6 +30,8 @@ export function CustomerSearchCombobox({
   getStatusLines?: (customer: Customer) => string[];
   autoFocus?: boolean;
   emptyMessage?: string;
+  inputRef?: RefObject<HTMLInputElement | null>;
+  showLabel?: boolean;
 }) {
   const [highlightIndex, setHighlightIndex] = useState(0);
 
@@ -36,7 +41,18 @@ export function CustomerSearchCombobox({
     setHighlightIndex(0);
   }, [query, customers.length]);
 
-  const highlighted = useMemo(() => customers[highlightIndex], [customers, highlightIndex]);
+  const displayedCustomers = useMemo(() => {
+    return [...customers].sort((a, b) => {
+      const aStaff = a.staffProfile?.isStaff ? 1 : 0;
+      const bStaff = b.staffProfile?.isStaff ? 1 : 0;
+      if (aStaff !== bStaff) return aStaff - bStaff;
+      const byLast = a.lastName.localeCompare(b.lastName, "en", { sensitivity: "base" });
+      if (byLast !== 0) return byLast;
+      return a.firstName.localeCompare(b.firstName, "en", { sensitivity: "base" });
+    });
+  }, [customers]);
+
+  const highlighted = useMemo(() => displayedCustomers[highlightIndex], [displayedCustomers, highlightIndex]);
 
   return (
     <div className="w-full">
@@ -45,8 +61,10 @@ export function CustomerSearchCombobox({
         onChange={onQueryChange}
         placeholder={placeholder}
         label={label}
+        showLabel={showLabel}
         autoFocus={autoFocus}
         className="h-12 text-base"
+        inputRef={inputRef}
         onKeyDown={(event) => {
           if (!open) return;
           if (event.key === "ArrowDown") {
@@ -77,7 +95,7 @@ export function CustomerSearchCombobox({
         <div className="mt-2 space-y-2 rounded-xl border bg-card p-3">
           {customers.length > 0 ? (
             <div className="space-y-2" role="listbox" aria-label="Customer search results">
-              {customers.map((customer, index) => (
+              {displayedCustomers.map((customer, index) => (
                 <button
                   key={customer.id}
                   role="option"

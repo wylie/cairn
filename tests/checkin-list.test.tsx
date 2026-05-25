@@ -401,7 +401,51 @@ describe("Check-in desk workflow", () => {
     await activateStaff(user, "2222");
     await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Sam");
     await user.keyboard("{Enter}");
-    expect(screen.getByRole("button", { name: "Manager Override" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Manager Override + Check In" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Override reason")).toBeInTheDocument();
+  });
+
+  it("shows ready status card messaging for eligible customers", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CheckInList />
+      </TestProviders>
+    );
+    await activateStaff(user, "1111");
+    await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Jordan");
+    await user.keyboard("{Enter}");
+    expect(screen.getByText("Ready to check in")).toBeInTheDocument();
+    expect(screen.getAllByText(/Using Punch Pass/i).length).toBeGreaterThan(0);
+  });
+
+  it("shows blocked waiver messaging for waiver-missing customer", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CheckInList />
+      </TestProviders>
+    );
+    await activateStaff(user, "3333");
+    await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Sam");
+    await user.keyboard("{Enter}");
+    expect(screen.getByText("Cannot check in")).toBeInTheDocument();
+    expect(screen.getAllByText(/Waiver missing/i).length).toBeGreaterThan(0);
+  });
+
+  it("shows selected customer check-in timeline context", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CheckInList />
+      </TestProviders>
+    );
+    await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Maya");
+    await user.keyboard("{Enter}");
+    expect(screen.getByText("Check-in timeline")).toBeInTheDocument();
   });
 
   it("shows clickable occupancy navigation and recent activity section", () => {
@@ -413,5 +457,67 @@ describe("Check-in desk workflow", () => {
     );
     expect(screen.getByTestId("occupancy-count")).toHaveAttribute("href", "/check-in#recent-checkins");
     expect(screen.getByText("Recent check-ins")).toBeInTheDocument();
+  });
+
+  it("supports slash keyboard shortcut to focus search", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CheckInList />
+      </TestProviders>
+    );
+    await user.tab();
+    await user.keyboard("/");
+    expect(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name")).toHaveFocus();
+  });
+
+  it("supports Cmd/Ctrl+Enter shortcut to check in selected eligible customer", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CheckInList />
+      </TestProviders>
+    );
+    await activateStaff(user, "1111");
+    const input = screen.getByLabelText("Scan barcode, member ID, phone, email, or search name");
+    await user.type(input, "Jordan");
+    await user.keyboard("{Enter}");
+    await user.keyboard("{Control>}{Enter}{/Control}");
+    expect(screen.getByRole("status")).toHaveTextContent(/Check-in recorded for Jordan Kim/i);
+  });
+
+  it("enforces dependent restriction with guardian-required messaging", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CheckInList />
+      </TestProviders>
+    );
+    await activateStaff(user, "3333");
+    await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Sam");
+    await user.keyboard("{Enter}");
+    expect(screen.getByText(/Minor requires guardian/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cannot Check In" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Manager Override + Check In" })).not.toBeInTheDocument();
+  });
+
+  it("shows undo after successful check-in", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CheckInList />
+      </TestProviders>
+    );
+    await activateStaff(user, "1111");
+    await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Jordan");
+    await user.keyboard("{Enter}");
+    await user.click(screen.getByRole("button", { name: "Check In" }));
+    expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+    expect(screen.getByRole("status")).toHaveTextContent(/Undo applied/i);
   });
 });

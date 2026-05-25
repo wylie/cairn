@@ -16,6 +16,7 @@ export const householdMembers: HouseholdMember[] = [
   {
     householdId: "hh_001",
     customerId: "cust_003",
+    memberType: "adult",
     role: "primary-adult",
     relationship: "guardian",
     canCheckInOthers: true,
@@ -26,6 +27,7 @@ export const householdMembers: HouseholdMember[] = [
   {
     householdId: "hh_001",
     customerId: "cust_004",
+    memberType: "child",
     role: "child",
     relationship: "child",
     canCheckInOthers: false,
@@ -36,8 +38,9 @@ export const householdMembers: HouseholdMember[] = [
   {
     householdId: "hh_001",
     customerId: "cust_002",
+    memberType: "adult",
     role: "emergency-contact-only",
-    relationship: "other",
+    relationship: "emergency_contact_only",
     canCheckInOthers: false,
     canPurchaseForOthers: false,
     canSignWaivers: false,

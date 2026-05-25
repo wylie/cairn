@@ -218,6 +218,10 @@ describe("CustomerList", () => {
     );
 
     await user.click(screen.getAllByRole("button", { name: "Add Customer" })[0]);
+    const dialog = screen.getByRole("dialog", { name: "New Customer" });
+    expect(within(dialog).getByTestId("modal-body").className).toContain("overflow-y-auto");
+    expect(within(dialog).getByTestId("modal-footer")).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Close New Customer" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Next" }));
     expect(screen.getByRole("alert")).toHaveTextContent("First and last name are required.");
   });

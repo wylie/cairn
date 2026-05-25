@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ModalShell } from "@/components/ui/modal-shell";
 import { FormField, FormGrid } from "@/components/shared/form-layout";
 import { SearchInput } from "@/components/shared/search-input";
 import type { Customer, CustomerRelationshipType } from "@/types/domain";
@@ -424,10 +425,20 @@ export function AddCustomerModal({
 
   if (createdCustomerId && !autoCloseOnSuccess) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4" role="dialog" aria-modal="true" aria-label="New Customer">
-        <div className="w-full max-w-xl space-y-4 rounded-xl border bg-card p-4 shadow-sm">
-          <h3 className="text-lg font-semibold">Customer created: {createdDisplayName}</h3>
-          <p className="text-sm text-muted-foreground">Choose the next action to keep front desk flow moving.</p>
+      <ModalShell
+        open={open}
+        ariaLabel="New Customer"
+        title={`Customer created: ${createdDisplayName}`}
+        description="Choose the next action to keep front desk flow moving."
+        onClose={close}
+        maxWidthClassName="max-w-xl"
+        footer={
+          <div className="flex justify-end">
+            <Button variant="outline" className="min-h-11" onClick={close}>Done</Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
           <div className="grid gap-2 sm:grid-cols-2">
             <Button className="min-h-11" onClick={() => quickActions?.onSellAccess?.(createdCustomerId)}>Sell Access</Button>
             <Button className="min-h-11" onClick={() => quickActions?.onCheckIn?.(createdCustomerId)}>Check In</Button>
@@ -435,25 +446,52 @@ export function AddCustomerModal({
             <Button variant="secondary" className="min-h-11" onClick={() => quickActions?.onViewProfile?.(createdCustomerId)}>View Profile</Button>
             <Button variant="secondary" className="min-h-11 sm:col-span-2" onClick={() => quickActions?.onAddFamilyMember?.(createdCustomerId)}>Add Family Member</Button>
           </div>
-          <div className="flex justify-end">
-            <Button variant="outline" className="min-h-11" onClick={close}>Done</Button>
-          </div>
         </div>
-      </div>
+      </ModalShell>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4" role="dialog" aria-modal="true" aria-label="New Customer">
-      <div className="w-full max-w-3xl space-y-4 rounded-xl border bg-card p-4 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h3 className="text-lg font-semibold">{title}</h3>
-            <p className="text-sm text-muted-foreground">Step {step + 1} of {steps.length}: {steps[step]}</p>
+    <ModalShell
+      open={open}
+      ariaLabel="New Customer"
+      title={title}
+      description={`Step ${step + 1} of ${steps.length}: ${steps[step]}`}
+      onClose={close}
+      maxWidthClassName="max-w-3xl"
+      footer={
+        <div className="space-y-2">
+          {warning ? <p role="alert" className="text-sm text-amber-800">{warning}</p> : null}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Button variant="outline" className="min-h-11" onClick={() => setStep((value) => Math.max(0, value - 1))} disabled={step === 0}>
+              Back
+            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" className="min-h-11" onClick={close}>Cancel</Button>
+              {step < steps.length - 1 ? (
+                <Button
+                  className="min-h-11"
+                  onClick={() => {
+                    const stepWarning = validateStep();
+                    if (stepWarning) {
+                      setWarning(stepWarning);
+                      return;
+                    }
+                    setWarning("");
+                    setStep((value) => Math.min(steps.length - 1, value + 1));
+                  }}
+                >
+                  Next
+                </Button>
+              ) : (
+                <Button className="min-h-11" onClick={submit}>Create Customer</Button>
+              )}
+            </div>
           </div>
-          <Button variant="outline" className="min-h-11" onClick={close}>Close</Button>
         </div>
-
+      }
+    >
+      <div className="space-y-4">
         <div className="grid grid-cols-6 gap-1" aria-label="New customer steps">
           {steps.map((label, index) => (
             <div key={label} className={`h-1.5 rounded-full ${index <= step ? "bg-primary" : "bg-secondary"}`} aria-label={`step-${label}`} />
@@ -461,36 +499,7 @@ export function AddCustomerModal({
         </div>
 
         <div className="rounded-lg border p-3">{stepContent()}</div>
-
-        {warning ? <p role="alert" className="text-sm text-amber-800">{warning}</p> : null}
-
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <Button variant="outline" className="min-h-11" onClick={() => setStep((value) => Math.max(0, value - 1))} disabled={step === 0}>
-            Back
-          </Button>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" className="min-h-11" onClick={close}>Cancel</Button>
-            {step < steps.length - 1 ? (
-              <Button
-                className="min-h-11"
-                onClick={() => {
-                  const stepWarning = validateStep();
-                  if (stepWarning) {
-                    setWarning(stepWarning);
-                    return;
-                  }
-                  setWarning("");
-                  setStep((value) => Math.min(steps.length - 1, value + 1));
-                }}
-              >
-                Next
-              </Button>
-            ) : (
-              <Button className="min-h-11" onClick={submit}>Create Customer</Button>
-            )}
-          </div>
-        </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

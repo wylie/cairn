@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { ModalShell } from "@/components/ui/modal-shell";
+import { FormField, FormGrid, SelectInput, TextInput, TextareaInput } from "@/components/shared/form-layout";
 
 type AccessType = "day-pass" | "membership" | "punch-pass" | "custom";
 type DurationType = "today" | "days" | "date" | "unlimited";
@@ -93,101 +94,62 @@ export function GrantCompAccessModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4" role="dialog" aria-modal="true" aria-label="Grant Comp Access">
-      <section className="w-full max-w-2xl space-y-4 rounded-xl border bg-card p-4 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold">Grant Comp Access</h3>
-            <p className="text-sm text-muted-foreground">{customerName}</p>
+    <ModalShell
+      open={open}
+      ariaLabel="Grant Comp Access"
+      title="Grant Comp Access"
+      description={customerName}
+      onClose={onClose}
+      maxWidthClassName="max-w-2xl"
+      footer={
+        <div className="space-y-2">
+          {warning ? <p role="alert" className="text-sm text-amber-800">{warning}</p> : null}
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button variant="caution" onClick={submit}>Grant Access</Button>
           </div>
-          <Button variant="secondary" onClick={onClose}>Close</Button>
         </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="space-y-1 text-sm">
-            <span>Access type</span>
-            <select
-              aria-label="Comp access type"
-              className="h-11 w-full rounded-md border border-input bg-white px-3 text-sm"
-              value={accessType}
-              onChange={(event) => setAccessType(event.target.value as AccessType)}
-            >
+      }
+    >
+      <FormGrid className="sm:grid-cols-2">
+          <FormField label="Access type">
+            <SelectInput aria-label="Comp access type" value={accessType} onChange={(event) => setAccessType(event.target.value as AccessType)}>
               {Object.entries(ACCESS_TYPE_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>{label}</option>
               ))}
-            </select>
-          </label>
-          <label className="space-y-1 text-sm">
-            <span>Duration</span>
-            <select
-              aria-label="Comp duration"
-              className="h-11 w-full rounded-md border border-input bg-white px-3 text-sm"
-              value={durationType}
-              onChange={(event) => setDurationType(event.target.value as DurationType)}
-            >
+            </SelectInput>
+          </FormField>
+          <FormField label="Duration">
+            <SelectInput aria-label="Comp duration" value={durationType} onChange={(event) => setDurationType(event.target.value as DurationType)}>
               <option value="today">Today only</option>
               <option value="days">X days</option>
               <option value="date">Expiration date</option>
               <option value="unlimited">Unlimited</option>
-            </select>
-          </label>
+            </SelectInput>
+          </FormField>
 
           {durationType === "days" ? (
-            <label className="space-y-1 text-sm">
-              <span>Number of days</span>
-              <Input
-                aria-label="Comp duration days"
-                type="number"
-                min={1}
-                value={durationDays}
-                onChange={(event) => setDurationDays(event.target.value)}
-              />
-            </label>
+            <FormField label="Number of days">
+              <TextInput aria-label="Comp duration days" type="number" min={1} value={durationDays} onChange={(event) => setDurationDays(event.target.value)} />
+            </FormField>
           ) : null}
           {durationType === "date" ? (
-            <label className="space-y-1 text-sm">
-              <span>Expiration date</span>
-              <Input
-                aria-label="Comp expiration date"
-                type="date"
-                value={expirationDate}
-                onChange={(event) => setExpirationDate(event.target.value)}
-              />
-            </label>
+            <FormField label="Expiration date">
+              <TextInput aria-label="Comp expiration date" type="date" value={expirationDate} onChange={(event) => setExpirationDate(event.target.value)} />
+            </FormField>
           ) : null}
 
-          <label className="space-y-1 text-sm sm:col-span-2">
-            <span>Reason</span>
-            <select
-              aria-label="Comp reason"
-              className="h-11 w-full rounded-md border border-input bg-white px-3 text-sm"
-              value={reason}
-              onChange={(event) => setReason(event.target.value as ReasonType)}
-            >
+          <FormField label="Reason" className="sm:col-span-2">
+            <SelectInput aria-label="Comp reason" value={reason} onChange={(event) => setReason(event.target.value as ReasonType)}>
               {Object.entries(REASON_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>{label}</option>
               ))}
-            </select>
-          </label>
-          <label className="space-y-1 text-sm sm:col-span-2">
-            <span>Notes (optional)</span>
-            <textarea
-              aria-label="Comp notes"
-              className="min-h-24 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-            />
-          </label>
-        </div>
-
-        {warning ? <p role="alert" className="text-sm text-amber-800">{warning}</p> : null}
-
-        <footer className="flex flex-wrap justify-end gap-2">
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button variant="caution" onClick={submit}>Grant Access</Button>
-        </footer>
-      </section>
-    </div>
+            </SelectInput>
+          </FormField>
+          <FormField label="Notes (optional)" className="sm:col-span-2">
+            <TextareaInput aria-label="Comp notes" value={notes} onChange={(event) => setNotes(event.target.value)} />
+          </FormField>
+      </FormGrid>
+    </ModalShell>
   );
 }
-

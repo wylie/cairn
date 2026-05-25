@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { checkInRecords as seedCheckInRecords } from "@/lib/mocks/checkins";
 import { accessRecords as seedAccessRecords } from "@/lib/mocks/access-records";
 import { customers as seedCustomers } from "@/lib/mocks/customers";
@@ -43,6 +43,8 @@ import type {
   PunchPass,
   ClassCampSession,
   Registration,
+  StaffPermission,
+  StaffRole,
   Waiver
 } from "@/types/domain";
 
@@ -64,9 +66,26 @@ function addDays(key: string, days: number) {
 
 function normalizeProductForState(product: PosProduct): PosProduct {
   const normalizedPriceCents = normalizeProductPriceCents(product);
+  const defaultDisplayType =
+    product.displayType?.trim() ||
+    (product.type === "membership"
+      ? "Memberships"
+      : product.type === "punch-pass"
+        ? "Punch Passes"
+        : product.type === "class"
+          ? "Classes"
+          : product.type === "camp"
+            ? "Camps"
+            : product.type === "retail"
+              ? "Retail"
+              : product.type === "comp"
+                ? "Comps"
+                : "Day Passes");
   return {
     ...product,
-    priceCents: normalizedPriceCents ?? 0
+    priceCents: normalizedPriceCents ?? 0,
+    tags: Array.isArray(product.tags) ? product.tags.filter(Boolean) : [],
+    displayType: defaultDisplayType
   };
 }
 
@@ -125,6 +144,32 @@ function normalizeCustomersForState(customers: Customer[]): Customer[] {
         : seeded.emergencyContactPhone
     };
   });
+}
+
+function mergeSeedCustomers(stored: Customer[]) {
+  const byId = new Map(stored.map((customer) => [customer.id, customer]));
+  const merged: Customer[] = [...stored];
+  for (const seeded of seedCustomers) {
+    if (!byId.has(seeded.id)) {
+      merged.push(seeded);
+    }
+  }
+  return merged;
+}
+
+function normalizeHouseholdMemberForState(member: HouseholdMember): HouseholdMember {
+  return {
+    ...member,
+    memberType:
+      member.memberType ??
+      (member.role === "child" || member.role === "dependent" ? "child" : "adult"),
+    relationship:
+      member.relationship === "guardian"
+        ? "parent_guardian"
+        : member.relationship === "partner" || member.relationship === "spouse"
+          ? "spouse_partner"
+          : member.relationship
+  };
 }
 
 function canCreateSaleCheckInSlot(product: PosProduct) {
@@ -186,7 +231,7 @@ interface CustomerStateContextValue {
       transactionId?: string;
       slotId?: string;
     }
-  ) => { ok: boolean; message: string };
+  ) => { ok: boolean; message: string; recordId?: string };
   checkOutRecord: (recordId: string, staffUserId: string, staffName?: string) => { ok: boolean; message: string };
   runCustomerCheckInAction: (
     customerId: string,
@@ -236,6 +281,32 @@ interface CustomerStateContextValue {
     createdByStaffId?: string;
     createdByStaffName?: string;
   }) => { ok: boolean; message: string; customerId?: string };
+  addStaffProfileToCustomer: (input: {
+    customerId: string;
+    staffId: string;
+    role: StaffRole;
+    status: "active" | "inactive" | "on_leave";
+    staffPin: string;
+    locations: string[];
+    assignedPrograms?: string[];
+    permissions?: StaffPermission[];
+    startDate?: string;
+    certifications?: string[];
+    staffNotes?: string;
+  }) => { ok: boolean; message: string };
+  updateStaffProfileForCustomer: (input: {
+    customerId: string;
+    role: StaffRole;
+    status: "active" | "inactive" | "on_leave";
+    staffPin: string;
+    locations: string[];
+    assignedPrograms?: string[];
+    permissions?: StaffPermission[];
+    startDate?: string;
+    certifications?: string[];
+    staffNotes?: string;
+  }) => { ok: boolean; message: string };
+  clearStaffProfileForCustomer: (customerId: string) => { ok: boolean; message: string };
   updateCustomerProfile: (input: {
     customerId: string;
     firstName: string;
@@ -294,28 +365,51 @@ interface CustomerStateContextValue {
   cancelSession: (sessionId: string, cancelledByStaffId?: string) => { ok: boolean; message: string };
   registerCustomerForSession: (input: { customerId: string; sessionId: string }) => { ok: boolean; message: string; registrationId?: string };
   cancelRegistration: (registrationId: string) => { ok: boolean; message: string };
+  promoteWaitlistedRegistration: (registrationId: string) => { ok: boolean; message: string };
+  moveRegistrationToWaitlist: (registrationId: string) => { ok: boolean; message: string };
+  markRegistrationAttendance: (
+    registrationId: string,
+    status: "attended" | "absent" | "late" | "excused" | "no_show" | "checked_in" | "completed",
+    updatedByStaffId?: string
+  ) => { ok: boolean; message: string };
   createProgram: (input: {
     title: string;
     description?: string;
     category: Program["category"];
+    programType?: Program["programType"];
     active: boolean;
     colorToken?: Program["colorToken"];
     defaultCapacity?: number;
     requiresWaiver?: boolean;
+    guardianRequired?: boolean;
+    memberRequired?: boolean;
+    dropInAllowed?: boolean;
+    pricingModel?: Program["pricingModel"];
+    basePriceCents?: number;
+    waitlistEnabled?: boolean;
     minimumAge?: number;
     maximumAge?: number;
+    tags?: string[];
   }) => { ok: boolean; message: string; programId?: string };
   updateProgram: (input: {
     id: string;
     title: string;
     description?: string;
     category: Program["category"];
+    programType?: Program["programType"];
     active: boolean;
     colorToken?: Program["colorToken"];
     defaultCapacity?: number;
     requiresWaiver?: boolean;
+    guardianRequired?: boolean;
+    memberRequired?: boolean;
+    dropInAllowed?: boolean;
+    pricingModel?: Program["pricingModel"];
+    basePriceCents?: number;
+    waitlistEnabled?: boolean;
     minimumAge?: number;
     maximumAge?: number;
+    tags?: string[];
   }) => { ok: boolean; message: string };
   createProduct: (
     input: Omit<PosProduct, "id" | "organizationId"> & { price: string | number }
@@ -325,6 +419,7 @@ interface CustomerStateContextValue {
     input: Omit<PosProduct, "id" | "organizationId"> & { price: string | number }
   ) => { ok: boolean; message: string };
   toggleProductActive: (productId: string) => { ok: boolean; message: string };
+  reorderQuickButtonProduct: (productId: string, direction: "up" | "down") => { ok: boolean; message: string };
   updateCustomerAccessRecord: (accessId: string, updates: Partial<CustomerAccessRecord>) => { ok: boolean; message: string };
   addCustomerAccessRecord: (record: Omit<CustomerAccessRecord, "id">) => { ok: boolean; message: string; accessId?: string };
   updateCustomerWaiver: (
@@ -351,6 +446,7 @@ interface CustomerStateContextValue {
   addHouseholdMember: (input: {
     householdId: string;
     customerId: string;
+    memberType: "adult" | "child";
     role: HouseholdMemberRole;
     relationship: HouseholdRelationship;
     canCheckInOthers: boolean;
@@ -362,7 +458,7 @@ interface CustomerStateContextValue {
   updateHouseholdMember: (
     householdId: string,
     customerId: string,
-    updates: Partial<Pick<HouseholdMember, "role" | "relationship" | "canCheckInOthers" | "canPurchaseForOthers" | "canSignWaivers" | "emergencyContactPriority">>
+    updates: Partial<Pick<HouseholdMember, "memberType" | "role" | "relationship" | "canCheckInOthers" | "canPurchaseForOthers" | "canSignWaivers" | "emergencyContactPriority">>
   ) => { ok: boolean; message: string };
   familyCheckIn: (input: {
     actingCustomerId: string;
@@ -393,68 +489,34 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     householdMembers: buildScopedMockKey("org_summit", "loc_001", "householdMembers")
   };
 
-  const initialStateRef = useRef<{
-    customers: Customer[];
-    memberships: Membership[];
-    punchPasses: PunchPass[];
-    transactions: PosTransaction[];
-    accessProducts: PosProduct[];
-    programs: Program[];
-    sessions: ClassCampSession[];
-    registrations: Registration[];
-    accessRecords: CustomerAccessRecord[];
-    waivers: Waiver[];
-    households: Household[];
-    householdMembers: HouseholdMember[];
-    checkIns: CheckInLogRecord[];
-  } | null>(null);
+  const seededProducts = seedPosProducts.map(normalizeProductForState);
+  const seededPrograms = seedPrograms.map(normalizeProgramForState);
+  const seededCheckIns = seedCheckInRecords.map((record) => ({
+    ...record,
+    checkedInByStaffId: record.checkedInByStaffId ?? record.staffUserId ?? "",
+    checkedInByStaffName: record.checkedInByStaffName
+  }));
 
-  if (!initialStateRef.current) {
-    const products = (loadMockState(storageKeys.products, seedPosProducts) as PosProduct[]).map(normalizeProductForState);
-    const programs = (loadMockState(storageKeys.programs, seedPrograms) as Program[]).map(normalizeProgramForState);
-    initialStateRef.current = {
-      customers: normalizeCustomersForState(loadMockState(storageKeys.customers, seedCustomers)),
-      memberships: loadMockState(storageKeys.memberships, seedMemberships),
-      punchPasses: loadMockState(storageKeys.passes, seedPunchPasses),
-      transactions: normalizeTransactions(
-        loadMockState(storageKeys.transactions, seedPosTransactions) as Partial<PosTransaction>[],
-        products
-      ),
-      accessProducts: products,
-      programs,
-      sessions: (loadMockState(storageKeys.sessions, seedSessions) as ClassCampSession[]).map((session) =>
-        normalizeSessionForState(session, programs)
-      ),
-      registrations: loadMockState(storageKeys.registrations, seedRegistrations),
-      accessRecords: loadMockState(storageKeys.accessRecords, seedAccessRecords) as CustomerAccessRecord[],
-      waivers: loadMockState(storageKeys.waivers, seedWaivers) as Waiver[],
-      households: loadMockState(storageKeys.households, seedHouseholds) as Household[],
-      householdMembers: loadMockState(storageKeys.householdMembers, seedHouseholdMembers) as HouseholdMember[],
-      checkIns: loadMockState(storageKeys.checkins, seedCheckInRecords).map((record) => ({
-        ...record,
-        checkedInByStaffId: record.checkedInByStaffId ?? record.staffUserId ?? "",
-        checkedInByStaffName: record.checkedInByStaffName
-      }))
-    };
-  }
-
-  const [customers, setCustomers] = useState<Customer[]>(initialStateRef.current.customers);
-  const [memberships, setMemberships] = useState<Membership[]>(initialStateRef.current.memberships);
-  const [punchPasses, setPunchPasses] = useState<PunchPass[]>(initialStateRef.current.punchPasses);
-  const [transactions, setTransactions] = useState<PosTransaction[]>(initialStateRef.current.transactions);
-  const [accessProducts, setAccessProducts] = useState<PosProduct[]>(initialStateRef.current.accessProducts);
-  const [programs, setPrograms] = useState<Program[]>(initialStateRef.current.programs);
-  const [sessions, setSessions] = useState<ClassCampSession[]>(initialStateRef.current.sessions);
-  const [registrations, setRegistrations] = useState<Registration[]>(initialStateRef.current.registrations);
-  const [customerAccessRecords, setCustomerAccessRecords] = useState<CustomerAccessRecord[]>(initialStateRef.current.accessRecords);
-  const [waivers, setWaivers] = useState<Waiver[]>(initialStateRef.current.waivers);
-  const [households, setHouseholds] = useState<Household[]>(initialStateRef.current.households);
-  const [householdMembers, setHouseholdMembers] = useState<HouseholdMember[]>(initialStateRef.current.householdMembers);
-  const [checkInLogRecords, setCheckInLogRecords] = useState<CheckInLogRecord[]>(initialStateRef.current.checkIns.map((record) => ({
-      ...record,
-      checkedInByStaffId: record.checkedInByStaffId ?? record.staffUserId ?? "",
-      checkedInByStaffName: record.checkedInByStaffName
-    })));
+  const [customers, setCustomers] = useState<Customer[]>(normalizeCustomersForState(seedCustomers));
+  const [memberships, setMemberships] = useState<Membership[]>(seedMemberships);
+  const [punchPasses, setPunchPasses] = useState<PunchPass[]>(seedPunchPasses);
+  const [transactions, setTransactions] = useState<PosTransaction[]>(
+    normalizeTransactions(seedPosTransactions as Partial<PosTransaction>[], seededProducts)
+  );
+  const [accessProducts, setAccessProducts] = useState<PosProduct[]>(seededProducts);
+  const [programs, setPrograms] = useState<Program[]>(seededPrograms);
+  const [sessions, setSessions] = useState<ClassCampSession[]>(
+    seedSessions.map((session) => normalizeSessionForState(session, seededPrograms))
+  );
+  const [registrations, setRegistrations] = useState<Registration[]>(seedRegistrations);
+  const [customerAccessRecords, setCustomerAccessRecords] = useState<CustomerAccessRecord[]>(seedAccessRecords);
+  const [waivers, setWaivers] = useState<Waiver[]>(seedWaivers);
+  const [households, setHouseholds] = useState<Household[]>(seedHouseholds);
+  const [householdMembers, setHouseholdMembers] = useState<HouseholdMember[]>(
+    seedHouseholdMembers.map(normalizeHouseholdMemberForState)
+  );
+  const [checkInLogRecords, setCheckInLogRecords] = useState<CheckInLogRecord[]>(seededCheckIns);
+  const [hydrated, setHydrated] = useState(false);
   const [activeDateKey, setActiveDateKey] = useState<string>(BASE_DATE);
   const activeLocationId = "loc_001";
 
@@ -502,46 +564,96 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
   };
 
   useEffect(() => {
+    const products = (loadMockState(storageKeys.products, seedPosProducts) as PosProduct[]).map(normalizeProductForState);
+    const storedPrograms = (loadMockState(storageKeys.programs, seedPrograms) as Program[]).map(normalizeProgramForState);
+    const storedCheckIns = loadMockState(storageKeys.checkins, seedCheckInRecords).map((record) => ({
+      ...record,
+      checkedInByStaffId: record.checkedInByStaffId ?? record.staffUserId ?? "",
+      checkedInByStaffName: record.checkedInByStaffName
+    }));
+
+    const loadedCustomers = loadMockState(storageKeys.customers, seedCustomers) as Customer[];
+    setCustomers(normalizeCustomersForState(mergeSeedCustomers(loadedCustomers)));
+    setMemberships(loadMockState(storageKeys.memberships, seedMemberships));
+    setPunchPasses(loadMockState(storageKeys.passes, seedPunchPasses));
+    setAccessProducts(products);
+    setPrograms(storedPrograms);
+    setSessions(
+      (loadMockState(storageKeys.sessions, seedSessions) as ClassCampSession[]).map((session) =>
+        normalizeSessionForState(session, storedPrograms)
+      )
+    );
+    setRegistrations(loadMockState(storageKeys.registrations, seedRegistrations));
+    setCustomerAccessRecords(loadMockState(storageKeys.accessRecords, seedAccessRecords) as CustomerAccessRecord[]);
+    setWaivers(loadMockState(storageKeys.waivers, seedWaivers) as Waiver[]);
+    setHouseholds(loadMockState(storageKeys.households, seedHouseholds) as Household[]);
+    setHouseholdMembers(
+      (loadMockState(storageKeys.householdMembers, seedHouseholdMembers) as HouseholdMember[]).map(
+        normalizeHouseholdMemberForState
+      )
+    );
+    setTransactions(
+      normalizeTransactions(loadMockState(storageKeys.transactions, seedPosTransactions) as Partial<PosTransaction>[], products)
+    );
+    setCheckInLogRecords(storedCheckIns);
+    setHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
     saveMockState(storageKeys.customers, customers);
-  }, [customers]);
+  }, [customers, hydrated]);
 
   useEffect(() => {
+    if (!hydrated) return;
     saveMockState(storageKeys.passes, punchPasses);
-  }, [punchPasses]);
+  }, [punchPasses, hydrated]);
   useEffect(() => {
+    if (!hydrated) return;
     saveMockState(storageKeys.memberships, memberships);
-  }, [memberships]);
+  }, [memberships, hydrated]);
   useEffect(() => {
+    if (!hydrated) return;
     saveMockState(storageKeys.transactions, transactions);
-  }, [transactions]);
+  }, [transactions, hydrated]);
   useEffect(() => {
+    if (!hydrated) return;
     saveMockState(storageKeys.products, accessProducts);
-  }, [accessProducts]);
+  }, [accessProducts, hydrated]);
   useEffect(() => {
+    if (!hydrated) return;
     saveMockState(storageKeys.programs, programs);
-  }, [programs]);
+  }, [programs, hydrated]);
   useEffect(() => {
+    if (!hydrated) return;
     saveMockState(storageKeys.sessions, sessions);
-  }, [sessions]);
+  }, [sessions, hydrated]);
   useEffect(() => {
+    if (!hydrated) return;
     saveMockState(storageKeys.registrations, registrations);
-  }, [registrations]);
+  }, [registrations, hydrated]);
   useEffect(() => {
+    if (!hydrated) return;
     saveMockState(storageKeys.accessRecords, customerAccessRecords);
-  }, [customerAccessRecords]);
+  }, [customerAccessRecords, hydrated]);
   useEffect(() => {
+    if (!hydrated) return;
     saveMockState(storageKeys.waivers, waivers);
-  }, [waivers]);
+  }, [waivers, hydrated]);
   useEffect(() => {
+    if (!hydrated) return;
     saveMockState(storageKeys.households, households);
-  }, [households]);
+  }, [households, hydrated]);
   useEffect(() => {
+    if (!hydrated) return;
     saveMockState(storageKeys.householdMembers, householdMembers);
-  }, [householdMembers]);
+  }, [householdMembers, hydrated]);
 
   useEffect(() => {
+    if (!hydrated) return;
     saveMockState(storageKeys.checkins, checkInLogRecords);
-  }, [checkInLogRecords]);
+  }, [checkInLogRecords, hydrated]);
 
   const checkOutRecord = (recordId: string, staffUserId: string, staffName?: string) => {
     if (!isActiveDateToday) return { ok: false, message: "Historical check-in logs are read-only." };
@@ -584,6 +696,33 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     if (!options.staffUserId) return { ok: false, message: "Select staff PIN to continue." };
     const customer = options.customerOverride ?? customers.find((entry) => entry.id === customerId);
     if (!customer) return { ok: false, message: "Customer not found." };
+
+    const householdMembership = householdMembers.find((entry) => entry.customerId === customer.id);
+    const isDependent = Boolean(
+      householdMembership &&
+        (householdMembership.memberType === "child" ||
+          householdMembership.role === "child" ||
+          householdMembership.role === "dependent")
+    );
+    if (isDependent && !options.overrideReason) {
+      const guardianApproved = householdMembers
+        .filter((entry) => entry.householdId === householdMembership!.householdId)
+        .some((entry) => {
+          if (entry.customerId === customer.id) return false;
+          if (!entry.canCheckInOthers) return false;
+          if (entry.memberType !== "adult" && entry.role !== "guardian" && entry.role !== "primary-adult" && entry.role !== "adult") return false;
+          return checkInLogRecords.some(
+            (record) =>
+              record.customerId === entry.customerId &&
+              record.locationId === activeLocationId &&
+              record.checkInTime.startsWith(activeDateKey) &&
+              record.status === "checked-in"
+          );
+        });
+      if (!guardianApproved) {
+        return { ok: false, message: "Guardian approval required before check-in." };
+      }
+    }
 
     const existing = checkInLogRecords.find(
       (record) =>
@@ -731,6 +870,29 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
 
     setCheckInLogRecords((prev) => [newRecord, ...prev]);
     setCustomers((prev) => prev.map((entry) => (entry.id === customerId ? { ...entry, checkInStatus: "in" } : entry)));
+    if (decision.sessionAccess) {
+      const matchingRegistration = registrations.find(
+        (entry) =>
+          entry.customerId === customerId &&
+          entry.sessionId === decision.sessionAccess?.sessionId &&
+          entry.status !== "cancelled" &&
+          entry.status !== "waitlisted"
+      );
+      if (matchingRegistration) {
+        setRegistrations((prev) =>
+          prev.map((entry) =>
+            entry.id === matchingRegistration.id
+              ? {
+                  ...entry,
+                  status: "checked_in",
+                  updatedAt: new Date().toISOString(),
+                  updatedByStaffId: options.staffUserId
+                }
+              : entry
+          )
+        );
+      }
+    }
 
     const accessUsedMessage =
       entryMethod === "membership"
@@ -745,7 +907,8 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     const warningSuffix = decision.warnings.length > 0 ? ` ${decision.warnings.join(" ")}` : "";
     return {
       ok: true,
-      message: `Check-in recorded for ${customer.firstName} ${customer.lastName}. ${accessUsedMessage}${warningSuffix}`.trim()
+      message: `Check-in recorded for ${customer.firstName} ${customer.lastName}. ${accessUsedMessage}${warningSuffix}`.trim(),
+      recordId: newRecord.id
     };
   };
 
@@ -1205,6 +1368,116 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     return { ok: true, message: `Customer created: ${firstName} ${lastName}.`, customerId: id };
   };
 
+  const addStaffProfileToCustomer = (input: {
+    customerId: string;
+    staffId: string;
+    role: StaffRole;
+    status: "active" | "inactive" | "on_leave";
+    staffPin: string;
+    locations: string[];
+    assignedPrograms?: string[];
+    permissions?: StaffPermission[];
+    startDate?: string;
+    certifications?: string[];
+    staffNotes?: string;
+  }) => {
+    if (!input.staffId.trim()) return { ok: false as const, message: "Staff ID is required." };
+    if (!input.staffPin.trim()) return { ok: false as const, message: "Staff PIN is required." };
+    if (input.locations.length === 0) return { ok: false as const, message: "At least one location is required." };
+
+    let foundCustomer = false;
+    let alreadyStaff = false;
+    setCustomers((prev) =>
+      prev.map((entry) => {
+        if (entry.id !== input.customerId) return entry;
+        foundCustomer = true;
+        if (entry.staffProfile?.isStaff) {
+          alreadyStaff = true;
+          return entry;
+        }
+        return {
+          ...entry,
+          staffProfile: {
+            isStaff: true,
+            staffId: input.staffId.trim(),
+            role: input.role,
+            status: input.status,
+            staffPin: input.staffPin.trim(),
+            locations: input.locations,
+            assignedPrograms: input.assignedPrograms ?? [],
+            permissions: input.permissions ?? [],
+            startDate: input.startDate,
+            certifications: input.certifications ?? [],
+            staffNotes: input.staffNotes,
+            lastActive: entry.staffProfile?.lastActive
+          }
+        };
+      })
+    );
+    if (!foundCustomer) return { ok: false as const, message: "Customer not found." };
+    if (alreadyStaff) return { ok: false as const, message: "Customer is already staff." };
+    return { ok: true as const, message: "Staff profile added." };
+  };
+
+  const updateStaffProfileForCustomer = (input: {
+    customerId: string;
+    role: StaffRole;
+    status: "active" | "inactive" | "on_leave";
+    staffPin: string;
+    locations: string[];
+    assignedPrograms?: string[];
+    permissions?: StaffPermission[];
+    startDate?: string;
+    certifications?: string[];
+    staffNotes?: string;
+  }) => {
+    const customer = customers.find((entry) => entry.id === input.customerId);
+    if (!customer) return { ok: false as const, message: "Customer not found." };
+    if (!customer.staffProfile?.isStaff) return { ok: false as const, message: "Customer is not staff." };
+    if (!input.staffPin.trim()) return { ok: false as const, message: "Staff PIN is required." };
+    if (input.locations.length === 0) return { ok: false as const, message: "At least one location is required." };
+
+    setCustomers((prev) =>
+      prev.map((entry) =>
+        entry.id !== input.customerId
+          ? entry
+          : {
+              ...entry,
+              staffProfile: {
+                ...entry.staffProfile!,
+                role: input.role,
+                status: input.status,
+                staffPin: input.staffPin.trim(),
+                locations: input.locations,
+                assignedPrograms: input.assignedPrograms ?? [],
+                permissions: input.permissions ?? [],
+                startDate: input.startDate,
+                certifications: input.certifications ?? [],
+                staffNotes: input.staffNotes
+              }
+            }
+      )
+    );
+    return { ok: true as const, message: "Staff profile updated." };
+  };
+
+  const clearStaffProfileForCustomer = (customerId: string) => {
+    const customer = customers.find((entry) => entry.id === customerId);
+    if (!customer) return { ok: false as const, message: "Customer not found." };
+    if (!customer.staffProfile?.isStaff) return { ok: false as const, message: "Customer is not staff." };
+    setCustomers((prev) =>
+      prev.map((entry) =>
+        entry.id !== customerId
+          ? entry
+          : {
+              ...entry,
+              staffProfile: undefined
+            }
+      )
+    );
+    return { ok: true as const, message: "Staff profile removed." };
+  };
+
   const updateCustomerProfile = (input: {
     customerId: string;
     firstName: string;
@@ -1478,18 +1751,76 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     if (!customer) return { ok: false, message: "Customer not found." };
     const session = sessions.find((entry) => entry.id === input.sessionId);
     if (!session) return { ok: false, message: "Session not found." };
+    const program = programs.find((entry) => entry.id === session.programId);
+    if (!program) return { ok: false, message: "Program not found." };
+
+    const waiver = customer.waiverId ? waivers.find((entry) => entry.id === customer.waiverId) : undefined;
+    const hasValidWaiver =
+      waiver?.status === "valid" &&
+      (!waiver.expiresAt || new Date(waiver.expiresAt).getTime() >= new Date(session.startsAt).getTime());
+    const dob = customer.dateOfBirth ? new Date(`${customer.dateOfBirth}T00:00:00Z`) : null;
+    const age =
+      dob && !Number.isNaN(dob.getTime())
+        ? Math.max(0, Math.floor((new Date(session.startsAt).getTime() - dob.getTime()) / (1000 * 60 * 60 * 24 * 365.2425)))
+        : undefined;
+    if (typeof program.minimumAge === "number" && typeof age === "number" && age < program.minimumAge) {
+      return { ok: false, message: "Blocked: Customer is below minimum age for this program." };
+    }
+    if (typeof program.maximumAge === "number" && typeof age === "number" && age > program.maximumAge) {
+      return { ok: false, message: "Blocked: Customer is above maximum age for this program." };
+    }
+    if (program.requiresWaiver && !hasValidWaiver) {
+      return { ok: false, message: "Blocked: Waiver missing or expired." };
+    }
+    if (program.memberRequired) {
+      const activeMembership = customerAccessRecords.some(
+        (entry) =>
+          entry.customerId === customer.id &&
+          entry.type === "membership" &&
+          entry.status === "active" &&
+          (!entry.expirationDate || entry.expirationDate >= session.startsAt.slice(0, 10))
+      );
+      if (!activeMembership) {
+        return { ok: false, message: "Warning: Customer is not an active member (drop-in fee may apply)." };
+      }
+    }
+    if (program.guardianRequired) {
+      const membership = householdMembers.find((entry) => entry.customerId === customer.id);
+      const hasGuardian = Boolean(
+        membership &&
+          householdMembers.some(
+            (entry) =>
+              entry.householdId === membership.householdId &&
+              entry.customerId !== customer.id &&
+              entry.memberType === "adult" &&
+              (entry.relationship === "parent_guardian" || entry.role === "guardian" || entry.role === "primary-adult")
+          )
+      );
+      if (!hasGuardian) return { ok: false, message: "Blocked: Guardian required." };
+    }
 
     const existing = registrations.find((entry) => entry.customerId === input.customerId && entry.sessionId === input.sessionId && entry.status !== "cancelled");
     if (existing) return { ok: false, message: `${customer.firstName} ${customer.lastName} is already registered.` };
     const sessionIsFull = session.enrolled >= session.capacity;
     if (sessionIsFull && !session.waitlistEnabled) return { ok: false, message: "Session is full." };
+    const waitlistPosition = sessionIsFull
+      ? registrations.filter((entry) => entry.sessionId === session.id && entry.status === "waitlisted").length + 1
+      : undefined;
 
     const registrationId = `reg_${Math.random().toString(36).slice(2, 9)}`;
     const registration: Registration = {
       id: registrationId,
       customerId: customer.id,
       sessionId: session.id,
-      status: sessionIsFull ? "waitlisted" : "confirmed"
+      status: sessionIsFull ? "waitlisted" : "confirmed",
+      waitlistPosition,
+      registeredAt: new Date().toISOString(),
+      paymentStatus:
+        program.pricingModel === "free"
+          ? "paid"
+          : program.pricingModel === "included_membership"
+            ? "included"
+            : "unpaid"
     };
 
     setRegistrations((prev) => [registration, ...prev]);
@@ -1504,7 +1835,13 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
           : entry
       )
     );
-    return { ok: true, message: `Registration confirmed for ${customer.firstName} ${customer.lastName}.`, registrationId };
+    return {
+      ok: true,
+      message: sessionIsFull
+        ? `${customer.firstName} ${customer.lastName} added to waitlist (#${waitlistPosition}).`
+        : `Registration confirmed for ${customer.firstName} ${customer.lastName}.`,
+      registrationId
+    };
   };
 
   const cancelRegistration = (registrationId: string) => {
@@ -1512,29 +1849,147 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     if (!existing) return { ok: false as const, message: "Registration not found." };
     if (existing.status === "cancelled") return { ok: true as const, message: "Registration already cancelled." };
 
-    setRegistrations((prev) => prev.map((entry) => (entry.id === registrationId ? { ...entry, status: "cancelled" } : entry)));
+    let promotedId: string | null = null;
+    setRegistrations((prev) => {
+      const next: Registration[] = prev.map((entry) =>
+        entry.id === registrationId ? { ...entry, status: "cancelled" as const } : entry
+      );
+      if (existing.status !== "waitlisted") {
+        const waitlisted = next
+          .filter((entry) => entry.sessionId === existing.sessionId && entry.status === "waitlisted")
+          .sort((a, b) => (a.waitlistPosition ?? 999) - (b.waitlistPosition ?? 999));
+        if (waitlisted.length > 0) {
+          promotedId = waitlisted[0].id;
+          const promoted: Registration[] = next.map((entry) =>
+            entry.id === waitlisted[0].id
+              ? { ...entry, status: "confirmed" as const, waitlistPosition: undefined, updatedAt: new Date().toISOString() }
+              : entry.sessionId === existing.sessionId && entry.status === "waitlisted" && (entry.waitlistPosition ?? 999) > (waitlisted[0].waitlistPosition ?? 999)
+                ? { ...entry, waitlistPosition: Math.max((entry.waitlistPosition ?? 2) - 1, 1) }
+                : entry
+          );
+          return promoted;
+        }
+      }
+      return next;
+    });
     setSessions((prev) =>
       prev.map((entry) => {
         if (entry.id !== existing.sessionId) return entry;
         if (existing.status === "waitlisted") {
           return { ...entry, waitlistCount: Math.max((entry.waitlistCount ?? 0) - 1, 0) };
         }
-        return { ...entry, enrolled: Math.max(entry.enrolled - 1, 0) };
+        return {
+          ...entry,
+          enrolled: Math.max(entry.enrolled - 1, 0) + (promotedId ? 1 : 0),
+          waitlistCount: promotedId ? Math.max((entry.waitlistCount ?? 1) - 1, 0) : entry.waitlistCount
+        };
       })
     );
-    return { ok: true as const, message: "Registration cancelled." };
+    return { ok: true as const, message: promotedId ? "Registration cancelled. Waitlist promoted automatically." : "Registration cancelled." };
+  };
+
+  const promoteWaitlistedRegistration = (registrationId: string) => {
+    const existing = registrations.find((entry) => entry.id === registrationId);
+    if (!existing) return { ok: false as const, message: "Registration not found." };
+    if (existing.status !== "waitlisted") return { ok: false as const, message: "Only waitlisted registrations can be promoted." };
+    const session = sessions.find((entry) => entry.id === existing.sessionId);
+    if (!session) return { ok: false as const, message: "Session not found." };
+    if (session.enrolled >= session.capacity) return { ok: false as const, message: "Session is still full." };
+
+    setRegistrations((prev) =>
+      prev.map((entry) =>
+        entry.id === registrationId
+          ? { ...entry, status: "confirmed", waitlistPosition: undefined, updatedAt: new Date().toISOString() }
+          : entry.sessionId === existing.sessionId && entry.status === "waitlisted" && (entry.waitlistPosition ?? 999) > (existing.waitlistPosition ?? 999)
+            ? { ...entry, waitlistPosition: Math.max((entry.waitlistPosition ?? 2) - 1, 1) }
+            : entry
+      )
+    );
+    setSessions((prev) =>
+      prev.map((entry) =>
+        entry.id === existing.sessionId
+          ? { ...entry, enrolled: entry.enrolled + 1, waitlistCount: Math.max((entry.waitlistCount ?? 1) - 1, 0) }
+          : entry
+      )
+    );
+    return { ok: true as const, message: "Waitlisted registration promoted." };
+  };
+
+  const moveRegistrationToWaitlist = (registrationId: string) => {
+    const existing = registrations.find((entry) => entry.id === registrationId);
+    if (!existing) return { ok: false as const, message: "Registration not found." };
+    if (existing.status === "waitlisted") return { ok: true as const, message: "Registration already waitlisted." };
+    if (existing.status === "cancelled") return { ok: false as const, message: "Cancelled registrations cannot be waitlisted." };
+    const session = sessions.find((entry) => entry.id === existing.sessionId);
+    if (!session) return { ok: false as const, message: "Session not found." };
+    if (!session.waitlistEnabled) return { ok: false as const, message: "Waitlist is not enabled for this session." };
+
+    const nextWaitlistPosition =
+      registrations
+        .filter((entry) => entry.sessionId === existing.sessionId && entry.status === "waitlisted")
+        .reduce((max, entry) => Math.max(max, entry.waitlistPosition ?? 0), 0) + 1;
+
+    setRegistrations((prev) =>
+      prev.map((entry) =>
+        entry.id === registrationId
+          ? {
+              ...entry,
+              status: "waitlisted",
+              waitlistPosition: nextWaitlistPosition,
+              updatedAt: new Date().toISOString()
+            }
+          : entry
+      )
+    );
+    setSessions((prev) =>
+      prev.map((entry) =>
+        entry.id === existing.sessionId
+          ? {
+              ...entry,
+              enrolled: Math.max(entry.enrolled - 1, 0),
+              waitlistCount: (entry.waitlistCount ?? 0) + 1
+            }
+          : entry
+      )
+    );
+    return { ok: true as const, message: "Registration moved to waitlist." };
+  };
+
+  const markRegistrationAttendance = (
+    registrationId: string,
+    status: "attended" | "absent" | "late" | "excused" | "no_show" | "checked_in" | "completed",
+    updatedByStaffId?: string
+  ) => {
+    const existing = registrations.find((entry) => entry.id === registrationId);
+    if (!existing) return { ok: false as const, message: "Registration not found." };
+    setRegistrations((prev) =>
+      prev.map((entry) =>
+        entry.id === registrationId
+          ? { ...entry, status, updatedAt: new Date().toISOString(), updatedByStaffId: updatedByStaffId ?? entry.updatedByStaffId }
+          : entry
+      )
+    );
+    return { ok: true as const, message: `Marked ${status}.` };
   };
 
   const createProgram = (input: {
     title: string;
     description?: string;
     category: Program["category"];
+    programType?: Program["programType"];
     active: boolean;
     colorToken?: Program["colorToken"];
     defaultCapacity?: number;
     requiresWaiver?: boolean;
+    guardianRequired?: boolean;
+    memberRequired?: boolean;
+    dropInAllowed?: boolean;
+    pricingModel?: Program["pricingModel"];
+    basePriceCents?: number;
+    waitlistEnabled?: boolean;
     minimumAge?: number;
     maximumAge?: number;
+    tags?: string[];
   }) => {
     const title = input.title.trim();
     if (!title) return { ok: false as const, message: "Program name is required." };
@@ -1545,12 +2000,20 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       title,
       description: input.description?.trim() || undefined,
       category: input.category,
+      programType: input.programType,
       active: input.active,
       colorToken: input.colorToken,
       defaultCapacity: input.defaultCapacity,
       requiresWaiver: input.requiresWaiver,
+      guardianRequired: input.guardianRequired,
+      memberRequired: input.memberRequired,
+      dropInAllowed: input.dropInAllowed,
+      pricingModel: input.pricingModel,
+      basePriceCents: Number.isFinite(input.basePriceCents) ? input.basePriceCents : undefined,
+      waitlistEnabled: input.waitlistEnabled,
       minimumAge: Number.isFinite(input.minimumAge) ? input.minimumAge : undefined,
-      maximumAge: Number.isFinite(input.maximumAge) ? input.maximumAge : undefined
+      maximumAge: Number.isFinite(input.maximumAge) ? input.maximumAge : undefined,
+      tags: input.tags?.filter(Boolean)
     };
     setPrograms((prev) => [next, ...prev]);
     return { ok: true as const, message: `Program created: ${title}.`, programId: id };
@@ -1561,12 +2024,20 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     title: string;
     description?: string;
     category: Program["category"];
+    programType?: Program["programType"];
     active: boolean;
     colorToken?: Program["colorToken"];
     defaultCapacity?: number;
     requiresWaiver?: boolean;
+    guardianRequired?: boolean;
+    memberRequired?: boolean;
+    dropInAllowed?: boolean;
+    pricingModel?: Program["pricingModel"];
+    basePriceCents?: number;
+    waitlistEnabled?: boolean;
     minimumAge?: number;
     maximumAge?: number;
+    tags?: string[];
   }) => {
     const existing = programs.find((entry) => entry.id === input.id);
     if (!existing) return { ok: false as const, message: "Program not found." };
@@ -1580,12 +2051,20 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
               title,
               description: input.description?.trim() || undefined,
               category: input.category,
+              programType: input.programType,
               active: input.active,
               colorToken: input.colorToken,
               defaultCapacity: input.defaultCapacity,
               requiresWaiver: input.requiresWaiver,
+              guardianRequired: input.guardianRequired,
+              memberRequired: input.memberRequired,
+              dropInAllowed: input.dropInAllowed,
+              pricingModel: input.pricingModel,
+              basePriceCents: Number.isFinite(input.basePriceCents) ? input.basePriceCents : undefined,
+              waitlistEnabled: input.waitlistEnabled,
               minimumAge: Number.isFinite(input.minimumAge) ? input.minimumAge : undefined,
-              maximumAge: Number.isFinite(input.maximumAge) ? input.maximumAge : undefined
+              maximumAge: Number.isFinite(input.maximumAge) ? input.maximumAge : undefined,
+              tags: input.tags?.filter(Boolean)
             }
           : entry
       )
@@ -1619,7 +2098,14 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     if (!parsed.ok) return parsed;
 
     const id = `prd_${Math.random().toString(36).slice(2, 9)}`;
-    const next: PosProduct = normalizeProductForState({ ...parsed.product, id, organizationId: "org_summit" });
+    const maxQuickRank = accessProducts.reduce((max, product) => Math.max(max, product.quickButtonRank ?? 0), 0);
+    const next: PosProduct = normalizeProductForState({
+      ...parsed.product,
+      id,
+      organizationId: "org_summit",
+      quickButtonRank: parsed.product.showAsQuickButton ? maxQuickRank + 1 : undefined,
+      updatedAt: new Date().toISOString()
+    });
     setAccessProducts((prev) => [next, ...prev]);
     return { ok: true as const, message: `Product created: ${next.name}.`, productId: id };
   };
@@ -1630,7 +2116,15 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     const existing = accessProducts.find((entry) => entry.id === productId);
     if (!existing) return { ok: false as const, message: "Product not found." };
 
-    const next: PosProduct = normalizeProductForState({ ...existing, ...parsed.product });
+    const next: PosProduct = normalizeProductForState({
+      ...existing,
+      ...parsed.product,
+      quickButtonRank:
+        parsed.product.showAsQuickButton
+          ? existing.quickButtonRank ?? accessProducts.filter((entry) => entry.showAsQuickButton).length + 1
+          : undefined,
+      updatedAt: new Date().toISOString()
+    });
     setAccessProducts((prev) => prev.map((entry) => (entry.id === productId ? next : entry)));
     return { ok: true as const, message: `Product updated: ${next.name}.` };
   };
@@ -1642,10 +2136,45 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     return { ok: true as const, message: `${existing.name} ${existing.active === false ? "activated" : "deactivated"}.` };
   };
 
+  const reorderQuickButtonProduct = (productId: string, direction: "up" | "down") => {
+    const current = accessProducts.find((entry) => entry.id === productId);
+    if (!current) return { ok: false as const, message: "Product not found." };
+    if (!current.showAsQuickButton) return { ok: false as const, message: "Product is not a quick button." };
+
+    const quick = accessProducts
+      .filter((entry) => entry.showAsQuickButton)
+      .sort((a, b) => (a.quickButtonRank ?? 999) - (b.quickButtonRank ?? 999));
+    const idx = quick.findIndex((entry) => entry.id === productId);
+    if (idx < 0) return { ok: false as const, message: "Quick button product not found." };
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= quick.length) return { ok: true as const, message: "No change." };
+
+    const nextQuick = [...quick];
+    const tmp = nextQuick[idx];
+    nextQuick[idx] = nextQuick[swapIdx];
+    nextQuick[swapIdx] = tmp;
+    const rankMap = new Map(nextQuick.map((entry, index) => [entry.id, index + 1]));
+
+    setAccessProducts((prev) =>
+      prev.map((entry) =>
+        entry.showAsQuickButton
+          ? { ...entry, quickButtonRank: rankMap.get(entry.id) ?? entry.quickButtonRank }
+          : entry
+      )
+    );
+    return { ok: true as const, message: "Quick button order updated." };
+  };
+
   const updateCustomerAccessRecord = (accessId: string, updates: Partial<CustomerAccessRecord>) => {
     const existing = customerAccessRecords.find((entry) => entry.id === accessId);
     if (!existing) return { ok: false as const, message: "Access record not found." };
-    setCustomerAccessRecords((prev) => prev.map((entry) => (entry.id === accessId ? { ...entry, ...updates } : entry)));
+    setCustomerAccessRecords((prev) =>
+      prev.map((entry) =>
+        entry.id === accessId
+          ? { ...entry, ...updates, updatedAt: new Date().toISOString() }
+          : entry
+      )
+    );
     return { ok: true as const, message: "Access record updated." };
   };
 
@@ -1732,8 +2261,9 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         {
           householdId,
           customerId: input.primaryContactCustomerId,
+          memberType: "adult",
           role: "primary-adult",
-          relationship: "guardian",
+          relationship: "parent_guardian",
           canCheckInOthers: true,
           canPurchaseForOthers: true,
           canSignWaivers: true,
@@ -1748,6 +2278,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
   const addHouseholdMember = (input: {
     householdId: string;
     customerId: string;
+    memberType: "adult" | "child";
     role: HouseholdMemberRole;
     relationship: HouseholdRelationship;
     canCheckInOthers: boolean;
@@ -1767,6 +2298,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       {
         householdId: input.householdId,
         customerId: input.customerId,
+        memberType: input.memberType,
         role: input.role,
         relationship: input.relationship,
         canCheckInOthers: input.canCheckInOthers,
@@ -1797,6 +2329,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       Pick<
         HouseholdMember,
         "role" | "relationship" | "canCheckInOthers" | "canPurchaseForOthers" | "canSignWaivers" | "emergencyContactPriority"
+        | "memberType"
       >
     >
   ) => {
@@ -1913,6 +2446,9 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       assignSaleCheckInSlotCustomer,
       fulfillSaleCheckInSlot,
       addCustomer,
+      addStaffProfileToCustomer,
+      updateStaffProfileForCustomer,
+      clearStaffProfileForCustomer,
       updateCustomerProfile,
       addCustomerRelationship,
       removeCustomerRelationship,
@@ -1921,11 +2457,15 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       cancelSession,
       registerCustomerForSession,
       cancelRegistration,
+      promoteWaitlistedRegistration,
+      moveRegistrationToWaitlist,
+      markRegistrationAttendance,
       createProgram,
       updateProgram,
       createProduct,
       updateProduct,
       toggleProductActive,
+      reorderQuickButtonProduct,
       updateCustomerAccessRecord,
       addCustomerAccessRecord,
       updateCustomerWaiver,
@@ -1948,7 +2488,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         setCustomerAccessRecords(seedAccessRecords);
         setWaivers(seedWaivers);
         setHouseholds(seedHouseholds);
-        setHouseholdMembers(seedHouseholdMembers);
+        setHouseholdMembers(seedHouseholdMembers.map(normalizeHouseholdMemberForState));
         clearScopedMockState(
           "org_summit",
           "loc_001",

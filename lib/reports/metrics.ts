@@ -132,7 +132,11 @@ const EMPTY_REPORT_MODEL = {
     uniqueVisitors: 0,
     repeatVisitors: 0,
     averageVisitDurationMinutes: 0,
-    topVisitors: [] as Array<{ customerId: string; customerName: string; visits: number }>
+    topVisitors: [] as Array<{ customerId: string; customerName: string; visits: number }>,
+    showUpRate: 0,
+    fillRate: 0,
+    waitlistUtilization: 0,
+    instructorAttendance: [] as Array<{ instructor: string; attendanceRate: number; attended: number; total: number }>
   },
   csvRows: [] as Array<{ receipt: string; date: string; customer: string; staff: string; category: string; total: string; items: string }>
 };
@@ -593,6 +597,58 @@ export function buildReportModel(input: ReportInput) {
     }))
     .sort((a, b) => b.visits - a.visits)
     .slice(0, 8);
+  const attendanceEligible = scopedRegistrations.filter((entry) =>
+    entry.status === "confirmed" ||
+    entry.status === "attended" ||
+    entry.status === "checked_in" ||
+    entry.status === "completed" ||
+    entry.status === "late" ||
+    entry.status === "absent" ||
+    entry.status === "no_show" ||
+    entry.status === "excused"
+  );
+  const showUps = scopedRegistrations.filter((entry) =>
+    entry.status === "attended" || entry.status === "checked_in" || entry.status === "completed" || entry.status === "late"
+  ).length;
+  const totalCapacity = scopedSessions.reduce((sum, session) => sum + session.capacity, 0);
+  const totalEnrolled = scopedSessions.reduce((sum, session) => sum + session.enrolled, 0);
+  const totalWaitlisted = scopedSessions.reduce((sum, session) => sum + (session.waitlistCount ?? 0), 0);
+  const instructorAttendanceMap = new Map<string, { attended: number; total: number }>();
+  scopedRegistrations.forEach((registration) => {
+    const session = sessionsById.get(registration.sessionId);
+    if (!session) return;
+    const instructor = session.instructorName ?? "Unassigned";
+    const current = instructorAttendanceMap.get(instructor) ?? { attended: 0, total: 0 };
+    if (
+      registration.status === "confirmed" ||
+      registration.status === "attended" ||
+      registration.status === "checked_in" ||
+      registration.status === "completed" ||
+      registration.status === "late" ||
+      registration.status === "absent" ||
+      registration.status === "no_show" ||
+      registration.status === "excused"
+    ) {
+      current.total += 1;
+    }
+    if (
+      registration.status === "attended" ||
+      registration.status === "checked_in" ||
+      registration.status === "completed" ||
+      registration.status === "late"
+    ) {
+      current.attended += 1;
+    }
+    instructorAttendanceMap.set(instructor, current);
+  });
+  const instructorAttendance = Array.from(instructorAttendanceMap.entries())
+    .map(([instructor, value]) => ({
+      instructor,
+      attended: value.attended,
+      total: value.total,
+      attendanceRate: value.total > 0 ? Number(((value.attended / value.total) * 100).toFixed(1)) : 0
+    }))
+    .sort((a, b) => b.attendanceRate - a.attendanceRate);
 
   return {
     range: { start, end },
@@ -679,7 +735,11 @@ export function buildReportModel(input: ReportInput) {
       uniqueVisitors,
       repeatVisitors: repeatVisits,
       averageVisitDurationMinutes,
-      topVisitors
+      topVisitors,
+      showUpRate: attendanceEligible.length > 0 ? Number(((showUps / attendanceEligible.length) * 100).toFixed(1)) : 0,
+      fillRate: totalCapacity > 0 ? Number(((totalEnrolled / totalCapacity) * 100).toFixed(1)) : 0,
+      waitlistUtilization: totalEnrolled + totalWaitlisted > 0 ? Number(((totalWaitlisted / (totalEnrolled + totalWaitlisted)) * 100).toFixed(1)) : 0,
+      instructorAttendance
     },
     csvRows
   };

@@ -384,7 +384,7 @@ interface CustomerStateContextValue {
     updatedByStaffId?: string;
   }) => { ok: boolean; message: string };
   cancelSession: (sessionId: string, cancelledByStaffId?: string) => { ok: boolean; message: string };
-  registerCustomerForSession: (input: { customerId: string; sessionId: string }) => { ok: boolean; message: string; registrationId?: string };
+  registerCustomerForSession: (input: { customerId: string; sessionId: string; override?: boolean }) => { ok: boolean; message: string; registrationId?: string };
   cancelRegistration: (registrationId: string) => { ok: boolean; message: string };
   promoteWaitlistedRegistration: (registrationId: string) => { ok: boolean; message: string };
   moveRegistrationToWaitlist: (registrationId: string) => { ok: boolean; message: string };
@@ -1937,7 +1937,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     return { ok: true as const, message: `${existing.title ?? "Session"} cancelled.` };
   };
 
-  const registerCustomerForSession = (input: { customerId: string; sessionId: string }) => {
+  const registerCustomerForSession = (input: { customerId: string; sessionId: string; override?: boolean }) => {
     const customer = customers.find((entry) => entry.id === input.customerId);
     if (!customer) return { ok: false, message: "Customer not found." };
     const session = sessions.find((entry) => entry.id === input.sessionId);
@@ -1954,16 +1954,16 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       dob && !Number.isNaN(dob.getTime())
         ? Math.max(0, Math.floor((new Date(session.startsAt).getTime() - dob.getTime()) / (1000 * 60 * 60 * 24 * 365.2425)))
         : undefined;
-    if (typeof program.minimumAge === "number" && typeof age === "number" && age < program.minimumAge) {
+    if (!input.override && typeof program.minimumAge === "number" && typeof age === "number" && age < program.minimumAge) {
       return { ok: false, message: "Blocked: Customer is below minimum age for this program." };
     }
-    if (typeof program.maximumAge === "number" && typeof age === "number" && age > program.maximumAge) {
+    if (!input.override && typeof program.maximumAge === "number" && typeof age === "number" && age > program.maximumAge) {
       return { ok: false, message: "Blocked: Customer is above maximum age for this program." };
     }
-    if (program.requiresWaiver && !hasValidWaiver) {
+    if (!input.override && program.requiresWaiver && !hasValidWaiver) {
       return { ok: false, message: "Blocked: Waiver missing or expired." };
     }
-    if (program.memberRequired) {
+    if (!input.override && program.memberRequired) {
       const activeMembership = customerAccessRecords.some(
         (entry) =>
           entry.customerId === customer.id &&
@@ -1975,7 +1975,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         return { ok: false, message: "Warning: Customer is not an active member (drop-in fee may apply)." };
       }
     }
-    if (program.guardianRequired) {
+    if (!input.override && program.guardianRequired) {
       const membership = householdMembers.find((entry) => entry.customerId === customer.id);
       const hasGuardian = Boolean(
         membership &&
@@ -2030,7 +2030,9 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       ok: true,
       message: sessionIsFull
         ? `${customer.firstName} ${customer.lastName} added to waitlist (#${waitlistPosition}).`
-        : `Registration confirmed for ${customer.firstName} ${customer.lastName}.`,
+        : input.override
+          ? `Registration override confirmed for ${customer.firstName} ${customer.lastName}.`
+          : `Registration confirmed for ${customer.firstName} ${customer.lastName}.`,
       registrationId
     };
   };

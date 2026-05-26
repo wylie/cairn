@@ -444,19 +444,35 @@ export default function ReportsPage() {
               <MetricCard title="Repeat Visitors" value={report.attendance.repeatVisitors} />
               <MetricCard title="Avg Visit Duration" value={`${report.attendance.averageVisitDurationMinutes} min`} />
             </div>
+            <div className="grid gap-3 md:grid-cols-3">
+              <StatusCard title="Show-up Rate" value={`${report.attendance.showUpRate}%`} />
+              <StatusCard title="Fill Rate" value={`${report.attendance.fillRate}%`} />
+              <StatusCard title="Waitlist Utilization" value={`${report.attendance.waitlistUtilization}%`} />
+            </div>
             <div className="grid gap-3 lg:grid-cols-2">
               <BarBreakdownCard title="Visits by Hour" data={report.trends.byHour.map((row) => ({ label: row.label, visits: row.count }))} bars={[{ key: "visits", color: "#2563eb", name: "Visits" }]} />
               <BarBreakdownCard title="Visits by Day" data={report.trends.byDay.map((row) => ({ label: row.label, visits: row.count }))} bars={[{ key: "visits", color: "#7c3aed", name: "Visits" }]} />
             </div>
-            <ListCard
-              title="Top Visitors"
-              emptyText="No attendance data available."
-              items={report.attendance.topVisitors.map((entry) => ({
-                id: entry.customerId,
-                primary: entry.customerName,
-                secondary: `${entry.visits} visits`
-              }))}
-            />
+            <div className="grid gap-3 lg:grid-cols-2">
+              <ListCard
+                title="Top Visitors"
+                emptyText="No attendance data available."
+                items={report.attendance.topVisitors.map((entry) => ({
+                  id: entry.customerId,
+                  primary: entry.customerName,
+                  secondary: `${entry.visits} visits`
+                }))}
+              />
+              <ListCard
+                title="Instructor Attendance Trend"
+                emptyText="No instructor attendance data available."
+                items={report.attendance.instructorAttendance.map((entry) => ({
+                  id: entry.instructor,
+                  primary: entry.instructor,
+                  secondary: `${entry.attendanceRate}% attendance (${entry.attended}/${entry.total})`
+                }))}
+              />
+            </div>
           </div>
         ) : null}
 

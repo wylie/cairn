@@ -12,7 +12,7 @@ import {
   buildSessionCards,
   filterScheduleSessions,
   sortSessionsByStart,
-  type ScheduleView
+type ScheduleView
 } from "@/lib/data/session-schedule";
 import { data } from "@/lib/data";
 import { useCustomerState } from "@/lib/state/customer-state";
@@ -67,6 +67,24 @@ function buildRecurringDates(startDate: string, pattern: "none" | "weekly" | "ca
 
 const CALENDAR_VIEW_STORAGE_KEY = "cairn:calendar:view";
 const VIEW_OPTIONS: ScheduleView[] = ["day", "week", "month", "agenda"];
+type SessionActivityEvent = {
+  id: string;
+  sessionId: string;
+  customerName?: string;
+  action: "registered" | "removed" | "waitlisted" | "promoted" | "checked_in" | "marked_absent";
+  occurredAt: string;
+  staffName?: string;
+};
+type DragMoveState = {
+  sessionId: string;
+  fromDate: string;
+  fromStart: string;
+  fromEnd: string;
+  toDate: string;
+  toStart: string;
+  toEnd: string;
+  view: ScheduleView;
+};
 
 export default function CalendarPage() {
   const {
@@ -113,6 +131,10 @@ export default function CalendarPage() {
   const [conflictWarning, setConflictWarning] = useState("");
   const [createPrefill, setCreatePrefill] = useState<{ date: string; startTime: string; endTime: string } | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [sessionActivityEvents, setSessionActivityEvents] = useState<SessionActivityEvent[]>([]);
+  const [dragSessionId, setDragSessionId] = useState<string | null>(null);
+  const [moveDraft, setMoveDraft] = useState<DragMoveState | null>(null);
+  const [activeDropTarget, setActiveDropTarget] = useState<string | null>(null);
 
   useEffect(() => {
     setIsHydrated(true);
@@ -210,6 +232,23 @@ export default function CalendarPage() {
     }
     return { ok: true as const };
   };
+  const recordSessionEvent = (
+    sessionId: string,
+    action: SessionActivityEvent["action"],
+    customerName?: string
+  ) => {
+    setSessionActivityEvents((prev) => [
+      {
+        id: `evt_${Math.random().toString(36).slice(2, 9)}`,
+        sessionId,
+        action,
+        customerName,
+        occurredAt: new Date().toISOString(),
+        staffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
+      },
+      ...prev
+    ]);
+  };
   const getInstructorConflict = (input: { instructorStaffId?: string; startsAt: string; endsAt: string; sessionId?: string }) => {
     if (!input.instructorStaffId) return null;
     const overlap = sessions.find((entry) => {
@@ -220,6 +259,105 @@ export default function CalendarPage() {
     });
     if (!overlap) return null;
     return `Instructor conflict detected: ${overlap.title ?? "Session"} at ${new Date(overlap.startsAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}.`;
+  };
+  const getLocationConflict = (input: { locationId?: string; startsAt: string; endsAt: string; sessionId?: string }) => {
+    if (!input.locationId) return null;
+    const overlap = sessions.find((entry) => {
+      if (input.sessionId && entry.id === input.sessionId) return false;
+      if (entry.status === "cancelled") return false;
+      if (entry.locationId !== input.locationId) return false;
+      return input.startsAt < entry.endsAt && input.endsAt > entry.startsAt;
+    });
+    if (!overlap) return null;
+    return `Location conflict detected: ${overlap.title ?? "Session"} overlaps at ${new Date(overlap.startsAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}.`;
+  };
+  const startDragSession = (sessionId: string) => {
+    setDragSessionId(sessionId);
+  };
+  const createMoveDraft = (target: { date: string; startHour?: number }, mode: "slot" | "date") => {
+    if (!dragSessionId) return;
+    const session = sessions.find((entry) => entry.id === dragSessionId);
+    if (!session) return;
+    const start = new Date(session.startsAt);
+    const end = new Date(session.endsAt);
+    const durationMs = Math.max(end.getTime() - start.getTime(), 30 * 60 * 1000);
+    const nextStart = new Date(`${target.date}T00:00:00`);
+    if (mode === "slot" && typeof target.startHour === "number") {
+      nextStart.setHours(target.startHour, 0, 0, 0);
+    } else {
+      nextStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
+    }
+    const nextEnd = new Date(nextStart.getTime() + durationMs);
+    setMoveDraft({
+      sessionId: session.id,
+      fromDate: session.startsAt.slice(0, 10),
+      fromStart: session.startsAt,
+      fromEnd: session.endsAt,
+      toDate: target.date,
+      toStart: nextStart.toISOString(),
+      toEnd: nextEnd.toISOString(),
+      view
+    });
+    setActiveDropTarget(null);
+  };
+  const confirmMoveSession = () => {
+    if (!moveDraft) return;
+    const session = sessions.find((entry) => entry.id === moveDraft.sessionId);
+    if (!session) {
+      setMoveDraft(null);
+      return;
+    }
+    const instructorConflict = getInstructorConflict({
+      instructorStaffId: session.instructorStaffId,
+      startsAt: moveDraft.toStart,
+      endsAt: moveDraft.toEnd,
+      sessionId: session.id
+    });
+    const locationConflict = getLocationConflict({
+      locationId: session.locationId,
+      startsAt: moveDraft.toStart,
+      endsAt: moveDraft.toEnd,
+      sessionId: session.id
+    });
+    if ((instructorConflict || locationConflict) && !activeStaff?.permissions.includes("overrideAccess")) {
+      setWarning(instructorConflict ?? locationConflict ?? "Conflict detected.");
+      setMoveDraft(null);
+      return;
+    }
+    const result = updateSession({
+      sessionId: session.id,
+      title: session.title,
+      programId: session.programId,
+      locationId: session.locationId,
+      startsAt: moveDraft.toStart,
+      endsAt: moveDraft.toEnd,
+      instructorName: session.instructorName,
+      instructorStaffId: session.instructorStaffId,
+      capacity: session.capacity,
+      waitlistEnabled: session.waitlistEnabled ?? false,
+      notes: session.notes,
+      updatedByStaffId: activeStaff?.id
+    });
+    if (!result.ok) {
+      setWarning(result.message);
+      setMoveDraft(null);
+      return;
+    }
+    setFeedback("Session moved.");
+    setWarning("");
+    setSessionActivityEvents((prev) => [
+      {
+        id: `evt_${Math.random().toString(36).slice(2, 9)}`,
+        sessionId: session.id,
+        action: "registered",
+        customerName: `${programs.find((entry) => entry.id === session.programId)?.title ?? "Session"} rescheduled`,
+        occurredAt: new Date().toISOString(),
+        staffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
+      },
+      ...prev
+    ]);
+    setMoveDraft(null);
+    setDragSessionId(null);
   };
   const getRegistrationEligibility = (session: NonNullable<typeof activeSession>, customerId: string) => {
     const customer = customers.find((entry) => entry.id === customerId);
@@ -374,6 +512,11 @@ export default function CalendarPage() {
                 openCreatePanel(prefill);
               }}
               onOpenDayAgenda={openDayAgendaPanel}
+              onDragSessionStart={startDragSession}
+              onDropOnSlot={({ date, startHour }) => createMoveDraft({ date, startHour }, "slot")}
+              onDropOnDate={({ date }) => createMoveDraft({ date }, "date")}
+              activeDropTarget={activeDropTarget}
+              onDragTargetChange={setActiveDropTarget}
             />
           ) : (
             <div className="h-[560px] rounded-xl border bg-card p-3" aria-label="calendar-loading-state" />
@@ -663,6 +806,25 @@ export default function CalendarPage() {
                   setFeedback("");
                   return;
                 }
+                const c = customers.find((entry) => entry.id === customerId);
+                recordSessionEvent(activeSession.id, result.message.toLowerCase().includes("waitlist") ? "waitlisted" : "registered", c ? `${c.firstName} ${c.lastName}` : undefined);
+                setFeedback(result.message);
+                setWarning("");
+              }}
+              onOverrideRegister={(customerId) => {
+                if (!activeStaff?.permissions.includes("overrideAccess")) {
+                  setWarning("Manager override permission required.");
+                  setFeedback("");
+                  return;
+                }
+                const result = registerCustomerForSession({ customerId, sessionId: activeSession.id, override: true });
+                if (!result.ok) {
+                  setWarning(result.message);
+                  setFeedback("");
+                  return;
+                }
+                const c = customers.find((entry) => entry.id === customerId);
+                recordSessionEvent(activeSession.id, result.message.toLowerCase().includes("waitlist") ? "waitlisted" : "registered", c ? `${c.firstName} ${c.lastName}` : undefined);
                 setFeedback(result.message);
                 setWarning("");
               }}
@@ -682,6 +844,12 @@ export default function CalendarPage() {
                   setWarning("");
                 }
                 const successCount = results.filter((entry) => entry.ok).length;
+                customerIds.forEach((customerId, index) => {
+                  if (results[index]?.ok) {
+                    const c = customers.find((entry) => entry.id === customerId);
+                    recordSessionEvent(activeSession.id, "registered", c ? `${c.firstName} ${c.lastName}` : undefined);
+                  }
+                });
                 setFeedback(`Registered ${successCount} household participant${successCount === 1 ? "" : "s"}.`);
               }}
               onCancelRegistration={(registrationId) => {
@@ -697,6 +865,9 @@ export default function CalendarPage() {
                   setFeedback("");
                   return;
                 }
+                const registration = registrations.find((entry) => entry.id === registrationId);
+                const c = registration ? customers.find((entry) => entry.id === registration.customerId) : null;
+                recordSessionEvent(activeSession.id, "removed", c ? `${c.firstName} ${c.lastName}` : undefined);
                 setFeedback(result.message);
                 setWarning("");
               }}
@@ -713,6 +884,9 @@ export default function CalendarPage() {
                   setFeedback("");
                   return;
                 }
+                const registration = registrations.find((entry) => entry.id === registrationId);
+                const c = registration ? customers.find((entry) => entry.id === registration.customerId) : null;
+                recordSessionEvent(activeSession.id, "waitlisted", c ? `${c.firstName} ${c.lastName}` : undefined);
                 setFeedback(result.message);
                 setWarning("");
               }}
@@ -725,6 +899,9 @@ export default function CalendarPage() {
                 const result = promoteWaitlistedRegistration(registrationId);
                 if (!result.ok) setWarning(result.message);
                 else {
+                  const registration = registrations.find((entry) => entry.id === registrationId);
+                  const c = registration ? customers.find((entry) => entry.id === registration.customerId) : null;
+                  recordSessionEvent(activeSession.id, "promoted", c ? `${c.firstName} ${c.lastName}` : undefined);
                   setFeedback(result.message);
                   setWarning("");
                 }
@@ -738,6 +915,14 @@ export default function CalendarPage() {
                 const result = markRegistrationAttendance(registrationId, statusValue, activeStaff?.id);
                 if (!result.ok) setWarning(result.message);
                 else {
+                  const registration = registrations.find((entry) => entry.id === registrationId);
+                  const c = registration ? customers.find((entry) => entry.id === registration.customerId) : null;
+                  if (statusValue === "checked_in" || statusValue === "attended" || statusValue === "late") {
+                    recordSessionEvent(activeSession.id, "checked_in", c ? `${c.firstName} ${c.lastName}` : undefined);
+                  }
+                  if (statusValue === "absent" || statusValue === "no_show") {
+                    recordSessionEvent(activeSession.id, "marked_absent", c ? `${c.firstName} ${c.lastName}` : undefined);
+                  }
                   setFeedback(result.message);
                   setWarning("");
                 }
@@ -827,6 +1012,8 @@ export default function CalendarPage() {
                 setFeedback(`Marked ${confirmed.length} participants present.`);
                 setWarning("");
               }}
+              canOverride={Boolean(activeStaff?.permissions.includes("overrideAccess"))}
+              activityEvents={sessionActivityEvents}
             />
           ) : !showCreate && !editingSession && !dayAgendaDateKey ? (
             <aside className="rounded-xl border bg-card px-4 py-6 text-sm text-muted-foreground">Select a session to view registrations, waitlist, and quick actions.</aside>
@@ -862,6 +1049,34 @@ export default function CalendarPage() {
             return { ...result, transaction: result.transaction ?? null };
           }}
         />
+      ) : null}
+      {moveDraft ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" role="dialog" aria-label="move-session-confirmation">
+          <div className="w-full max-w-lg rounded-xl border bg-card p-4">
+            <h3 className="text-lg font-semibold">Move session?</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              From: {new Date(moveDraft.fromStart).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              To: {new Date(moveDraft.toStart).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+            </p>
+            <div className="mt-3 rounded-md border bg-secondary/20 p-2 text-xs text-muted-foreground">
+              Recurring session scope: This session only. (Future options coming soon.)
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setMoveDraft(null);
+                  setDragSessionId(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={confirmMoveSession}>Confirm Move</Button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </section>
   );

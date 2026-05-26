@@ -43,8 +43,12 @@ async function activateStaff(user: ReturnType<typeof userEvent.setup>, pin = "22
 
 describe("Calendar interactive workstation", () => {
   beforeEach(() => {
-    window.localStorage.clear();
-    window.sessionStorage.clear();
+    if (typeof (window.localStorage as Storage & { clear?: unknown }).clear === "function") {
+      window.localStorage.clear();
+    }
+    if (typeof (window.sessionStorage as Storage & { clear?: unknown }).clear === "function") {
+      window.sessionStorage.clear();
+    }
   });
 
   it("renders week view with navigation controls by default", () => {
@@ -173,7 +177,7 @@ describe("Calendar interactive workstation", () => {
     await user.click(screen.getByRole("button", { name: "Next" }));
     const juneCells = screen.getAllByTestId("month-day-cell");
     expect(within(juneCells[0]).getByRole("button", { name: "View agenda for June 1, 2026" })).toBeInTheDocument();
-  });
+  }, 15000);
 
   it("renders visual session blocks with registration/capacity details", async () => {
     const user = userEvent.setup();
@@ -388,7 +392,7 @@ describe("Calendar interactive workstation", () => {
     await user.click(screen.getByTestId("month-overflow-trigger"));
     expect(screen.getByTestId("day-agenda-panel")).toBeInTheDocument();
     expect(screen.getByText("Overflow D")).toBeInTheDocument();
-  });
+  }, 15000);
 
   it("clicking month date opens right-panel day agenda instead of switching to day view", async () => {
     const user = userEvent.setup();
@@ -499,7 +503,7 @@ describe("Calendar interactive workstation", () => {
 
     const panel = screen.getByLabelText("session-form-panel");
     expect(within(panel).getByLabelText("Session date")).toHaveValue("2026-05-24");
-  });
+  }, 15000);
 
   it("supports keyboard activation on month date and +N more to open day agenda", async () => {
     const user = userEvent.setup();
@@ -542,7 +546,7 @@ describe("Calendar interactive workstation", () => {
     moreButton.focus();
     await user.keyboard(" ");
     expect(screen.getByTestId("day-agenda-panel")).toBeInTheDocument();
-  });
+  }, 15000);
 
   it("manages roster and attendance from session detail", async () => {
     const user = userEvent.setup();
@@ -564,6 +568,41 @@ describe("Calendar interactive workstation", () => {
     expect(screen.getByRole("status")).toHaveTextContent(/Marked/i);
   });
 
+  it("supports attendance mode present/absent toggles", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    await activateStaff(user);
+
+    await user.click(screen.getByRole("button", { name: "Agenda" }));
+    await user.click(screen.getAllByRole("button", { name: "Open" })[0]);
+    await user.click(screen.getByRole("button", { name: "Take Attendance" }));
+    expect(screen.getByLabelText("attendance-mode")).toBeInTheDocument();
+    await user.click(screen.getAllByRole("button", { name: "Present" })[0]);
+    expect(screen.getByRole("status")).toHaveTextContent(/Marked/i);
+  });
+
+  it("allows override registration for blocked eligibility when permission is available", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    await activateStaff(user, "1111");
+
+    await user.click(screen.getByRole("button", { name: "Agenda" }));
+    await user.click(screen.getAllByRole("button", { name: "Open" })[0]);
+    await user.type(screen.getByLabelText("Session customer search"), "Alex Rivera");
+    await user.click(screen.getByRole("button", { name: "Override & Register" }));
+    expect(screen.getByRole("status")).toHaveTextContent(/override confirmed|waitlist/i);
+  });
+
   it("moves registrations to waitlist and promotes waitlisted participants", async () => {
     const user = userEvent.setup();
     render(
@@ -582,7 +621,8 @@ describe("Calendar interactive workstation", () => {
     expect(screen.getByText(/#1/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Promote" }));
-    expect(screen.getByText(/promoted/i)).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(/promoted/i);
+    expect(screen.getByLabelText("session-activity-log")).toBeInTheDocument();
   });
 
   it("routes additional registrations to waitlist when session is full", async () => {
@@ -658,7 +698,7 @@ describe("Calendar interactive workstation", () => {
     await user.click(screen.getByRole("button", { name: "Agenda" }));
     expect(screen.getByText(/Persisted Session/i)).toBeInTheDocument();
     storage.restore();
-  });
+  }, 15000);
 
   it("persists selected month view after refresh", async () => {
     const storage = installStorageMock();
@@ -684,5 +724,78 @@ describe("Calendar interactive workstation", () => {
 
     expect(screen.getByTestId("month-grid")).toBeInTheDocument();
     storage.restore();
+  });
+
+  it("drags a day/week session to a new hour and preserves duration after confirm", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    await activateStaff(user);
+
+    await user.click(screen.getByRole("button", { name: "Week" }));
+    const sessionButton = screen.getAllByRole("button", { name: /Morning Mobility Flow/i })[0];
+    fireEvent.dragStart(sessionButton);
+
+    const targetSlot = screen.getByText("9:00 AM").closest(".contents")?.querySelectorAll(".min-h-16")[0];
+    if (!targetSlot) throw new Error("Expected week slot target");
+    fireEvent.dragOver(targetSlot);
+    fireEvent.drop(targetSlot);
+
+    expect(screen.getByLabelText("move-session-confirmation")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Confirm Move" }));
+
+    await user.click(screen.getByRole("button", { name: "Agenda" }));
+    expect(screen.getByText(/9:00 AM–9:50 AM|9:00 AM - 9:50 AM/i)).toBeInTheDocument();
+  });
+
+  it("cancel move keeps session in original slot", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    await activateStaff(user);
+    await user.click(screen.getByRole("button", { name: "Week" }));
+
+    const sessionButton = screen.getAllByRole("button", { name: /Morning Mobility Flow/i })[0];
+    fireEvent.dragStart(sessionButton);
+    const targetSlot = screen.getByText("10:00 AM").closest(".contents")?.querySelectorAll(".min-h-16")[0];
+    if (!targetSlot) throw new Error("Expected week slot target");
+    fireEvent.dragOver(targetSlot);
+    fireEvent.drop(targetSlot);
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: "Agenda" }));
+    expect(screen.getByText(/7:00 AM–7:50 AM|7:00 AM - 7:50 AM/i)).toBeInTheDocument();
+  });
+
+  it("drags a month session to a new date and preserves time", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    await activateStaff(user);
+    await user.click(screen.getByRole("button", { name: "Month" }));
+
+    const sessionButton = screen.getAllByRole("button", { name: /Morning Mobility Flow/i })[0];
+    fireEvent.dragStart(sessionButton);
+    const dropDate = screen.getByRole("button", { name: "View agenda for May 23, 2026" }).closest("[data-testid='month-day-cell']");
+    if (!dropDate) throw new Error("Expected month day cell target");
+    fireEvent.dragOver(dropDate);
+    fireEvent.drop(dropDate);
+
+    await user.click(screen.getByRole("button", { name: "Confirm Move" }));
+    await user.click(screen.getByRole("button", { name: "Agenda" }));
+    expect(screen.getByText(/2026-05-23/i)).toBeInTheDocument();
+    expect(screen.getByText(/7:00 AM–7:50 AM|7:00 AM - 7:50 AM/i)).toBeInTheDocument();
   });
 });

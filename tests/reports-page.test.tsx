@@ -100,6 +100,22 @@ describe("Reports dashboards", () => {
     expect(screen.getByTestId("trend-line-chart")).toBeInTheDocument();
   });
 
+  it("shows attendance metrics including show-up, fill-rate, and waitlist utilization", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <ReportsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "2222");
+    await user.click(screen.getByRole("button", { name: "Attendance" }));
+    expect(screen.getByText("Show-up Rate")).toBeInTheDocument();
+    expect(screen.getByText("Fill Rate")).toBeInTheDocument();
+    expect(screen.getByText("Waitlist Utilization")).toBeInTheDocument();
+    expect(screen.getByText("Instructor Attendance Trend")).toBeInTheDocument();
+  });
+
   it("exports CSV from report data", async () => {
     const storage = installStorageMock();
     window.localStorage.setItem(

@@ -130,7 +130,12 @@ export function InteractiveCalendar({
   onOpenSession,
   onEditSession,
   onCreateAtSlot,
-  onOpenDayAgenda
+  onOpenDayAgenda,
+  onDragSessionStart,
+  onDropOnSlot,
+  onDropOnDate,
+  activeDropTarget,
+  onDragTargetChange
 }: {
   view: ScheduleView;
   dateKey: string;
@@ -141,6 +146,11 @@ export function InteractiveCalendar({
   onEditSession: (sessionId: string) => void;
   onCreateAtSlot: (prefill: { date: string; startTime: string; endTime: string }) => void;
   onOpenDayAgenda: (dateKey: string) => void;
+  onDragSessionStart: (sessionId: string) => void;
+  onDropOnSlot: (target: { date: string; startHour: number; locationId?: string }) => void;
+  onDropOnDate: (target: { date: string; locationId?: string }) => void;
+  activeDropTarget?: string | null;
+  onDragTargetChange?: (target: string | null) => void;
 }) {
   const selectedDate = fromDateKey(dateKey);
   const weekStart = startOfWeek(selectedDate);
@@ -224,7 +234,19 @@ export function InteractiveCalendar({
             const visibleEntries = dayEntries.slice(0, 3);
             const overflowCount = Math.max(dayEntries.length - visibleEntries.length, 0);
             return (
-              <section key={dayKey} className={`h-44 overflow-hidden rounded-md border p-2 ${inMonth ? "bg-card" : "bg-secondary/20"}`} data-testid="month-day-cell">
+              <section
+                key={dayKey}
+                className={`h-44 overflow-hidden rounded-md border p-2 ${inMonth ? "bg-card" : "bg-secondary/20"} ${activeDropTarget === `date:${dayKey}` ? "ring-2 ring-primary" : ""}`}
+                data-testid="month-day-cell"
+                onDragOver={(event) => event.preventDefault()}
+                onDragEnter={() => onDragTargetChange?.(`date:${dayKey}`)}
+                onDragLeave={() => onDragTargetChange?.(null)}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  onDropOnDate({ date: dayKey });
+                  onDragTargetChange?.(null);
+                }}
+              >
                 <button
                   type="button"
                   className="text-xs font-medium"
@@ -247,6 +269,8 @@ export function InteractiveCalendar({
                         key={entry.session.id}
                         onClick={() => onOpenSession(entry.session.id)}
                         className={`block w-full rounded border px-1 py-0.5 text-left text-[11px] ${sessionColor(entry.program?.category)}`}
+                        draggable
+                        onDragStart={() => onDragSessionStart(entry.session.id)}
                       >
                         <p className="truncate font-medium">{display.programName}</p>
                         {display.overrideTitle ? <p className="truncate text-[10px] text-muted-foreground">{display.overrideTitle}</p> : null}
@@ -293,7 +317,18 @@ export function InteractiveCalendar({
                   const dayEntries = sessionsByDay.get(dayKey) ?? [];
                   const rowEntries = dayEntries.filter((entry) => new Date(entry.session.startsAt).getHours() === hour);
                   return (
-                    <div key={`${dayKey}-${hour}`} className="min-h-16 rounded-md border bg-background p-1">
+                    <div
+                      key={`${dayKey}-${hour}`}
+                      className={`min-h-16 rounded-md border bg-background p-1 ${activeDropTarget === `slot:${dayKey}:${hour}` ? "ring-2 ring-primary" : ""}`}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDragEnter={() => onDragTargetChange?.(`slot:${dayKey}:${hour}`)}
+                      onDragLeave={() => onDragTargetChange?.(null)}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        onDropOnSlot({ date: dayKey, startHour: hour });
+                        onDragTargetChange?.(null);
+                      }}
+                    >
                       <CalendarAddSlotButton
                         testId="calendar-add-slot-button"
                         className="mb-1"
@@ -307,6 +342,8 @@ export function InteractiveCalendar({
                               key={entry.session.id}
                               onClick={() => onOpenSession(entry.session.id)}
                               className={`block w-full rounded border px-1 py-0.5 text-left text-[11px] ${sessionColor(entry.program?.category)}`}
+                              draggable
+                              onDragStart={() => onDragSessionStart(entry.session.id)}
                             >
                               <p className="truncate font-medium">{display.programName}</p>
                               {display.overrideTitle ? <p className="truncate text-[10px] text-muted-foreground">{display.overrideTitle}</p> : null}

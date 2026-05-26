@@ -1,7 +1,6 @@
 import type { SessionScheduleCardModel, ScheduleView } from "@/lib/data/session-schedule";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useMemo, useState } from "react";
 
 function toDateKey(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -38,13 +37,6 @@ function startOfWeek(date: Date) {
   start.setDate(start.getDate() - mondayOffset);
   start.setHours(0, 0, 0, 0);
   return start;
-}
-
-function endOfWeek(date: Date) {
-  const end = startOfWeek(date);
-  end.setDate(end.getDate() + 6);
-  end.setHours(23, 59, 59, 999);
-  return end;
 }
 
 function viewTitle(view: ScheduleView, dateKey: string) {
@@ -137,7 +129,8 @@ export function InteractiveCalendar({
   onDateKeyChange,
   onOpenSession,
   onEditSession,
-  onCreateAtSlot
+  onCreateAtSlot,
+  onOpenDayAgenda
 }: {
   view: ScheduleView;
   dateKey: string;
@@ -147,18 +140,16 @@ export function InteractiveCalendar({
   onOpenSession: (sessionId: string) => void;
   onEditSession: (sessionId: string) => void;
   onCreateAtSlot: (prefill: { date: string; startTime: string; endTime: string }) => void;
+  onOpenDayAgenda: (dateKey: string) => void;
 }) {
   const selectedDate = fromDateKey(dateKey);
   const weekStart = startOfWeek(selectedDate);
   const weekDays = Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
   const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
-  const monthGridStart = startOfWeek(monthStart);
   const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
-  const monthGridEnd = endOfWeek(monthEnd);
-  const monthDayCount = Math.floor((monthGridEnd.getTime() - monthGridStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-  const monthDays = Array.from({ length: monthDayCount }, (_, index) => addDays(monthGridStart, index));
+  const monthDayCount = monthEnd.getDate();
+  const monthDays = Array.from({ length: monthDayCount }, (_, index) => addDays(monthStart, index));
   const hours = Array.from({ length: 16 }, (_, i) => i + 6);
-  const [monthOverflowDayKey, setMonthOverflowDayKey] = useState<string | null>(null);
 
   const sessionsByDay = new Map<string, SessionScheduleCardModel[]>();
   for (const entry of entries) {
@@ -171,11 +162,6 @@ export function InteractiveCalendar({
     value.sort((a, b) => a.session.startsAt.localeCompare(b.session.startsAt));
     sessionsByDay.set(key, value);
   }
-  const monthOverflowEntries = useMemo(
-    () => (monthOverflowDayKey ? sessionsByDay.get(monthOverflowDayKey) ?? [] : []),
-    [monthOverflowDayKey, sessionsByDay]
-  );
-
   return (
     <div className="space-y-3 rounded-xl border bg-card p-3" aria-label="interactive-calendar">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -240,8 +226,10 @@ export function InteractiveCalendar({
             return (
               <section key={dayKey} className={`h-44 overflow-hidden rounded-md border p-2 ${inMonth ? "bg-card" : "bg-secondary/20"}`} data-testid="month-day-cell">
                 <button
+                  type="button"
                   className="text-xs font-medium"
-                  onClick={() => setMonthOverflowDayKey(dayKey)}
+                  aria-label={`View agenda for ${day.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`}
+                  onClick={() => onOpenDayAgenda(dayKey)}
                 >
                   {day.toLocaleDateString("en-US", { month: "numeric", day: "numeric" })}
                 </button>
@@ -272,7 +260,8 @@ export function InteractiveCalendar({
                       type="button"
                       data-testid="month-overflow-trigger"
                       className="text-left text-[11px] text-muted-foreground hover:text-foreground"
-                      onClick={() => setMonthOverflowDayKey(dayKey)}
+                      aria-label={`View ${overflowCount} more session${overflowCount === 1 ? "" : "s"} for ${day.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`}
+                      onClick={() => onOpenDayAgenda(dayKey)}
                     >
                       +{overflowCount} more
                     </button>
@@ -282,55 +271,6 @@ export function InteractiveCalendar({
             );
           })}
         </div>
-      ) : null}
-
-      {view === "month" && monthOverflowDayKey ? (
-        <section className="rounded-xl border bg-card p-3" data-testid="month-overflow-panel" aria-label="month-day-agenda">
-          <div className="mb-2 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold">Day agenda</p>
-              <p className="text-xs text-muted-foreground">{monthOverflowDayKey}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="secondary"
-                className="h-8"
-                onClick={() => {
-                  onDateKeyChange(monthOverflowDayKey);
-                  onViewChange("day");
-                  setMonthOverflowDayKey(null);
-                }}
-              >
-                View Day
-              </Button>
-              <Button variant="secondary" className="h-8" onClick={() => setMonthOverflowDayKey(null)}>Close</Button>
-            </div>
-          </div>
-          <div className="space-y-2">
-            {monthOverflowEntries.map((entry) => {
-              const display = getSessionDisplay(entry);
-              return (
-                <article key={entry.session.id} className={`rounded-md border p-2 ${sessionColor(entry.program?.category)}`}>
-                  <p className="text-sm font-medium">{display.programName}</p>
-                  {display.overrideTitle ? <p className="text-xs text-muted-foreground">{display.overrideTitle}</p> : null}
-                  <p className="text-xs text-muted-foreground">{formatRange(entry.session.startsAt, entry.session.endsAt)}</p>
-                  <p className="text-xs text-muted-foreground">{entry.session.instructorName ?? "Unassigned"} • {entry.registrationCount}/{entry.session.capacity}{entry.waitlistCount > 0 ? ` • WL ${entry.waitlistCount}` : ""}</p>
-                  <div className="mt-2 flex gap-2">
-                    <Button className="h-8" variant="secondary" onClick={() => onOpenSession(entry.session.id)}>View</Button>
-                    <Button className="h-8" variant="secondary" onClick={() => onEditSession(entry.session.id)}>Edit</Button>
-                    <Button
-                      className="h-8"
-                      variant="secondary"
-                      onClick={() => onCreateAtSlot({ date: monthOverflowDayKey, startTime: "09:00", endTime: "10:00" })}
-                    >
-                      Add Session
-                    </Button>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        </section>
       ) : null}
 
       {(view === "day" || view === "week") ? (

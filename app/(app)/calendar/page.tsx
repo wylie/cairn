@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { InteractiveCalendar } from "@/components/calendar/interactive-calendar";
 import { ScheduleFilters } from "@/components/calendar/schedule-filters";
 import { SessionDetailPanel } from "@/components/calendar/session-detail-panel";
@@ -28,6 +28,26 @@ function addDays(dateKey: string, days: number) {
   return base.toISOString().slice(0, 10);
 }
 
+function formatDayAgendaTitle(dateKey: string) {
+  const date = new Date(`${dateKey}T00:00:00`);
+  return date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+}
+
+function formatSessionTimeRange(startIso: string, endIso: string) {
+  const start = new Date(startIso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  const end = new Date(endIso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  return `${start} - ${end}`;
+}
+
+function getSessionDisplay(sessionTitle: string | undefined, programTitle: string | undefined) {
+  const programName = programTitle ?? "Session";
+  const overrideTitle = sessionTitle?.trim();
+  if (!overrideTitle || overrideTitle.toLowerCase() === programName.toLowerCase()) {
+    return { programName, overrideTitle: "" };
+  }
+  return { programName, overrideTitle };
+}
+
 function buildRecurringDates(startDate: string, pattern: "none" | "weekly" | "camp_weekdays", count: number) {
   if (pattern === "none") return [startDate];
   const dates: string[] = [];
@@ -44,6 +64,9 @@ function buildRecurringDates(startDate: string, pattern: "none" | "weekly" | "ca
   }
   return dates;
 }
+
+const CALENDAR_VIEW_STORAGE_KEY = "cairn:calendar:view";
+const VIEW_OPTIONS: ScheduleView[] = ["day", "week", "month", "agenda"];
 
 export default function CalendarPage() {
   const {
@@ -67,7 +90,11 @@ export default function CalendarPage() {
   } = useCustomerState();
   const { activeStaff, assertPermission, staffUsers, requestStaffSwitch } = useWorkstationState();
 
-  const [view, setView] = useState<ScheduleView>("week");
+  const [view, setView] = useState<ScheduleView>(() => {
+    if (typeof window === "undefined") return "week";
+    const stored = window.localStorage.getItem(CALENDAR_VIEW_STORAGE_KEY);
+    return stored && VIEW_OPTIONS.includes(stored as ScheduleView) ? (stored as ScheduleView) : "week";
+  });
   const [search, setSearch] = useState("");
   const [dateKey, setDateKey] = useState("2026-05-21");
   const [locationId, setLocationId] = useState("all");
@@ -81,9 +108,19 @@ export default function CalendarPage() {
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [dayAgendaDateKey, setDayAgendaDateKey] = useState<string | null>(null);
   const [sellCustomerId, setSellCustomerId] = useState<string | null>(null);
   const [conflictWarning, setConflictWarning] = useState("");
   const [createPrefill, setCreatePrefill] = useState<{ date: string; startTime: string; endTime: string } | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(CALENDAR_VIEW_STORAGE_KEY, view);
+  }, [view]);
 
   const instructors = staffUsers.filter((entry) => (entry.role === "instructor" || entry.canTeach) && entry.activeInstructor !== false);
   const activePrograms = useMemo(() => programs.filter((entry) => entry.active !== false), [programs]);
@@ -122,6 +159,39 @@ export default function CalendarPage() {
     if (linked.active === false) return [linked, ...activePrograms.filter((entry) => entry.id !== linked.id)];
     return activePrograms;
   }, [editingSession, programs, activePrograms]);
+  const dayAgendaEntries = useMemo(() => {
+    if (!dayAgendaDateKey) return [];
+    return sortSessionsByStart(scopedEntries.filter((entry) => entry.session.startsAt.slice(0, 10) === dayAgendaDateKey));
+  }, [dayAgendaDateKey, scopedEntries]);
+
+  const openCreatePanel = (prefill: { date: string; startTime: string; endTime: string } | null) => {
+    setCreatePrefill(prefill);
+    setShowCreate(true);
+    setEditingSessionId(null);
+    setActiveSessionId(null);
+    setDayAgendaDateKey(null);
+  };
+
+  const openEditPanel = (sessionId: string) => {
+    setEditingSessionId(sessionId);
+    setShowCreate(false);
+    setActiveSessionId(null);
+    setDayAgendaDateKey(null);
+  };
+
+  const openSessionPanel = (sessionId: string) => {
+    setActiveSessionId(sessionId);
+    setShowCreate(false);
+    setEditingSessionId(null);
+    setDayAgendaDateKey(null);
+  };
+
+  const openDayAgendaPanel = (agendaDateKey: string) => {
+    setDayAgendaDateKey(agendaDateKey);
+    setShowCreate(false);
+    setEditingSessionId(null);
+    setActiveSessionId(null);
+  };
 
   const requireScheduleEditPermission = () => {
     if (!activeStaff) {
@@ -242,9 +312,7 @@ export default function CalendarPage() {
                 setFeedback("");
                 return;
               }
-              setShowCreate(true);
-              setEditingSessionId(null);
-              setCreatePrefill(null);
+              openCreatePanel(null);
             }}
           >
             Create Session
@@ -279,35 +347,37 @@ export default function CalendarPage() {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_400px]" data-testid="calendar-layout">
         <div className="space-y-3 min-w-0" aria-label="schedule-results">
-          <InteractiveCalendar
-            view={view}
-            dateKey={dateKey}
-            entries={scopedEntries}
-            onViewChange={setView}
-            onDateKeyChange={setDateKey}
-            onOpenSession={(sessionId) => setActiveSessionId(sessionId)}
-            onEditSession={(sessionId) => {
-              const allowed = requireScheduleEditPermission();
-              if (!allowed.ok) {
-                setWarning(allowed.message);
-                setFeedback("");
-                return;
-              }
-              setEditingSessionId(sessionId);
-              setShowCreate(false);
-            }}
-            onCreateAtSlot={(prefill) => {
-              const allowed = requireScheduleEditPermission();
-              if (!allowed.ok) {
-                setWarning(allowed.message);
-                setFeedback("");
-                return;
-              }
-              setCreatePrefill(prefill);
-              setShowCreate(true);
-              setEditingSessionId(null);
-            }}
-          />
+          {isHydrated ? (
+            <InteractiveCalendar
+              view={view}
+              dateKey={dateKey}
+              entries={scopedEntries}
+              onViewChange={setView}
+              onDateKeyChange={setDateKey}
+              onOpenSession={openSessionPanel}
+              onEditSession={(sessionId) => {
+                const allowed = requireScheduleEditPermission();
+                if (!allowed.ok) {
+                  setWarning(allowed.message);
+                  setFeedback("");
+                  return;
+                }
+                openEditPanel(sessionId);
+              }}
+              onCreateAtSlot={(prefill) => {
+                const allowed = requireScheduleEditPermission();
+                if (!allowed.ok) {
+                  setWarning(allowed.message);
+                  setFeedback("");
+                  return;
+                }
+                openCreatePanel(prefill);
+              }}
+              onOpenDayAgenda={openDayAgendaPanel}
+            />
+          ) : (
+            <div className="h-[560px] rounded-xl border bg-card p-3" aria-label="calendar-loading-state" />
+          )}
         </div>
 
         <div className="space-y-4 xl:w-[400px]" data-testid="calendar-sidebar">
@@ -493,7 +563,85 @@ export default function CalendarPage() {
             />
           ) : null}
 
-          {activeSession ? (
+          {dayAgendaDateKey ? (
+            <aside className="rounded-xl border bg-card p-4" data-testid="day-agenda-panel" aria-label="day-agenda-panel">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h3 className="text-base font-semibold">{formatDayAgendaTitle(dayAgendaDateKey)}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {dayAgendaEntries.length} session{dayAgendaEntries.length === 1 ? "" : "s"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    className="h-9"
+                    variant="secondary"
+                    onClick={() => {
+                      setDateKey(dayAgendaDateKey);
+                      setView("day");
+                      setDayAgendaDateKey(null);
+                    }}
+                  >
+                    View Day
+                  </Button>
+                  <Button
+                    className="h-9"
+                    onClick={() => {
+                      const allowed = requireScheduleEditPermission();
+                      if (!allowed.ok) {
+                        setWarning(allowed.message);
+                        setFeedback("");
+                        return;
+                      }
+                      openCreatePanel({ date: dayAgendaDateKey, startTime: "09:00", endTime: "10:00" });
+                    }}
+                  >
+                    Add Session
+                  </Button>
+                </div>
+              </div>
+              <div className="mt-3 space-y-2">
+                {dayAgendaEntries.length === 0 ? (
+                  <p className="rounded-lg border px-3 py-2 text-sm text-muted-foreground">No sessions for this date.</p>
+                ) : null}
+                {dayAgendaEntries.map((entry) => {
+                  const display = getSessionDisplay(entry.session.title, entry.program?.title);
+                  return (
+                    <article key={entry.session.id} className="rounded-lg border p-3">
+                      <p className="text-sm font-medium">{display.programName}</p>
+                      {display.overrideTitle ? <p className="text-xs text-muted-foreground">{display.overrideTitle}</p> : null}
+                      <p className="text-xs text-muted-foreground">{formatSessionTimeRange(entry.session.startsAt, entry.session.endsAt)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {entry.session.instructorName ?? "Unassigned"} • {entry.registrationCount}/{entry.session.capacity}
+                        {entry.waitlistCount > 0 ? ` • WL ${entry.waitlistCount}` : ""}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Button className="h-8" variant="secondary" onClick={() => openSessionPanel(entry.session.id)}>View Session</Button>
+                        <Button
+                          className="h-8"
+                          variant="secondary"
+                          onClick={() => {
+                            const allowed = requireScheduleEditPermission();
+                            if (!allowed.ok) {
+                              setWarning(allowed.message);
+                              setFeedback("");
+                              return;
+                            }
+                            openEditPanel(entry.session.id);
+                          }}
+                        >
+                          Edit Session
+                        </Button>
+                        <Button className="h-8" variant="secondary" onClick={() => openSessionPanel(entry.session.id)}>Take Attendance</Button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </aside>
+          ) : null}
+
+          {activeSession && !dayAgendaDateKey ? (
             <SessionDetailPanel
               session={activeSession}
               program={programs.find((entry) => entry.id === activeSession.programId)}
@@ -622,8 +770,7 @@ export default function CalendarPage() {
                   setFeedback("");
                   return;
                 }
-                setEditingSessionId(activeSession.id);
-                setShowCreate(false);
+                openEditPanel(activeSession.id);
               }}
               onCancelSession={() => {
                 const allowed = requireScheduleEditPermission();
@@ -681,9 +828,9 @@ export default function CalendarPage() {
                 setWarning("");
               }}
             />
-          ) : (
+          ) : !showCreate && !editingSession && !dayAgendaDateKey ? (
             <aside className="rounded-xl border bg-card px-4 py-6 text-sm text-muted-foreground">Select a session to view registrations, waitlist, and quick actions.</aside>
-          )}
+          ) : null}
         </div>
       </div>
       {sellCustomer ? (

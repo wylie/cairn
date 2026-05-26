@@ -116,7 +116,7 @@ describe("Calendar interactive workstation", () => {
     expect(screen.getByTestId("week-grid")).toBeInTheDocument();
   });
 
-  it("month view starts on Monday of the week containing the first of month", async () => {
+  it("month view starts on the first day of the selected month", async () => {
     const user = userEvent.setup();
     render(
       <TestProviders>
@@ -128,7 +128,7 @@ describe("Calendar interactive workstation", () => {
     fireEvent.change(screen.getByLabelText("Calendar jump date"), { target: { value: "2026-04-15" } });
     await user.click(screen.getByRole("button", { name: "Month" }));
     const monthCells = screen.getAllByTestId("month-day-cell");
-    expect(within(monthCells[0]).getByRole("button", { name: "3/30" })).toBeInTheDocument();
+    expect(within(monthCells[0]).getByRole("button", { name: "View agenda for April 1, 2026" })).toBeInTheDocument();
   });
 
   it("week view uses Monday-start ordering", () => {
@@ -160,7 +160,7 @@ describe("Calendar interactive workstation", () => {
     await user.click(screen.getByRole("button", { name: "Week" }));
     expect(screen.getByText("Mon, 5/18")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Previous" }));
-    expect(screen.getByText("Mon, 5/11")).toBeInTheDocument();
+    expect(screen.getByText("May 11 - May 17, 2026")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Agenda" }));
     expect(screen.getByText("May 11 - May 17, 2026")).toBeInTheDocument();
@@ -169,10 +169,10 @@ describe("Calendar interactive workstation", () => {
 
     await user.click(screen.getByRole("button", { name: "Month" }));
     const monthCells = screen.getAllByTestId("month-day-cell");
-    expect(within(monthCells[0]).getByRole("button", { name: "4/27" })).toBeInTheDocument();
+    expect(within(monthCells[0]).getByRole("button", { name: "View agenda for May 1, 2026" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Next" }));
     const juneCells = screen.getAllByTestId("month-day-cell");
-    expect(within(juneCells[0]).getByRole("button", { name: "6/1" })).toBeInTheDocument();
+    expect(within(juneCells[0]).getByRole("button", { name: "View agenda for June 1, 2026" })).toBeInTheDocument();
   });
 
   it("renders visual session blocks with registration/capacity details", async () => {
@@ -332,7 +332,7 @@ describe("Calendar interactive workstation", () => {
     expect(monthAdd).toHaveTextContent("+ Add");
   });
 
-  it("keeps month cells at a consistent height and opens overflow agenda", async () => {
+  it("keeps month cells at a consistent height and opens day agenda from overflow", async () => {
     const user = userEvent.setup();
     render(
       <TestProviders>
@@ -386,11 +386,11 @@ describe("Calendar interactive workstation", () => {
     expect(screen.getByTestId("month-overflow-trigger")).toBeInTheDocument();
 
     await user.click(screen.getByTestId("month-overflow-trigger"));
-    expect(screen.getByTestId("month-overflow-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("day-agenda-panel")).toBeInTheDocument();
     expect(screen.getByText("Overflow D")).toBeInTheDocument();
   });
 
-  it("clicking month date opens day agenda panel instead of switching to day view", async () => {
+  it("clicking month date opens right-panel day agenda instead of switching to day view", async () => {
     const user = userEvent.setup();
     render(
       <TestProviders>
@@ -400,9 +400,9 @@ describe("Calendar interactive workstation", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Month" }));
-    await user.click(screen.getByRole("button", { name: "5/21" }));
+    await user.click(screen.getByRole("button", { name: "View agenda for May 21, 2026" }));
 
-    expect(screen.getByTestId("month-overflow-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("day-agenda-panel")).toBeInTheDocument();
     expect(screen.getByTestId("month-grid")).toBeInTheDocument();
   });
 
@@ -416,11 +416,11 @@ describe("Calendar interactive workstation", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Month" }));
-    await user.click(screen.getByRole("button", { name: "5/21" }));
-    await user.click(within(screen.getByTestId("month-overflow-panel")).getByRole("button", { name: "View Day" }));
+    await user.click(screen.getByRole("button", { name: "View agenda for May 21, 2026" }));
+    await user.click(within(screen.getByTestId("day-agenda-panel")).getByRole("button", { name: "View Day" }));
 
     expect(screen.getByTestId("day-grid")).toBeInTheDocument();
-    expect(screen.queryByTestId("month-overflow-panel")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("day-agenda-panel")).not.toBeInTheDocument();
   });
 
   it("month add button appears near top of day cell and overflow still works", async () => {
@@ -452,7 +452,7 @@ describe("Calendar interactive workstation", () => {
     fireEvent.change(screen.getByLabelText("Calendar jump date"), { target: { value: "2026-05-24" } });
     await user.click(screen.getByRole("button", { name: "Month" }));
 
-    const targetDate = screen.getByRole("button", { name: "5/24" });
+    const targetDate = screen.getByRole("button", { name: "View agenda for May 24, 2026" });
     const targetCell = targetDate.closest("[data-testid='month-day-cell']");
     if (!targetCell) throw new Error("Expected month cell for 5/24");
 
@@ -494,11 +494,54 @@ describe("Calendar interactive workstation", () => {
     fireEvent.change(screen.getByLabelText("Calendar jump date"), { target: { value: "2026-05-24" } });
     await user.click(screen.getByRole("button", { name: "Month" }));
     await user.click(screen.getByTestId("month-overflow-trigger"));
-    const overflowPanel = screen.getByTestId("month-overflow-panel");
-    await user.click(within(overflowPanel).getAllByRole("button", { name: "Add Session" })[0]);
+    const agendaPanel = screen.getByTestId("day-agenda-panel");
+    await user.click(within(agendaPanel).getByRole("button", { name: "Add Session" }));
 
     const panel = screen.getByLabelText("session-form-panel");
     expect(within(panel).getByLabelText("Session date")).toHaveValue("2026-05-24");
+  });
+
+  it("supports keyboard activation on month date and +N more to open day agenda", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    await activateStaff(user);
+
+    for (const [title, start, end] of [
+      ["Keyboard A", "07:00", "08:00"],
+      ["Keyboard B", "08:00", "09:00"],
+      ["Keyboard C", "09:00", "10:00"],
+      ["Keyboard D", "10:00", "11:00"]
+    ] as const) {
+      await user.click(screen.getByRole("button", { name: "Create Session" }));
+      const createPanel = screen.getByLabelText("session-form-panel");
+      await user.type(within(createPanel).getByLabelText("Session title"), title);
+      await user.selectOptions(within(createPanel).getByLabelText("Session program"), "prog_101");
+      fireEvent.change(within(createPanel).getByLabelText("Session date"), { target: { value: "2026-05-24" } });
+      fireEvent.change(within(createPanel).getByLabelText("Session start time"), { target: { value: start } });
+      fireEvent.change(within(createPanel).getByLabelText("Session end time"), { target: { value: end } });
+      await user.click(within(createPanel).getByRole("button", { name: "Create Session" }));
+    }
+
+    fireEvent.change(screen.getByLabelText("Calendar jump date"), { target: { value: "2026-05-24" } });
+    await user.click(screen.getByRole("button", { name: "Month" }));
+
+    const dateButton = screen.getByRole("button", { name: "View agenda for May 24, 2026" });
+    dateButton.focus();
+    await user.keyboard("{Enter}");
+    expect(screen.getByTestId("day-agenda-panel")).toBeInTheDocument();
+
+    await user.click(within(screen.getByTestId("day-agenda-panel")).getByRole("button", { name: "View Day" }));
+    await user.click(screen.getByRole("button", { name: "Month" }));
+
+    const moreButton = screen.getByRole("button", { name: "View 1 more session for May 24, 2026" });
+    moreButton.focus();
+    await user.keyboard(" ");
+    expect(screen.getByTestId("day-agenda-panel")).toBeInTheDocument();
   });
 
   it("manages roster and attendance from session detail", async () => {
@@ -614,6 +657,32 @@ describe("Calendar interactive workstation", () => {
 
     await user.click(screen.getByRole("button", { name: "Agenda" }));
     expect(screen.getByText(/Persisted Session/i)).toBeInTheDocument();
+    storage.restore();
+  });
+
+  it("persists selected month view after refresh", async () => {
+    const storage = installStorageMock();
+    const user = userEvent.setup();
+
+    const first = render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+
+    await user.click(screen.getByRole("button", { name: "Month" }));
+    expect(screen.getByTestId("month-grid")).toBeInTheDocument();
+    first.unmount();
+
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+
+    expect(screen.getByTestId("month-grid")).toBeInTheDocument();
     storage.restore();
   });
 });

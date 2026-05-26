@@ -30,6 +30,7 @@ export function SessionDetailPanel({
   onSellAccess,
   onMarkWaiverSigned,
   onEditSession,
+  onMoveSession,
   onCancelSession,
   onDuplicateSession,
   onTakeAttendance,
@@ -53,6 +54,7 @@ export function SessionDetailPanel({
   onSellAccess: (customerId: string) => void;
   onMarkWaiverSigned: (customerId: string) => void;
   onEditSession: () => void;
+  onMoveSession: () => void;
   onCancelSession: () => void;
   onDuplicateSession: () => void;
   onTakeAttendance: () => void;
@@ -133,6 +135,7 @@ export function SessionDetailPanel({
       </div>
       <div className="mt-2 flex flex-wrap gap-2">
         <Button className="h-9" variant="secondary" onClick={onEditSession}>Edit Session</Button>
+        <Button className="h-9" variant="secondary" onClick={onMoveSession}>Move Session</Button>
         <Button className="h-9" variant="secondary" onClick={onDuplicateSession}>Duplicate Session</Button>
         <Button
           className="h-9"

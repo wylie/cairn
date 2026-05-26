@@ -8,6 +8,7 @@ import { SessionFormPanel } from "@/components/calendar/session-form-panel";
 import { SellAccessModal } from "@/components/pos/sell-access-modal";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
+import { ModalShell } from "@/components/ui/modal-shell";
 import {
   buildSessionCards,
   filterScheduleSessions,
@@ -85,7 +86,7 @@ type SessionActivityEvent = {
   id: string;
   sessionId: string;
   customerName?: string;
-  action: "registered" | "removed" | "waitlisted" | "promoted" | "checked_in" | "marked_absent";
+  action: "registered" | "removed" | "waitlisted" | "promoted" | "checked_in" | "marked_absent" | "rescheduled";
   occurredAt: string;
   staffName?: string;
 };
@@ -147,6 +148,7 @@ export default function CalendarPage() {
   const [dragSessionId, setDragSessionId] = useState<string | null>(null);
   const [moveDraft, setMoveDraft] = useState<DragMoveState | null>(null);
   const [activeDropTarget, setActiveDropTarget] = useState<string | null>(null);
+  const [moveOverrideAccepted, setMoveOverrideAccepted] = useState(false);
 
   useEffect(() => {
     setIsHydrated(true);
@@ -284,6 +286,7 @@ export default function CalendarPage() {
     return `Location conflict detected: ${overlap.title ?? "Session"} overlaps at ${new Date(overlap.startsAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}.`;
   };
   const startDragSession = (sessionId: string) => {
+    if (!canEditSchedule) return;
     setDragSessionId(sessionId);
   };
   const createMoveDraft = (target: { date: string; startHour?: number }, mode: "slot" | "date") => {
@@ -310,15 +313,14 @@ export default function CalendarPage() {
       toEnd: nextEnd.toISOString(),
       view
     });
+    setMoveOverrideAccepted(false);
     setActiveDropTarget(null);
   };
-  const confirmMoveSession = () => {
-    if (!moveDraft) return;
+  const moveDraftConflicts = useMemo(() => {
+    if (!moveDraft) return [] as string[];
     const session = sessions.find((entry) => entry.id === moveDraft.sessionId);
-    if (!session) {
-      setMoveDraft(null);
-      return;
-    }
+    if (!session) return [] as string[];
+    const issues: string[] = [];
     const instructorConflict = getInstructorConflict({
       instructorStaffId: session.instructorStaffId,
       startsAt: moveDraft.toStart,
@@ -331,8 +333,24 @@ export default function CalendarPage() {
       endsAt: moveDraft.toEnd,
       sessionId: session.id
     });
-    if ((instructorConflict || locationConflict) && !activeStaff?.permissions.includes("overrideAccess")) {
-      setWarning(instructorConflict ?? locationConflict ?? "Conflict detected.");
+    if (instructorConflict) issues.push(instructorConflict);
+    if (locationConflict) issues.push(locationConflict);
+    if ((session.enrolled ?? 0) > 0) {
+      issues.push("Capacity/registrations affected: customers are already registered.");
+    }
+    return issues;
+  }, [moveDraft, sessions]);
+  const confirmMoveSession = () => {
+    if (!moveDraft) return;
+    const session = sessions.find((entry) => entry.id === moveDraft.sessionId);
+    if (!session) {
+      setMoveDraft(null);
+      return;
+    }
+    const hasHardConflict = moveDraftConflicts.some((entry) => entry.toLowerCase().includes("conflict"));
+    const canOverrideMove = Boolean(activeStaff?.permissions.includes("overrideAccess"));
+    if (hasHardConflict && (!canOverrideMove || !moveOverrideAccepted)) {
+      setWarning(canOverrideMove ? "Conflict detected. Manager override required to confirm move." : moveDraftConflicts[0] ?? "Conflict detected.");
       setMoveDraft(null);
       return;
     }
@@ -361,7 +379,7 @@ export default function CalendarPage() {
       {
         id: `evt_${Math.random().toString(36).slice(2, 9)}`,
         sessionId: session.id,
-        action: "registered",
+        action: "rescheduled",
         customerName: `${programs.find((entry) => entry.id === session.programId)?.title ?? "Session"} rescheduled`,
         occurredAt: new Date().toISOString(),
         staffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
@@ -370,6 +388,7 @@ export default function CalendarPage() {
     ]);
     setMoveDraft(null);
     setDragSessionId(null);
+    setMoveOverrideAccepted(false);
   };
   const getRegistrationEligibility = (session: NonNullable<typeof activeSession>, customerId: string) => {
     const customer = customers.find((entry) => entry.id === customerId);
@@ -529,6 +548,7 @@ export default function CalendarPage() {
               onDropOnDate={({ date }) => createMoveDraft({ date }, "date")}
               activeDropTarget={activeDropTarget}
               onDragTargetChange={setActiveDropTarget}
+              dragEnabled={canEditSchedule}
             />
           ) : (
             <div className="h-[560px] rounded-xl border bg-card p-3" aria-label="calendar-loading-state" />
@@ -969,6 +989,15 @@ export default function CalendarPage() {
                 }
                 openEditPanel(activeSession.id);
               }}
+              onMoveSession={() => {
+                const allowed = requireScheduleEditPermission();
+                if (!allowed.ok) {
+                  setWarning(allowed.message);
+                  setFeedback("");
+                  return;
+                }
+                openEditPanel(activeSession.id);
+              }}
               onCancelSession={() => {
                 const allowed = requireScheduleEditPermission();
                 if (!allowed.ok) {
@@ -1063,32 +1092,80 @@ export default function CalendarPage() {
         />
       ) : null}
       {moveDraft ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" role="dialog" aria-label="move-session-confirmation">
-          <div className="w-full max-w-lg rounded-xl border bg-card p-4">
-            <h3 className="text-lg font-semibold">Move session?</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              From: {new Date(moveDraft.fromStart).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              To: {new Date(moveDraft.toStart).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-            </p>
-            <div className="mt-3 rounded-md border bg-secondary/20 p-2 text-xs text-muted-foreground">
-              Recurring session scope: This session only. (Future options coming soon.)
-            </div>
-            <div className="mt-4 flex justify-end gap-2">
+        <ModalShell
+          open
+          ariaLabel="move-session-confirmation"
+          title="Move session?"
+          description="Confirm session rescheduling details."
+          maxWidthClassName="max-w-lg"
+          onClose={() => {
+            setMoveDraft(null);
+            setDragSessionId(null);
+            setMoveOverrideAccepted(false);
+          }}
+          footer={
+            <div className="flex justify-end gap-2">
               <Button
                 variant="secondary"
                 onClick={() => {
                   setMoveDraft(null);
                   setDragSessionId(null);
+                  setMoveOverrideAccepted(false);
                 }}
               >
                 Cancel
               </Button>
-              <Button onClick={confirmMoveSession}>Confirm Move</Button>
+              <Button
+                disabled={moveDraftConflicts.some((entry) => entry.toLowerCase().includes("conflict")) && (!activeStaff?.permissions.includes("overrideAccess") || !moveOverrideAccepted)}
+                onClick={confirmMoveSession}
+              >
+                Confirm Move
+              </Button>
             </div>
+          }
+        >
+          <p className="text-sm text-muted-foreground">
+            From: {new Date(moveDraft.fromStart).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            To: {new Date(moveDraft.toStart).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+          </p>
+          <div className="mt-3 space-y-2 rounded-md border bg-secondary/20 p-2 text-xs text-muted-foreground">
+            <p className="font-medium text-foreground">Apply move to:</p>
+            <label className="flex items-center gap-2">
+              <input type="radio" name="move-scope" checked readOnly />
+              <span>This session only</span>
+            </label>
+            <label className="flex items-center gap-2 opacity-60">
+              <input type="radio" name="move-scope" disabled />
+              <span>This and future sessions (coming soon)</span>
+            </label>
+            <label className="flex items-center gap-2 opacity-60">
+              <input type="radio" name="move-scope" disabled />
+              <span>Entire series (coming soon)</span>
+            </label>
           </div>
-        </div>
+          {moveDraftConflicts.length > 0 ? (
+            <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900" aria-label="move-conflict-warning">
+              <p className="font-medium">Conflict warning</p>
+              {moveDraftConflicts.map((entry) => (
+                <p key={entry}>• {entry}</p>
+              ))}
+              {activeStaff?.permissions.includes("overrideAccess") ? (
+                <label className="mt-2 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={moveOverrideAccepted}
+                    onChange={(event) => setMoveOverrideAccepted(event.target.checked)}
+                  />
+                  <span>Manager override: confirm move despite conflict</span>
+                </label>
+              ) : (
+                <p className="mt-2">Manager override required.</p>
+              )}
+            </div>
+          ) : null}
+        </ModalShell>
       ) : null}
     </section>
   );

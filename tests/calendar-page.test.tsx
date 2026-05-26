@@ -131,8 +131,8 @@ describe("Calendar interactive workstation", () => {
 
     fireEvent.change(screen.getByLabelText("Calendar jump date"), { target: { value: "2026-04-15" } });
     await user.click(screen.getByRole("button", { name: "Month" }));
-    const monthCells = screen.getAllByTestId("month-day-cell");
-    expect(within(monthCells[0]).getByRole("button", { name: "View agenda for April 1, 2026" })).toBeInTheDocument();
+    expect(screen.getByTestId("calendar-date-cell-2026-04-01")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "View agenda for April 1, 2026" })).toBeInTheDocument();
   });
 
   it("week view uses Monday-start ordering", () => {
@@ -172,11 +172,11 @@ describe("Calendar interactive workstation", () => {
     expect(screen.getByText("May 18 - May 24, 2026")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Month" }));
-    const monthCells = screen.getAllByTestId("month-day-cell");
-    expect(within(monthCells[0]).getByRole("button", { name: "View agenda for May 1, 2026" })).toBeInTheDocument();
+    expect(screen.getByTestId("calendar-date-cell-2026-05-01")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "View agenda for May 1, 2026" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Next" }));
-    const juneCells = screen.getAllByTestId("month-day-cell");
-    expect(within(juneCells[0]).getByRole("button", { name: "View agenda for June 1, 2026" })).toBeInTheDocument();
+    expect(screen.getByTestId("calendar-date-cell-2026-06-01")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "View agenda for June 1, 2026" })).toBeInTheDocument();
   }, 15000);
 
   it("renders visual session blocks with registration/capacity details", async () => {
@@ -385,8 +385,8 @@ describe("Calendar interactive workstation", () => {
     fireEvent.change(screen.getByLabelText("Calendar jump date"), { target: { value: "2026-05-24" } });
     await user.click(screen.getByRole("button", { name: "Month" }));
 
-    const monthCells = screen.getAllByTestId("month-day-cell");
-    expect(monthCells[0].className).toContain("h-44");
+    const targetCell = screen.getByTestId("calendar-date-cell-2026-05-24");
+    expect(targetCell.className).toContain("h-44");
     expect(screen.getByTestId("month-overflow-trigger")).toBeInTheDocument();
 
     await user.click(screen.getByTestId("month-overflow-trigger"));
@@ -457,7 +457,7 @@ describe("Calendar interactive workstation", () => {
     await user.click(screen.getByRole("button", { name: "Month" }));
 
     const targetDate = screen.getByRole("button", { name: "View agenda for May 24, 2026" });
-    const targetCell = targetDate.closest("[data-testid='month-day-cell']");
+    const targetCell = targetDate.closest("[data-testid='calendar-date-cell-2026-05-24']");
     if (!targetCell) throw new Error("Expected month cell for 5/24");
 
     const addButton = within(targetCell).getByRole("button", { name: "+ Add" });
@@ -788,7 +788,9 @@ describe("Calendar interactive workstation", () => {
 
     const sessionButton = screen.getAllByRole("button", { name: /Morning Mobility Flow/i })[0];
     fireEvent.dragStart(sessionButton);
-    const dropDate = screen.getByRole("button", { name: "View agenda for May 23, 2026" }).closest("[data-testid='month-day-cell']");
+    const dropDate = screen
+      .getByRole("button", { name: "View agenda for May 23, 2026" })
+      .closest("[data-testid='calendar-date-cell-2026-05-23']");
     if (!dropDate) throw new Error("Expected month day cell target");
     fireEvent.dragOver(dropDate);
     fireEvent.drop(dropDate);
@@ -797,5 +799,63 @@ describe("Calendar interactive workstation", () => {
     await user.click(screen.getByRole("button", { name: "Agenda" }));
     expect(screen.getByText(/2026-05-23/i)).toBeInTheDocument();
     expect(screen.getByText(/7:00 AM–7:50 AM|7:00 AM - 7:50 AM/i)).toBeInTheDocument();
+  });
+
+  it("shows recurring scope prompt in move confirmation", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    await activateStaff(user);
+    await user.click(screen.getByRole("button", { name: "Week" }));
+
+    const sessionButton = screen.getAllByRole("button", { name: /Morning Mobility Flow/i })[0];
+    fireEvent.dragStart(sessionButton);
+    fireEvent.drop(screen.getByTestId("calendar-slot-2026-05-21-9"));
+
+    expect(screen.getByText(/Apply move to:/i)).toBeInTheDocument();
+    expect(screen.getByText(/This session only/i)).toBeInTheDocument();
+    expect(screen.getByText(/This and future sessions/i)).toBeInTheDocument();
+    expect(screen.getByText(/Entire series/i)).toBeInTheDocument();
+  });
+
+  it("shows conflict warning on drag move and requires override checkbox", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    await activateStaff(user);
+    await user.click(screen.getByRole("button", { name: "Week" }));
+
+    const sessionButton = screen.getAllByRole("button", { name: /Yoga Flow/i })[0];
+    fireEvent.dragStart(sessionButton);
+    fireEvent.drop(screen.getByTestId("calendar-slot-2026-05-21-7"));
+
+    expect(screen.getByLabelText("move-conflict-warning")).toBeInTheDocument();
+    const confirmButton = screen.getByRole("button", { name: "Confirm Move" }) as HTMLButtonElement;
+    expect(confirmButton.disabled).toBe(true);
+    await user.click(screen.getByLabelText(/Manager override:/i));
+    expect(confirmButton.disabled).toBe(false);
+  });
+
+  it("exposes keyboard fallback move action in session detail", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    await activateStaff(user);
+    await user.click(screen.getByRole("button", { name: "Agenda" }));
+    await user.click(screen.getAllByRole("button", { name: "Open" })[0]);
+    await user.click(screen.getByRole("button", { name: "Move Session" }));
+    expect(screen.getByLabelText("session-form-panel")).toBeInTheDocument();
   });
 });

@@ -135,7 +135,8 @@ export function InteractiveCalendar({
   onDropOnSlot,
   onDropOnDate,
   activeDropTarget,
-  onDragTargetChange
+  onDragTargetChange,
+  dragEnabled = true
 }: {
   view: ScheduleView;
   dateKey: string;
@@ -151,6 +152,7 @@ export function InteractiveCalendar({
   onDropOnDate: (target: { date: string; locationId?: string }) => void;
   activeDropTarget?: string | null;
   onDragTargetChange?: (target: string | null) => void;
+  dragEnabled?: boolean;
 }) {
   const selectedDate = fromDateKey(dateKey);
   const weekStart = startOfWeek(selectedDate);
@@ -236,12 +238,23 @@ export function InteractiveCalendar({
             return (
               <section
                 key={dayKey}
+                data-testid={`calendar-date-cell-${dayKey}`}
                 className={`h-44 overflow-hidden rounded-md border p-2 ${inMonth ? "bg-card" : "bg-secondary/20"} ${activeDropTarget === `date:${dayKey}` ? "ring-2 ring-primary" : ""}`}
-                data-testid="month-day-cell"
-                onDragOver={(event) => event.preventDefault()}
-                onDragEnter={() => onDragTargetChange?.(`date:${dayKey}`)}
-                onDragLeave={() => onDragTargetChange?.(null)}
+                aria-label={`calendar-date-cell-${dayKey}`}
+                onDragOver={(event) => {
+                  if (!dragEnabled) return;
+                  event.preventDefault();
+                }}
+                onDragEnter={() => {
+                  if (!dragEnabled) return;
+                  onDragTargetChange?.(`date:${dayKey}`);
+                }}
+                onDragLeave={() => {
+                  if (!dragEnabled) return;
+                  onDragTargetChange?.(null);
+                }}
                 onDrop={(event) => {
+                  if (!dragEnabled) return;
                   event.preventDefault();
                   onDropOnDate({ date: dayKey });
                   onDragTargetChange?.(null);
@@ -268,9 +281,13 @@ export function InteractiveCalendar({
                       <button
                         key={entry.session.id}
                         onClick={() => onOpenSession(entry.session.id)}
-                        className={`block w-full rounded border px-1 py-0.5 text-left text-[11px] ${sessionColor(entry.program?.category)}`}
-                        draggable
-                        onDragStart={() => onDragSessionStart(entry.session.id)}
+                        className={`block w-full rounded border px-1 py-0.5 text-left text-[11px] ${sessionColor(entry.program?.category)} ${dragEnabled ? "cursor-grab active:cursor-grabbing" : ""}`}
+                        draggable={dragEnabled}
+                        title={dragEnabled ? "Drag to reschedule" : undefined}
+                        onDragStart={() => {
+                          if (!dragEnabled) return;
+                          onDragSessionStart(entry.session.id);
+                        }}
                       >
                         <p className="truncate font-medium">{display.programName}</p>
                         {display.overrideTitle ? <p className="truncate text-[10px] text-muted-foreground">{display.overrideTitle}</p> : null}
@@ -319,11 +336,22 @@ export function InteractiveCalendar({
                   return (
                     <div
                       key={`${dayKey}-${hour}`}
+                      data-testid={`calendar-slot-${dayKey}-${hour}`}
                       className={`min-h-16 rounded-md border bg-background p-1 ${activeDropTarget === `slot:${dayKey}:${hour}` ? "ring-2 ring-primary" : ""}`}
-                      onDragOver={(event) => event.preventDefault()}
-                      onDragEnter={() => onDragTargetChange?.(`slot:${dayKey}:${hour}`)}
-                      onDragLeave={() => onDragTargetChange?.(null)}
+                      onDragOver={(event) => {
+                        if (!dragEnabled) return;
+                        event.preventDefault();
+                      }}
+                      onDragEnter={() => {
+                        if (!dragEnabled) return;
+                        onDragTargetChange?.(`slot:${dayKey}:${hour}`);
+                      }}
+                      onDragLeave={() => {
+                        if (!dragEnabled) return;
+                        onDragTargetChange?.(null);
+                      }}
                       onDrop={(event) => {
+                        if (!dragEnabled) return;
                         event.preventDefault();
                         onDropOnSlot({ date: dayKey, startHour: hour });
                         onDragTargetChange?.(null);
@@ -341,9 +369,13 @@ export function InteractiveCalendar({
                             <button
                               key={entry.session.id}
                               onClick={() => onOpenSession(entry.session.id)}
-                              className={`block w-full rounded border px-1 py-0.5 text-left text-[11px] ${sessionColor(entry.program?.category)}`}
-                              draggable
-                              onDragStart={() => onDragSessionStart(entry.session.id)}
+                              className={`block w-full rounded border px-1 py-0.5 text-left text-[11px] ${sessionColor(entry.program?.category)} ${dragEnabled ? "cursor-grab active:cursor-grabbing" : ""}`}
+                              draggable={dragEnabled}
+                              title={dragEnabled ? "Drag to reschedule" : undefined}
+                              onDragStart={() => {
+                                if (!dragEnabled) return;
+                                onDragSessionStart(entry.session.id);
+                              }}
                             >
                               <p className="truncate font-medium">{display.programName}</p>
                               {display.overrideTitle ? <p className="truncate text-[10px] text-muted-foreground">{display.overrideTitle}</p> : null}

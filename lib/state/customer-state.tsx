@@ -37,6 +37,7 @@ import type {
   HouseholdRelationship,
   CustomerAccessRecord,
   EntryMethod,
+  InventoryAuditEntry,
   Membership,
   PosProduct,
   PosTransaction,
@@ -205,6 +206,7 @@ interface CustomerStateContextValue {
   memberships: Membership[];
   punchPasses: PunchPass[];
   accessProducts: PosProduct[];
+  inventoryAuditEntries: InventoryAuditEntry[];
   productCategories: ProductCategoryRecord[];
   transactions: PosTransaction[];
   programs: Program[];
@@ -447,6 +449,26 @@ interface CustomerStateContextValue {
   reorderProductCategory: (categoryId: string, direction: "up" | "down") => { ok: boolean; message: string };
   toggleProductActive: (productId: string) => { ok: boolean; message: string };
   reorderQuickButtonProduct: (productId: string, direction: "up" | "down") => { ok: boolean; message: string };
+  adjustProductInventory: (input: {
+    productId: string;
+    variantId?: string;
+    locationId: string;
+    quantityDelta: number;
+    action: InventoryAuditEntry["action"];
+    note?: string;
+    staffId?: string;
+    staffName?: string;
+  }) => { ok: boolean; message: string };
+  transferProductInventory: (input: {
+    productId: string;
+    variantId?: string;
+    fromLocationId: string;
+    toLocationId: string;
+    quantity: number;
+    note?: string;
+    staffId?: string;
+    staffName?: string;
+  }) => { ok: boolean; message: string };
   updateCustomerAccessRecord: (accessId: string, updates: Partial<CustomerAccessRecord>) => { ok: boolean; message: string };
   addCustomerAccessRecord: (record: Omit<CustomerAccessRecord, "id">) => { ok: boolean; message: string; accessId?: string };
   updateCustomerWaiver: (
@@ -574,6 +596,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     memberships: buildScopedMockKey(activeOrgId, activeLocationId, "memberships"),
     transactions: buildScopedMockKey(activeOrgId, activeLocationId, "transactions"),
     products: buildScopedMockKey(activeOrgId, activeLocationId, "products"),
+    inventoryAudit: buildScopedMockKey(activeOrgId, activeLocationId, "inventoryAudit"),
     productCategories: buildScopedMockKey(activeOrgId, activeLocationId, "productCategories"),
     programs: buildScopedMockKey(activeOrgId, activeLocationId, "programs"),
     sessions: buildScopedMockKey(activeOrgId, activeLocationId, "sessions"),
@@ -603,6 +626,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     normalizeTransactions(seededTransactionsForOrg as Partial<PosTransaction>[], seededProductsForOrg)
   );
   const [accessProducts, setAccessProducts] = useState<PosProduct[]>(seededProductsForOrg);
+  const [inventoryAuditEntries, setInventoryAuditEntries] = useState<InventoryAuditEntry[]>([]);
   const [productCategories, setProductCategories] = useState<ProductCategoryRecord[]>(seededProductCategoriesForOrg);
   const [programs, setPrograms] = useState<Program[]>(seededProgramsForOrg);
   const [sessions, setSessions] = useState<ClassCampSession[]>(
@@ -665,6 +689,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
   useEffect(() => {
     const products = (loadMockState(storageKeys.products, seededProductsForOrg) as PosProduct[]).map(normalizeProductForState);
     const categories = loadMockState(storageKeys.productCategories, seededProductCategoriesForOrg) as ProductCategoryRecord[];
+    const inventoryAudit = loadMockState(storageKeys.inventoryAudit, []) as InventoryAuditEntry[];
     const storedPrograms = (loadMockState(storageKeys.programs, seededProgramsForOrg) as Program[]).map(normalizeProgramForState);
     const storedCheckIns = loadMockState(storageKeys.checkins, seededCheckIns).map((record) => ({
       ...record,
@@ -677,6 +702,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     setMemberships(loadMockState(storageKeys.memberships, seededMembershipsForOrg));
     setPunchPasses(loadMockState(storageKeys.passes, seededPunchPassesForOrg));
     setAccessProducts(products);
+    setInventoryAuditEntries(inventoryAudit);
     setProductCategories(
       [...categories]
         .sort((a, b) => a.displayOrder - b.displayOrder)
@@ -725,6 +751,10 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     if (!hydrated) return;
     saveMockState(storageKeys.products, accessProducts);
   }, [accessProducts, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
+    saveMockState(storageKeys.inventoryAudit, inventoryAuditEntries);
+  }, [inventoryAuditEntries, hydrated]);
   useEffect(() => {
     if (!hydrated) return;
     saveMockState(storageKeys.productCategories, productCategories);
@@ -2364,6 +2394,136 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     return { ok: true as const, message: "Quick button order updated." };
   };
 
+  const adjustProductInventory = (input: {
+    productId: string;
+    variantId?: string;
+    locationId: string;
+    quantityDelta: number;
+    action: InventoryAuditEntry["action"];
+    note?: string;
+    staffId?: string;
+    staffName?: string;
+  }) => {
+    const product = accessProducts.find((entry) => entry.id === input.productId);
+    if (!product) return { ok: false as const, message: "Product not found." };
+    if (!Number.isFinite(input.quantityDelta) || input.quantityDelta === 0) {
+      return { ok: false as const, message: "Quantity delta must be non-zero." };
+    }
+    const variantExists = input.variantId
+      ? (product.variants ?? []).some((entry) => entry.id === input.variantId)
+      : true;
+    setAccessProducts((prev) =>
+      prev.map((entry) => {
+        if (entry.id !== input.productId) return entry;
+        if (input.variantId) {
+          const variants = (entry.variants ?? []).map((variant) => {
+            if (variant.id !== input.variantId) return variant;
+            const current = variant.inventoryByLocation?.[input.locationId] ?? 0;
+            const nextQty = Math.max(0, current + input.quantityDelta);
+            return {
+              ...variant,
+              inventoryByLocation: {
+                ...(variant.inventoryByLocation ?? {}),
+                [input.locationId]: nextQty
+              }
+            };
+          });
+          if (!variantExists) {
+            return {
+              ...entry,
+              variants: [
+                ...variants,
+                {
+                  id: input.variantId,
+                  productId: entry.id,
+                  name: "Variant",
+                  inventoryByLocation: {
+                    [input.locationId]: Math.max(0, input.quantityDelta)
+                  },
+                  active: true
+                }
+              ]
+            };
+          }
+          return { ...entry, variants };
+        }
+        const current = entry.inventoryByLocation?.[input.locationId] ?? 0;
+        const nextQty = Math.max(0, current + input.quantityDelta);
+        return {
+          ...entry,
+          inventoryByLocation: {
+            ...(entry.inventoryByLocation ?? {}),
+            [input.locationId]: nextQty
+          }
+        };
+      })
+    );
+    setInventoryAuditEntries((prev) => [
+      {
+        id: `inv_${Math.random().toString(36).slice(2, 9)}`,
+        organizationId: activeOrgId,
+        locationId: input.locationId,
+        productId: input.productId,
+        variantId: input.variantId,
+        action: input.action,
+        quantityDelta: input.quantityDelta,
+        note: input.note,
+        createdAt: new Date().toISOString(),
+        createdByStaffId: input.staffId,
+        createdByStaffName: input.staffName
+      },
+      ...prev
+    ]);
+    return { ok: true as const, message: "Inventory updated." };
+  };
+
+  const transferProductInventory = (input: {
+    productId: string;
+    variantId?: string;
+    fromLocationId: string;
+    toLocationId: string;
+    quantity: number;
+    note?: string;
+    staffId?: string;
+    staffName?: string;
+  }) => {
+    if (!Number.isFinite(input.quantity) || input.quantity <= 0) {
+      return { ok: false as const, message: "Transfer quantity must be greater than zero." };
+    }
+    const product = accessProducts.find((entry) => entry.id === input.productId);
+    if (!product) return { ok: false as const, message: "Product not found." };
+
+    const fromQty = input.variantId
+      ? product.variants?.find((entry) => entry.id === input.variantId)?.inventoryByLocation?.[input.fromLocationId] ?? 0
+      : product.inventoryByLocation?.[input.fromLocationId] ?? 0;
+
+    if (fromQty < input.quantity) return { ok: false as const, message: "Insufficient stock for transfer." };
+
+    const out = adjustProductInventory({
+      productId: input.productId,
+      variantId: input.variantId,
+      locationId: input.fromLocationId,
+      quantityDelta: -input.quantity,
+      action: "transfer_out",
+      note: input.note,
+      staffId: input.staffId,
+      staffName: input.staffName
+    });
+    if (!out.ok) return out;
+    const incoming = adjustProductInventory({
+      productId: input.productId,
+      variantId: input.variantId,
+      locationId: input.toLocationId,
+      quantityDelta: input.quantity,
+      action: "transfer_in",
+      note: input.note,
+      staffId: input.staffId,
+      staffName: input.staffName
+    });
+    if (!incoming.ok) return incoming;
+    return { ok: true as const, message: "Inventory transferred." };
+  };
+
   const createProductCategory = (input: { label: string; colorToken?: ProductCategoryRecord["colorToken"] }) => {
     const label = input.label.trim();
     if (!label) return { ok: false as const, message: "Category name is required." };
@@ -2681,6 +2841,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       memberships,
       punchPasses,
       accessProducts,
+      inventoryAuditEntries,
       productCategories,
       transactions,
       programs,
@@ -2751,6 +2912,8 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       reorderProductCategory,
       toggleProductActive,
       reorderQuickButtonProduct,
+      adjustProductInventory,
+      transferProductInventory,
       updateCustomerAccessRecord,
       addCustomerAccessRecord,
       updateCustomerWaiver,
@@ -2766,6 +2929,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         setPunchPasses(seededPunchPassesForOrg);
         setCheckInLogRecords(seededCheckIns);
         setAccessProducts(seededProductsForOrg.map(normalizeProductForState));
+        setInventoryAuditEntries([]);
         setProductCategories(seededProductCategoriesForOrg);
         setTransactions(normalizeTransactions(seededTransactionsForOrg, seededProductsForOrg.map(normalizeProductForState)));
         setPrograms(seededProgramsForOrg);
@@ -2778,7 +2942,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         clearScopedMockState(
           activeOrgId,
           activeLocationId,
-          ["customers", "punchPasses", "checkIns", "memberships", "transactions", "products", "productCategories", "programs", "sessions", "registrations", "accessRecords", "waivers", "households", "householdMembers"]
+          ["customers", "punchPasses", "checkIns", "memberships", "transactions", "products", "inventoryAudit", "productCategories", "programs", "sessions", "registrations", "accessRecords", "waivers", "households", "householdMembers"]
         );
       }
     }),
@@ -2787,6 +2951,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       memberships,
       punchPasses,
       accessProducts,
+      inventoryAuditEntries,
       productCategories,
       customerAccessRecords,
       waivers,

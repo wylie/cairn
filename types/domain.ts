@@ -423,8 +423,27 @@ export interface PosProduct {
   name: string;
   description?: string;
   category: string;
+  sku?: string;
+  barcode?: string;
+  status?: "draft" | "active" | "archived";
   priceCents: number;
-  type?: "access" | "membership" | "punch-pass" | "class" | "camp" | "registration" | "retail" | "comp";
+  costCents?: number;
+  marginPercent?: number;
+  type?:
+    | "access"
+    | "membership"
+    | "punch-pass"
+    | "class"
+    | "camp"
+    | "registration"
+    | "retail"
+    | "comp"
+    | "day-pass"
+    | "program-registration"
+    | "rental"
+    | "gift-card"
+    | "service"
+    | "digital-product";
   displayType?: string;
   productCategory?: string;
   colorToken?: "blue" | "green" | "amber" | "purple" | "orange" | "slate" | "gray" | "red";
@@ -455,6 +474,50 @@ export interface PosProduct {
   updatedByStaffName?: string;
   updatedAt?: string;
   active?: boolean;
+  featured?: boolean;
+  onlineVisible?: boolean;
+  imageUrls?: string[];
+  facilityAvailability?: string[];
+  trackInventory?: boolean;
+  lowStockThreshold?: number;
+  inventoryByLocation?: Record<string, number>;
+  variants?: ProductVariant[];
+  slug?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  shippingRequired?: boolean;
+  pickupAvailable?: boolean;
+  fulfillmentLocationIds?: string[];
+  stripeProductIdPlaceholder?: string;
+}
+
+export interface ProductVariant {
+  id: string;
+  productId: string;
+  name: string;
+  option1?: string;
+  option2?: string;
+  option3?: string;
+  sku?: string;
+  barcode?: string;
+  priceCents?: number;
+  costCents?: number;
+  inventoryByLocation?: Record<string, number>;
+  active?: boolean;
+}
+
+export interface InventoryAuditEntry {
+  id: string;
+  organizationId: string;
+  locationId: string;
+  productId: string;
+  variantId?: string;
+  action: "receive" | "adjust" | "transfer_out" | "transfer_in" | "damaged";
+  quantityDelta: number;
+  note?: string;
+  createdAt: string;
+  createdByStaffId?: string;
+  createdByStaffName?: string;
 }
 
 export interface ProductCategoryRecord {

@@ -35,10 +35,20 @@ function toFormState(product?: PosProduct | null): ProductFormInput {
       description: "",
       category: "day_passes",
       type: "access",
+      sku: "",
+      barcode: "",
       displayType: "Day Passes",
       price: "",
       priceCents: 0,
       active: true,
+      status: "active",
+      taxable: true,
+      trackInventory: false,
+      lowStockThreshold: 5,
+      onlineVisible: false,
+      featured: false,
+      shippingRequired: false,
+      pickupAvailable: true,
       showAsQuickButton: false,
       accessBehavior: "single_entry",
       waiverRequired: true,
@@ -144,6 +154,25 @@ export function ProductFormModal({
           <FormField label="Price">
             <Input aria-label="Product price" type="number" min="0" step="0.01" value={String(form.price)} onChange={(event) => setForm((prev) => ({ ...prev, price: event.target.value }))} />
           </FormField>
+          <FormField label="SKU">
+            <Input aria-label="Product SKU" value={form.sku ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, sku: event.target.value }))} />
+          </FormField>
+          <FormField label="Barcode">
+            <Input aria-label="Product barcode" value={form.barcode ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, barcode: event.target.value }))} />
+          </FormField>
+          <FormField label="Cost">
+            <Input
+              aria-label="Product cost"
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.costCents ? String((form.costCents / 100).toFixed(2)) : ""}
+              onChange={(event) => {
+                const amount = Number(event.target.value);
+                setForm((prev) => ({ ...prev, costCents: Number.isFinite(amount) ? Math.round(amount * 100) : undefined }));
+              }}
+            />
+          </FormField>
 
           <FormField label="Description" className="md:col-span-2">
             <Input aria-label="Product description" value={form.description ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))} />
@@ -166,6 +195,17 @@ export function ProductFormModal({
               {productTypeOptions.map((option) => (
                 <option key={option} value={option}>{typeLabels[option]}</option>
               ))}
+            </SelectInput>
+          </FormField>
+          <FormField label="Status">
+            <SelectInput
+              aria-label="Product status"
+              value={form.status ?? "active"}
+              onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value as NonNullable<PosProduct["status"]> }))}
+            >
+              <option value="draft">Draft</option>
+              <option value="active">Active</option>
+              <option value="archived">Archived</option>
             </SelectInput>
           </FormField>
           <FormField label="Category">
@@ -237,6 +277,31 @@ export function ProductFormModal({
             checked={Boolean(form.taxable)}
             onChange={(next) => setForm((prev) => ({ ...prev, taxable: next }))}
           />
+          <CheckboxField
+            label="Track inventory"
+            checked={Boolean(form.trackInventory)}
+            onChange={(next) => setForm((prev) => ({ ...prev, trackInventory: next }))}
+          />
+          <CheckboxField
+            label="Featured"
+            checked={Boolean(form.featured)}
+            onChange={(next) => setForm((prev) => ({ ...prev, featured: next }))}
+          />
+          <CheckboxField
+            label="Online visible"
+            checked={Boolean(form.onlineVisible)}
+            onChange={(next) => setForm((prev) => ({ ...prev, onlineVisible: next }))}
+          />
+          <CheckboxField
+            label="Shipping required"
+            checked={Boolean(form.shippingRequired)}
+            onChange={(next) => setForm((prev) => ({ ...prev, shippingRequired: next }))}
+          />
+          <CheckboxField
+            label="Pickup available"
+            checked={Boolean(form.pickupAvailable)}
+            onChange={(next) => setForm((prev) => ({ ...prev, pickupAvailable: next }))}
+          />
           <label className="space-y-1 text-sm">
             <span>Minimum age</span>
             <Input aria-label="Minimum age" type="number" min="0" value={form.minimumAge ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, minimumAge: event.target.value ? Number(event.target.value) : undefined }))} />
@@ -290,6 +355,20 @@ export function ProductFormModal({
             <label className="space-y-1 text-sm">
               <span>Expiration days (placeholder)</span>
               <Input aria-label="Expiration days" type="number" min="1" value={form.expirationDays ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, expirationDays: event.target.value ? Number(event.target.value) : undefined }))} />
+            </label>
+          ) : null}
+          {form.trackInventory ? (
+            <label className="space-y-1 text-sm">
+              <span>Low stock threshold</span>
+              <Input
+                aria-label="Low stock threshold"
+                type="number"
+                min="0"
+                value={form.lowStockThreshold ?? 0}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, lowStockThreshold: event.target.value ? Number(event.target.value) : 0 }))
+                }
+              />
             </label>
           ) : null}
           <FormField label="Internal notes" className="md:col-span-2">

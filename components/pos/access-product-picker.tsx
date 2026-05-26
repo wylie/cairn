@@ -74,6 +74,8 @@ export function AccessProductPicker({
     return activeProducts.filter((product) => {
       const haystack = [
         product.name,
+        product.sku ?? "",
+        product.barcode ?? "",
         product.description ?? "",
         product.category,
         product.productCategory ?? "",
@@ -169,7 +171,7 @@ export function AccessProductPicker({
             setHighlightedIndex(0);
           }}
           label="Search products"
-          placeholder="Find products by name, category, type, or description"
+          placeholder="Find products by name, SKU, barcode, category, type, or description"
           onKeyDown={handleSearchKeyDown}
         />
         {query ? (

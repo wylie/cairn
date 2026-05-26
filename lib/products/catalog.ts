@@ -20,7 +20,13 @@ export const productTypeOptions: Array<NonNullable<PosProduct["type"]>> = [
   "camp",
   "registration",
   "retail",
-  "comp"
+  "comp",
+  "day-pass",
+  "program-registration",
+  "rental",
+  "gift-card",
+  "service",
+  "digital-product"
 ];
 
 export const categoryLabels: Record<string, string> = {
@@ -45,7 +51,13 @@ export const typeLabels: Record<string, string> = {
   camp: "Camp",
   registration: "Registration",
   retail: "Retail",
-  comp: "Comp"
+  comp: "Comp",
+  "day-pass": "Day Pass",
+  "program-registration": "Program Registration",
+  rental: "Rental",
+  "gift-card": "Gift Card",
+  service: "Service",
+  "digital-product": "Digital Product"
 };
 
 export const productColorTokens = ["blue", "green", "amber", "purple", "orange", "slate", "gray", "red"] as const;
@@ -122,6 +134,18 @@ export function mapTypeToCategory(type: PosProduct["type"]): string {
       return "camps";
     case "retail":
       return "retail";
+    case "rental":
+      return "rentals";
+    case "gift-card":
+      return "other";
+    case "service":
+      return "other";
+    case "digital-product":
+      return "other";
+    case "day-pass":
+      return "day_passes";
+    case "program-registration":
+      return "classes";
     case "comp":
       return "comps";
     case "access":

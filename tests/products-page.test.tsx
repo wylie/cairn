@@ -274,10 +274,12 @@ describe("Products page", () => {
     );
     await activateStaff(user, "2222");
 
+    await user.click(screen.getByRole("button", { name: "Categories" }));
     await user.type(screen.getByLabelText("New category"), "Parties");
     await user.click(screen.getByRole("button", { name: "Add Category" }));
     expect(screen.getByRole("status")).toHaveTextContent(/Category created: Parties/i);
 
+    await user.click(screen.getByRole("button", { name: "Products" }));
     await user.click(screen.getAllByRole("button", { name: "Add Product" })[0]);
     const categorySelect = screen.getByLabelText("Product category");
     expect(within(categorySelect).getByRole("option", { name: "Parties" })).toBeInTheDocument();
@@ -411,8 +413,7 @@ describe("Products page", () => {
     expect(screen.queryByText("Monthly Membership")).not.toBeInTheDocument();
 
     const tagSelect = screen.getByLabelText("Filter products by tag");
-    const firstTag = (within(tagSelect).getAllByRole("option").find((option) => option.getAttribute("value") !== "all") as HTMLOptionElement);
-    await user.selectOptions(tagSelect, firstTag.value);
+    await user.selectOptions(tagSelect, "Youth");
     expect(screen.getByText("Youth Intro Pack")).toBeInTheDocument();
   });
 
@@ -434,5 +435,70 @@ describe("Products page", () => {
     const nameInput = screen.getByLabelText("Product name");
     expect(nameInput).toHaveFocus();
     expect(String((nameInput as HTMLInputElement).value)).toMatch(/ - Copy/i);
+  });
+
+  it("creates a retail product with sku/barcode and finds it by barcode search", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <ProductsPage />
+      </TestProviders>
+    );
+    await activateStaff(user, "2222");
+
+    await user.click(screen.getAllByRole("button", { name: "Add Product" })[0]);
+    await user.type(screen.getByLabelText("Product name"), "Retail Bottle");
+    await user.type(screen.getByLabelText("Product price"), "14");
+    await user.type(screen.getByLabelText("Product SKU"), "RTL-BOTTLE-001");
+    await user.type(screen.getByLabelText("Product barcode"), "777000111");
+    await user.selectOptions(screen.getByLabelText("Product type"), "retail");
+    await user.click(screen.getByRole("button", { name: "Save Product" }));
+
+    await user.clear(screen.getByLabelText("Search products"));
+    await user.type(screen.getByLabelText("Search products"), "777000111");
+    expect(screen.getByText("Retail Bottle")).toBeInTheDocument();
+  });
+
+  it("supports variant creation for retail/rental products", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <ProductsPage />
+      </TestProviders>
+    );
+    await activateStaff(user, "2222");
+
+    const retailCard = screen.getByText("Summit Tee").closest("article");
+    expect(retailCard).not.toBeNull();
+    await user.click(within(retailCard as HTMLElement).getByRole("button", { name: "Add Variant" }));
+    expect(screen.getByRole("status")).toHaveTextContent(/Variant created for Summit Tee/i);
+    expect(within(retailCard as HTMLElement).getAllByText(/Variant \d+/i).length).toBeGreaterThan(0);
+  });
+
+  it("supports inventory adjustments, transfers, and low stock warnings", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <ProductsPage />
+      </TestProviders>
+    );
+    await activateStaff(user, "2222");
+
+    await user.click(screen.getByRole("button", { name: "Inventory" }));
+    expect(screen.getByText("Inventory by facility")).toBeInTheDocument();
+
+    const lowStockRows = screen.getAllByText("Low Stock");
+    expect(lowStockRows.length).toBeGreaterThan(0);
+
+    const rowAction = screen.getAllByRole("button", { name: /Adjust stock/i })[0];
+    await user.click(rowAction);
+    expect(screen.getByRole("status")).toHaveTextContent(/Inventory updated/i);
+
+    const transferAction = screen.getAllByRole("button", { name: /Transfer stock/i })[0];
+    await user.click(transferAction);
+    expect(screen.getByRole("status")).toHaveTextContent(/Inventory transferred/i);
   });
 });

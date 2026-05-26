@@ -67,6 +67,20 @@ function buildRecurringDates(startDate: string, pattern: "none" | "weekly" | "ca
 
 const CALENDAR_VIEW_STORAGE_KEY = "cairn:calendar:view";
 const VIEW_OPTIONS: ScheduleView[] = ["day", "week", "month", "agenda"];
+function getStoredCalendarView(): ScheduleView | null {
+  if (typeof window === "undefined") return null;
+  const storage = window.localStorage as unknown as { getItem?: (key: string) => string | null };
+  if (typeof storage.getItem !== "function") return null;
+  const stored = storage.getItem(CALENDAR_VIEW_STORAGE_KEY);
+  if (!stored || !VIEW_OPTIONS.includes(stored as ScheduleView)) return null;
+  return stored as ScheduleView;
+}
+function setStoredCalendarView(view: ScheduleView) {
+  if (typeof window === "undefined") return;
+  const storage = window.localStorage as unknown as { setItem?: (key: string, value: string) => void };
+  if (typeof storage.setItem !== "function") return;
+  storage.setItem(CALENDAR_VIEW_STORAGE_KEY, view);
+}
 type SessionActivityEvent = {
   id: string;
   sessionId: string;
@@ -109,9 +123,7 @@ export default function CalendarPage() {
   const { activeStaff, assertPermission, staffUsers, requestStaffSwitch } = useWorkstationState();
 
   const [view, setView] = useState<ScheduleView>(() => {
-    if (typeof window === "undefined") return "week";
-    const stored = window.localStorage.getItem(CALENDAR_VIEW_STORAGE_KEY);
-    return stored && VIEW_OPTIONS.includes(stored as ScheduleView) ? (stored as ScheduleView) : "week";
+    return getStoredCalendarView() ?? "week";
   });
   const [search, setSearch] = useState("");
   const [dateKey, setDateKey] = useState("2026-05-21");
@@ -141,7 +153,7 @@ export default function CalendarPage() {
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(CALENDAR_VIEW_STORAGE_KEY, view);
+    setStoredCalendarView(view);
   }, [view]);
 
   const instructors = staffUsers.filter((entry) => (entry.role === "instructor" || entry.canTeach) && entry.activeInstructor !== false);

@@ -236,7 +236,7 @@ export const posProducts: PosProduct[] = [
   },
   {
     id: "prd_f_001",
-    organizationId: "org_fiddlehead",
+    organizationId: "org_riverbend",
     name: "Forest Day Pass",
     description: "Single-day trail access.",
     category: "day_passes",
@@ -253,9 +253,9 @@ export const posProducts: PosProduct[] = [
   },
   {
     id: "prd_f_002",
-    organizationId: "org_fiddlehead",
-    name: "Fiddlehead Membership",
-    description: "Monthly unlimited access at Fiddlehead locations.",
+    organizationId: "org_riverbend",
+    name: "Riverbend Membership",
+    description: "Monthly unlimited access at Riverbend locations.",
     category: "memberships",
     priceCents: 9900,
     type: "membership",

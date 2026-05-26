@@ -116,6 +116,65 @@ describe("Calendar interactive workstation", () => {
     expect(screen.getByTestId("week-grid")).toBeInTheDocument();
   });
 
+  it("month view starts on Monday of the week containing the first of month", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+
+    fireEvent.change(screen.getByLabelText("Calendar jump date"), { target: { value: "2026-04-15" } });
+    await user.click(screen.getByRole("button", { name: "Month" }));
+    const monthCells = screen.getAllByTestId("month-day-cell");
+    expect(within(monthCells[0]).getByRole("button", { name: "3/30" })).toBeInTheDocument();
+  });
+
+  it("week view uses Monday-start ordering", () => {
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    const headers = within(screen.getByTestId("week-grid-layout")).getAllByText(/^[A-Za-z]{3}, \d{1,2}\/\d{1,2}$/);
+    expect(headers[0]).toHaveTextContent("Mon, 5/18");
+    expect(headers[6]).toHaveTextContent("Sun, 5/24");
+  });
+
+  it("Previous/Next respects active day, week, month, and agenda views", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+
+    await user.click(screen.getByRole("button", { name: "Day" }));
+    expect(screen.getByText("Thu, 5/21")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByText("Fri, 5/22")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Week" }));
+    expect(screen.getByText("Mon, 5/18")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Previous" }));
+    expect(screen.getByText("Mon, 5/11")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Agenda" }));
+    expect(screen.getByText("May 11 - May 17, 2026")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByText("May 18 - May 24, 2026")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Month" }));
+    const monthCells = screen.getAllByTestId("month-day-cell");
+    expect(within(monthCells[0]).getByRole("button", { name: "4/27" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    const juneCells = screen.getAllByTestId("month-day-cell");
+    expect(within(juneCells[0]).getByRole("button", { name: "6/1" })).toBeInTheDocument();
+  });
+
   it("renders visual session blocks with registration/capacity details", async () => {
     const user = userEvent.setup();
     render(
@@ -213,7 +272,7 @@ describe("Calendar interactive workstation", () => {
     await user.click(screen.getAllByRole("button", { name: "+ Add" })[0]);
     const panel = screen.getByLabelText("session-form-panel");
     expect(panel).toBeInTheDocument();
-    expect(within(panel).getByLabelText("Session date")).toHaveValue("2026-05-17");
+    expect(within(panel).getByLabelText("Session date")).toHaveValue("2026-05-18");
 
     await user.type(within(panel).getByLabelText("Session title"), "Slot Created Session");
     await user.selectOptions(within(panel).getByLabelText("Session program"), "prog_101");

@@ -53,13 +53,13 @@ export const mockAuthUsers: MockAuthUser[] = [
     locationIds: ["loc_001"]
   },
   {
-    id: "auth_owner_fiddlehead",
-    email: "owner@fiddlehead.example",
+    id: "auth_owner_riverbend",
+    email: "owner@riverbend.example",
     password: "dev1234",
     firstName: "Avery",
     lastName: "Morgan",
     role: "owner",
-    organizationSlugs: ["fiddlehead"],
+    organizationSlugs: ["riverbend"],
     locationIds: ["loc_101", "loc_102"]
   },
   {
@@ -69,7 +69,7 @@ export const mockAuthUsers: MockAuthUser[] = [
     firstName: "Morgan",
     lastName: "Lee",
     role: "manager",
-    organizationSlugs: ["summit", "fiddlehead"],
+    organizationSlugs: ["summit", "riverbend"],
     locationIds: ["loc_001", "loc_002", "loc_101", "loc_102"]
   }
 ];

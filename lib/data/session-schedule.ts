@@ -77,7 +77,8 @@ export function sessionsForWeek(cards: SessionScheduleCardModel[], dateKey: stri
   const selectedDate = new Date(`${dateKey}T00:00:00`);
   const weekStart = new Date(selectedDate);
   const day = weekStart.getDay();
-  weekStart.setDate(weekStart.getDate() - day);
+  const mondayOffset = (day + 6) % 7;
+  weekStart.setDate(weekStart.getDate() - mondayOffset);
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 7);
 

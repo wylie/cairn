@@ -9,9 +9,9 @@ export const organizations: Organization[] = [
     timezone: "America/New_York"
   },
   {
-    id: "org_fiddlehead",
-    slug: "fiddlehead",
-    name: "Fiddlehead Farm & Forest",
+    id: "org_riverbend",
+    slug: "riverbend",
+    name: "Riverbend Recreation Collective",
     facilityType: "camp",
     timezone: "America/New_York"
   }

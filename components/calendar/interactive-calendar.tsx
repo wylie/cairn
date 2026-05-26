@@ -33,9 +33,18 @@ function addDays(date: Date, delta: number) {
 
 function startOfWeek(date: Date) {
   const start = new Date(date);
-  start.setDate(start.getDate() - start.getDay());
+  const dayIndex = start.getDay();
+  const mondayOffset = (dayIndex + 6) % 7;
+  start.setDate(start.getDate() - mondayOffset);
   start.setHours(0, 0, 0, 0);
   return start;
+}
+
+function endOfWeek(date: Date) {
+  const end = startOfWeek(date);
+  end.setDate(end.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  return end;
 }
 
 function viewTitle(view: ScheduleView, dateKey: string) {
@@ -46,12 +55,25 @@ function viewTitle(view: ScheduleView, dateKey: string) {
     const end = addDays(start, 6);
     return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
   }
+  if (view === "agenda") {
+    const start = startOfWeek(date);
+    const end = addDays(start, 6);
+    return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+  }
   return date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 }
 
 function shiftDate(dateKey: string, view: ScheduleView, direction: -1 | 1) {
   const base = fromDateKey(dateKey);
-  const amount = view === "month" ? 30 : view === "week" ? 7 : 1;
+  if (view === "month") {
+    const currentDay = base.getDate();
+    base.setDate(1);
+    base.setMonth(base.getMonth() + direction);
+    const monthLastDay = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+    base.setDate(Math.min(currentDay, monthLastDay));
+    return toDateKey(base);
+  }
+  const amount = view === "week" || view === "agenda" ? 7 : 1;
   base.setDate(base.getDate() + amount * direction);
   return toDateKey(base);
 }
@@ -131,7 +153,10 @@ export function InteractiveCalendar({
   const weekDays = Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
   const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
   const monthGridStart = startOfWeek(monthStart);
-  const monthDays = Array.from({ length: 42 }, (_, index) => addDays(monthGridStart, index));
+  const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
+  const monthGridEnd = endOfWeek(monthEnd);
+  const monthDayCount = Math.floor((monthGridEnd.getTime() - monthGridStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const monthDays = Array.from({ length: monthDayCount }, (_, index) => addDays(monthGridStart, index));
   const hours = Array.from({ length: 16 }, (_, i) => i + 6);
   const [monthOverflowDayKey, setMonthOverflowDayKey] = useState<string | null>(null);
 

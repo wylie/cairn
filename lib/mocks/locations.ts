@@ -27,8 +27,8 @@ export const locations: Location[] = [
   },
   {
     id: "loc_101",
-    organizationId: "org_fiddlehead",
-    name: "Fiddlehead Main",
+    organizationId: "org_riverbend",
+    name: "Riverbend Main",
     shortName: "Main",
     addressLine1: "14 Orchard Rd",
     city: "Asheville",
@@ -39,9 +39,9 @@ export const locations: Location[] = [
   },
   {
     id: "loc_102",
-    organizationId: "org_fiddlehead",
-    name: "Forest Trails",
-    shortName: "Trails",
+    organizationId: "org_riverbend",
+    name: "Riverbend Trail Center",
+    shortName: "Trail Center",
     addressLine1: "88 Pine Loop",
     city: "Asheville",
     state: "NC",

@@ -334,13 +334,13 @@ export const customers: Customer[] = [
   {
     id: "cust_f_001",
     memberId: "F-3001",
-    organizationId: "org_fiddlehead",
+    organizationId: "org_riverbend",
     locationId: "loc_101",
     firstName: "Rowan",
     lastName: "Pike",
     preferredName: "Rowan",
     pronouns: "They/them",
-    email: "rowan@fiddlehead.example",
+    email: "rowan@riverbend.example",
     phone: "(828) 555-4101",
     dateOfBirth: "1992-04-14",
     addressLine1: "12 Creek Rd",
@@ -355,13 +355,13 @@ export const customers: Customer[] = [
   {
     id: "cust_f_staff_001",
     memberId: "FS-3101",
-    organizationId: "org_fiddlehead",
+    organizationId: "org_riverbend",
     locationId: "loc_101",
     firstName: "Avery",
     lastName: "Morgan",
     preferredName: "Avery",
     pronouns: "She/her",
-    email: "owner@fiddlehead.example",
+    email: "owner@riverbend.example",
     phone: "(828) 555-4201",
     dateOfBirth: "1986-08-11",
     addressLine1: "98 Orchard Lane",
@@ -382,7 +382,7 @@ export const customers: Customer[] = [
       assignedPrograms: [],
       permissions: ["manageStaff", "manageSettings", "manageProducts", "viewReports", "viewFinancialReports", "usePOS", "checkInCustomer", "checkOutCustomer"],
       startDate: "2023-07-01",
-      staffNotes: "Fiddlehead owner",
+      staffNotes: "Riverbend owner",
       lastActive: "2026-05-24T10:00:00Z"
     }
   }

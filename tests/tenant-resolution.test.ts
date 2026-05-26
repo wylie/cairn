@@ -3,9 +3,9 @@ import { resolveTenant, resolveOrganizationBySlug } from "@/lib/tenant/resolve";
 import { customers } from "@/lib/mocks/customers";
 
 describe("tenant resolution and data isolation", () => {
-  it("resolves summit and fiddlehead slugs", () => {
+  it("resolves summit and riverbend slugs", () => {
     expect(resolveOrganizationBySlug("summit")?.id).toBe("org_summit");
-    expect(resolveOrganizationBySlug("fiddlehead")?.id).toBe("org_fiddlehead");
+    expect(resolveOrganizationBySlug("riverbend")?.id).toBe("org_riverbend");
   });
 
   it("returns null for invalid org slug", () => {
@@ -14,9 +14,9 @@ describe("tenant resolution and data isolation", () => {
 
   it("seed customers are organization-scoped", () => {
     const summit = customers.filter((entry) => entry.organizationId === "org_summit");
-    const fiddlehead = customers.filter((entry) => entry.organizationId === "org_fiddlehead");
+    const riverbend = customers.filter((entry) => entry.organizationId === "org_riverbend");
     expect(summit.length).toBeGreaterThan(0);
-    expect(fiddlehead.length).toBeGreaterThan(0);
-    expect(fiddlehead.some((entry) => summit.some((s) => s.id === entry.id))).toBe(false);
+    expect(riverbend.length).toBeGreaterThan(0);
+    expect(riverbend.some((entry) => summit.some((s) => s.id === entry.id))).toBe(false);
   });
 });

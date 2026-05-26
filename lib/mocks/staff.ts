@@ -203,11 +203,11 @@ export const staffUsers: StaffUser[] = [
   },
   {
     id: "staff_f_001",
-    organizationId: "org_fiddlehead",
+    organizationId: "org_riverbend",
     locationIds: ["loc_101", "loc_102"],
     firstName: "Avery",
     lastName: "Morgan",
-    email: "owner@fiddlehead.example",
+    email: "owner@riverbend.example",
     phone: "(828) 555-4201",
     pronouns: "She/her",
     role: "owner",
@@ -218,7 +218,7 @@ export const staffUsers: StaffUser[] = [
     startDate: "2023-07-01",
     lastActiveAt: "2026-05-24T10:00:00Z",
     certifications: ["Wilderness First Aid"],
-    notes: "Fiddlehead owner.",
+    notes: "Riverbend owner.",
     permissions: ["viewCustomers", "editCustomer", "createCustomer", "checkInCustomer", "checkOutCustomer", "overrideAccess", "compAccess", "manageProducts", "deactivateProduct", "viewReports", "viewAttendanceReports", "viewFinancialReports", "viewMembershipReports", "usePOS", "refundTransaction", "discountTransaction", "editPrograms", "cancelPrograms", "rosterAccess", "manageSettings", "manageBillingSettings", "managePlatformSettings", "manageStaff", "manageRoles", "inviteStaff", "grantCompAccess"]
   }
 ];

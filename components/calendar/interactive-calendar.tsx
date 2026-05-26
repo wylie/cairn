@@ -216,11 +216,16 @@ export function InteractiveCalendar({
               <section key={dayKey} className={`h-44 overflow-hidden rounded-md border p-2 ${inMonth ? "bg-card" : "bg-secondary/20"}`} data-testid="month-day-cell">
                 <button
                   className="text-xs font-medium"
-                  onClick={() => onDateKeyChange(dayKey)}
+                  onClick={() => setMonthOverflowDayKey(dayKey)}
                 >
                   {day.toLocaleDateString("en-US", { month: "numeric", day: "numeric" })}
                 </button>
                 <div className="mt-1 flex h-[calc(100%-1.25rem)] flex-col gap-1">
+                  <CalendarAddSlotButton
+                    testId="calendar-add-slot-button"
+                    className="h-7"
+                    onClick={() => onCreateAtSlot({ date: dayKey, startTime: "09:00", endTime: "10:00" })}
+                  />
                   <div className="space-y-1 overflow-hidden">
                     {visibleEntries.map((entry) => {
                     const display = getSessionDisplay(entry);
@@ -247,13 +252,6 @@ export function InteractiveCalendar({
                       +{overflowCount} more
                     </button>
                   ) : null}
-                  <div className="mt-auto">
-                    <CalendarAddSlotButton
-                      testId="calendar-add-slot-button"
-                      className="h-7"
-                      onClick={() => onCreateAtSlot({ date: dayKey, startTime: "09:00", endTime: "10:00" })}
-                    />
-                  </div>
                 </div>
               </section>
             );
@@ -268,7 +266,20 @@ export function InteractiveCalendar({
               <p className="text-sm font-semibold">Day agenda</p>
               <p className="text-xs text-muted-foreground">{monthOverflowDayKey}</p>
             </div>
-            <Button variant="secondary" className="h-8" onClick={() => setMonthOverflowDayKey(null)}>Close</Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                className="h-8"
+                onClick={() => {
+                  onDateKeyChange(monthOverflowDayKey);
+                  onViewChange("day");
+                  setMonthOverflowDayKey(null);
+                }}
+              >
+                View Day
+              </Button>
+              <Button variant="secondary" className="h-8" onClick={() => setMonthOverflowDayKey(null)}>Close</Button>
+            </div>
           </div>
           <div className="space-y-2">
             {monthOverflowEntries.map((entry) => {

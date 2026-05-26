@@ -331,6 +331,81 @@ describe("Calendar interactive workstation", () => {
     expect(screen.getByText("Overflow D")).toBeInTheDocument();
   });
 
+  it("clicking month date opens day agenda panel instead of switching to day view", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+
+    await user.click(screen.getByRole("button", { name: "Month" }));
+    await user.click(screen.getByRole("button", { name: "5/21" }));
+
+    expect(screen.getByTestId("month-overflow-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("month-grid")).toBeInTheDocument();
+  });
+
+  it("month day agenda View Day button intentionally switches to day view", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+
+    await user.click(screen.getByRole("button", { name: "Month" }));
+    await user.click(screen.getByRole("button", { name: "5/21" }));
+    await user.click(within(screen.getByTestId("month-overflow-panel")).getByRole("button", { name: "View Day" }));
+
+    expect(screen.getByTestId("day-grid")).toBeInTheDocument();
+    expect(screen.queryByTestId("month-overflow-panel")).not.toBeInTheDocument();
+  });
+
+  it("month add button appears near top of day cell and overflow still works", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    await activateStaff(user);
+
+    for (const [title, start, end] of [
+      ["Top Add A", "07:00", "08:00"],
+      ["Top Add B", "08:00", "09:00"],
+      ["Top Add C", "09:00", "10:00"],
+      ["Top Add D", "10:00", "11:00"]
+    ] as const) {
+      await user.click(screen.getByRole("button", { name: "Create Session" }));
+      const createPanel = screen.getByLabelText("session-form-panel");
+      await user.type(within(createPanel).getByLabelText("Session title"), title);
+      await user.selectOptions(within(createPanel).getByLabelText("Session program"), "prog_101");
+      fireEvent.change(within(createPanel).getByLabelText("Session date"), { target: { value: "2026-05-24" } });
+      fireEvent.change(within(createPanel).getByLabelText("Session start time"), { target: { value: start } });
+      fireEvent.change(within(createPanel).getByLabelText("Session end time"), { target: { value: end } });
+      await user.click(within(createPanel).getByRole("button", { name: "Create Session" }));
+    }
+
+    fireEvent.change(screen.getByLabelText("Calendar jump date"), { target: { value: "2026-05-24" } });
+    await user.click(screen.getByRole("button", { name: "Month" }));
+
+    const targetDate = screen.getByRole("button", { name: "5/24" });
+    const targetCell = targetDate.closest("[data-testid='month-day-cell']");
+    if (!targetCell) throw new Error("Expected month cell for 5/24");
+
+    const addButton = within(targetCell).getByRole("button", { name: "+ Add" });
+    const firstSessionLabel = within(targetCell).getAllByText(/Top Add/i)[0];
+    const cellText = targetCell.textContent ?? "";
+    expect(cellText.indexOf("+ Add")).toBeGreaterThan(-1);
+    expect(cellText.indexOf("+ Add")).toBeLessThan(cellText.indexOf(firstSessionLabel.textContent ?? ""));
+
+    expect(screen.getByTestId("month-overflow-trigger")).toBeInTheDocument();
+  });
+
   it("adds a session from month overflow agenda with date prefilled", async () => {
     const user = userEvent.setup();
     render(

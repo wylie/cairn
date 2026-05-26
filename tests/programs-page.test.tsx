@@ -134,8 +134,9 @@ describe("Programs page IA", () => {
       </TestProviders>
     );
 
-    await user.click(screen.getAllByRole("button", { name: "View Details" })[0]);
-    expect(screen.getByText("Registrations")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Agenda" }));
+    await user.click(screen.getAllByRole("button", { name: "Open" })[0]);
+    expect(screen.getByText("Registered roster")).toBeInTheDocument();
   });
 
   it("creating session uses program default capacity and allows override", async () => {

@@ -104,6 +104,7 @@ describe("Calendar interactive workstation", () => {
 
     await user.click(screen.getByRole("button", { name: "Day" }));
     expect(screen.getByTestId("day-grid")).toBeInTheDocument();
+    expect(screen.getByTestId("day-grid-layout").className).toContain("w-full");
 
     await user.click(screen.getByRole("button", { name: "Month" }));
     expect(screen.getByTestId("month-grid")).toBeInTheDocument();
@@ -127,6 +128,61 @@ describe("Calendar interactive workstation", () => {
     await user.click(screen.getByRole("button", { name: "Agenda" }));
     expect(screen.getByText(/Morning Mobility Flow/i)).toBeInTheDocument();
     expect(screen.getByText(/14\/20|14 \/ 20|14\/ 20|14 \/20/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Iris Chen/i).length).toBeGreaterThan(0);
+  });
+
+  it("week layout uses compact time column and avoids excessive overflow defaults", () => {
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+
+    expect(screen.getByTestId("week-grid-layout").className).toContain("grid-cols-[56px_repeat(7,minmax(0,1fr))]");
+  });
+
+  it("uses program name by default and shows session title override as secondary text", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    await activateStaff(user);
+
+    await user.click(screen.getByRole("button", { name: "Create Session" }));
+    const panel = screen.getByLabelText("session-form-panel");
+    await user.type(within(panel).getByLabelText("Session title"), "Technique Focus");
+    await user.selectOptions(within(panel).getByLabelText("Session program"), "prog_101");
+    fireEvent.change(within(panel).getByLabelText("Session date"), { target: { value: "2026-05-24" } });
+    fireEvent.change(within(panel).getByLabelText("Session start time"), { target: { value: "07:00" } });
+    fireEvent.change(within(panel).getByLabelText("Session end time"), { target: { value: "08:00" } });
+    await user.click(within(panel).getByRole("button", { name: "Create Session" }));
+
+    await user.click(screen.getByRole("button", { name: "Agenda" }));
+    expect(screen.getAllByText("Morning Mobility Flow").length).toBeGreaterThan(0);
+    expect(screen.getByText("Technique Focus")).toBeInTheDocument();
+  });
+
+  it("prefills session instructor from program default and allows override", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    await activateStaff(user);
+
+    await user.click(screen.getByRole("button", { name: "Create Session" }));
+    const panel = screen.getByLabelText("session-form-panel");
+    const instructorSelect = within(panel).getByLabelText("Session instructor") as HTMLSelectElement;
+    expect(instructorSelect.value).toBe("staff_004");
+
+    await user.selectOptions(instructorSelect, "staff_002");
+    expect(within(panel).getByText(/overridden for this session/i)).toBeInTheDocument();
   });
 
   it("opens session detail from a visual block", async () => {
@@ -227,9 +283,51 @@ describe("Calendar interactive workstation", () => {
     await user.click(screen.getAllByRole("button", { name: "Open" })[0]);
     await user.click(screen.getAllByRole("button", { name: "Move to Waitlist" })[0]);
     expect(screen.getByText(/Registration moved to waitlist\./i)).toBeInTheDocument();
+    expect(screen.getByText(/Waitlist roster/i)).toBeInTheDocument();
+    expect(screen.getByText(/#1/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Promote to Registered" }));
+    await user.click(screen.getByRole("button", { name: "Promote" }));
     expect(screen.getByText(/promoted/i)).toBeInTheDocument();
+  });
+
+  it("routes additional registrations to waitlist when session is full", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    await activateStaff(user);
+
+    await user.click(screen.getByRole("button", { name: "Create Session" }));
+    const panel = screen.getByLabelText("session-form-panel");
+    await user.type(within(panel).getByLabelText("Session title"), "Waitlist Capacity Test");
+    await user.selectOptions(within(panel).getByLabelText("Session program"), "prog_101");
+    fireEvent.change(within(panel).getByLabelText("Session date"), { target: { value: "2026-05-24" } });
+    fireEvent.change(within(panel).getByLabelText("Session start time"), { target: { value: "07:00" } });
+    fireEvent.change(within(panel).getByLabelText("Session end time"), { target: { value: "08:00" } });
+    await user.clear(within(panel).getByLabelText("Session capacity"));
+    await user.type(within(panel).getByLabelText("Session capacity"), "1");
+    await user.click(within(panel).getByRole("button", { name: "Create Session" }));
+
+    fireEvent.change(screen.getByLabelText("Calendar jump date"), { target: { value: "2026-05-24" } });
+    await user.click(screen.getByRole("button", { name: "Agenda" }));
+    const sessionRowTitle = screen.getByText(/^Waitlist Capacity Test$/i);
+    const sessionRow = sessionRowTitle.closest("article");
+    if (!sessionRow) {
+      throw new Error("Expected agenda session row for waitlist capacity test session.");
+    }
+    await user.click(within(sessionRow).getByRole("button", { name: "Open" }));
+
+    await user.type(screen.getByLabelText("Session customer search"), "Maya");
+    await user.click(screen.getByRole("option", { name: /M-1001/i }));
+
+    await user.type(screen.getByLabelText("Session customer search"), "Jordan");
+    await user.click(screen.getByRole("option", { name: /M-1002/i }));
+
+    expect(screen.getByText(/added to waitlist/i)).toBeInTheDocument();
+    expect(screen.getByText(/Waitlist roster/i)).toBeInTheDocument();
   });
 
   it("persists created sessions after refresh", async () => {

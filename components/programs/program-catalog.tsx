@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { FormActions, FormField, FormGrid, ToggleField } from "@/components/shared/form-layout";
-import type { ClassCampSession, Program } from "@/types/domain";
+import type { ClassCampSession, Program, StaffUser } from "@/types/domain";
 
 interface ProgramFormValues {
   title: string;
@@ -20,6 +20,7 @@ interface ProgramFormValues {
   guardianRequired: boolean;
   memberRequired: boolean;
   dropInAllowed: boolean;
+  defaultInstructorId: string;
   pricingModel: NonNullable<Program["pricingModel"]>;
   basePriceCents: string;
   waitlistEnabled: boolean;
@@ -40,6 +41,7 @@ const defaultForm: ProgramFormValues = {
   guardianRequired: false,
   memberRequired: false,
   dropInAllowed: true,
+  defaultInstructorId: "",
   pricingModel: "paid_registration",
   basePriceCents: "0",
   waitlistEnabled: true,
@@ -61,11 +63,13 @@ function formatAgeRange(program: Program) {
 export function ProgramCatalog({
   programs,
   sessions,
+  instructors,
   onCreateProgram,
   onUpdateProgram
 }: {
   programs: Program[];
   sessions: ClassCampSession[];
+  instructors: StaffUser[];
   onCreateProgram: (input: {
     title: string;
     description?: string;
@@ -77,6 +81,7 @@ export function ProgramCatalog({
     guardianRequired?: boolean;
     memberRequired?: boolean;
     dropInAllowed?: boolean;
+    defaultInstructorId?: string;
     pricingModel?: Program["pricingModel"];
     basePriceCents?: number;
     waitlistEnabled?: boolean;
@@ -96,6 +101,7 @@ export function ProgramCatalog({
     guardianRequired?: boolean;
     memberRequired?: boolean;
     dropInAllowed?: boolean;
+    defaultInstructorId?: string;
     pricingModel?: Program["pricingModel"];
     basePriceCents?: number;
     waitlistEnabled?: boolean;
@@ -129,6 +135,7 @@ export function ProgramCatalog({
       guardianRequired: Boolean(program.guardianRequired),
       memberRequired: Boolean(program.memberRequired),
       dropInAllowed: program.dropInAllowed !== false,
+      defaultInstructorId: program.defaultInstructorId ?? "",
       pricingModel: program.pricingModel ?? "paid_registration",
       basePriceCents: String(program.basePriceCents ?? 0),
       waitlistEnabled: program.waitlistEnabled !== false,
@@ -168,6 +175,7 @@ export function ProgramCatalog({
       guardianRequired: form.guardianRequired,
       memberRequired: form.memberRequired,
       dropInAllowed: form.dropInAllowed,
+      defaultInstructorId: form.defaultInstructorId || undefined,
       pricingModel: form.pricingModel,
       basePriceCents: Number(form.basePriceCents || "0"),
       waitlistEnabled: form.waitlistEnabled,
@@ -263,6 +271,14 @@ export function ProgramCatalog({
               <ToggleField label="Member required" checked={form.memberRequired} onChange={(checked) => setForm((prev) => ({ ...prev, memberRequired: checked }))} ariaLabel="Program member required" />
               <ToggleField label="Drop-ins allowed" checked={form.dropInAllowed} onChange={(checked) => setForm((prev) => ({ ...prev, dropInAllowed: checked }))} ariaLabel="Program drop in allowed" />
               <ToggleField label="Waitlist enabled" checked={form.waitlistEnabled} onChange={(checked) => setForm((prev) => ({ ...prev, waitlistEnabled: checked }))} ariaLabel="Program waitlist enabled" />
+              <FormField label="Default instructor">
+                <select aria-label="Program default instructor" value={form.defaultInstructorId} onChange={(event) => setForm((prev) => ({ ...prev, defaultInstructorId: event.target.value }))} className="h-11 w-full rounded-md border border-input bg-white px-3 py-2 text-sm">
+                  <option value="">None</option>
+                  {instructors.map((staff) => (
+                    <option key={staff.id} value={staff.id}>{staff.firstName} {staff.lastName}</option>
+                  ))}
+                </select>
+              </FormField>
               <FormField label="Pricing">
                 <select aria-label="Program pricing model" value={form.pricingModel} onChange={(event) => setForm((prev) => ({ ...prev, pricingModel: event.target.value as NonNullable<Program["pricingModel"]> }))} className="h-11 w-full rounded-md border border-input bg-white px-3 py-2 text-sm">
                   <option value="free">Free</option>

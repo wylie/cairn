@@ -370,6 +370,7 @@ export interface Program {
   prerequisites?: string;
   locationId?: string;
   instructorIds?: string[];
+  defaultInstructorId?: string;
   pricingModel?: "free" | "included_membership" | "paid_registration" | "drop_in_fee";
   dropInFeeCents?: number;
   basePriceCents?: number;

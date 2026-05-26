@@ -97,10 +97,9 @@ function normalizeProductForState(product: PosProduct): PosProduct {
 }
 
 function normalizeSessionForState(session: ClassCampSession, programs: Program[]): ClassCampSession {
-  const program = programs.find((entry) => entry.id === session.programId);
   return {
     ...session,
-    title: session.title ?? program?.title ?? "Untitled Session",
+    title: session.title?.trim() ? session.title.trim() : undefined,
     waitlistEnabled: session.waitlistEnabled ?? false,
     waitlistCount: session.waitlistCount ?? 0,
     status: session.status ?? "scheduled"
@@ -372,7 +371,7 @@ interface CustomerStateContextValue {
   }) => { ok: boolean; message: string; sessionId?: string };
   updateSession: (input: {
     sessionId: string;
-    title: string;
+    title?: string;
     programId: string;
     locationId: string;
     startsAt: string;
@@ -406,6 +405,7 @@ interface CustomerStateContextValue {
     guardianRequired?: boolean;
     memberRequired?: boolean;
     dropInAllowed?: boolean;
+    defaultInstructorId?: string;
     pricingModel?: Program["pricingModel"];
     basePriceCents?: number;
     waitlistEnabled?: boolean;
@@ -426,6 +426,7 @@ interface CustomerStateContextValue {
     guardianRequired?: boolean;
     memberRequired?: boolean;
     dropInAllowed?: boolean;
+    defaultInstructorId?: string;
     pricingModel?: Program["pricingModel"];
     basePriceCents?: number;
     waitlistEnabled?: boolean;
@@ -1851,7 +1852,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       id: sessionId,
       programId: program.id,
       locationId: input.locationId || activeLocationId,
-      title: input.title?.trim() || program.title,
+      title: input.title?.trim() || undefined,
       instructorName: input.instructorName,
       instructorStaffId: input.instructorStaffId,
       notes: input.notes?.trim() || undefined,
@@ -1872,7 +1873,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
 
   const updateSession = (input: {
     sessionId: string;
-    title: string;
+    title?: string;
     programId: string;
     locationId: string;
     startsAt: string;
@@ -1899,7 +1900,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         entry.id === input.sessionId
           ? {
               ...entry,
-              title: input.title.trim() || existing.title || "Untitled Session",
+              title: input.title?.trim() || undefined,
               programId: input.programId,
               locationId: input.locationId,
               startsAt,
@@ -2174,6 +2175,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     guardianRequired?: boolean;
     memberRequired?: boolean;
     dropInAllowed?: boolean;
+    defaultInstructorId?: string;
     pricingModel?: Program["pricingModel"];
     basePriceCents?: number;
     waitlistEnabled?: boolean;
@@ -2198,6 +2200,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       guardianRequired: input.guardianRequired,
       memberRequired: input.memberRequired,
       dropInAllowed: input.dropInAllowed,
+      defaultInstructorId: input.defaultInstructorId,
       pricingModel: input.pricingModel,
       basePriceCents: Number.isFinite(input.basePriceCents) ? input.basePriceCents : undefined,
       waitlistEnabled: input.waitlistEnabled,
@@ -2222,6 +2225,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     guardianRequired?: boolean;
     memberRequired?: boolean;
     dropInAllowed?: boolean;
+    defaultInstructorId?: string;
     pricingModel?: Program["pricingModel"];
     basePriceCents?: number;
     waitlistEnabled?: boolean;
@@ -2249,6 +2253,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
               guardianRequired: input.guardianRequired,
               memberRequired: input.memberRequired,
               dropInAllowed: input.dropInAllowed,
+              defaultInstructorId: input.defaultInstructorId,
               pricingModel: input.pricingModel,
               basePriceCents: Number.isFinite(input.basePriceCents) ? input.basePriceCents : undefined,
               waitlistEnabled: input.waitlistEnabled,

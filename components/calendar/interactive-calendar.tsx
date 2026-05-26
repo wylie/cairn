@@ -76,6 +76,15 @@ function sessionColor(category?: string) {
   }
 }
 
+function getSessionDisplay(entry: SessionScheduleCardModel) {
+  const programName = entry.program?.title ?? "Session";
+  const overrideTitle = entry.session.title?.trim();
+  if (!overrideTitle || overrideTitle.toLowerCase() === programName.toLowerCase()) {
+    return { programName, overrideTitle: "" };
+  }
+  return { programName, overrideTitle };
+}
+
 export function InteractiveCalendar({
   view,
   dateKey,
@@ -145,13 +154,16 @@ export function InteractiveCalendar({
       {view === "agenda" ? (
         <div className="space-y-2" data-testid="agenda-list">
           {entries.length === 0 ? <p className="rounded-md border px-3 py-4 text-sm text-muted-foreground">No sessions in this date range.</p> : null}
-          {entries.map((entry) => (
+          {entries.map((entry) => {
+            const display = getSessionDisplay(entry);
+            return (
             <article key={entry.session.id} className={`rounded-md border p-2 ${sessionColor(entry.program?.category)}`}>
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-sm font-medium">{entry.session.title ?? entry.program?.title ?? "Session"}</p>
+                  <p className="text-sm font-medium">{display.programName}</p>
+                  {display.overrideTitle ? <p className="text-xs text-muted-foreground">{display.overrideTitle}</p> : null}
                   <p className="text-xs text-muted-foreground">{entry.session.startsAt.slice(0, 10)} • {formatRange(entry.session.startsAt, entry.session.endsAt)}</p>
-                  <p className="text-xs text-muted-foreground">{entry.session.instructorName ?? "Unassigned"} • {entry.registrationCount} / {entry.session.capacity}</p>
+                  <p className="text-xs text-muted-foreground">{entry.session.instructorName ?? "Unassigned"} • {entry.registrationCount} / {entry.session.capacity}{entry.waitlistCount > 0 ? ` • WL ${entry.waitlistCount}` : ""}</p>
                 </div>
                 <Badge tone={statusTone(entry.session.status)}>{entry.session.status ?? "scheduled"}</Badge>
               </div>
@@ -160,7 +172,8 @@ export function InteractiveCalendar({
                 <Button className="h-8" variant="secondary" onClick={() => onEditSession(entry.session.id)}>Edit</Button>
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       ) : null}
 
@@ -179,16 +192,20 @@ export function InteractiveCalendar({
                   {day.toLocaleDateString("en-US", { month: "numeric", day: "numeric" })}
                 </button>
                 <div className="mt-1 space-y-1">
-                  {dayEntries.slice(0, 3).map((entry) => (
-                    <button
-                      key={entry.session.id}
-                      onClick={() => onOpenSession(entry.session.id)}
-                      className={`block w-full rounded border px-1 py-0.5 text-left text-[11px] ${sessionColor(entry.program?.category)}`}
-                    >
-                      <p className="truncate font-medium">{entry.session.title ?? entry.program?.title ?? "Session"}</p>
-                      <p className="truncate">{formatTime(entry.session.startsAt)} • {entry.registrationCount}/{entry.session.capacity}</p>
-                    </button>
-                  ))}
+                  {dayEntries.slice(0, 3).map((entry) => {
+                    const display = getSessionDisplay(entry);
+                    return (
+                      <button
+                        key={entry.session.id}
+                        onClick={() => onOpenSession(entry.session.id)}
+                        className={`block w-full rounded border px-1 py-0.5 text-left text-[11px] ${sessionColor(entry.program?.category)}`}
+                      >
+                        <p className="truncate font-medium">{display.programName}</p>
+                        {display.overrideTitle ? <p className="truncate text-[10px] text-muted-foreground">{display.overrideTitle}</p> : null}
+                        <p className="truncate">{formatTime(entry.session.startsAt)} • {entry.registrationCount}/{entry.session.capacity}{entry.waitlistCount > 0 ? ` • WL ${entry.waitlistCount}` : ""}</p>
+                      </button>
+                    );
+                  })}
                   {dayEntries.length > 3 ? <p className="text-[11px] text-muted-foreground">+{dayEntries.length - 3} more</p> : null}
                   <Button
                     className="h-7 w-full text-xs"
@@ -205,8 +222,11 @@ export function InteractiveCalendar({
       ) : null}
 
       {(view === "day" || view === "week") ? (
-        <div className="overflow-auto" data-testid={`${view}-grid`}>
-          <div className={`grid min-w-[900px] gap-2 ${view === "day" ? "grid-cols-[80px_1fr]" : "grid-cols-[80px_repeat(7,minmax(0,1fr))]"}`}>
+        <div className="overflow-x-auto overflow-y-visible" data-testid={`${view}-grid`}>
+          <div
+            data-testid={view === "day" ? "day-grid-layout" : "week-grid-layout"}
+            className={`grid gap-2 ${view === "day" ? "w-full grid-cols-[56px_minmax(0,1fr)]" : "min-w-[780px] grid-cols-[56px_repeat(7,minmax(0,1fr))] xl:min-w-0"}`}
+          >
             <div />
             {(view === "day" ? [selectedDate] : weekDays).map((day) => (
               <div key={toDateKey(day)} className="px-1 text-xs font-medium text-muted-foreground">
@@ -229,17 +249,21 @@ export function InteractiveCalendar({
                         + Add
                       </button>
                       <div className="space-y-1">
-                        {rowEntries.map((entry) => (
-                          <button
-                            key={entry.session.id}
-                            onClick={() => onOpenSession(entry.session.id)}
-                            className={`block w-full rounded border px-1 py-0.5 text-left text-[11px] ${sessionColor(entry.program?.category)}`}
-                          >
-                            <p className="truncate font-medium">{entry.session.title ?? entry.program?.title ?? "Session"}</p>
-                            <p className="truncate">{formatRange(entry.session.startsAt, entry.session.endsAt)}</p>
-                            <p className="truncate">{entry.registrationCount}/{entry.session.capacity}</p>
-                          </button>
-                        ))}
+                        {rowEntries.map((entry) => {
+                          const display = getSessionDisplay(entry);
+                          return (
+                            <button
+                              key={entry.session.id}
+                              onClick={() => onOpenSession(entry.session.id)}
+                              className={`block w-full rounded border px-1 py-0.5 text-left text-[11px] ${sessionColor(entry.program?.category)}`}
+                            >
+                              <p className="truncate font-medium">{display.programName}</p>
+                              {display.overrideTitle ? <p className="truncate text-[10px] text-muted-foreground">{display.overrideTitle}</p> : null}
+                              <p className="truncate">{formatRange(entry.session.startsAt, entry.session.endsAt)}</p>
+                              <p className="truncate">{entry.session.instructorName ?? "Unassigned"} • {entry.registrationCount}/{entry.session.capacity}{entry.waitlistCount > 0 ? ` • WL ${entry.waitlistCount}` : ""}</p>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   );

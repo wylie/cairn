@@ -11,7 +11,8 @@ export const programs: Program[] = [
     active: true,
     colorToken: "green",
     defaultCapacity: 12,
-    requiresWaiver: true
+    requiresWaiver: true,
+    defaultInstructorId: "staff_004"
   },
   {
     id: "prog_202",
@@ -28,7 +29,8 @@ export const programs: Program[] = [
     memberRequired: false,
     waitlistEnabled: true,
     minimumAge: 8,
-    maximumAge: 14
+    maximumAge: 14,
+    defaultInstructorId: "staff_004"
   },
   {
     id: "prog_303",
@@ -43,7 +45,8 @@ export const programs: Program[] = [
     requiresWaiver: true,
     dropInAllowed: true,
     waitlistEnabled: true,
-    minimumAge: 14
+    minimumAge: 14,
+    defaultInstructorId: "staff_002"
   },
   {
     id: "prog_404",
@@ -57,7 +60,8 @@ export const programs: Program[] = [
     defaultCapacity: 18,
     requiresWaiver: true,
     dropInAllowed: true,
-    waitlistEnabled: true
+    waitlistEnabled: true,
+    defaultInstructorId: "staff_002"
   },
   {
     id: "prog_505",
@@ -72,7 +76,8 @@ export const programs: Program[] = [
     requiresWaiver: true,
     memberRequired: true,
     waitlistEnabled: true,
-    minimumAge: 12
+    minimumAge: 12,
+    defaultInstructorId: "staff_004"
   },
   {
     id: "prog_606",
@@ -88,7 +93,8 @@ export const programs: Program[] = [
     guardianRequired: true,
     waitlistEnabled: true,
     minimumAge: 9,
-    maximumAge: 15
+    maximumAge: 15,
+    defaultInstructorId: "staff_004"
   }
 ];
 

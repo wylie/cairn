@@ -87,19 +87,28 @@ export function SessionFormPanel({
 }) {
   const defaultProgramId = programs[0]?.id ?? "";
   const defaultCapacity = String(programs[0]?.defaultCapacity ?? 12);
+  const defaultInstructorStaffId = programs[0]?.defaultInstructorId ?? "";
 
   const [values, setValues] = useState<SessionFormValues>(
     session
       ? fromSession(session)
-      : { ...emptyValues, programId: defaultProgramId, locationId: locations[0]?.id ?? "", capacity: defaultCapacity }
+      : {
+          ...emptyValues,
+          programId: defaultProgramId,
+          locationId: locations[0]?.id ?? "",
+          capacity: defaultCapacity,
+          instructorStaffId: defaultInstructorStaffId
+        }
   );
   const [capacityEdited, setCapacityEdited] = useState(false);
+  const [instructorEdited, setInstructorEdited] = useState(false);
   const lastProgramIdRef = useRef<string>(values.programId);
 
   useEffect(() => {
     if (session) {
       setValues(fromSession(session));
       setCapacityEdited(true);
+      setInstructorEdited(true);
       return;
     }
     const next = {
@@ -107,12 +116,14 @@ export function SessionFormPanel({
       programId: defaultProgramId,
       locationId: locations[0]?.id ?? "",
       capacity: defaultCapacity,
+      instructorStaffId: defaultInstructorStaffId,
       ...initialValues
     };
     setValues(next);
     lastProgramIdRef.current = next.programId;
     setCapacityEdited(false);
-  }, [session, defaultProgramId, defaultCapacity, locations, initialValues]);
+    setInstructorEdited(false);
+  }, [session, defaultProgramId, defaultCapacity, defaultInstructorStaffId, locations, initialValues]);
 
   useEffect(() => {
     if (mode !== "create") return;
@@ -121,8 +132,11 @@ export function SessionFormPanel({
     if (!capacityEdited && selectedProgram?.defaultCapacity) {
       setValues((prev) => ({ ...prev, capacity: String(selectedProgram.defaultCapacity) }));
     }
+    if (!instructorEdited && selectedProgram?.defaultInstructorId) {
+      setValues((prev) => ({ ...prev, instructorStaffId: selectedProgram.defaultInstructorId ?? "" }));
+    }
     lastProgramIdRef.current = values.programId;
-  }, [mode, values.programId, capacityEdited, programs]);
+  }, [mode, values.programId, capacityEdited, instructorEdited, programs]);
 
   const title = mode === "create" ? "Create Session" : "Edit Session";
   const hasRegistrations = (session?.enrolled ?? 0) > 0 || (session?.waitlistCount ?? 0) > 0;
@@ -131,6 +145,12 @@ export function SessionFormPanel({
     const instructor = instructors.find((entry) => entry.id === values.instructorStaffId);
     return instructor ? `${instructor.firstName} ${instructor.lastName}` : "Unassigned";
   }, [instructors, values.instructorStaffId]);
+  const selectedProgram = useMemo(() => programs.find((entry) => entry.id === values.programId), [programs, values.programId]);
+  const hasInstructorOverride = Boolean(
+    selectedProgram?.defaultInstructorId &&
+      values.instructorStaffId &&
+      values.instructorStaffId !== selectedProgram.defaultInstructorId
+  );
 
   return (
     <section className="rounded-xl border bg-card p-4" aria-label="session-form-panel">
@@ -148,7 +168,7 @@ export function SessionFormPanel({
         </p>
       ) : null}
       <FormGrid className="mt-3" label="session-form-layout">
-        <FormField label="Title">
+        <FormField label="Session title override" helperText="Optional. Use only for special sessions or variations.">
           <Input aria-label="Session title" value={values.title} onChange={(event) => setValues((prev) => ({ ...prev, title: event.target.value }))} />
         </FormField>
         <FormField label="Program">
@@ -171,12 +191,29 @@ export function SessionFormPanel({
           </FormField>
         </div>
         <FormField label="Instructor">
-          <select aria-label="Session instructor" value={values.instructorStaffId} onChange={(event) => setValues((prev) => ({ ...prev, instructorStaffId: event.target.value }))} className="h-11 w-full rounded-md border border-input bg-white px-3 py-2 text-sm">
+          <select
+            aria-label="Session instructor"
+            value={values.instructorStaffId}
+            onChange={(event) => {
+              setInstructorEdited(true);
+              setValues((prev) => ({ ...prev, instructorStaffId: event.target.value }));
+            }}
+            className="h-11 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+          >
             <option value="">Unassigned</option>
             {instructors.map((staff) => (
               <option key={staff.id} value={staff.id}>{staff.firstName} {staff.lastName}</option>
             ))}
           </select>
+          {selectedProgram?.defaultInstructorId ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Default instructor: {(() => {
+                const staff = instructors.find((entry) => entry.id === selectedProgram.defaultInstructorId);
+                return staff ? `${staff.firstName} ${staff.lastName}` : "Assigned staff";
+              })()}
+              {hasInstructorOverride ? " (overridden for this session)" : ""}
+            </p>
+          ) : null}
         </FormField>
         <FormField label="Session capacity">
           <Input

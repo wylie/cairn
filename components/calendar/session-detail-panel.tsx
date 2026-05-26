@@ -64,6 +64,8 @@ export function SessionDetailPanel({
   const waitlisted = sessionRegistrations
     .filter((entry) => entry.status === "waitlisted")
     .sort((a, b) => (a.waitlistPosition ?? 999) - (b.waitlistPosition ?? 999));
+  const isFull = session.enrolled >= session.capacity;
+  const availableSpots = Math.max(session.capacity - session.enrolled, 0);
 
   return (
     <aside className="rounded-xl border bg-card p-4" aria-label="session-detail-panel">
@@ -85,6 +87,9 @@ export function SessionDetailPanel({
       </div>
 
       <div className="mt-3 space-y-2">
+        <div className="rounded-md border bg-secondary/20 px-3 py-2 text-xs text-muted-foreground">
+          Capacity: {session.enrolled}/{session.capacity} • Available spots: {availableSpots} • Waitlist: {waitlisted.length}
+        </div>
         <CustomerSearchCombobox
           label="Session customer search"
           placeholder="Search customer to register"
@@ -108,7 +113,9 @@ export function SessionDetailPanel({
             ))}
             {candidateEligibility.guardianName ? <p className="text-xs text-muted-foreground">Guardian: {candidateEligibility.guardianName}</p> : null}
             <div className="mt-2 flex flex-wrap gap-2">
-              <Button className="h-9" onClick={() => onRegister(activeCandidate.id)} disabled={candidateEligibility.state === "blocked"}>Register</Button>
+              <Button className="h-9" onClick={() => onRegister(activeCandidate.id)} disabled={candidateEligibility.state === "blocked"}>
+                {isFull && session.waitlistEnabled ? "Join Waitlist" : "Register"}
+              </Button>
               <Button className="h-9" variant="secondary" onClick={() => onSellAccess(activeCandidate.id)}>Sell Access</Button>
               <Button className="h-9" variant="secondary" onClick={() => onMarkWaiverSigned(activeCandidate.id)}>Mark Waiver Signed</Button>
             </div>
@@ -149,7 +156,7 @@ export function SessionDetailPanel({
       </div>
 
       <div className="mt-3 space-y-2">
-        <p className="text-sm font-medium">Registrations</p>
+        <p className="text-sm font-medium">Registered roster</p>
         {confirmed.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             <Button className="h-9" variant="secondary" onClick={() => confirmed.forEach((entry) => onMarkAttendance(entry.id, "attended"))}>Mark all present</Button>
@@ -190,7 +197,7 @@ export function SessionDetailPanel({
                       Move to Waitlist
                     </Button>
                   ) : null}
-                  <Button className="h-9" variant="outline" onClick={() => onCancelRegistration(entry.id)}>Cancel</Button>
+                  <Button className="h-9" variant="outline" onClick={() => onCancelRegistration(entry.id)}>Remove</Button>
                 </div>
               </div>
             </article>
@@ -198,14 +205,20 @@ export function SessionDetailPanel({
         })}
         {waitlisted.length > 0 ? (
           <div className="space-y-2">
-            <p className="text-sm font-medium">Waitlist</p>
+            <p className="text-sm font-medium">Waitlist roster</p>
             {waitlisted.map((entry) => {
               const customer = customers.find((item) => item.id === entry.customerId);
               return (
                 <article key={entry.id} className="rounded-lg border p-3 text-sm">
-                  <div className="flex items-center justify-between gap-2">
-                    <p>{customer ? `${customer.firstName} ${customer.lastName}` : "Unknown customer"} • Waitlist #{entry.waitlistPosition ?? "—"}</p>
-                    <Button className="h-9" variant="secondary" onClick={() => onPromoteWaitlist(entry.id)}>Promote to Registered</Button>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p>{entry.waitlistPosition ? `#${entry.waitlistPosition}` : "#—"} • {customer ? `${customer.firstName} ${customer.lastName}` : "Unknown customer"}</p>
+                      <p className="text-xs text-muted-foreground">Joined {entry.registeredAt ? new Date(entry.registeredAt).toLocaleString("en-US") : "unknown"}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button className="h-9" variant="secondary" onClick={() => onPromoteWaitlist(entry.id)}>Promote</Button>
+                      <Button className="h-9" variant="outline" onClick={() => onCancelRegistration(entry.id)}>Remove</Button>
+                    </div>
                   </div>
                 </article>
               );

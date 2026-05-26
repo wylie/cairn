@@ -1,6 +1,7 @@
 import type { SessionScheduleCardModel, ScheduleView } from "@/lib/data/session-schedule";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useMemo, useState } from "react";
 
 function toDateKey(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -85,6 +86,27 @@ function getSessionDisplay(entry: SessionScheduleCardModel) {
   return { programName, overrideTitle };
 }
 
+function CalendarAddSlotButton({
+  onClick,
+  className = "",
+  testId
+}: {
+  onClick: () => void;
+  className?: string;
+  testId?: string;
+}) {
+  return (
+    <button
+      type="button"
+      data-testid={testId}
+      className={`w-full rounded border border-dashed border-border px-1 py-0.5 text-[11px] text-muted-foreground hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${className}`}
+      onClick={onClick}
+    >
+      + Add
+    </button>
+  );
+}
+
 export function InteractiveCalendar({
   view,
   dateKey,
@@ -111,6 +133,7 @@ export function InteractiveCalendar({
   const monthGridStart = startOfWeek(monthStart);
   const monthDays = Array.from({ length: 42 }, (_, index) => addDays(monthGridStart, index));
   const hours = Array.from({ length: 16 }, (_, i) => i + 6);
+  const [monthOverflowDayKey, setMonthOverflowDayKey] = useState<string | null>(null);
 
   const sessionsByDay = new Map<string, SessionScheduleCardModel[]>();
   for (const entry of entries) {
@@ -123,6 +146,10 @@ export function InteractiveCalendar({
     value.sort((a, b) => a.session.startsAt.localeCompare(b.session.startsAt));
     sessionsByDay.set(key, value);
   }
+  const monthOverflowEntries = useMemo(
+    () => (monthOverflowDayKey ? sessionsByDay.get(monthOverflowDayKey) ?? [] : []),
+    [monthOverflowDayKey, sessionsByDay]
+  );
 
   return (
     <div className="space-y-3 rounded-xl border bg-card p-3" aria-label="interactive-calendar">
@@ -183,16 +210,19 @@ export function InteractiveCalendar({
             const dayKey = toDateKey(day);
             const dayEntries = sessionsByDay.get(dayKey) ?? [];
             const inMonth = day.getMonth() === selectedDate.getMonth();
+            const visibleEntries = dayEntries.slice(0, 3);
+            const overflowCount = Math.max(dayEntries.length - visibleEntries.length, 0);
             return (
-              <section key={dayKey} className={`min-h-28 rounded-md border p-2 ${inMonth ? "bg-card" : "bg-secondary/20"}`}>
+              <section key={dayKey} className={`h-44 overflow-hidden rounded-md border p-2 ${inMonth ? "bg-card" : "bg-secondary/20"}`} data-testid="month-day-cell">
                 <button
                   className="text-xs font-medium"
                   onClick={() => onDateKeyChange(dayKey)}
                 >
                   {day.toLocaleDateString("en-US", { month: "numeric", day: "numeric" })}
                 </button>
-                <div className="mt-1 space-y-1">
-                  {dayEntries.slice(0, 3).map((entry) => {
+                <div className="mt-1 flex h-[calc(100%-1.25rem)] flex-col gap-1">
+                  <div className="space-y-1 overflow-hidden">
+                    {visibleEntries.map((entry) => {
                     const display = getSessionDisplay(entry);
                     return (
                       <button
@@ -205,20 +235,66 @@ export function InteractiveCalendar({
                         <p className="truncate">{formatTime(entry.session.startsAt)} • {entry.registrationCount}/{entry.session.capacity}{entry.waitlistCount > 0 ? ` • WL ${entry.waitlistCount}` : ""}</p>
                       </button>
                     );
-                  })}
-                  {dayEntries.length > 3 ? <p className="text-[11px] text-muted-foreground">+{dayEntries.length - 3} more</p> : null}
-                  <Button
-                    className="h-7 w-full text-xs"
-                    variant="ghost"
-                    onClick={() => onCreateAtSlot({ date: dayKey, startTime: "09:00", endTime: "10:00" })}
-                  >
-                    Add
-                  </Button>
+                    })}
+                  </div>
+                  {overflowCount > 0 ? (
+                    <button
+                      type="button"
+                      data-testid="month-overflow-trigger"
+                      className="text-left text-[11px] text-muted-foreground hover:text-foreground"
+                      onClick={() => setMonthOverflowDayKey(dayKey)}
+                    >
+                      +{overflowCount} more
+                    </button>
+                  ) : null}
+                  <div className="mt-auto">
+                    <CalendarAddSlotButton
+                      testId="calendar-add-slot-button"
+                      className="h-7"
+                      onClick={() => onCreateAtSlot({ date: dayKey, startTime: "09:00", endTime: "10:00" })}
+                    />
+                  </div>
                 </div>
               </section>
             );
           })}
         </div>
+      ) : null}
+
+      {view === "month" && monthOverflowDayKey ? (
+        <section className="rounded-xl border bg-card p-3" data-testid="month-overflow-panel" aria-label="month-day-agenda">
+          <div className="mb-2 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold">Day agenda</p>
+              <p className="text-xs text-muted-foreground">{monthOverflowDayKey}</p>
+            </div>
+            <Button variant="secondary" className="h-8" onClick={() => setMonthOverflowDayKey(null)}>Close</Button>
+          </div>
+          <div className="space-y-2">
+            {monthOverflowEntries.map((entry) => {
+              const display = getSessionDisplay(entry);
+              return (
+                <article key={entry.session.id} className={`rounded-md border p-2 ${sessionColor(entry.program?.category)}`}>
+                  <p className="text-sm font-medium">{display.programName}</p>
+                  {display.overrideTitle ? <p className="text-xs text-muted-foreground">{display.overrideTitle}</p> : null}
+                  <p className="text-xs text-muted-foreground">{formatRange(entry.session.startsAt, entry.session.endsAt)}</p>
+                  <p className="text-xs text-muted-foreground">{entry.session.instructorName ?? "Unassigned"} • {entry.registrationCount}/{entry.session.capacity}{entry.waitlistCount > 0 ? ` • WL ${entry.waitlistCount}` : ""}</p>
+                  <div className="mt-2 flex gap-2">
+                    <Button className="h-8" variant="secondary" onClick={() => onOpenSession(entry.session.id)}>View</Button>
+                    <Button className="h-8" variant="secondary" onClick={() => onEditSession(entry.session.id)}>Edit</Button>
+                    <Button
+                      className="h-8"
+                      variant="secondary"
+                      onClick={() => onCreateAtSlot({ date: monthOverflowDayKey, startTime: "09:00", endTime: "10:00" })}
+                    >
+                      Add Session
+                    </Button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
       ) : null}
 
       {(view === "day" || view === "week") ? (
@@ -242,12 +318,11 @@ export function InteractiveCalendar({
                   const rowEntries = dayEntries.filter((entry) => new Date(entry.session.startsAt).getHours() === hour);
                   return (
                     <div key={`${dayKey}-${hour}`} className="min-h-16 rounded-md border bg-background p-1">
-                      <button
-                        className="mb-1 w-full rounded border border-dashed px-1 py-0.5 text-[11px] text-muted-foreground hover:bg-secondary"
+                      <CalendarAddSlotButton
+                        testId="calendar-add-slot-button"
+                        className="mb-1"
                         onClick={() => onCreateAtSlot({ date: dayKey, startTime: `${String(hour).padStart(2, "0")}:00`, endTime: `${String(Math.min(hour + 1, 23)).padStart(2, "0")}:00` })}
-                      >
-                        + Add
-                      </button>
+                      />
                       <div className="space-y-1">
                         {rowEntries.map((entry) => {
                           const display = getSessionDisplay(entry);

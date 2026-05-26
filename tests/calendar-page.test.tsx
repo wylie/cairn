@@ -249,6 +249,124 @@ describe("Calendar interactive workstation", () => {
     expect(screen.getByText(/Created 3 recurring sessions\./i)).toBeInTheDocument();
   });
 
+  it("uses shared add control styling in day/week/month views", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+
+    const weekAdd = screen.getAllByTestId("calendar-add-slot-button")[0];
+    expect(weekAdd.className).toContain("border-dashed");
+    expect(weekAdd).toHaveTextContent("+ Add");
+
+    await user.click(screen.getByRole("button", { name: "Day" }));
+    const dayAdd = screen.getAllByTestId("calendar-add-slot-button")[0];
+    expect(dayAdd.className).toContain("border-dashed");
+    expect(dayAdd).toHaveTextContent("+ Add");
+
+    await user.click(screen.getByRole("button", { name: "Month" }));
+    const monthAdd = screen.getAllByTestId("calendar-add-slot-button")[0];
+    expect(monthAdd.className).toContain("border-dashed");
+    expect(monthAdd).toHaveTextContent("+ Add");
+  });
+
+  it("keeps month cells at a consistent height and opens overflow agenda", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    await activateStaff(user);
+
+    await user.click(screen.getByRole("button", { name: "Create Session" }));
+    const panel = screen.getByLabelText("session-form-panel");
+    await user.type(within(panel).getByLabelText("Session title"), "Overflow A");
+    await user.selectOptions(within(panel).getByLabelText("Session program"), "prog_101");
+    fireEvent.change(within(panel).getByLabelText("Session date"), { target: { value: "2026-05-24" } });
+    fireEvent.change(within(panel).getByLabelText("Session start time"), { target: { value: "07:00" } });
+    fireEvent.change(within(panel).getByLabelText("Session end time"), { target: { value: "08:00" } });
+    await user.click(within(panel).getByRole("button", { name: "Create Session" }));
+
+    await user.click(screen.getByRole("button", { name: "Create Session" }));
+    const panel2 = screen.getByLabelText("session-form-panel");
+    await user.type(within(panel2).getByLabelText("Session title"), "Overflow B");
+    await user.selectOptions(within(panel2).getByLabelText("Session program"), "prog_101");
+    fireEvent.change(within(panel2).getByLabelText("Session date"), { target: { value: "2026-05-24" } });
+    fireEvent.change(within(panel2).getByLabelText("Session start time"), { target: { value: "08:00" } });
+    fireEvent.change(within(panel2).getByLabelText("Session end time"), { target: { value: "09:00" } });
+    await user.click(within(panel2).getByRole("button", { name: "Create Session" }));
+
+    await user.click(screen.getByRole("button", { name: "Create Session" }));
+    const panel3 = screen.getByLabelText("session-form-panel");
+    await user.type(within(panel3).getByLabelText("Session title"), "Overflow C");
+    await user.selectOptions(within(panel3).getByLabelText("Session program"), "prog_101");
+    fireEvent.change(within(panel3).getByLabelText("Session date"), { target: { value: "2026-05-24" } });
+    fireEvent.change(within(panel3).getByLabelText("Session start time"), { target: { value: "09:00" } });
+    fireEvent.change(within(panel3).getByLabelText("Session end time"), { target: { value: "10:00" } });
+    await user.click(within(panel3).getByRole("button", { name: "Create Session" }));
+
+    await user.click(screen.getByRole("button", { name: "Create Session" }));
+    const panel4 = screen.getByLabelText("session-form-panel");
+    await user.type(within(panel4).getByLabelText("Session title"), "Overflow D");
+    await user.selectOptions(within(panel4).getByLabelText("Session program"), "prog_101");
+    fireEvent.change(within(panel4).getByLabelText("Session date"), { target: { value: "2026-05-24" } });
+    fireEvent.change(within(panel4).getByLabelText("Session start time"), { target: { value: "10:00" } });
+    fireEvent.change(within(panel4).getByLabelText("Session end time"), { target: { value: "11:00" } });
+    await user.click(within(panel4).getByRole("button", { name: "Create Session" }));
+
+    fireEvent.change(screen.getByLabelText("Calendar jump date"), { target: { value: "2026-05-24" } });
+    await user.click(screen.getByRole("button", { name: "Month" }));
+
+    const monthCells = screen.getAllByTestId("month-day-cell");
+    expect(monthCells[0].className).toContain("h-44");
+    expect(screen.getByTestId("month-overflow-trigger")).toBeInTheDocument();
+
+    await user.click(screen.getByTestId("month-overflow-trigger"));
+    expect(screen.getByTestId("month-overflow-panel")).toBeInTheDocument();
+    expect(screen.getByText("Overflow D")).toBeInTheDocument();
+  });
+
+  it("adds a session from month overflow agenda with date prefilled", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+    await activateStaff(user);
+
+    for (const [title, start, end] of [
+      ["Month Add A", "07:00", "08:00"],
+      ["Month Add B", "08:00", "09:00"],
+      ["Month Add C", "09:00", "10:00"],
+      ["Month Add D", "10:00", "11:00"]
+    ] as const) {
+      await user.click(screen.getByRole("button", { name: "Create Session" }));
+      const createPanel = screen.getByLabelText("session-form-panel");
+      await user.type(within(createPanel).getByLabelText("Session title"), title);
+      await user.selectOptions(within(createPanel).getByLabelText("Session program"), "prog_101");
+      fireEvent.change(within(createPanel).getByLabelText("Session date"), { target: { value: "2026-05-24" } });
+      fireEvent.change(within(createPanel).getByLabelText("Session start time"), { target: { value: start } });
+      fireEvent.change(within(createPanel).getByLabelText("Session end time"), { target: { value: end } });
+      await user.click(within(createPanel).getByRole("button", { name: "Create Session" }));
+    }
+
+    fireEvent.change(screen.getByLabelText("Calendar jump date"), { target: { value: "2026-05-24" } });
+    await user.click(screen.getByRole("button", { name: "Month" }));
+    await user.click(screen.getByTestId("month-overflow-trigger"));
+    const overflowPanel = screen.getByTestId("month-overflow-panel");
+    await user.click(within(overflowPanel).getAllByRole("button", { name: "Add Session" })[0]);
+
+    const panel = screen.getByLabelText("session-form-panel");
+    expect(within(panel).getByLabelText("Session date")).toHaveValue("2026-05-24");
+  });
+
   it("manages roster and attendance from session detail", async () => {
     const user = userEvent.setup();
     render(

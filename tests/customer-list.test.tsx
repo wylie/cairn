@@ -186,6 +186,18 @@ describe("CustomerList", () => {
     expect(screen.getByText("Jordy Kim")).toBeInTheDocument();
   });
 
+  it("search supports household names", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <CustomerList />
+      </TestProviders>
+    );
+    const search = screen.getByLabelText("Search customers");
+    await user.type(search, "rivera family");
+    expect(screen.getByText("Alex Rivera")).toBeInTheDocument();
+  });
+
   it("shows empty state when no customer matches", async () => {
     const user = userEvent.setup();
     render(

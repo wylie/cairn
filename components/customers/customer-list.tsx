@@ -14,7 +14,7 @@ import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 
 export function CustomerList() {
-  const { customers, accessProducts, runCustomerCheckInAction, sellAccessProducts, addCustomer, evaluateCustomerEntry } = useCustomerState();
+  const { customers, households, householdMembers, accessProducts, runCustomerCheckInAction, sellAccessProducts, addCustomer, evaluateCustomerEntry } = useCustomerState();
   const { activeStaff, assertPermission, requestStaffSwitch, hasPermission } = useWorkstationState();
   const [query, setQuery] = useState("");
   const [feedback, setFeedback] = useState("");
@@ -23,7 +23,10 @@ export function CustomerList() {
   const [sellCustomerId, setSellCustomerId] = useState<string | null>(null);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
 
-  const filtered = useMemo(() => filterCustomers(customers, query), [customers, query]);
+  const filtered = useMemo(
+    () => filterCustomers(customers, query, { households, householdMembers }),
+    [customers, query, households, householdMembers]
+  );
   const sellCustomer = useMemo(() => customers.find((entry) => entry.id === sellCustomerId) ?? null, [customers, sellCustomerId]);
 
   const handleToggleCheckIn = (customerId: string) => {

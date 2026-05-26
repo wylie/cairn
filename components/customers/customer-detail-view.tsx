@@ -38,6 +38,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     addHouseholdMember,
     removeHouseholdMember,
     updateHouseholdMember,
+    familyCheckIn,
     updateStaffProfileForCustomer
   } = useCustomerState();
   const {
@@ -53,6 +54,8 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
   const [profileFeedback, setProfileFeedback] = useState("");
   const [activeSection, setActiveSection] = useState("overview");
   const [showSuspendConfirm, setShowSuspendConfirm] = useState(false);
+  const [showHouseholdDetail, setShowHouseholdDetail] = useState(false);
+  const [selectedHouseholdCheckInIds, setSelectedHouseholdCheckInIds] = useState<string[]>([]);
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [draftMember, setDraftMember] = useState<{
     memberType: "adult" | "child";
@@ -159,6 +162,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
   const shortNotesPreview = notesPreview.length > 140 ? `${notesPreview.slice(0, 140).trim()}…` : notesPreview;
   const dobDate = customer.dateOfBirth ? new Date(`${customer.dateOfBirth}T00:00:00Z`) : null;
   const hasValidDob = !!dobDate && !Number.isNaN(dobDate.getTime());
+  const todayDateKey = new Date().toISOString().slice(0, 10);
   const age = hasValidDob
     ? Math.max(0, Math.floor((Date.now() - (dobDate as Date).getTime()) / (1000 * 60 * 60 * 24 * 365.2425)))
     : null;
@@ -199,6 +203,54 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     ? customers.find((entry) => entry.id === household.billingCustomerId)
     : undefined;
   const householdDefaultPayment = householdBillingCustomer?.paymentMethods?.find((method) => method.isDefault);
+  const householdCheckInRows = householdRows.filter((row) => row.customer);
+  const householdActiveCheckIns = householdCheckInRows.filter((row) => row.customer?.checkInStatus === "in").length;
+  const householdWaiverIssues = householdCheckInRows.filter((row) => {
+    const rowCustomer = row.customer;
+    if (!rowCustomer) return false;
+    const rowWaiver = rowCustomer.waiverId ? waivers.find((entry) => entry.id === rowCustomer.waiverId) : undefined;
+    return !rowWaiver || rowWaiver.status !== "valid";
+  }).length;
+  const householdActiveAccess = householdCheckInRows.filter((row) => {
+    const rowCustomer = row.customer;
+    if (!rowCustomer) return false;
+    return customerAccessRecords.some((entry) => entry.customerId === rowCustomer.id && entry.status === "active");
+  }).length;
+  const householdUpcomingPrograms = registrations
+    .filter((registration) => householdRows.some((row) => row.customerId === registration.customerId))
+    .filter((registration) => registration.status === "registered" || registration.status === "waitlisted")
+    .map((registration) => {
+      const session = sessions.find((entry) => entry.id === registration.sessionId);
+      const program = session ? programs.find((entry) => entry.id === session.programId) : undefined;
+      return {
+        registration,
+        session,
+        program,
+        customer: customers.find((entry) => entry.id === registration.customerId)
+      };
+    })
+    .filter((entry) => entry.session)
+    .sort((a, b) => (a.session?.startsAt ?? "").localeCompare(b.session?.startsAt ?? ""))
+    .slice(0, 6);
+  const householdPurchases = transactions
+    .filter((transaction) =>
+      transaction.customerId
+        ? householdRows.some((row) => row.customerId === transaction.customerId)
+        : false
+    )
+    .sort((a, b) => b.completedAt.localeCompare(a.completedAt))
+    .slice(0, 6);
+  const alerts: Array<{ id: string; tone: "warning" | "danger" | "success"; message: string }> = [];
+  if (!waiver || waiver.status !== "valid") alerts.push({ id: "waiver", tone: "danger", message: waiver?.status === "expired" ? "Waiver expired" : "Waiver missing" });
+  if (membership && membership.status === "expired") alerts.push({ id: "membership", tone: "danger", message: "Membership expired" });
+  if (decision.chosenAccess?.type === "punch-pass" && (decision.chosenAccess.remainingPunches ?? 0) <= 2) {
+    alerts.push({ id: "punch", tone: "warning", message: `Punch pass low (${decision.chosenAccess.remainingPunches ?? 0} remaining)` });
+  }
+  if (isBirthdayToday) alerts.push({ id: "birthday", tone: "success", message: "Birthday today" });
+  if (requiredMissing.emergencyContactName || requiredMissing.emergencyContactPhone) alerts.push({ id: "emergency", tone: "warning", message: "Emergency contact missing" });
+  if (decision.reasons.some((reason) => reason.toLowerCase().includes("guardian"))) alerts.push({ id: "guardian", tone: "warning", message: "Guardian required" });
+  if (decision.reasons.some((reason) => reason.toLowerCase().includes("balance due") || reason.toLowerCase().includes("unpaid"))) alerts.push({ id: "balance", tone: "warning", message: "Balance due" });
+  if (latestUpcomingSession?.session?.startsAt?.slice(0, 10) === todayDateKey) alerts.push({ id: "registration", tone: "warning", message: "Upcoming registration today" });
   const householdCandidates = useMemo(
     () =>
       householdMemberQuery.trim().length === 0
@@ -292,6 +344,12 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     return () => window.removeEventListener("hashchange", syncHash);
   }, []);
 
+  useEffect(() => {
+    if (!showHouseholdDetail) return;
+    if (selectedHouseholdCheckInIds.length > 0) return;
+    setSelectedHouseholdCheckInIds(householdRows.map((member) => member.customerId));
+  }, [showHouseholdDetail, selectedHouseholdCheckInIds.length, householdRows]);
+
   return (
     <div className="space-y-4">
       <div>
@@ -370,6 +428,18 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
               ) : null}
             </div>
           </div>
+          {alerts.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2" aria-label="detail-alert-summary">
+              {alerts.map((alert) => (
+                <Badge
+                  key={alert.id}
+                  tone={alert.tone === "danger" ? "danger" : alert.tone === "success" ? "success" : "warning"}
+                >
+                  {alert.message}
+                </Badge>
+              ))}
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -408,6 +478,26 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
       </Card>
 
       <section id="overview" aria-label="section-overview" className="scroll-mt-40 space-y-4">
+        <Card aria-label="detail-operational-alerts">
+          <CardHeader><CardTitle>Alerts & Status</CardTitle></CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            {alerts.length === 0 ? (
+              <p className="text-emerald-700">No active alerts.</p>
+            ) : (
+              alerts.map((alert) => (
+                <div key={alert.id} className="flex items-center gap-2 rounded-md border border-border/70 bg-secondary/30 p-2">
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      alert.tone === "danger" ? "bg-rose-500" : alert.tone === "success" ? "bg-emerald-500" : "bg-amber-500"
+                    }`}
+                    aria-hidden
+                  />
+                  <span>{alert.message}</span>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="detail-summary-cards">
           <CustomerSummaryCard
             title="Access Status"
@@ -715,11 +805,48 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                 <p className="font-semibold">{household.householdName}</p>
                 <p className="text-muted-foreground">Primary contact: {householdPrimaryContact ? `${householdPrimaryContact.firstName} ${householdPrimaryContact.lastName}` : "Unknown"}</p>
                 <p className="text-muted-foreground">Billing customer: {householdBillingCustomer ? `${householdBillingCustomer.firstName} ${householdBillingCustomer.lastName}` : "Unknown"}</p>
+                <p className="text-muted-foreground">Default address: {household.defaultAddress ?? `${customer.addressLine1 ?? "Not set"}, ${customer.city ?? ""} ${customer.state ?? ""}`.trim()}</p>
+                <p className="text-muted-foreground">
+                  Default emergency contact: {household.defaultEmergencyContactName ?? customer.emergencyContactName ?? "Not set"}
+                  {household.defaultEmergencyContactPhone || customer.emergencyContactPhone ? ` • ${household.defaultEmergencyContactPhone ?? customer.emergencyContactPhone}` : ""}
+                </p>
+                {household.notes ? <p className="text-muted-foreground">Shared notes: {household.notes}</p> : null}
                 <p className="text-muted-foreground">
                   Default payment: {householdDefaultPayment
                     ? `${householdDefaultPayment.cardBrand} ending in ${householdDefaultPayment.last4}`
                     : "No household payment method"}
                 </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button variant="secondary" className="h-9" onClick={() => {
+                    setSelectedHouseholdCheckInIds(householdRows.map((member) => member.customerId));
+                    setShowHouseholdDetail(true);
+                  }}>
+                    View Household
+                  </Button>
+                  <Button
+                    className="h-9"
+                    onClick={() => {
+                      const result = familyCheckIn({
+                        actingCustomerId: customer.id,
+                        memberIds: householdRows.map((row) => row.customerId),
+                        staffUserId: activeStaff?.id ?? "stf_002",
+                        staffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : "Maya Lopez"
+                      });
+                      setProfileFeedback(result.message);
+                    }}
+                  >
+                    Check In Household
+                  </Button>
+                  <Link href={`/pos?household=${household.id}`}>
+                    <Button variant="secondary" className="h-9">Sell to Household</Button>
+                  </Link>
+                  <a href="#registrations">
+                    <Button variant="secondary" className="h-9">Register Household Member</Button>
+                  </a>
+                  <Button variant="secondary" className="h-9" onClick={() => setProfileFeedback("Waiver update available in Waiver section below.")}>
+                    Mark Waiver Signed
+                  </Button>
+                </div>
               </div>
               <div className="space-y-2">
                 {householdRows.map((member) => (
@@ -931,6 +1058,98 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
         </CardContent>
       </Card>
       </section>
+      {household ? (
+        <ModalShell
+          open={showHouseholdDetail}
+          ariaLabel="Household detail"
+          title={household.householdName}
+          description="Household summary, memberships, registrations, and quick actions."
+          onClose={() => setShowHouseholdDetail(false)}
+          maxWidthClassName="max-w-5xl"
+          footer={
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="secondary" onClick={() => setShowHouseholdDetail(false)}>Close</Button>
+              <Button
+                onClick={() => {
+                  const result = familyCheckIn({
+                    actingCustomerId: customer.id,
+                    memberIds: selectedHouseholdCheckInIds,
+                    staffUserId: activeStaff?.id ?? "stf_002",
+                    staffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : "Maya Lopez"
+                  });
+                  setProfileFeedback(result.message);
+                  if (result.ok) setShowHouseholdDetail(false);
+                }}
+              >
+                Check In Selected
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-4 text-sm">
+            <div className="grid gap-3 md:grid-cols-4">
+              <Field label="Primary adult" value={householdPrimaryContact ? `${householdPrimaryContact.firstName} ${householdPrimaryContact.lastName}` : "Not set"} />
+              <Field label="Billing contact" value={householdBillingCustomer ? `${householdBillingCustomer.firstName} ${householdBillingCustomer.lastName}` : "Not set"} />
+              <Field label="Active access" value={`${householdActiveAccess}/${householdRows.length}`} />
+              <Field label="Waiver issues" value={householdWaiverIssues ? `${householdWaiverIssues} member(s)` : "None"} />
+            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="space-y-2 rounded-lg border p-3">
+                <p className="font-medium">Members</p>
+                {householdRows.map((member) => {
+                  const person = member.customer;
+                  if (!person) return null;
+                  const memberWaiver = person.waiverId ? waivers.find((entry) => entry.id === person.waiverId) : undefined;
+                  return (
+                    <label key={member.customerId} className="flex items-start justify-between gap-2 rounded-md border p-2">
+                      <span>
+                        <span className="font-medium">{person.firstName} {person.lastName}</span>
+                        <span className="block text-muted-foreground">{member.memberType === "adult" ? "Adult" : "Child"} · {formatHouseholdRelationship(member.relationship)}</span>
+                        <span className="block text-muted-foreground">
+                          {person.checkInStatus === "in" ? "Checked in" : "Checked out"} · {memberWaiver?.status === "valid" ? "Waiver valid" : "Waiver missing"}
+                        </span>
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={selectedHouseholdCheckInIds.includes(member.customerId)}
+                        onChange={(event) => {
+                          setSelectedHouseholdCheckInIds((prev) =>
+                            event.target.checked ? [...new Set([...prev, member.customerId])] : prev.filter((id) => id !== member.customerId)
+                          );
+                        }}
+                        aria-label={`Select ${person.firstName} ${person.lastName} for household check-in`}
+                      />
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="space-y-2 rounded-lg border p-3">
+                <p className="font-medium">Household programs</p>
+                {householdUpcomingPrograms.length === 0 ? <p className="text-muted-foreground">No upcoming registrations.</p> : null}
+                {householdUpcomingPrograms.map((entry) => (
+                  <div key={entry.registration.id} className="rounded-md border p-2">
+                    <p className="font-medium">{entry.customer?.firstName} {entry.customer?.lastName}</p>
+                    <p className="text-muted-foreground">{entry.program?.title ?? entry.session?.title ?? "Session"}</p>
+                    <p className="text-muted-foreground">{entry.session?.startsAt ? new Date(entry.session.startsAt).toLocaleString("en-US") : "Date pending"} · {entry.registration.status}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2 rounded-lg border p-3">
+              <p className="font-medium">Household purchases</p>
+              {householdPurchases.length === 0 ? <p className="text-muted-foreground">No household purchases yet.</p> : null}
+              {householdPurchases.map((entry) => (
+                <div key={entry.id} className="rounded-md border p-2">
+                  <p className="font-medium">Receipt #{entry.receiptNumber}</p>
+                  <p className="text-muted-foreground">
+                    Purchaser: {customers.find((customerEntry) => customerEntry.id === entry.customerId)?.firstName ?? "Unknown"} · {formatCurrency(entry.total)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </ModalShell>
+      ) : null}
       {customerStaffProfile ? (
         <ModalShell
           open={showSuspendConfirm}

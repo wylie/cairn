@@ -267,6 +267,9 @@ export interface Household {
   primaryContactCustomerId: string;
   billingCustomerId: string;
   locationId: string;
+  defaultAddress?: string;
+  defaultEmergencyContactName?: string;
+  defaultEmergencyContactPhone?: string;
   notes?: string;
   createdAt: string;
 }
@@ -561,7 +564,11 @@ export interface PosTransaction {
   subtotal: number;
   total: number;
   completedAt: string;
-  paymentType: "mock" | "card" | "cash" | "comp" | "gift_card" | "account_credit";
+  paymentType: "mock" | "card" | "cash" | "comp" | "gift_card" | "account_credit" | "split";
+  paymentBreakdown?: Array<{ method: "card" | "cash" | "comp" | "gift_card" | "account_credit"; amountCents: number }>;
+  discountCents?: number;
+  taxCents?: number;
+  compCents?: number;
   paymentProcessor?: string;
   paymentApprovalCode?: string;
   paymentCardLast4?: string;

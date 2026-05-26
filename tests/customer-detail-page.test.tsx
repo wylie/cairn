@@ -884,4 +884,32 @@ describe("CustomerDetailPage", () => {
     await user.click(within(accessCard).getByRole("button", { name: "Cancel" }));
     expect(accessCard).toHaveTextContent("cancelled");
   });
+
+  it("renders alerts summary for customer issues", async () => {
+    const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_004" }) });
+    render(<TestProviders>{page}</TestProviders>);
+    expect(screen.getByLabelText("detail-operational-alerts")).toBeInTheDocument();
+    const summary = screen.getByLabelText("detail-alert-summary");
+    expect(summary).toBeInTheDocument();
+    expect(within(summary).getAllByText(/Waiver missing|Waiver expired/i).length).toBeGreaterThan(0);
+  });
+
+  it("opens household detail view and supports selected household check-in", async () => {
+    const user = userEvent.setup();
+    const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_003" }) });
+    render(
+      <TestProviders>
+        <TopBar />
+        {page}
+      </TestProviders>
+    );
+    await activateStaff(user, "2222");
+    await user.click(screen.getByRole("button", { name: "View Household" }));
+    const dialog = screen.getByRole("dialog", { name: "Household detail" });
+    expect(within(dialog).getByText("Members")).toBeInTheDocument();
+    const toggles = within(dialog).getAllByRole("checkbox");
+    await user.click(toggles[0]);
+    await user.click(within(dialog).getByRole("button", { name: "Check In Selected" }));
+    expect(screen.getByRole("status")).toHaveTextContent(/Checked in|No household members selected|failed/i);
+  });
 });

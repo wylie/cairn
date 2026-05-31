@@ -1,6 +1,6 @@
 import { memo } from "react";
 import Link from "next/link";
-import { LayoutDashboard, Users, ScanLine, Calendar, Boxes, CreditCard, BarChart3, Settings, Tags, UserCog } from "lucide-react";
+import { LayoutDashboard, Users, ScanLine, Calendar, Boxes, CreditCard, BarChart3, Settings, Tags, UserCog, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StaffPermission } from "@/types/domain";
 
@@ -9,6 +9,7 @@ const navItems = [
   { href: "/customers", label: "Customers", icon: Users, permissions: ["viewCustomers"] as StaffPermission[] },
   { href: "/check-in", label: "Check-in", icon: ScanLine },
   { href: "/calendar", label: "Calendar", icon: Calendar },
+  { href: "/registrations", label: "Registrations", icon: ClipboardList, permissions: ["rosterAccess", "editPrograms"] as StaffPermission[] },
   { href: "/programs", label: "Programs", icon: Boxes, permissions: ["editPrograms", "rosterAccess"] as StaffPermission[] },
   { href: "/products", label: "Products", icon: Tags, permissions: ["manageProducts"] as StaffPermission[] },
   { href: "/pos", label: "POS", icon: CreditCard, permissions: ["usePOS"] as StaffPermission[] },

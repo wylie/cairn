@@ -386,7 +386,14 @@ interface CustomerStateContextValue {
     updatedByStaffId?: string;
   }) => { ok: boolean; message: string };
   cancelSession: (sessionId: string, cancelledByStaffId?: string) => { ok: boolean; message: string };
-  registerCustomerForSession: (input: { customerId: string; sessionId: string; override?: boolean }) => { ok: boolean; message: string; registrationId?: string };
+  registerCustomerForSession: (input: {
+    customerId: string;
+    sessionId: string;
+    override?: boolean;
+    registrationSource?: Registration["registrationSource"];
+    registeredByStaffId?: string;
+    registeredByStaffName?: string;
+  }) => { ok: boolean; message: string; registrationId?: string };
   cancelRegistration: (registrationId: string) => { ok: boolean; message: string };
   promoteWaitlistedRegistration: (registrationId: string) => { ok: boolean; message: string };
   moveRegistrationToWaitlist: (registrationId: string) => { ok: boolean; message: string };
@@ -1967,7 +1974,14 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     return { ok: true as const, message: `${existing.title ?? "Session"} cancelled.` };
   };
 
-  const registerCustomerForSession = (input: { customerId: string; sessionId: string; override?: boolean }) => {
+  const registerCustomerForSession = (input: {
+    customerId: string;
+    sessionId: string;
+    override?: boolean;
+    registrationSource?: Registration["registrationSource"];
+    registeredByStaffId?: string;
+    registeredByStaffName?: string;
+  }) => {
     const customer = customers.find((entry) => entry.id === input.customerId);
     if (!customer) return { ok: false, message: "Customer not found." };
     const session = sessions.find((entry) => entry.id === input.sessionId);
@@ -2036,6 +2050,9 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       status: sessionIsFull ? "waitlisted" : "confirmed",
       waitlistPosition,
       registeredAt: new Date().toISOString(),
+      registeredByStaffId: input.registeredByStaffId,
+      registeredByStaffName: input.registeredByStaffName,
+      registrationSource: input.registrationSource ?? "front_desk",
       paymentStatus:
         program.pricingModel === "free"
           ? "paid"

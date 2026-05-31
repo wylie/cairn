@@ -414,6 +414,9 @@ export interface Registration {
   status: "confirmed" | "waitlisted" | "cancelled" | "attended" | "absent" | "late" | "excused" | "no_show" | "checked_in" | "completed";
   waitlistPosition?: number;
   registeredAt?: string;
+  registeredByStaffId?: string;
+  registeredByStaffName?: string;
+  registrationSource?: "front_desk" | "online" | "import" | "admin";
   updatedAt?: string;
   updatedByStaffId?: string;
   notes?: string;

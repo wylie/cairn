@@ -4,15 +4,7 @@ import { CustomerSearchCombobox } from "@/components/shared/customer-search-comb
 import { Button } from "@/components/ui/button";
 import { filterCustomers } from "@/lib/data/customer-search";
 import { Badge } from "@/components/ui/badge";
-
-type SessionActivityEvent = {
-  id: string;
-  sessionId: string;
-  customerName?: string;
-  action: "registered" | "removed" | "waitlisted" | "promoted" | "checked_in" | "marked_absent";
-  occurredAt: string;
-  staffName?: string;
-};
+import type { SessionActivityEvent } from "@/types/calendar";
 
 export function SessionDetailPanel({
   session,
@@ -336,7 +328,7 @@ export function SessionDetailPanel({
         {sessionActivity.map((event) => (
           <div key={event.id} className="text-xs text-muted-foreground">
             <span className="font-medium text-foreground">{event.customerName ?? "Customer"}</span>{" "}
-            {event.action.replaceAll("_", " ")} • {new Date(event.occurredAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+            {event.action.replaceAll("_", " ")} • {new Date(event.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
             {event.staffName ? ` • ${event.staffName}` : ""}
           </div>
         ))}

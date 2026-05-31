@@ -18,6 +18,7 @@ type ScheduleView
 import { data } from "@/lib/data";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
+import type { SessionActivityEvent } from "@/types/calendar";
 
 function buildIsoDateTime(date: string, time: string) {
   return new Date(`${date}T${time}:00`).toISOString();
@@ -82,14 +83,6 @@ function setStoredCalendarView(view: ScheduleView) {
   if (typeof storage.setItem !== "function") return;
   storage.setItem(CALENDAR_VIEW_STORAGE_KEY, view);
 }
-type SessionActivityEvent = {
-  id: string;
-  sessionId: string;
-  customerName?: string;
-  action: "registered" | "removed" | "waitlisted" | "promoted" | "checked_in" | "marked_absent" | "rescheduled";
-  occurredAt: string;
-  staffName?: string;
-};
 type DragMoveState = {
   sessionId: string;
   fromDate: string;
@@ -257,7 +250,8 @@ export default function CalendarPage() {
         sessionId,
         action,
         customerName,
-        occurredAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        staffId: activeStaff?.id,
         staffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
       },
       ...prev
@@ -381,7 +375,8 @@ export default function CalendarPage() {
         sessionId: session.id,
         action: "rescheduled",
         customerName: `${programs.find((entry) => entry.id === session.programId)?.title ?? "Session"} rescheduled`,
-        occurredAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        staffId: activeStaff?.id,
         staffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
       },
       ...prev

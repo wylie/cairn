@@ -13,6 +13,7 @@ import { classCampSessions as seedSessions, programs as seedPrograms } from "@/l
 import { registrations as seedRegistrations } from "@/lib/mocks/registrations";
 import { posTransactions as seedPosTransactions } from "@/lib/mocks/transactions";
 import { waivers as seedWaivers } from "@/lib/mocks/waivers";
+import { waiverTemplates as seedWaiverTemplates, waiverTemplateVersions as seedWaiverTemplateVersions } from "@/lib/mocks/waiver-templates";
 import { households as seedHouseholds, householdMembers as seedHouseholdMembers } from "@/lib/mocks/households";
 import { buildScopedMockKey, clearScopedMockState, loadMockState, saveMockState } from "@/lib/mock-storage";
 import { buildSystemProductCategories, normalizeCategoryKey } from "@/lib/products/categories";
@@ -50,7 +51,11 @@ import type {
   Registration,
   StaffPermission,
   StaffRole,
-  Waiver
+  Waiver,
+  WaiverTemplate,
+  WaiverTemplateVersion,
+  WaiverExpirationRuleType,
+  WaiverTemplateBlock
 } from "@/types/domain";
 import { resolveTenant } from "@/lib/tenant/resolve";
 import { getCurrentOrgSlugClient } from "@/lib/tenant/client";
@@ -214,6 +219,8 @@ interface CustomerStateContextValue {
   registrations: Registration[];
   customerAccessRecords: CustomerAccessRecord[];
   waivers: Waiver[];
+  waiverTemplates: WaiverTemplate[];
+  waiverTemplateVersions: WaiverTemplateVersion[];
   households: Household[];
   householdMembers: HouseholdMember[];
   checkInRecords: CheckInLogRecord[];
@@ -492,6 +499,36 @@ interface CustomerStateContextValue {
       signedByRelationship?: Waiver["signedByRelationship"] | null;
     }
   ) => { ok: boolean; message: string };
+  createWaiverTemplate: (input: {
+    name: string;
+    description?: string;
+    expirationRuleType: WaiverExpirationRuleType;
+    expirationDays?: number;
+    effectiveDate: string;
+    facilityAssignment?: string[];
+    brandingAssignment?: string;
+    blocks?: WaiverTemplateBlock[];
+    createdByStaffId?: string;
+  }) => { ok: boolean; message: string; templateId?: string; versionId?: string };
+  createWaiverTemplateVersion: (input: {
+    templateId: string;
+    version: string;
+    effectiveDate: string;
+    blocks: WaiverTemplateBlock[];
+    createdByStaffId?: string;
+  }) => { ok: boolean; message: string; versionId?: string };
+  signWaiverForCustomer: (input: {
+    customerId: string;
+    templateId: string;
+    typedName: string;
+    signedByName?: string;
+    signedByCustomerId?: string;
+    signedByRelationship?: Waiver["signedByRelationship"];
+    signedByStaffId?: string;
+    updatedByStaffName?: string;
+    notes?: string;
+  }) => { ok: boolean; message: string; waiverId?: string };
+  getWaiverStatusForCustomer: (customerId: string, templateId?: string) => "valid" | "missing" | "expired" | "expiring_soon" | "outdated_version";
   createHousehold: (input: {
     householdName: string;
     primaryContactCustomerId: string;
@@ -583,6 +620,17 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     () => seedWaivers.filter((entry) => seededCustomersForOrg.some((customer) => customer.id === entry.customerId)),
     [seededCustomersForOrg]
   );
+  const seededWaiverTemplatesForOrg = useMemo(
+    () => seedWaiverTemplates.filter((entry) => entry.organizationId === activeOrgId),
+    [activeOrgId]
+  );
+  const seededWaiverTemplateVersionsForOrg = useMemo(
+    () =>
+      seedWaiverTemplateVersions.filter((entry) =>
+        seededWaiverTemplatesForOrg.some((template) => template.id === entry.templateId)
+      ),
+    [seededWaiverTemplatesForOrg]
+  );
   const orgLocationIds = useMemo(
     () => seedLocations.filter((entry) => entry.organizationId === activeOrgId).map((entry) => entry.id),
     [activeOrgId]
@@ -610,6 +658,8 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     registrations: buildScopedMockKey(activeOrgId, activeLocationId, "registrations"),
     accessRecords: buildScopedMockKey(activeOrgId, activeLocationId, "accessRecords"),
     waivers: buildScopedMockKey(activeOrgId, activeLocationId, "waivers"),
+    waiverTemplates: buildScopedMockKey(activeOrgId, activeLocationId, "waiverTemplates"),
+    waiverTemplateVersions: buildScopedMockKey(activeOrgId, activeLocationId, "waiverTemplateVersions"),
     households: buildScopedMockKey(activeOrgId, activeLocationId, "households"),
     householdMembers: buildScopedMockKey(activeOrgId, activeLocationId, "householdMembers")
   }), [activeOrgId, activeLocationId]);
@@ -642,6 +692,8 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
   const [registrations, setRegistrations] = useState<Registration[]>(seededRegistrationsForOrg);
   const [customerAccessRecords, setCustomerAccessRecords] = useState<CustomerAccessRecord[]>(seededAccessRecordsForOrg);
   const [waivers, setWaivers] = useState<Waiver[]>(seededWaiversForOrg);
+  const [waiverTemplates, setWaiverTemplates] = useState<WaiverTemplate[]>(seededWaiverTemplatesForOrg);
+  const [waiverTemplateVersions, setWaiverTemplateVersions] = useState<WaiverTemplateVersion[]>(seededWaiverTemplateVersionsForOrg);
   const [households, setHouseholds] = useState<Household[]>(seededHouseholdsForOrg);
   const [householdMembers, setHouseholdMembers] = useState<HouseholdMember[]>(
     seededHouseholdMembersForOrg.map(normalizeHouseholdMemberForState)
@@ -680,9 +732,14 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       } as AccessDecision;
     }
     const waiver = customer.waiverId ? waivers.find((entry) => entry.id === customer.waiverId) : undefined;
+    const generalWaiverStatus = getWaiverStatusForCustomer(customer.id, "wtpl_general");
+    const effectiveWaiver =
+      waiver && (generalWaiverStatus === "outdated_version" || generalWaiverStatus === "expired" || generalWaiverStatus === "missing")
+        ? { ...waiver, status: "expired" as const }
+        : waiver;
     return evaluateCustomerAccess({
       customer,
-      waiver,
+      waiver: effectiveWaiver,
       locationId: activeLocationId,
       dayKey: activeDateKey,
       accessRecords: customerAccessRecords,
@@ -724,6 +781,10 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     setRegistrations(loadMockState(storageKeys.registrations, seededRegistrationsForOrg));
     setCustomerAccessRecords(loadMockState(storageKeys.accessRecords, seededAccessRecordsForOrg) as CustomerAccessRecord[]);
     setWaivers(loadMockState(storageKeys.waivers, seededWaiversForOrg) as Waiver[]);
+    setWaiverTemplates(loadMockState(storageKeys.waiverTemplates, seededWaiverTemplatesForOrg) as WaiverTemplate[]);
+    setWaiverTemplateVersions(
+      loadMockState(storageKeys.waiverTemplateVersions, seededWaiverTemplateVersionsForOrg) as WaiverTemplateVersion[]
+    );
     setHouseholds(loadMockState(storageKeys.households, seededHouseholdsForOrg) as Household[]);
     setHouseholdMembers(
       (loadMockState(storageKeys.householdMembers, seededHouseholdMembersForOrg) as HouseholdMember[]).map(
@@ -786,6 +847,14 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     if (!hydrated) return;
     saveMockState(storageKeys.waivers, waivers);
   }, [waivers, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
+    saveMockState(storageKeys.waiverTemplates, waiverTemplates);
+  }, [waiverTemplates, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
+    saveMockState(storageKeys.waiverTemplateVersions, waiverTemplateVersions);
+  }, [waiverTemplateVersions, hydrated]);
   useEffect(() => {
     if (!hydrated) return;
     saveMockState(storageKeys.households, households);
@@ -1993,6 +2062,11 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     const hasValidWaiver =
       waiver?.status === "valid" &&
       (!waiver.expiresAt || new Date(waiver.expiresAt).getTime() >= new Date(session.startsAt).getTime());
+    const requiredTemplateIds = program.requiredWaiverTemplateIds ?? (program.requiresWaiver ? ["wtpl_general"] : []);
+    const hasRequiredTemplateWaivers = requiredTemplateIds.every((templateId) => {
+      const status = getWaiverStatusForCustomer(customer.id, templateId);
+      return status === "valid" || status === "expiring_soon";
+    });
     const dob = customer.dateOfBirth ? new Date(`${customer.dateOfBirth}T00:00:00Z`) : null;
     const age =
       dob && !Number.isNaN(dob.getTime())
@@ -2004,7 +2078,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     if (!input.override && typeof program.maximumAge === "number" && typeof age === "number" && age > program.maximumAge) {
       return { ok: false, message: "Blocked: Customer is above maximum age for this program." };
     }
-    if (!input.override && program.requiresWaiver && !hasValidWaiver) {
+    if (!input.override && program.requiresWaiver && (!hasValidWaiver || !hasRequiredTemplateWaivers)) {
       return { ok: false, message: "Blocked: Waiver missing or expired." };
     }
     if (!input.override && program.memberRequired) {
@@ -2685,6 +2759,192 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     return { ok: true as const, message: "Waiver updated." };
   };
 
+  const getCurrentWaiverVersion = (templateId: string) => {
+    const template = waiverTemplates.find((entry) => entry.id === templateId);
+    if (!template) return undefined;
+    return waiverTemplateVersions.find((entry) => entry.id === template.currentVersionId);
+  };
+
+  const computeWaiverExpiry = (
+    signedAt: string,
+    template: WaiverTemplate
+  ) => {
+    const signed = new Date(`${signedAt}T00:00:00Z`);
+    if (Number.isNaN(signed.getTime())) return undefined;
+    switch (template.expirationRuleType) {
+      case "never":
+        return undefined;
+      case "fixed_date":
+        return template.fixedExpirationDate;
+      case "days_after_signing":
+        if (!template.expirationDays) return undefined;
+        return addDays(signedAt, template.expirationDays);
+      case "annual":
+        return addDays(signedAt, 365);
+      case "membership_expiration":
+      case "program_completion":
+      case "per_transaction":
+      default:
+        return undefined;
+    }
+  };
+
+  const createWaiverTemplate = (input: {
+    name: string;
+    description?: string;
+    expirationRuleType: WaiverExpirationRuleType;
+    expirationDays?: number;
+    effectiveDate: string;
+    facilityAssignment?: string[];
+    brandingAssignment?: string;
+    blocks?: WaiverTemplateBlock[];
+    createdByStaffId?: string;
+  }) => {
+    const name = input.name.trim();
+    if (!name) return { ok: false as const, message: "Waiver name is required." };
+    const templateId = `wtpl_${Math.random().toString(36).slice(2, 9)}`;
+    const versionId = `wver_${Math.random().toString(36).slice(2, 9)}`;
+    const version: WaiverTemplateVersion = {
+      id: versionId,
+      templateId,
+      version: "1.0",
+      effectiveDate: input.effectiveDate || BASE_DATE,
+      active: true,
+      archived: false,
+      blocks: input.blocks?.length
+        ? input.blocks
+        : [
+            { id: `blk_${Math.random().toString(36).slice(2, 7)}`, type: "heading", label: "Heading", content: name },
+            { id: `blk_${Math.random().toString(36).slice(2, 7)}`, type: "typed_name", label: "Typed legal name", required: true },
+            { id: `blk_${Math.random().toString(36).slice(2, 7)}`, type: "signature_placeholder", label: "Signature", required: true }
+          ],
+      createdAt: new Date().toISOString(),
+      createdByStaffId: input.createdByStaffId
+    };
+    const template: WaiverTemplate = {
+      id: templateId,
+      organizationId: activeOrgId,
+      name,
+      description: input.description?.trim() || undefined,
+      active: true,
+      archived: false,
+      effectiveDate: input.effectiveDate || BASE_DATE,
+      expirationRuleType: input.expirationRuleType,
+      expirationDays: input.expirationDays,
+      facilityAssignment: input.facilityAssignment?.length ? input.facilityAssignment : [activeLocationId],
+      brandingAssignment: input.brandingAssignment || "default",
+      versionIds: [versionId],
+      currentVersionId: versionId,
+      createdAt: new Date().toISOString()
+    };
+    setWaiverTemplateVersions((prev) => [version, ...prev]);
+    setWaiverTemplates((prev) => [template, ...prev]);
+    return { ok: true as const, message: `Waiver template created: ${name}.`, templateId, versionId };
+  };
+
+  const createWaiverTemplateVersion = (input: {
+    templateId: string;
+    version: string;
+    effectiveDate: string;
+    blocks: WaiverTemplateBlock[];
+    createdByStaffId?: string;
+  }) => {
+    const template = waiverTemplates.find((entry) => entry.id === input.templateId);
+    if (!template) return { ok: false as const, message: "Waiver template not found." };
+    if (!input.version.trim()) return { ok: false as const, message: "Version label is required." };
+    const versionId = `wver_${Math.random().toString(36).slice(2, 9)}`;
+    const version: WaiverTemplateVersion = {
+      id: versionId,
+      templateId: input.templateId,
+      version: input.version.trim(),
+      effectiveDate: input.effectiveDate || BASE_DATE,
+      active: true,
+      archived: false,
+      blocks: input.blocks,
+      createdAt: new Date().toISOString(),
+      createdByStaffId: input.createdByStaffId
+    };
+    setWaiverTemplateVersions((prev) => [version, ...prev]);
+    setWaiverTemplates((prev) =>
+      prev.map((entry) =>
+        entry.id === input.templateId
+          ? {
+              ...entry,
+              currentVersionId: versionId,
+              versionIds: [...entry.versionIds, versionId],
+              updatedAt: new Date().toISOString()
+            }
+          : entry
+      )
+    );
+    return { ok: true as const, message: `Version ${version.version} created.`, versionId };
+  };
+
+  const getWaiverStatusForCustomer = (customerId: string, templateId?: string) => {
+    const record = waivers.find((entry) => entry.customerId === customerId && (!templateId || entry.templateId === templateId));
+    if (!record) return "missing" as const;
+    if (record.status !== "valid") return "expired" as const;
+    if (record.expiresAt && record.expiresAt < activeDateKey) return "expired" as const;
+    if (record.expiresAt && record.expiresAt <= addDays(activeDateKey, 30)) return "expiring_soon" as const;
+    if (templateId) {
+      const currentVersion = getCurrentWaiverVersion(templateId);
+      if (currentVersion && record.templateVersion && record.templateVersion !== currentVersion.version) {
+        return "outdated_version" as const;
+      }
+    }
+    return "valid" as const;
+  };
+
+  const signWaiverForCustomer = (input: {
+    customerId: string;
+    templateId: string;
+    typedName: string;
+    signedByName?: string;
+    signedByCustomerId?: string;
+    signedByRelationship?: Waiver["signedByRelationship"];
+    signedByStaffId?: string;
+    updatedByStaffName?: string;
+    notes?: string;
+  }) => {
+    const customer = customers.find((entry) => entry.id === input.customerId);
+    if (!customer) return { ok: false as const, message: "Customer not found." };
+    const template = waiverTemplates.find((entry) => entry.id === input.templateId);
+    if (!template) return { ok: false as const, message: "Waiver template not found." };
+    const currentVersion = getCurrentWaiverVersion(template.id);
+    if (!currentVersion) return { ok: false as const, message: "Current waiver version not found." };
+    const signedAt = activeDateKey;
+    const expiresAt = computeWaiverExpiry(signedAt, template);
+    const existing = waivers.find((entry) => entry.customerId === input.customerId && entry.templateId === input.templateId);
+    const waiverId = existing?.id ?? `wav_${Math.random().toString(36).slice(2, 9)}`;
+    const nextRecord: Waiver = {
+      id: waiverId,
+      customerId: input.customerId,
+      status: "valid",
+      templateId: input.templateId,
+      templateName: template.name,
+      templateVersion: currentVersion.version,
+      typedName: input.typedName.trim(),
+      signedByName: (input.signedByName || input.typedName).trim(),
+      signedAt,
+      expiresAt,
+      signedByStaffId: input.signedByStaffId,
+      signedByCustomerId: input.signedByCustomerId,
+      signedByRelationship: input.signedByRelationship ?? "self",
+      updatedByStaffId: input.signedByStaffId ?? existing?.updatedByStaffId,
+      updatedByStaffName: input.updatedByStaffName,
+      notes: input.notes?.trim() || undefined
+    };
+    setWaivers((prev) => {
+      const hasExisting = prev.some((entry) => entry.id === waiverId);
+      if (hasExisting) return prev.map((entry) => (entry.id === waiverId ? nextRecord : entry));
+      return [nextRecord, ...prev];
+    });
+    if (!customer.waiverId) {
+      setCustomers((prev) => prev.map((entry) => (entry.id === input.customerId ? { ...entry, waiverId } : entry)));
+    }
+    return { ok: true as const, message: `${template.name} signed.`, waiverId };
+  };
+
   const createHousehold = (input: {
     householdName: string;
     primaryContactCustomerId: string;
@@ -2866,6 +3126,8 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       registrations,
       customerAccessRecords,
       waivers,
+      waiverTemplates,
+      waiverTemplateVersions,
       households,
       householdMembers,
       checkInRecords: checkInLogRecords,
@@ -2934,6 +3196,10 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       updateCustomerAccessRecord,
       addCustomerAccessRecord,
       updateCustomerWaiver,
+      createWaiverTemplate,
+      createWaiverTemplateVersion,
+      signWaiverForCustomer,
+      getWaiverStatusForCustomer,
       createHousehold,
       addHouseholdMember,
       removeHouseholdMember,
@@ -2954,12 +3220,14 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         setRegistrations(seededRegistrationsForOrg);
         setCustomerAccessRecords(seededAccessRecordsForOrg);
         setWaivers(seededWaiversForOrg);
+        setWaiverTemplates(seededWaiverTemplatesForOrg);
+        setWaiverTemplateVersions(seededWaiverTemplateVersionsForOrg);
         setHouseholds(seededHouseholdsForOrg);
         setHouseholdMembers(seededHouseholdMembersForOrg.map(normalizeHouseholdMemberForState));
         clearScopedMockState(
           activeOrgId,
           activeLocationId,
-          ["customers", "punchPasses", "checkIns", "memberships", "transactions", "products", "inventoryAudit", "productCategories", "programs", "sessions", "registrations", "accessRecords", "waivers", "households", "householdMembers"]
+          ["customers", "punchPasses", "checkIns", "memberships", "transactions", "products", "inventoryAudit", "productCategories", "programs", "sessions", "registrations", "accessRecords", "waivers", "waiverTemplates", "waiverTemplateVersions", "households", "householdMembers"]
         );
       }
     }),
@@ -2972,6 +3240,8 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       productCategories,
       customerAccessRecords,
       waivers,
+      waiverTemplates,
+      waiverTemplateVersions,
       households,
       householdMembers,
       transactions,

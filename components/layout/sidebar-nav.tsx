@@ -1,6 +1,6 @@
 import { memo } from "react";
 import Link from "next/link";
-import { LayoutDashboard, Users, ScanLine, Calendar, Boxes, CreditCard, BarChart3, Settings, Tags, UserCog, ClipboardList } from "lucide-react";
+import { LayoutDashboard, Users, ScanLine, Calendar, Boxes, CreditCard, BarChart3, Settings, Tags, UserCog, ClipboardList, FileCheck2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StaffPermission } from "@/types/domain";
 
@@ -48,6 +48,7 @@ const navItems: NavItem[] = [
     }
   },
   { href: "/products", label: "Products", icon: Tags, section: "management", permissions: ["manageProducts"] },
+  { href: "/waivers", label: "Waivers", icon: FileCheck2, section: "management", permissions: ["manageWaivers"] },
   { href: "/reports", label: "Reports", icon: BarChart3, section: "management", permissions: ["viewReports", "viewAttendanceReports", "viewFinancialReports"] },
   { href: "/staff", label: "Staff", icon: UserCog, section: "management", permissions: ["manageStaff", "inviteStaff", "manageRoles"] },
   { href: "/settings", label: "Settings", icon: Settings, section: "management", permissions: ["manageSettings", "manageStaff", "manageProducts"] }

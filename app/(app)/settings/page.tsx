@@ -89,7 +89,7 @@ const permissionGroups: Array<{ label: string; permissions: StaffPermission[] }>
   { label: "Programs", permissions: ["editPrograms", "cancelPrograms", "rosterAccess"] },
   { label: "Reports", permissions: ["viewReports", "viewAttendanceReports", "viewFinancialReports", "viewMembershipReports"] },
   { label: "Staff", permissions: ["manageStaff", "inviteStaff", "manageRoles"] },
-  { label: "Settings", permissions: ["manageSettings", "managePlatformSettings", "manageBillingSettings"] }
+  { label: "Settings", permissions: ["manageSettings", "managePlatformSettings", "manageBillingSettings", "manageWaivers"] }
 ];
 
 export default function SettingsPage() {

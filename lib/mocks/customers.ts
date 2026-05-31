@@ -180,7 +180,7 @@ export const customers: Customer[] = [
       staffPin: "1111",
       locations: ["loc_001", "loc_002"],
       assignedPrograms: ["prog_101", "prog_202"],
-      permissions: ["manageSettings", "manageStaff", "manageRoles", "viewReports", "usePOS", "checkInCustomer", "checkOutCustomer"],
+      permissions: ["manageSettings", "manageStaff", "manageRoles", "manageWaivers", "viewReports", "usePOS", "checkInCustomer", "checkOutCustomer"],
       startDate: "2023-01-10",
       certifications: ["CPR", "First Aid"],
       staffNotes: "Organization owner with full access.",
@@ -380,7 +380,7 @@ export const customers: Customer[] = [
       staffPin: "9111",
       locations: ["loc_101", "loc_102"],
       assignedPrograms: [],
-      permissions: ["manageStaff", "manageSettings", "manageProducts", "viewReports", "viewFinancialReports", "usePOS", "checkInCustomer", "checkOutCustomer"],
+      permissions: ["manageStaff", "manageSettings", "manageProducts", "manageWaivers", "viewReports", "viewFinancialReports", "usePOS", "checkInCustomer", "checkOutCustomer"],
       startDate: "2023-07-01",
       staffNotes: "Riverbend owner",
       lastActive: "2026-05-24T10:00:00Z"

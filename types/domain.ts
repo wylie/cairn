@@ -62,6 +62,7 @@ export type StaffPermission =
   | "mergeCustomer"
   | "deactivateCustomer"
   | "manageProducts"
+  | "manageWaivers"
   | "deactivateProduct"
   | "viewReports"
   | "viewAttendanceReports"
@@ -145,14 +146,81 @@ export interface Waiver {
   id: string;
   customerId: string;
   status: "valid" | "expired" | "missing";
+  templateId?: string;
+  templateName?: string;
+  templateVersion?: string;
+  typedName?: string;
   signedAt?: string;
   expiresAt?: string;
   signedByStaffId?: string;
   signedByCustomerId?: string;
+  signedByName?: string;
   signedByRelationship?: HouseholdRelationship | "self";
   updatedByStaffId?: string;
   updatedByStaffName?: string;
   notes?: string;
+}
+
+export type WaiverBlockType =
+  | "heading"
+  | "paragraph"
+  | "checkbox"
+  | "required_checkbox"
+  | "initial_required"
+  | "typed_name"
+  | "signature_placeholder"
+  | "emergency_contact_section"
+  | "guardian_agreement"
+  | "medical_information_placeholder"
+  | "free_text"
+  | "staff_notes";
+
+export interface WaiverTemplateBlock {
+  id: string;
+  type: WaiverBlockType;
+  label: string;
+  content?: string;
+  required?: boolean;
+}
+
+export type WaiverExpirationRuleType =
+  | "never"
+  | "fixed_date"
+  | "days_after_signing"
+  | "annual"
+  | "program_completion"
+  | "membership_expiration"
+  | "per_transaction";
+
+export interface WaiverTemplateVersion {
+  id: string;
+  templateId: string;
+  version: string;
+  effectiveDate: string;
+  active: boolean;
+  archived?: boolean;
+  blocks: WaiverTemplateBlock[];
+  createdAt: string;
+  createdByStaffId?: string;
+}
+
+export interface WaiverTemplate {
+  id: string;
+  organizationId: string;
+  name: string;
+  description?: string;
+  active: boolean;
+  archived?: boolean;
+  facilityAssignment?: string[];
+  brandingAssignment?: string;
+  effectiveDate: string;
+  expirationRuleType: WaiverExpirationRuleType;
+  expirationDays?: number;
+  fixedExpirationDate?: string;
+  versionIds: string[];
+  currentVersionId: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface CustomerAccessRecord {
@@ -366,6 +434,7 @@ export interface Program {
   colorToken?: "blue" | "green" | "amber" | "purple" | "orange" | "slate" | "gray" | "red";
   defaultCapacity?: number;
   requiresWaiver?: boolean;
+  requiredWaiverTemplateIds?: string[];
   guardianRequired?: boolean;
   dropInAllowed?: boolean;
   memberRequired?: boolean;

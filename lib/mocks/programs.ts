@@ -12,6 +12,7 @@ export const programs: Program[] = [
     colorToken: "green",
     defaultCapacity: 12,
     requiresWaiver: true,
+    requiredWaiverTemplateIds: ["wtpl_general"],
     defaultInstructorId: "staff_004"
   },
   {
@@ -25,6 +26,7 @@ export const programs: Program[] = [
     colorToken: "orange",
     defaultCapacity: 24,
     requiresWaiver: true,
+    requiredWaiverTemplateIds: ["wtpl_general", "wtpl_youth"],
     guardianRequired: true,
     memberRequired: false,
     waitlistEnabled: true,
@@ -43,6 +45,7 @@ export const programs: Program[] = [
     colorToken: "blue",
     defaultCapacity: 16,
     requiresWaiver: true,
+    requiredWaiverTemplateIds: ["wtpl_general"],
     dropInAllowed: true,
     waitlistEnabled: true,
     minimumAge: 14,
@@ -59,6 +62,7 @@ export const programs: Program[] = [
     colorToken: "purple",
     defaultCapacity: 18,
     requiresWaiver: true,
+    requiredWaiverTemplateIds: ["wtpl_general"],
     dropInAllowed: true,
     waitlistEnabled: true,
     defaultInstructorId: "staff_002"
@@ -74,6 +78,7 @@ export const programs: Program[] = [
     colorToken: "amber",
     defaultCapacity: 12,
     requiresWaiver: true,
+    requiredWaiverTemplateIds: ["wtpl_general", "wtpl_bike"],
     memberRequired: true,
     waitlistEnabled: true,
     minimumAge: 12,
@@ -90,6 +95,7 @@ export const programs: Program[] = [
     colorToken: "orange",
     defaultCapacity: 20,
     requiresWaiver: true,
+    requiredWaiverTemplateIds: ["wtpl_general", "wtpl_youth"],
     guardianRequired: true,
     waitlistEnabled: true,
     minimumAge: 9,

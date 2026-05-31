@@ -31,6 +31,7 @@ export const staffUsers: StaffUser[] = [
       "mergeCustomer",
       "deactivateCustomer",
       "manageProducts",
+      "manageWaivers",
       "deactivateProduct",
       "viewReports",
       "viewAttendanceReports",
@@ -73,7 +74,7 @@ export const staffUsers: StaffUser[] = [
     canTeach: true,
     activeInstructor: true,
     instructorBio: "Leads operations and introductory coaching.",
-    permissions: ["checkInCustomer", "checkOutCustomer", "overrideAccess", "editCustomer", "createCustomer", "manageProducts", "viewReports", "usePOS", "editPrograms", "manageStaff", "grantCompAccess", "viewCustomers", "rosterAccess", "discountTransaction"]
+    permissions: ["checkInCustomer", "checkOutCustomer", "overrideAccess", "editCustomer", "createCustomer", "manageProducts", "manageWaivers", "viewReports", "usePOS", "editPrograms", "manageStaff", "grantCompAccess", "viewCustomers", "rosterAccess", "discountTransaction"]
   },
   {
     id: "staff_003",
@@ -219,6 +220,6 @@ export const staffUsers: StaffUser[] = [
     lastActiveAt: "2026-05-24T10:00:00Z",
     certifications: ["Wilderness First Aid"],
     notes: "Riverbend owner.",
-    permissions: ["viewCustomers", "editCustomer", "createCustomer", "checkInCustomer", "checkOutCustomer", "overrideAccess", "compAccess", "manageProducts", "deactivateProduct", "viewReports", "viewAttendanceReports", "viewFinancialReports", "viewMembershipReports", "usePOS", "refundTransaction", "discountTransaction", "editPrograms", "cancelPrograms", "rosterAccess", "manageSettings", "manageBillingSettings", "managePlatformSettings", "manageStaff", "manageRoles", "inviteStaff", "grantCompAccess"]
+    permissions: ["viewCustomers", "editCustomer", "createCustomer", "checkInCustomer", "checkOutCustomer", "overrideAccess", "compAccess", "manageProducts", "manageWaivers", "deactivateProduct", "viewReports", "viewAttendanceReports", "viewFinancialReports", "viewMembershipReports", "usePOS", "refundTransaction", "discountTransaction", "editPrograms", "cancelPrograms", "rosterAccess", "manageSettings", "manageBillingSettings", "managePlatformSettings", "manageStaff", "manageRoles", "inviteStaff", "grantCompAccess"]
   }
 ];

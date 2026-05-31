@@ -50,7 +50,8 @@ function buildEligibility(
   session: ClassCampSession,
   program: Program | undefined,
   registrations: Registration[],
-  activeMembershipCustomerIds: Set<string>
+  activeMembershipCustomerIds: Set<string>,
+  getWaiverStatusForCustomer: (customerId: string, templateId?: string) => "valid" | "missing" | "expired" | "expiring_soon" | "outdated_version"
 ): EligibilityResult {
   const reasons: string[] = [];
   if (!program) {
@@ -60,7 +61,14 @@ function buildEligibility(
   if (existing) reasons.push("Already registered for this session.");
   if (session.status === "cancelled") reasons.push("Session is cancelled.");
 
-  if (program.requiresWaiver && !customer.waiverId) reasons.push("Missing waiver.");
+  if (program.requiresWaiver) {
+    const requiredTemplates = program.requiredWaiverTemplateIds ?? ["wtpl_general"];
+    const hasAllRequired = requiredTemplates.every((templateId) => {
+      const status = getWaiverStatusForCustomer(customer.id, templateId);
+      return status === "valid" || status === "expiring_soon";
+    });
+    if (!hasAllRequired) reasons.push("Missing waiver.");
+  }
 
   const dob = customer.dateOfBirth ? new Date(`${customer.dateOfBirth}T00:00:00`) : null;
   const age = dob ? Math.max(0, Math.floor((new Date(session.startsAt).getTime() - dob.getTime()) / (1000 * 60 * 60 * 24 * 365.2425))) : null;
@@ -101,6 +109,7 @@ export default function RegistrationsPage() {
     customers,
     registrations,
     customerAccessRecords,
+    getWaiverStatusForCustomer,
     registerCustomerForSession,
     cancelRegistration,
     moveRegistrationToWaitlist,
@@ -410,7 +419,14 @@ export default function RegistrationsPage() {
             {customerResults.length === 0 ? <p className="text-sm text-muted-foreground">Search to enroll a customer.</p> : null}
             {customerResults.map((customer) => {
               const eligibility = selectedSession
-                ? buildEligibility(customer, selectedSession, selectedProgram, registrations, activeMembershipCustomerIds)
+                ? buildEligibility(
+                    customer,
+                    selectedSession,
+                    selectedProgram,
+                    registrations,
+                    activeMembershipCustomerIds,
+                    getWaiverStatusForCustomer
+                  )
                 : { state: "blocked", label: "Blocked", reasons: ["Select a session first."] as string[] };
               const canOverride = eligibility.state !== "eligible";
               const isFull = selectedSession ? selectedSession.enrolled >= selectedSession.capacity : false;

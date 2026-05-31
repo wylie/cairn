@@ -17,7 +17,7 @@ describe("SidebarNav", () => {
 
     expect(screen.getByText("Operations")).toBeInTheDocument();
     expect(screen.getByText("Management")).toBeInTheDocument();
-    ["Dashboard", "Customers", "Check-in", "Calendar", "Registrations", "Programs", "Products", "POS", "Reports", "Staff", "Settings"].forEach((label) => {
+    ["Dashboard", "Customers", "Check-in", "Calendar", "Registrations", "Programs", "Products", "Waivers", "POS", "Reports", "Staff", "Settings"].forEach((label) => {
       expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
     });
   });
@@ -50,7 +50,7 @@ describe("SidebarNav", () => {
     ["Dashboard", "Check-in", "Customers", "Calendar", "Registrations", "POS"].forEach((label) => {
       expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
     });
-    ["Products", "Staff", "Settings", "Programs"].forEach((label) => {
+    ["Products", "Waivers", "Staff", "Settings", "Programs"].forEach((label) => {
       expect(screen.queryByRole("link", { name: label })).not.toBeInTheDocument();
     });
   });
@@ -69,7 +69,7 @@ describe("SidebarNav", () => {
     ["Dashboard", "Calendar", "Registrations", "Programs"].forEach((label) => {
       expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
     });
-    ["POS", "Products", "Staff", "Settings"].forEach((label) => {
+    ["POS", "Products", "Waivers", "Staff", "Settings"].forEach((label) => {
       expect(screen.queryByRole("link", { name: label })).not.toBeInTheDocument();
     });
   });
@@ -84,6 +84,7 @@ describe("SidebarNav", () => {
       "editPrograms",
       "cancelPrograms",
       "manageProducts",
+      "manageWaivers",
       "viewReports",
       "manageStaff",
       "manageRoles",
@@ -97,7 +98,7 @@ describe("SidebarNav", () => {
         hasPermission={hasPermission}
       />
     );
-    ["Dashboard", "Check-in", "Customers", "Calendar", "Registrations", "POS", "Programs", "Products", "Reports", "Staff", "Settings"].forEach((label) => {
+    ["Dashboard", "Check-in", "Customers", "Calendar", "Registrations", "POS", "Programs", "Products", "Waivers", "Reports", "Staff", "Settings"].forEach((label) => {
       expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
     });
   });

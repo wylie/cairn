@@ -13,6 +13,10 @@ export function CheckoutModal({
   onEmailReceiptChange,
   printReceipt,
   onPrintReceiptChange,
+  splitCashCents,
+  onSplitCashCentsChange,
+  splitCardCents,
+  onSplitCardCentsChange,
   canComplete,
   helperText,
   onClose,
@@ -20,12 +24,16 @@ export function CheckoutModal({
 }: {
   open: boolean;
   totalLabel: string;
-  paymentMethod: "card" | "cash" | "comp" | "gift_card" | "account_credit";
-  onPaymentMethodChange: (method: "card" | "cash" | "comp" | "gift_card" | "account_credit") => void;
+  paymentMethod: "card" | "cash" | "comp" | "gift_card" | "account_credit" | "split";
+  onPaymentMethodChange: (method: "card" | "cash" | "comp" | "gift_card" | "account_credit" | "split") => void;
   emailReceipt: boolean;
   onEmailReceiptChange: (value: boolean) => void;
   printReceipt: boolean;
   onPrintReceiptChange: (value: boolean) => void;
+  splitCashCents: number;
+  onSplitCashCentsChange: (value: number) => void;
+  splitCardCents: number;
+  onSplitCardCentsChange: (value: number) => void;
   canComplete: boolean;
   helperText?: string;
   onClose: () => void;
@@ -61,15 +69,48 @@ export function CheckoutModal({
             id="checkout-payment-method"
             aria-label="Checkout payment method"
             value={paymentMethod}
-            onChange={(event) => onPaymentMethodChange(event.target.value as "card" | "cash" | "comp" | "gift_card" | "account_credit")}
+            onChange={(event) => onPaymentMethodChange(event.target.value as "card" | "cash" | "comp" | "gift_card" | "account_credit" | "split")}
           >
             <option value="card">Card</option>
             <option value="cash">Cash</option>
             <option value="comp">Comp</option>
             <option value="gift_card">Gift Card (placeholder)</option>
             <option value="account_credit">Account Credit (placeholder)</option>
+            <option value="split">Split Payment</option>
           </SelectInput>
         </FormField>
+        {paymentMethod === "split" ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FormField label="Cash amount">
+              <input
+                aria-label="Split cash amount"
+                type="number"
+                min="0"
+                step="0.01"
+                className="h-11 w-full rounded-md border border-input bg-white px-3 text-sm"
+                value={splitCashCents === 0 ? "" : (splitCashCents / 100).toFixed(2)}
+                onChange={(event) => {
+                  const value = Number(event.target.value);
+                  onSplitCashCentsChange(Number.isFinite(value) ? Math.max(0, Math.round(value * 100)) : 0);
+                }}
+              />
+            </FormField>
+            <FormField label="Card amount">
+              <input
+                aria-label="Split card amount"
+                type="number"
+                min="0"
+                step="0.01"
+                className="h-11 w-full rounded-md border border-input bg-white px-3 text-sm"
+                value={splitCardCents === 0 ? "" : (splitCardCents / 100).toFixed(2)}
+                onChange={(event) => {
+                  const value = Number(event.target.value);
+                  onSplitCardCentsChange(Number.isFinite(value) ? Math.max(0, Math.round(value * 100)) : 0);
+                }}
+              />
+            </FormField>
+          </div>
+        ) : null}
 
         <fieldset className="space-y-2">
           <legend className="text-sm text-muted-foreground">Receipt options</legend>

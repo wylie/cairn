@@ -24,3 +24,20 @@ export function getAllowedOrgSlugsFromSessionCookie(): string[] | null {
     return null;
   }
 }
+
+export function getSessionFromCookieClient(): { userId: string; email: string; organizationSlugs: string[] } | null {
+  const raw = getCookieValue("cairn_mock_auth");
+  if (!raw) return null;
+  try {
+    const json = atob(raw.replaceAll("-", "+").replaceAll("_", "/"));
+    const parsed = JSON.parse(json) as { userId?: string; email?: string; organizationSlugs?: string[] };
+    if (!parsed.userId || !parsed.email || !Array.isArray(parsed.organizationSlugs)) return null;
+    return {
+      userId: parsed.userId,
+      email: parsed.email,
+      organizationSlugs: parsed.organizationSlugs
+    };
+  } catch {
+    return null;
+  }
+}

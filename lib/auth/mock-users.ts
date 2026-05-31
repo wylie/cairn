@@ -2,6 +2,7 @@ import type { StaffRole } from "@/types/domain";
 
 export interface MockAuthUser {
   id: string;
+  staffId?: string;
   email: string;
   password: string;
   firstName: string;
@@ -14,6 +15,7 @@ export interface MockAuthUser {
 export const mockAuthUsers: MockAuthUser[] = [
   {
     id: "auth_owner_summit",
+    staffId: "staff_001",
     email: "taylor@summitrec.co",
     password: "dev1234",
     firstName: "Taylor",
@@ -24,6 +26,7 @@ export const mockAuthUsers: MockAuthUser[] = [
   },
   {
     id: "auth_manager_summit",
+    staffId: "staff_002",
     email: "maya@summitrec.co",
     password: "dev1234",
     firstName: "Maya",
@@ -34,6 +37,7 @@ export const mockAuthUsers: MockAuthUser[] = [
   },
   {
     id: "auth_frontdesk_summit",
+    staffId: "staff_003",
     email: "sam@summitrec.co",
     password: "dev1234",
     firstName: "Sam",
@@ -44,6 +48,7 @@ export const mockAuthUsers: MockAuthUser[] = [
   },
   {
     id: "auth_instructor_summit",
+    staffId: "staff_008",
     email: "iris@summitrec.co",
     password: "dev1234",
     firstName: "Iris",
@@ -54,6 +59,7 @@ export const mockAuthUsers: MockAuthUser[] = [
   },
   {
     id: "auth_owner_riverbend",
+    staffId: "staff_f_001",
     email: "owner@riverbend.example",
     password: "dev1234",
     firstName: "Avery",

@@ -8,8 +8,9 @@ import { buildScopedMockKey, loadMockState, saveMockState } from "@/lib/mock-sto
 import { staffHasAnyPermission, staffHasPermission } from "@/lib/staff/permissions";
 import type { AuditLogEntry, StaffPermission, StaffUser } from "@/types/domain";
 import { resolveTenant } from "@/lib/tenant/resolve";
-import { getCurrentOrgSlugClient } from "@/lib/tenant/client";
+import { getCurrentOrgSlugClient, getSessionFromCookieClient } from "@/lib/tenant/client";
 import { parseOrgSlugFromPathname } from "@/lib/tenant/path";
+import { getMockUserById } from "@/lib/auth/mock-users";
 
 function mergeSeedStaffUsers(stored: StaffUser[], seededStaffUsers: StaffUser[]) {
   const byId = new Map(stored.map((staff) => [staff.id, staff]));
@@ -114,13 +115,27 @@ export function WorkstationStateProvider({ children }: { children: React.ReactNo
 
   useEffect(() => {
     const storedStaffUsers = mergeSeedStaffUsers(loadMockState(STAFF_USERS_STORAGE_KEY, orgSeedStaffUsers) as StaffUser[], orgSeedStaffUsers);
+    const session = getSessionFromCookieClient();
+    const authUser = session ? getMockUserById(session.userId) : null;
+    const preferredStaffId = authUser?.staffId ?? null;
+    let repairedStaffUsers = storedStaffUsers;
+    if (preferredStaffId) {
+      const seededPreferred = orgSeedStaffUsers.find((entry) => entry.id === preferredStaffId);
+      if (seededPreferred) {
+        repairedStaffUsers = storedStaffUsers.map((entry) => (entry.id === preferredStaffId ? seededPreferred : entry));
+      }
+    }
     const savedActiveStaffId = loadMockState<string | null>(ACTIVE_STAFF_STORAGE_KEY, null);
     const storedAuditLog = loadMockState<AuditLogEntry[]>(AUDIT_LOG_STORAGE_KEY, []);
 
-    setStaffUsers(storedStaffUsers);
-    setActiveStaffId(
-      savedActiveStaffId && storedStaffUsers.some((staff) => staff.id === savedActiveStaffId) ? savedActiveStaffId : null
-    );
+    setStaffUsers(repairedStaffUsers);
+    const nextActiveStaffId =
+      preferredStaffId && repairedStaffUsers.some((staff) => staff.id === preferredStaffId)
+        ? preferredStaffId
+        : savedActiveStaffId && repairedStaffUsers.some((staff) => staff.id === savedActiveStaffId)
+          ? savedActiveStaffId
+          : null;
+    setActiveStaffId(nextActiveStaffId);
     setAuditLog(storedAuditLog);
     setHydrated(true);
   }, [AUDIT_LOG_STORAGE_KEY, ACTIVE_STAFF_STORAGE_KEY, STAFF_USERS_STORAGE_KEY, activeOrgId]);

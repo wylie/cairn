@@ -30,14 +30,7 @@ export function middleware(req: NextRequest) {
 
   const session = decodeSession(req.cookies.get(AUTH_COOKIE)?.value);
 
-  if (pathname === "/" && !session) {
-    return NextResponse.redirect(new URL("/login", req.url));
-  }
-
-  if (pathname === "/") {
-    const org = session?.organizationSlugs[0] ?? "summit";
-    return NextResponse.redirect(new URL(`/o/${org}/dashboard`, req.url));
-  }
+  if (pathname === "/") return NextResponse.next();
 
   if (pathname === "/login") {
     if (session) {

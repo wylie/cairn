@@ -17,7 +17,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 async function switchStaff(user: ReturnType<typeof userEvent.setup>, pin: string) {
-  await user.click(screen.getByRole("button", { name: "Switch" }));
+  await user.click(screen.getAllByRole("button", { name: "Switch" })[0]);
   await user.type(screen.getByLabelText("Staff PIN input"), pin);
   await user.click(screen.getByRole("button", { name: "Confirm" }));
 }
@@ -131,6 +131,44 @@ describe("Staff management MVP", () => {
     await user.click(screen.getByRole("button", { name: "Suspend Staff" }));
     expect(screen.getByRole("dialog", { name: "Suspend staff confirmation" })).toBeInTheDocument();
     expect(screen.queryByText(/window\.confirm/i)).not.toBeInTheDocument();
+  });
+
+  it("staff profile displays human-friendly permission labels and hides raw keys", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CustomerDetailView customerId="cust_staff_002" />
+      </TestProviders>
+    );
+    await switchStaff(user, "1111");
+    await user.click(screen.getByRole("link", { name: "Staff Profile" }));
+    expect(screen.getByText(/Manage staff/i)).toBeInTheDocument();
+    expect(screen.getByText(/View reports/i)).toBeInTheDocument();
+    expect(screen.queryByText(/manageStaff/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/viewReports/)).not.toBeInTheDocument();
+  });
+
+  it("editing staff profile does not mutate current user navigation before save", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <AppShell>
+          <CustomerDetailView customerId="cust_staff_002" />
+        </AppShell>
+      </TestProviders>
+    );
+    await switchStaff(user, "1111");
+    expect(screen.getByRole("link", { name: "Customers" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: "Staff Profile" }));
+    await user.click(screen.getByRole("button", { name: "Edit Staff Profile" }));
+    const dialog = screen.getByRole("dialog", { name: "Edit staff profile" });
+    await user.selectOptions(within(dialog).getByLabelText("Role"), "front_desk");
+    expect(screen.getByRole("link", { name: "Customers" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Settings" })).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog", { name: "Edit staff profile" })).not.toBeInTheDocument();
   });
 
   it("role management placeholder renders", async () => {

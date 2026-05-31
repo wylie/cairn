@@ -437,6 +437,20 @@ describe("Products page", () => {
     expect(String((nameInput as HTMLInputElement).value)).toMatch(/ - Copy/i);
   });
 
+  it("uses secondary outlined style for duplicate action", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <ProductsPage />
+      </TestProviders>
+    );
+    await activateStaff(user, "2222");
+    const duplicateButton = screen.getAllByRole("button", { name: "Duplicate" })[0];
+    expect(duplicateButton.className).toContain("border");
+    expect(duplicateButton.className).not.toContain("hover:bg-rose");
+  });
+
   it("creates a retail product with sku/barcode and finds it by barcode search", async () => {
     const user = userEvent.setup();
     render(

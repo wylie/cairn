@@ -1,10 +1,22 @@
 import { render, screen } from "@testing-library/react";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
+import type { StaffPermission } from "@/types/domain";
+
+function buildPermissionHelpers(granted: StaffPermission[]) {
+  const hasPermission = (permission: StaffPermission) => granted.includes(permission);
+  const canAccessPermissions = (permissions?: StaffPermission[]) => {
+    if (!permissions || permissions.length === 0) return true;
+    return permissions.some((permission) => granted.includes(permission));
+  };
+  return { hasPermission, canAccessPermissions };
+}
 
 describe("SidebarNav", () => {
-  it("renders expected primary navigation links", () => {
+  it("renders grouped navigation headings", () => {
     render(<SidebarNav pathname="/dashboard" />);
 
+    expect(screen.getByText("Operations")).toBeInTheDocument();
+    expect(screen.getByText("Management")).toBeInTheDocument();
     ["Dashboard", "Customers", "Check-in", "Calendar", "Registrations", "Programs", "Products", "POS", "Reports", "Staff", "Settings"].forEach((label) => {
       expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
     });
@@ -16,5 +28,77 @@ describe("SidebarNav", () => {
     expect(screen.getByRole("link", { name: "Customers" })).toHaveAttribute("href", "/o/summit/customers");
     expect(screen.getByRole("link", { name: "Registrations" })).toHaveAttribute("href", "/o/summit/registrations");
     expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("href", "/o/summit/reports");
+  });
+
+  it("shows front desk operational pages and hides administrative pages", () => {
+    const { canAccessPermissions, hasPermission } = buildPermissionHelpers([
+      "viewCustomers",
+      "checkInCustomer",
+      "checkOutCustomer",
+      "usePOS",
+      "rosterAccess"
+    ]);
+    render(
+      <SidebarNav
+        pathname="/o/summit/dashboard"
+        currentOrgSlug="summit"
+        canAccessPermissions={canAccessPermissions}
+        hasPermission={hasPermission}
+      />
+    );
+
+    ["Dashboard", "Check-in", "Customers", "Calendar", "Registrations", "POS"].forEach((label) => {
+      expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
+    });
+    ["Products", "Staff", "Settings", "Programs"].forEach((label) => {
+      expect(screen.queryByRole("link", { name: label })).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows instructor calendar/registration/program pages and hides POS/admin pages", () => {
+    const { canAccessPermissions, hasPermission } = buildPermissionHelpers(["editPrograms", "rosterAccess"]);
+    render(
+      <SidebarNav
+        pathname="/o/summit/calendar"
+        currentOrgSlug="summit"
+        canAccessPermissions={canAccessPermissions}
+        hasPermission={hasPermission}
+      />
+    );
+
+    ["Dashboard", "Calendar", "Registrations", "Programs"].forEach((label) => {
+      expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
+    });
+    ["POS", "Products", "Staff", "Settings"].forEach((label) => {
+      expect(screen.queryByRole("link", { name: label })).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows full navigation for manager/owner-level permissions", () => {
+    const { canAccessPermissions, hasPermission } = buildPermissionHelpers([
+      "viewCustomers",
+      "checkInCustomer",
+      "checkOutCustomer",
+      "usePOS",
+      "rosterAccess",
+      "editPrograms",
+      "cancelPrograms",
+      "manageProducts",
+      "viewReports",
+      "manageStaff",
+      "manageRoles",
+      "manageSettings"
+    ]);
+    render(
+      <SidebarNav
+        pathname="/o/summit/dashboard"
+        currentOrgSlug="summit"
+        canAccessPermissions={canAccessPermissions}
+        hasPermission={hasPermission}
+      />
+    );
+    ["Dashboard", "Check-in", "Customers", "Calendar", "Registrations", "POS", "Programs", "Products", "Reports", "Staff", "Settings"].forEach((label) => {
+      expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
+    });
   });
 });

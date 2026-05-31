@@ -154,6 +154,7 @@ Why: cards should separate workflow chunks without looking like old desktop wind
 - Delete actions use filled destructive in confirmation modals.
 - Avoid multiple filled destructive buttons in dense cards.
 - Icons are optional and should not create clutter.
+- Duplicate actions use `secondary` (outlined), not ghost.
 
 ## Badges
 - Success: green tint

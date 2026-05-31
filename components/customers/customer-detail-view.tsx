@@ -15,6 +15,9 @@ import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import { filterCustomers } from "@/lib/data/customer-search";
 import { formatCurrency } from "@/lib/transactions";
+import { ROLE_LABELS } from "@/lib/staff/capabilities";
+import { PERMISSION_LABELS } from "@/lib/staff/permissions";
+import type { StaffRole } from "@/types/domain";
 
 export function CustomerDetailView({ customerId }: { customerId: string }) {
   const {
@@ -54,6 +57,14 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
   const [profileFeedback, setProfileFeedback] = useState("");
   const [activeSection, setActiveSection] = useState("overview");
   const [showSuspendConfirm, setShowSuspendConfirm] = useState(false);
+  const [showEditStaffProfile, setShowEditStaffProfile] = useState(false);
+  const [staffProfileDraft, setStaffProfileDraft] = useState<{
+    role: StaffRole;
+    status: "active" | "inactive" | "on_leave";
+    locations: string[];
+    startDate: string;
+    staffNotes: string;
+  } | null>(null);
   const [showHouseholdDetail, setShowHouseholdDetail] = useState(false);
   const [selectedHouseholdCheckInIds, setSelectedHouseholdCheckInIds] = useState<string[]>([]);
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
@@ -186,6 +197,17 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
   };
   const householdMembership = householdMembers.find((entry) => entry.customerId === customer.id);
   const customerStaffProfile = customer.staffProfile?.isStaff ? customer.staffProfile : null;
+  const openEditStaffProfile = () => {
+    if (!customerStaffProfile) return;
+    setStaffProfileDraft({
+      role: customerStaffProfile.role,
+      status: customerStaffProfile.status,
+      locations: [...customerStaffProfile.locations],
+      startDate: customerStaffProfile.startDate ?? "",
+      staffNotes: customerStaffProfile.staffNotes ?? ""
+    });
+    setShowEditStaffProfile(true);
+  };
   const household = householdMembership ? households.find((entry) => entry.id === householdMembership.householdId) : undefined;
   const householdRows = household
     ? householdMembers
@@ -424,7 +446,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
             <div className="flex flex-wrap items-center gap-2">
               <CustomerBadges customer={customer} membership={membership} punchPass={pass} waiver={waiver} />
               {customerStaffProfile ? (
-                <Badge tone="muted">Staff: {customerStaffProfile.role.replace("_", " ")}</Badge>
+                <Badge tone="muted">Staff: {ROLE_LABELS[customerStaffProfile.role]}</Badge>
               ) : null}
             </div>
           </div>
@@ -657,49 +679,20 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
           <Card>
             <CardHeader><CardTitle>Staff Profile</CardTitle></CardHeader>
             <CardContent className="space-y-2 text-sm">
-              <Field label="Role" value={customerStaffProfile.role.replace("_", " ")} />
+              <Field label="Role" value={ROLE_LABELS[customerStaffProfile.role]} />
               <Field label="Status" value={customerStaffProfile.status} />
               <Field label="Locations" value={customerStaffProfile.locations.join(", ") || "Not set"} />
               <Field label="Assigned programs" value={customerStaffProfile.assignedPrograms.join(", ") || "None assigned"} />
-              <Field label="Permissions" value={customerStaffProfile.permissions.join(", ") || "None"} />
+              <Field
+                label="Permissions"
+                value={customerStaffProfile.permissions.map((permission) => PERMISSION_LABELS[permission]).join(", ") || "None"}
+              />
               <Field label="Last active" value={customerStaffProfile.lastActive ? new Date(customerStaffProfile.lastActive).toLocaleString("en-US") : "No recent activity"} />
               <div className="mt-3 flex flex-wrap gap-2">
                 <Button
                   variant="secondary"
                   className="h-10"
-                  onClick={() => {
-                    const nextRole = customerStaffProfile.role === "front_desk" ? "instructor" : "front_desk";
-                    const next = updateStaffMember({
-                      id: customerStaffProfile.staffId,
-                      firstName: customer.firstName,
-                      lastName: customer.lastName,
-                      role: nextRole,
-                      email: customer.email,
-                      phone: customer.phone,
-                      pronouns: customer.pronouns,
-                      locationIds: customerStaffProfile.locations,
-                      status: customerStaffProfile.status,
-                      startDate: customerStaffProfile.startDate,
-                      notes: customerStaffProfile.staffNotes
-                    });
-                    if (!next.ok) {
-                      setProfileFeedback(next.message);
-                      return;
-                    }
-                    const profileRes = updateStaffProfileForCustomer({
-                      customerId: customer.id,
-                      role: nextRole,
-                      status: customerStaffProfile.status,
-                      staffPin: customerStaffProfile.staffPin,
-                      locations: customerStaffProfile.locations,
-                      assignedPrograms: customerStaffProfile.assignedPrograms,
-                      permissions: customerStaffProfile.permissions,
-                      startDate: customerStaffProfile.startDate,
-                      certifications: customerStaffProfile.certifications,
-                      staffNotes: customerStaffProfile.staffNotes
-                    });
-                    setProfileFeedback(profileRes.ok ? `Staff role updated to ${nextRole.replace("_", " ")}.` : profileRes.message);
-                  }}
+                  onClick={openEditStaffProfile}
                 >
                   Edit Staff Profile
                 </Button>
@@ -1148,6 +1141,142 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
               ))}
             </div>
           </div>
+        </ModalShell>
+      ) : null}
+      {customerStaffProfile ? (
+        <ModalShell
+          open={showEditStaffProfile}
+          ariaLabel="Edit staff profile"
+          title="Edit Staff Profile"
+          description="Update role, status, and location access for this staff profile."
+          onClose={() => setShowEditStaffProfile(false)}
+          maxWidthClassName="max-w-2xl"
+          footer={
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setShowEditStaffProfile(false)}>Cancel</Button>
+              <Button
+                onClick={() => {
+                  if (!customerStaffProfile || !staffProfileDraft) return;
+                  const staffUpdate = updateStaffMember({
+                    id: customerStaffProfile.staffId,
+                    firstName: customer.firstName,
+                    lastName: customer.lastName,
+                    role: staffProfileDraft.role,
+                    email: customer.email,
+                    phone: customer.phone,
+                    pronouns: customer.pronouns,
+                    locationIds: staffProfileDraft.locations,
+                    status: staffProfileDraft.status,
+                    startDate: staffProfileDraft.startDate || undefined,
+                    notes: staffProfileDraft.staffNotes || undefined
+                  });
+                  if (!staffUpdate.ok) {
+                    setProfileFeedback(staffUpdate.message);
+                    return;
+                  }
+                  const profileResult = updateStaffProfileForCustomer({
+                    customerId: customer.id,
+                    role: staffProfileDraft.role,
+                    status: staffProfileDraft.status,
+                    staffPin: customerStaffProfile.staffPin,
+                    locations: staffProfileDraft.locations,
+                    assignedPrograms: customerStaffProfile.assignedPrograms,
+                    permissions: customerStaffProfile.permissions,
+                    startDate: staffProfileDraft.startDate || undefined,
+                    certifications: customerStaffProfile.certifications,
+                    staffNotes: staffProfileDraft.staffNotes || undefined
+                  });
+                  setProfileFeedback(profileResult.ok ? "Staff profile updated." : profileResult.message);
+                  if (profileResult.ok) setShowEditStaffProfile(false);
+                }}
+              >
+                Save Staff Profile
+              </Button>
+            </div>
+          }
+        >
+          {staffProfileDraft ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="text-sm">
+                <span className="mb-1 block text-muted-foreground">Role</span>
+                <select
+                  className="h-11 w-full rounded-md border border-input bg-white px-3"
+                  value={staffProfileDraft.role}
+                  onChange={(event) => setStaffProfileDraft((prev) => (prev ? { ...prev, role: event.target.value as StaffRole } : prev))}
+                >
+                  <option value="owner">Owner</option>
+                  <option value="manager">Manager</option>
+                  <option value="front_desk">Front Desk</option>
+                  <option value="instructor">Instructor</option>
+                  <option value="volunteer_limited">Volunteer</option>
+                </select>
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block text-muted-foreground">Status</span>
+                <select
+                  className="h-11 w-full rounded-md border border-input bg-white px-3"
+                  value={staffProfileDraft.status}
+                  onChange={(event) =>
+                    setStaffProfileDraft((prev) =>
+                      prev ? { ...prev, status: event.target.value as "active" | "inactive" | "on_leave" } : prev
+                    )
+                  }
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Suspended</option>
+                  <option value="on_leave">On leave</option>
+                </select>
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block text-muted-foreground">Start date</span>
+                <input
+                  type="date"
+                  className="h-11 w-full rounded-md border border-input bg-white px-3"
+                  value={staffProfileDraft.startDate}
+                  onChange={(event) => setStaffProfileDraft((prev) => (prev ? { ...prev, startDate: event.target.value } : prev))}
+                />
+              </label>
+              <div className="text-sm">
+                <span className="mb-1 block text-muted-foreground">Locations</span>
+                <div className="space-y-2 rounded-md border border-input bg-white p-3">
+                  {["loc_001", "loc_002"].map((locationId) => (
+                    <label key={locationId} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={staffProfileDraft.locations.includes(locationId)}
+                        onChange={(event) => {
+                          setStaffProfileDraft((prev) => {
+                            if (!prev) return prev;
+                            const next = event.target.checked
+                              ? [...prev.locations, locationId]
+                              : prev.locations.filter((entry) => entry !== locationId);
+                            return { ...prev, locations: Array.from(new Set(next)) };
+                          });
+                        }}
+                      />
+                      <span>{locationId === "loc_001" ? "Summit Downtown" : "Summit Uptown"}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <label className="text-sm md:col-span-2">
+                <span className="mb-1 block text-muted-foreground">Staff notes</span>
+                <textarea
+                  className="min-h-24 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+                  value={staffProfileDraft.staffNotes}
+                  onChange={(event) => setStaffProfileDraft((prev) => (prev ? { ...prev, staffNotes: event.target.value } : prev))}
+                />
+              </label>
+              <div className="md:col-span-2">
+                <p className="mb-2 text-sm text-muted-foreground">Permissions</p>
+                <div className="flex flex-wrap gap-2">
+                  {customerStaffProfile.permissions.map((permission) => (
+                    <Badge key={permission} tone="muted">{PERMISSION_LABELS[permission]}</Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </ModalShell>
       ) : null}
       {customerStaffProfile ? (

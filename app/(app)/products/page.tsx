@@ -404,7 +404,7 @@ export default function ProductsPage() {
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit Product
                 </Button>
-                <Button variant="ghost" disabled={!canManageProducts} onClick={() => {
+                <Button variant="secondary" disabled={!canManageProducts} onClick={() => {
                   const name = nextDuplicateName(product.name, accessProducts);
                   const result = createProduct({
                     ...product,

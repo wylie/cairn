@@ -24,7 +24,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     () => organizations.find((entry) => entry.slug === currentSlug) ?? organizations[0],
     [organizations, currentSlug]
   );
-  const { hasAnyPermission, activeStaff } = useWorkstationState();
+  const { hasAnyPermission, hasPermission, activeStaff } = useWorkstationState();
 
   const canAccessPermissions = useCallback((permissions?: StaffPermission[]) => {
     if (!activeStaff) return true;
@@ -41,7 +41,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <h1 className="mt-1 text-lg font-semibold">{currentOrganization?.name}</h1>
           <p className="mt-1 text-xs text-muted-foreground">{currentOrganization?.facilityType.replace("_", " ")}</p>
           <div className="mt-5">
-            <SidebarNav pathname={pathname} currentOrgSlug={currentSlug} canAccessPermissions={canAccessPermissions} />
+            <SidebarNav
+              pathname={pathname}
+              currentOrgSlug={currentSlug}
+              canAccessPermissions={canAccessPermissions}
+              hasPermission={hasPermission}
+            />
           </div>
         </aside>
         <main className="space-y-4">

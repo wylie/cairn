@@ -4,23 +4,53 @@ import { LayoutDashboard, Users, ScanLine, Calendar, Boxes, CreditCard, BarChart
 import { cn } from "@/lib/utils";
 import type { StaffPermission } from "@/types/domain";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/customers", label: "Customers", icon: Users, permissions: ["viewCustomers"] as StaffPermission[] },
-  { href: "/check-in", label: "Check-in", icon: ScanLine },
-  { href: "/calendar", label: "Calendar", icon: Calendar },
-  { href: "/registrations", label: "Registrations", icon: ClipboardList, permissions: ["rosterAccess", "editPrograms"] as StaffPermission[] },
-  { href: "/programs", label: "Programs", icon: Boxes, permissions: ["editPrograms", "rosterAccess"] as StaffPermission[] },
-  { href: "/products", label: "Products", icon: Tags, permissions: ["manageProducts"] as StaffPermission[] },
-  { href: "/pos", label: "POS", icon: CreditCard, permissions: ["usePOS"] as StaffPermission[] },
-  { href: "/reports", label: "Reports", icon: BarChart3, permissions: ["viewReports", "viewAttendanceReports", "viewFinancialReports"] as StaffPermission[] },
-  { href: "/staff", label: "Staff", icon: UserCog, permissions: ["manageStaff", "inviteStaff", "manageRoles"] as StaffPermission[] },
+type NavSection = "operations" | "management";
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  section: NavSection;
+  permissions?: StaffPermission[];
+  isVisible?: (ctx: {
+    canAccessPermissions?: (permissions?: StaffPermission[]) => boolean;
+    hasPermission?: (permission: StaffPermission) => boolean;
+  }) => boolean;
+};
+
+const operationalPermissions: StaffPermission[] = ["checkInCustomer", "checkOutCustomer", "viewCustomers", "usePOS", "rosterAccess", "editPrograms"];
+
+const navItems: NavItem[] = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, section: "operations", permissions: operationalPermissions },
+  { href: "/check-in", label: "Check-in", icon: ScanLine, section: "operations", permissions: ["checkInCustomer", "checkOutCustomer"] },
+  { href: "/customers", label: "Customers", icon: Users, section: "operations", permissions: ["viewCustomers"] },
+  { href: "/calendar", label: "Calendar", icon: Calendar, section: "operations", permissions: ["rosterAccess", "editPrograms", "checkInCustomer"] },
+  { href: "/registrations", label: "Registrations", icon: ClipboardList, section: "operations", permissions: ["rosterAccess", "editPrograms"] },
+  { href: "/pos", label: "POS", icon: CreditCard, section: "operations", permissions: ["usePOS"] },
   {
-    href: "/settings",
-    label: "Settings",
-    icon: Settings,
-    permissions: ["manageSettings", "manageStaff", "manageProducts"] as StaffPermission[]
-  }
+    href: "/programs",
+    label: "Programs",
+    icon: Boxes,
+    section: "management",
+    permissions: ["editPrograms"],
+    // Front desk often has limited roster permissions; keep program setup scoped to instructor/manager-level capabilities.
+    isVisible: ({ hasPermission, canAccessPermissions }) => {
+      const canEditPrograms = hasPermission
+        ? hasPermission("editPrograms")
+        : canAccessPermissions
+          ? canAccessPermissions(["editPrograms"])
+          : true;
+      const isFrontDeskOnly =
+        Boolean(hasPermission?.("usePOS")) &&
+        !Boolean(hasPermission?.("manageStaff")) &&
+        !Boolean(hasPermission?.("manageSettings")) &&
+        !Boolean(hasPermission?.("cancelPrograms"));
+      return canEditPrograms && !isFrontDeskOnly;
+    }
+  },
+  { href: "/products", label: "Products", icon: Tags, section: "management", permissions: ["manageProducts"] },
+  { href: "/reports", label: "Reports", icon: BarChart3, section: "management", permissions: ["viewReports", "viewAttendanceReports", "viewFinancialReports"] },
+  { href: "/staff", label: "Staff", icon: UserCog, section: "management", permissions: ["manageStaff", "inviteStaff", "manageRoles"] },
+  { href: "/settings", label: "Settings", icon: Settings, section: "management", permissions: ["manageSettings", "manageStaff", "manageProducts"] }
 ];
 
 function buildOrgHref(pathname: string, href: string) {
@@ -33,37 +63,57 @@ function buildOrgHref(pathname: string, href: string) {
 function SidebarNavInner({
   pathname,
   currentOrgSlug,
-  canAccessPermissions
+  canAccessPermissions,
+  hasPermission
 }: {
   pathname: string;
   currentOrgSlug?: string;
   canAccessPermissions?: (permissions?: StaffPermission[]) => boolean;
+  hasPermission?: (permission: StaffPermission) => boolean;
 }) {
-  const visibleItems = navItems.filter((item) => (canAccessPermissions ? canAccessPermissions(item.permissions) : true));
+  const visibleItems = navItems.filter((item) => {
+    const permissionVisible = canAccessPermissions ? canAccessPermissions(item.permissions) : true;
+    const customVisible = item.isVisible ? item.isVisible({ canAccessPermissions, hasPermission }) : true;
+    return permissionVisible && customVisible;
+  });
+  const operations = visibleItems.filter((item) => item.section === "operations");
+  const management = visibleItems.filter((item) => item.section === "management");
+
+  const renderGroup = (heading: string, items: NavItem[]) => {
+    if (items.length === 0) return null;
+    return (
+      <div className="space-y-1">
+        <p className="px-2 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{heading}</p>
+        {items.map((item) => {
+          const orgHref = currentOrgSlug ? `/o/${currentOrgSlug}${item.href}` : buildOrgHref(pathname, item.href);
+          const isActive =
+            pathname === item.href ||
+            Boolean(pathname?.startsWith(`${item.href}/`)) ||
+            pathname === orgHref ||
+            Boolean(pathname?.startsWith(`${orgHref}/`));
+          return (
+            <Link
+              key={item.href}
+              href={orgHref}
+              prefetch
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+              )}
+            >
+              <item.icon className="h-4 w-4" aria-hidden="true" />
+              {item.label}
+            </Link>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <nav className="space-y-1">
-      {visibleItems.map((item) => {
-        const orgHref = currentOrgSlug ? `/o/${currentOrgSlug}${item.href}` : buildOrgHref(pathname, item.href);
-        const isActive =
-          pathname === item.href ||
-          Boolean(pathname?.startsWith(`${item.href}/`)) ||
-          pathname === orgHref ||
-          Boolean(pathname?.startsWith(`${orgHref}/`));
-        return (
-          <Link
-            key={item.href}
-            href={orgHref}
-            prefetch
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-            )}
-          >
-            <item.icon className="h-4 w-4" aria-hidden="true" />
-            {item.label}
-          </Link>
-        );
-      })}
+      {renderGroup("Operations", operations)}
+      {renderGroup("Management", management)}
     </nav>
   );
 }

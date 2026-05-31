@@ -240,7 +240,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
   }).length;
   const householdUpcomingPrograms = registrations
     .filter((registration) => householdRows.some((row) => row.customerId === registration.customerId))
-    .filter((registration) => registration.status === "registered" || registration.status === "waitlisted")
+    .filter((registration) => registration.status === "confirmed" || registration.status === "waitlisted")
     .map((registration) => {
       const session = sessions.find((entry) => entry.id === registration.sessionId);
       const program = session ? programs.find((entry) => entry.id === session.programId) : undefined;
@@ -264,7 +264,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     .slice(0, 6);
   const alerts: Array<{ id: string; tone: "warning" | "danger" | "success"; message: string }> = [];
   if (!waiver || waiver.status !== "valid") alerts.push({ id: "waiver", tone: "danger", message: waiver?.status === "expired" ? "Waiver expired" : "Waiver missing" });
-  if (membership && membership.status === "expired") alerts.push({ id: "membership", tone: "danger", message: "Membership expired" });
+  if (membership && membership.status === "inactive") alerts.push({ id: "membership", tone: "danger", message: "Membership expired" });
   if (decision.chosenAccess?.type === "punch-pass" && (decision.chosenAccess.remainingPunches ?? 0) <= 2) {
     alerts.push({ id: "punch", tone: "warning", message: `Punch pass low (${decision.chosenAccess.remainingPunches ?? 0} remaining)` });
   }

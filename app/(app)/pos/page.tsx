@@ -50,6 +50,8 @@ export default function PosPage() {
   const [purchaseTarget, setPurchaseTarget] = useState<"self" | "member" | "household">("self");
   const [purchaseMemberId, setPurchaseMemberId] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
+  const [splitCashCents, setSplitCashCents] = useState(0);
+  const [splitCardCents, setSplitCardCents] = useState(0);
   const [emailReceipt, setEmailReceipt] = useState(true);
   const [printReceipt, setPrintReceipt] = useState(false);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
@@ -106,6 +108,9 @@ export default function PosPage() {
   const hasCartItems = cartProducts.length > 0;
   const hasActiveStaff = Boolean(activeStaff);
   const canCheckout = canUsePos && hasSelectedCustomer && hasCartItems && hasActiveStaff;
+  const splitTotalCents = splitCashCents + splitCardCents;
+  const splitValid = paymentMethod !== "split" || splitTotalCents === totalOwedCents;
+  const canCompleteCheckout = canCheckout && splitValid;
   const canUseDiscounts = hasPermission("discountTransaction");
   const canCustomizeQuickButtons = activeStaff?.role === "owner" || activeStaff?.role === "manager";
   const selectedMembership = selectedCustomer
@@ -157,6 +162,11 @@ export default function PosPage() {
   };
 
   const submit = (checkInAfterSale: boolean) => {
+    if (paymentMethod === "split" && splitCashCents + splitCardCents !== totalOwedCents) {
+      setWarning("Split payment must equal the full amount owed before checkout can be completed.");
+      setFeedback("");
+      return;
+    }
     const checkoutCustomer = ensureCheckoutCustomer();
     if (!checkoutCustomer.ok) {
       setWarning(checkoutCustomer.message);
@@ -217,6 +227,8 @@ export default function PosPage() {
     setActiveFulfillmentTransactionId(result.transaction?.id ?? null);
     if ((result.transaction?.checkInSlots?.length ?? 0) > 0) setFulfillmentOpen(true);
     setCart([]);
+    setSplitCashCents(0);
+    setSplitCardCents(0);
     setCheckoutModalOpen(false);
     if (guestCheckout) setGuestCheckout(false);
   };
@@ -274,6 +286,14 @@ export default function PosPage() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [canCheckout, checkoutModalOpen, quickProducts]);
+
+  useEffect(() => {
+    if (!checkoutModalOpen) return;
+    if (paymentMethod !== "split") {
+      setSplitCashCents(0);
+      setSplitCardCents(0);
+    }
+  }, [checkoutModalOpen, paymentMethod]);
 
   const getWaiverStatusForCustomer = (customerId?: string) => {
     if (!customerId) return "missing";
@@ -675,12 +695,22 @@ export default function PosPage() {
           open={checkoutModalOpen}
           totalLabel={formatCurrency(totalOwedCents)}
           paymentMethod={paymentMethod}
-          onPaymentMethodChange={setPaymentMethod}
+          onPaymentMethodChange={(method) => {
+            setPaymentMethod(method);
+            if (method !== "split") {
+              setSplitCashCents(0);
+              setSplitCardCents(0);
+            }
+          }}
           emailReceipt={emailReceipt}
           onEmailReceiptChange={setEmailReceipt}
           printReceipt={printReceipt}
           onPrintReceiptChange={setPrintReceipt}
-          canComplete={canCheckout}
+          splitCashCents={splitCashCents}
+          onSplitCashCentsChange={setSplitCashCents}
+          splitCardCents={splitCardCents}
+          onSplitCardCentsChange={setSplitCardCents}
+          canComplete={canCompleteCheckout}
           helperText={
             !hasSelectedCustomer
               ? "Select a customer or continue as guest."
@@ -688,6 +718,8 @@ export default function PosPage() {
                 ? "Add products to begin checkout."
                 : !hasActiveStaff
                   ? "Select staff PIN to continue."
+                  : paymentMethod === "split" && !splitValid
+                    ? `Split payment must equal ${formatCurrency(totalOwedCents)}. Currently ${formatCurrency(splitTotalCents)} entered.`
                   : undefined
           }
           onClose={() => setCheckoutModalOpen(false)}

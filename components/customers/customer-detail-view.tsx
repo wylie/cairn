@@ -679,6 +679,9 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
           <Card>
             <CardHeader><CardTitle>Staff Profile</CardTitle></CardHeader>
             <CardContent className="space-y-2 text-sm">
+              <p className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+                Login password is used to sign into Cairn. Staff PIN is used for quick workstation switching and manager approval.
+              </p>
               <Field label="Role" value={ROLE_LABELS[customerStaffProfile.role]} />
               <Field label="Status" value={customerStaffProfile.status} />
               <Field label="Locations" value={customerStaffProfile.locations.join(", ") || "Not set"} />
@@ -1196,7 +1199,11 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
           }
         >
           {staffProfileDraft ? (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-4">
+              <p className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+                Login password is used to sign into Cairn. Staff PIN is used for quick workstation switching and manager approval.
+              </p>
+              <div className="grid gap-4 md:grid-cols-2">
               <label className="text-sm">
                 <span className="mb-1 block text-muted-foreground">Role</span>
                 <select
@@ -1274,6 +1281,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                     <Badge key={permission} tone="muted">{PERMISSION_LABELS[permission]}</Badge>
                   ))}
                 </div>
+              </div>
               </div>
             </div>
           ) : null}

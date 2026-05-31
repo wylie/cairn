@@ -221,22 +221,25 @@ export default function ProductsPage() {
         title="Products"
         description="Create and manage sellable products for POS, access, and registration workflows."
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="secondary" onClick={() => setLayoutModalOpen(true)} disabled={!canManageProducts}>
-              <GripVertical className="mr-2 h-4 w-4" />
-              Customize Quick Buttons
-            </Button>
-            <Button onClick={() => setShowCreate(true)} disabled={!canManageProducts}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Product
-            </Button>
-          </div>
+          canManageProducts ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="secondary" onClick={() => setLayoutModalOpen(true)}>
+                <GripVertical className="mr-2 h-4 w-4" />
+                Customize Quick Buttons
+              </Button>
+              <Button onClick={() => setShowCreate(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Product
+              </Button>
+            </div>
+          ) : null
         }
       />
 
       {!canManageProducts ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-          <p>Product management is read-only for this staff role.</p>
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800" role="status">
+          <p>You do not have permission to manage products.</p>
+          <p className="mt-1">Ask a manager for assistance.</p>
           <div className="mt-2">
             <StaffSwitcher label="Switch Staff" />
           </div>
@@ -400,11 +403,14 @@ export default function ProductsPage() {
               ) : null}
 
               <div className="mt-3 flex flex-wrap gap-2">
-                <Button variant="secondary" disabled={!canManageProducts} onClick={() => setEditingProduct(product)}>
+                {canManageProducts ? (
+                <Button variant="secondary" onClick={() => setEditingProduct(product)}>
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit Product
                 </Button>
-                <Button variant="secondary" disabled={!canManageProducts} onClick={() => {
+                ) : null}
+                {canManageProducts ? (
+                <Button variant="secondary" onClick={() => {
                   const name = nextDuplicateName(product.name, accessProducts);
                   const result = createProduct({
                     ...product,
@@ -421,10 +427,11 @@ export default function ProductsPage() {
                   <Copy className="mr-2 h-4 w-4" />
                   Duplicate
                 </Button>
+                ) : null}
                 {(product.type === "retail" || product.type === "rental") ? (
+                  canManageProducts ? (
                   <Button
                     variant="secondary"
-                    disabled={!canManageProducts}
                     onClick={() => {
                       const nextIndex = (product.variants?.length ?? 0) + 1;
                       const result = updateProduct(product.id, {
@@ -448,11 +455,12 @@ export default function ProductsPage() {
                     <Plus className="mr-2 h-4 w-4" />
                     Add Variant
                   </Button>
+                  ) : null
                 ) : null}
+                {canManageProducts ? (
                 <Button
                   variant="secondary"
                   className={product.active === false ? "" : "border-rose-300 text-rose-700 hover:bg-rose-50"}
-                  disabled={!canManageProducts}
                   onClick={() => {
                     const result = toggleProductActive(product.id);
                     setFeedback(result.message);
@@ -461,6 +469,7 @@ export default function ProductsPage() {
                   <Ban className="mr-2 h-4 w-4" />
                   {product.active === false ? "Activate" : "Deactivate"}
                 </Button>
+                ) : null}
               </div>
             </article>
           );

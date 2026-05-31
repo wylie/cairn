@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 export default function LoginPage() {
   const router = useRouter();
   const next = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("next") : null;
+  const isDevelopment = process.env.NODE_ENV !== "production";
   const [email, setEmail] = useState("taylor@summitrec.co");
   const [password, setPassword] = useState("dev1234");
   const [error, setError] = useState("");
@@ -54,6 +55,20 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-xs text-muted-foreground">Mock login for local development.</p>
+          {isDevelopment ? (
+            <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
+              <p className="font-medium">Demo accounts</p>
+              <ul className="mt-2 space-y-1">
+                <li><span className="font-medium">Owner:</span> taylor@summitrec.co / dev1234 (PIN 1111)</li>
+                <li><span className="font-medium">Manager:</span> maya@summitrec.co / dev1234 (PIN 2222)</li>
+                <li><span className="font-medium">Front Desk:</span> sam@summitrec.co / dev1234 (PIN 3333)</li>
+                <li><span className="font-medium">Instructor:</span> iris@summitrec.co / dev1234 (PIN 8888)</li>
+              </ul>
+              <p className="mt-2 text-sky-800">
+                Password signs into Cairn. Staff PIN is used for quick workstation switching and manager approval.
+              </p>
+            </div>
+          ) : null}
           <form className="space-y-3" onSubmit={onSubmit}>
             <label className="block space-y-1 text-sm">
               <span>Email</span>

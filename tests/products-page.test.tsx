@@ -105,6 +105,20 @@ describe("Products page", () => {
     expect(screen.getByText("Updated description")).toBeInTheDocument();
   });
 
+  it("owner can manage products", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <ProductsPage />
+      </TestProviders>
+    );
+
+    await activateStaff(user, "1111");
+    expect(screen.getByRole("button", { name: "Add Product" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Edit Product" }).length).toBeGreaterThan(0);
+  });
+
   it("product persists after refresh", async () => {
     const storage = installStorageMock();
     const user = userEvent.setup();
@@ -174,8 +188,13 @@ describe("Products page", () => {
 
     await activateStaff(user, "3333");
 
-    expect(screen.getByText(/read-only for this staff role/i)).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "Add Product" })[0]).toBeDisabled();
+    expect(screen.getByText(/do not have permission to manage products/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add Product" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Customize Quick Buttons" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit Product" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Duplicate" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add Variant" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Deactivate" })).not.toBeInTheDocument();
 
     await user.click(screen.getAllByRole("button", { name: "Switch" })[0]);
     await user.clear(screen.getByLabelText("Staff PIN input"));

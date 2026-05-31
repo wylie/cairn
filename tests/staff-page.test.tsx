@@ -149,6 +149,21 @@ describe("Staff management MVP", () => {
     expect(screen.queryByText(/viewReports/)).not.toBeInTheDocument();
   });
 
+  it("staff profile explains password vs staff PIN usage", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CustomerDetailView customerId="cust_staff_002" />
+      </TestProviders>
+    );
+    await switchStaff(user, "1111");
+    await user.click(screen.getByRole("link", { name: "Staff Profile" }));
+    expect(
+      screen.getByText(/Login password is used to sign into Cairn. Staff PIN is used for quick workstation switching and manager approval./i)
+    ).toBeInTheDocument();
+  });
+
   it("editing staff profile does not mutate current user navigation before save", async () => {
     const user = userEvent.setup();
     render(

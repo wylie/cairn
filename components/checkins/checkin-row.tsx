@@ -17,11 +17,13 @@ function normalize(value: string) {
 export function CheckInRow({
   record,
   customer,
+  viewCustomerHref,
   readOnly,
   onCheckOut
 }: {
   record: CheckInLogRecord;
   customer?: Pick<Customer, "firstName" | "lastName" | "profilePhotoUrl"> | null;
+  viewCustomerHref?: string;
   readOnly: boolean;
   onCheckOut: (recordId: string) => void;
 }) {
@@ -35,7 +37,7 @@ export function CheckInRow({
       className="relative grid grid-cols-1 gap-3 rounded-lg border bg-card p-4 md:grid-cols-[1.3fr_1fr_1fr_1.2fr_auto] md:items-center"
     >
       <Link
-        href={`/customers/${record.customerId}`}
+        href={viewCustomerHref ?? `/customers/${record.customerId}`}
         aria-label={`Open customer profile for ${record.customerName}`}
         className="absolute inset-0 rounded-lg transition-colors hover:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       />
@@ -66,7 +68,7 @@ export function CheckInRow({
       {record.status === "checked-in" && !readOnly ? (
         <Button className="relative z-10" onClick={() => onCheckOut(record.id)} aria-label={`Check Out ${record.customerName}`}>Check Out</Button>
       ) : (
-        <Link className="relative z-10" href={`/customers/${record.customerId}`}>
+        <Link className="relative z-10" href={viewCustomerHref ?? `/customers/${record.customerId}`}>
           <Button variant="outline">View Customer</Button>
         </Link>
       )}

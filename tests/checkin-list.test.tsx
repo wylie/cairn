@@ -78,7 +78,10 @@ describe("CheckInList date behavior", () => {
 
     const row = screen.getByTestId("checkin-row-cust_001");
     const profileLink = within(row).getByRole("link", { name: /open customer profile for maya patel/i });
-    expect(profileLink).toHaveAttribute("href", "/customers/cust_001");
+    const href = profileLink.getAttribute("href") ?? "";
+    expect(href).toContain("/customers/cust_001?");
+    expect(href).toContain("from=");
+    expect(href).toContain("returnTo=");
   });
 
   it("check-in rows render customer avatar fallback", () => {

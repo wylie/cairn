@@ -62,11 +62,20 @@ describe("CustomerDetailPage", () => {
     expect(screen.queryByLabelText("detail-profile-details")).not.toBeInTheDocument();
   });
 
-  it("renders back to customers navigation link", async () => {
+  it("renders back to customers navigation link as fallback", async () => {
+    window.history.pushState({}, "", "/customers/cust_001");
     const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
     render(<TestProviders>{page}</TestProviders>);
     const backLink = screen.getByRole("link", { name: /back to customers/i });
     expect(backLink).toHaveAttribute("href", "/customers");
+  });
+
+  it("renders context-aware back link when opened from check-in", async () => {
+    window.history.pushState({}, "", "/customers/cust_001?from=check-in&returnTo=%2Fcheck-in%3Fquery%3DMaya");
+    const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
+    render(<TestProviders>{page}</TestProviders>);
+    const backLink = screen.getByRole("link", { name: /back to check-in/i });
+    expect(backLink).toHaveAttribute("href", "/check-in?query=Maya");
   });
 
   it("renders jump links targeting customer sections", async () => {

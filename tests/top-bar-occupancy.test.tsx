@@ -39,7 +39,7 @@ describe("Global occupancy indicator", () => {
     );
 
     const link = screen.getByRole("link", { name: "View current check-ins" });
-    expect(link).toHaveAttribute("href", "/check-in");
+    expect(link).toHaveAttribute("href", "/o/summit/check-in");
     await user.tab();
     expect(link).toHaveFocus();
   });

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRef } from "react";
+import { resolveDetailBackLink } from "@/lib/navigation/detail-navigation";
 import { CustomerBadges } from "@/components/customers/customer-badges";
 import { ActivityTimeline } from "@/components/customers/activity-timeline";
 import { CustomerDetailActions } from "@/components/customers/customer-detail-actions";
@@ -198,6 +199,12 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
       createdAt: "2026-05-01T09:00:00Z"
     }
   ]);
+  const backLink = useMemo(() => {
+    if (typeof window === "undefined") {
+      return { href: "/customers", label: "← Back to Customers" };
+    }
+    return resolveDetailBackLink(new URLSearchParams(window.location.search));
+  }, []);
   const recentCheckIns = checkInRecords
     .filter((entry) => entry.customerId === customer.id)
     .sort((a, b) => b.checkInTime.localeCompare(a.checkInTime))
@@ -585,8 +592,8 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
   return (
     <div className="space-y-4">
       <div>
-        <Link href="/customers" className="inline-flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-          ← Back to Customers
+        <Link href={backLink.href} className="inline-flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+          {backLink.label}
         </Link>
       </div>
       <Card aria-label="detail-header">

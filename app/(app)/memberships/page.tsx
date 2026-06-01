@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { StaffSwitcher } from "@/components/staff/staff-switcher";
 import { CustomerAvatar } from "@/components/customers/customer-avatar";
 import { PageHeader } from "@/components/shared/page-header";
@@ -15,6 +15,7 @@ import { useCustomerState } from "@/lib/state/customer-state";
 import { useSettingsState } from "@/lib/state/settings-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import type { CustomerAccessRecord } from "@/types/domain";
+import { buildCustomerDetailHref } from "@/lib/navigation/detail-navigation";
 
 type MembershipFilter = "all" | "active" | "expiring_30" | "expiring_7" | "frozen" | "cancelled" | "expired" | "pending_renewal";
 
@@ -56,7 +57,9 @@ function statusTone(label: ReturnType<typeof statusLabel>): "success" | "warning
 }
 
 export default function MembershipsWorkspacePage() {
+  const pathname = usePathname();
   const searchParams = useSearchParams();
+  const currentSearch = searchParams?.toString?.() ?? "";
   const { customers, customerAccessRecords, accessProducts, updateCustomerAccessRecord, households, householdMembers } = useCustomerState();
   const { settings } = useSettingsState();
   const { activeStaff, hasPermission } = useWorkstationState();
@@ -476,7 +479,11 @@ export default function MembershipsWorkspacePage() {
                   ) : (
                     <div className="space-y-2">
                       {selected.coveredMembers.map((member) => (
-                        <Link key={member.id} href={`/customers/${member.id}`} className="flex items-center gap-2 rounded-md border px-2 py-1 hover:bg-secondary/30">
+                        <Link key={member.id} href={buildCustomerDetailHref({
+                          customerId: member.id,
+                          currentPathname: pathname,
+                          currentSearch
+                        })} className="flex items-center gap-2 rounded-md border px-2 py-1 hover:bg-secondary/30">
                           <CustomerAvatar customer={member} sizeClassName="h-8 w-8" />
                           <span>{member.firstName} {member.lastName}</span>
                         </Link>
@@ -516,7 +523,11 @@ export default function MembershipsWorkspacePage() {
 
                 <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
                   <p>
-                    Customer profile integration: <Link className="underline" href={`/customers/${selected.customer?.id}#access`}>Open customer access section</Link>
+                    Customer profile integration: <Link className="underline" href={`${buildCustomerDetailHref({
+                      customerId: selected.customer!.id,
+                      currentPathname: pathname,
+                      currentSearch
+                    })}#access`}>Open customer access section</Link>
                   </p>
                 </div>
               </>

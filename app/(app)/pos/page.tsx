@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { PosProduct } from "@/types/domain";
 import Link from "next/link";
 import { AccessProductPicker } from "@/components/pos/access-product-picker";
@@ -19,8 +20,12 @@ import { filterCustomers } from "@/lib/data/customer-search";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import { mockPaymentProvider, type PaymentMethod } from "@/lib/payments/provider";
+import { buildCustomerDetailHref } from "@/lib/navigation/detail-navigation";
 
 export default function PosPage() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentSearch = searchParams?.toString?.() ?? "";
   const {
     customers,
     memberships,
@@ -354,7 +359,11 @@ export default function PosPage() {
                   <p><span className="text-muted-foreground">Emergency:</span> {selectedCustomer.emergencyContactName || "Not set"}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Link href={`/customers/${selectedCustomer.id}`} className="inline-flex min-h-11 items-center rounded-md border px-3 text-sm">
+                  <Link href={buildCustomerDetailHref({
+                    customerId: selectedCustomer.id,
+                    currentPathname: pathname,
+                    currentSearch
+                  })} className="inline-flex min-h-11 items-center rounded-md border px-3 text-sm">
                     View Profile
                   </Link>
                   <Link href="/check-in" className="inline-flex min-h-11 items-center rounded-md border px-3 text-sm">

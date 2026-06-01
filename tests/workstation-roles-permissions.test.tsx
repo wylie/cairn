@@ -8,7 +8,8 @@ import { useWorkstationState } from "@/lib/state/workstation-state";
 import { TestProviders } from "@/tests/test-providers";
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/dashboard"
+  usePathname: () => "/dashboard",
+  useSearchParams: () => new URLSearchParams()
 }));
 
 function AuditProbe() {

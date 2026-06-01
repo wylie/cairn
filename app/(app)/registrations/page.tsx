@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { useWorkstationState } from "@/lib/state/workstation-state";
 import { parseOrgSlugFromPathname } from "@/lib/tenant/path";
 import { CustomerAvatar } from "@/components/customers/customer-avatar";
 import type { ClassCampSession, Customer, Program, Registration } from "@/types/domain";
+import { buildCustomerDetailHref } from "@/lib/navigation/detail-navigation";
 
 type RegistrationFilter = "all" | "registered" | "waitlisted" | "checked_in" | "attended" | "absent" | "cancelled";
 
@@ -93,6 +94,8 @@ function buildEligibility(
 
 export default function RegistrationsPage() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentSearch = searchParams?.toString?.() ?? "";
   const orgSlug = parseOrgSlugFromPathname(pathname) ?? "summit";
   const {
     sessions,
@@ -493,7 +496,11 @@ export default function RegistrationsPage() {
                   <div className="mt-2 flex flex-wrap gap-2">
                     <Button className="h-8" disabled={!selectedSession || eligibility.state === "blocked"} onClick={() => runRegister(customer.id)}>{isFull && selectedSession?.waitlistEnabled ? "Add To Waitlist" : "Register"}</Button>
                     {eligibility.state !== "eligible" ? <Button className="h-8" variant="caution" disabled={!selectedSession} onClick={() => runRegister(customer.id, true)}>Override & Register</Button> : null}
-                    <Link className="inline-flex h-8 items-center justify-center rounded-md border border-border bg-transparent px-3 text-sm font-medium hover:bg-secondary" href={`/o/${orgSlug}/customers/${customer.id}`}>View Customer</Link>
+                    <Link className="inline-flex h-8 items-center justify-center rounded-md border border-border bg-transparent px-3 text-sm font-medium hover:bg-secondary" href={buildCustomerDetailHref({
+                      customerId: customer.id,
+                      currentPathname: pathname,
+                      currentSearch
+                    })}>View Customer</Link>
                   </div>
                 </article>
               );

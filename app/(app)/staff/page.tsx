@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
 import { CustomerSearchCombobox } from "@/components/shared/customer-search-combobox";
@@ -16,6 +17,7 @@ import { ROLE_LABELS } from "@/lib/staff/capabilities";
 import { filterCustomers } from "@/lib/data/customer-search";
 import type { StaffRole } from "@/types/domain";
 import { CheckboxField, FormField, FormGrid, SelectInput, TextInput } from "@/components/shared/form-layout";
+import { buildCustomerDetailHref } from "@/lib/navigation/detail-navigation";
 
 function formatLastActive(value?: string) {
   if (!value) return "No recent activity";
@@ -23,6 +25,9 @@ function formatLastActive(value?: string) {
 }
 
 export default function StaffPage() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentSearch = searchParams?.toString?.() ?? "";
   const { activeStaff, hasPermission, addStaffMember } = useWorkstationState();
   const { customers, sessions, programs, addCustomer, addStaffProfileToCustomer } = useCustomerState();
   const [query, setQuery] = useState("");
@@ -158,7 +163,11 @@ export default function StaffPage() {
                       <p className="sm:col-span-2"><span className="text-muted-foreground">Assigned programs:</span> {assignedPrograms.length > 0 ? assignedPrograms.join(", ") : "None assigned"}</p>
                     </div>
                     <div className="mt-4 flex flex-wrap gap-2">
-                      <Link href={`/customers/${person.id}#staff-profile`} className="inline-flex h-10 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-secondary/60">View Profile</Link>
+                      <Link href={`${buildCustomerDetailHref({
+                        customerId: person.id,
+                        currentPathname: pathname,
+                        currentSearch
+                      })}#staff-profile`} className="inline-flex h-10 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-secondary/60">View Profile</Link>
                     </div>
                   </CardContent>
                 </Card>
@@ -191,7 +200,11 @@ export default function StaffPage() {
                           <td className="py-2">{staff.status === "active" ? "Active" : "Suspended"}</td>
                           <td className="py-2">{formatLastActive(staff.lastActive)}</td>
                           <td className="py-2">
-                            <Link href={`/customers/${person.id}#staff-profile`} className="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary/60">View Profile</Link>
+                            <Link href={`${buildCustomerDetailHref({
+                              customerId: person.id,
+                              currentPathname: pathname,
+                              currentSearch
+                            })}#staff-profile`} className="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary/60">View Profile</Link>
                           </td>
                         </tr>
                       );

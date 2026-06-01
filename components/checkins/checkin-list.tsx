@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { AddCustomerModal } from "@/components/customers/add-customer-modal";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -12,8 +13,12 @@ import { StaffSwitcher } from "@/components/staff/staff-switcher";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import { CustomerAvatar } from "@/components/customers/customer-avatar";
+import { buildCustomerDetailHref } from "@/lib/navigation/detail-navigation";
 
 export function CheckInList() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentSearch = searchParams?.toString?.() ?? "";
   const {
     activeDateKey,
     isActiveDateToday,
@@ -660,7 +665,11 @@ export function CheckInList() {
                   <Button variant="secondary" className="min-h-11">
                     Emergency Contact
                   </Button>
-                  <Link href={`/customers/${selectedCustomer.id}`} className="inline-flex min-h-11 items-center justify-center rounded-md border px-3 text-sm font-medium">
+                  <Link href={buildCustomerDetailHref({
+                    customerId: selectedCustomer.id,
+                    currentPathname: pathname,
+                    currentSearch
+                  })} className="inline-flex min-h-11 items-center justify-center rounded-md border px-3 text-sm font-medium">
                     View Profile
                   </Link>
                 </div>
@@ -816,7 +825,11 @@ export function CheckInList() {
           {undoState ? (
             <div className="mt-2 flex flex-wrap gap-2">
               <Button variant="secondary" className="h-9" onClick={handleUndo}>Undo</Button>
-              {selectedCustomer ? <Link className="inline-flex h-9 items-center rounded-md border px-3 text-sm" href={`/customers/${selectedCustomer.id}`}>View Customer</Link> : null}
+              {selectedCustomer ? <Link className="inline-flex h-9 items-center rounded-md border px-3 text-sm" href={buildCustomerDetailHref({
+                customerId: selectedCustomer.id,
+                currentPathname: pathname,
+                currentSearch
+              })}>View Customer</Link> : null}
             </div>
           ) : null}
         </div>
@@ -847,6 +860,11 @@ export function CheckInList() {
               key={record.id}
               record={record}
               customer={customers.find((entry) => entry.id === record.customerId)}
+              viewCustomerHref={buildCustomerDetailHref({
+                customerId: record.customerId,
+                currentPathname: pathname,
+                currentSearch
+              })}
               readOnly={!isActiveDateToday}
               onCheckOut={handleCheckOut}
             />

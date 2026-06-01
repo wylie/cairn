@@ -15,7 +15,8 @@ import SettingsPage from "@/app/(app)/settings/page";
 import WaiversPage from "@/app/(app)/waivers/page";
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/dashboard"
+  usePathname: () => "/dashboard",
+  useSearchParams: () => new URLSearchParams()
 }));
 
 describe("Primary routes smoke", () => {

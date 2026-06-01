@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CustomerDetailPage from "@/app/(app)/customers/[id]/page";
 import { CheckInList } from "@/components/checkins/checkin-list";
@@ -73,11 +73,92 @@ describe("CustomerDetailPage", () => {
     const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
     render(<TestProviders>{page}</TestProviders>);
     const jumpRow = screen.getByLabelText("detail-jump-links");
-    const labels = ["Overview", "Profile", "Access", "Waiver", "Visits", "Purchases", "Registrations", "Household", "Notes", "Payment"];
+    const labels = ["Overview", "Profile", "Access", "Household", "Payment", "Visits", "Purchases", "Registrations", "Waiver", "Notes"];
     labels.forEach((label) => {
       const link = within(jumpRow).getByRole("link", { name: label });
       expect(link.getAttribute("href")).toMatch(/^#/);
     });
+  });
+
+  it("renders staff profile jump link only when staff section is rendered", async () => {
+    const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_staff_002" }) });
+    render(<TestProviders>{page}</TestProviders>);
+    const jumpRow = screen.getByLabelText("detail-jump-links");
+    expect(within(jumpRow).getByRole("link", { name: "Staff Profile" })).toBeInTheDocument();
+    expect(screen.getByLabelText("section-staff-profile")).toBeInTheDocument();
+  });
+
+  it("jump link order matches rendered section order", async () => {
+    const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
+    render(<TestProviders>{page}</TestProviders>);
+    const jumpRow = screen.getByLabelText("detail-jump-links");
+    const links = within(jumpRow).getAllByRole("link");
+    const hrefs = links.map((link) => link.getAttribute("href"));
+    expect(hrefs).toEqual([
+      "#overview",
+      "#profile",
+      "#access",
+      "#household",
+      "#payment",
+      "#visits",
+      "#purchases",
+      "#registrations",
+      "#waiver",
+      "#notes"
+    ]);
+  });
+
+  it("staff-only jump link is hidden when customer is not staff", async () => {
+    const nonStaffPage = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_002" }) });
+    render(<TestProviders>{nonStaffPage}</TestProviders>);
+    const jumpRow = screen.getByLabelText("detail-jump-links");
+    expect(within(jumpRow).queryByRole("link", { name: "Staff Profile" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("section-staff-profile")).not.toBeInTheDocument();
+  });
+
+  it("active jump link updates on section intersection", async () => {
+    const callbacks: Array<IntersectionObserverCallback> = [];
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+    const originalObserver = globalThis.IntersectionObserver;
+    globalThis.IntersectionObserver = vi.fn((cb: IntersectionObserverCallback) => {
+      callbacks.push(cb);
+      return {
+        observe,
+        unobserve: vi.fn(),
+        disconnect,
+        takeRecords: vi.fn()
+      } as unknown as IntersectionObserver;
+    }) as unknown as typeof IntersectionObserver;
+
+    const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
+    render(<TestProviders>{page}</TestProviders>);
+    const jumpRow = screen.getByLabelText("detail-jump-links");
+    const overviewLink = within(jumpRow).getByRole("link", { name: "Overview" });
+    const waiverLink = within(jumpRow).getByRole("link", { name: "Waiver" });
+    expect(overviewLink.className).toContain("bg-primary");
+    expect(waiverLink.className).not.toContain("bg-primary");
+
+    const waiverSection = screen.getByLabelText("section-waiver");
+    act(() => {
+      callbacks[0]?.(
+        [
+          {
+            target: waiverSection,
+            isIntersecting: true,
+            intersectionRatio: 0.75
+          } as IntersectionObserverEntry
+        ],
+        {} as IntersectionObserver
+      );
+    });
+
+    await waitFor(() => {
+      expect(waiverLink.className).toContain("bg-primary");
+      expect(overviewLink.className).not.toContain("bg-primary");
+    });
+
+    globalThis.IntersectionObserver = originalObserver;
   });
 
   it("top customer summary card displays address, emergency contact, and notes preview", async () => {

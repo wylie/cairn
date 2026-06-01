@@ -35,6 +35,9 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     customerAccessRecords,
     updateCustomerAccessRecord,
     updateCustomerWaiver,
+    signWaiverForCustomer,
+    getWaiverStatusForCustomer,
+    getSignedWaiverRecordsForCustomer,
     households,
     householdMembers,
     createHousehold,
@@ -76,6 +79,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     canPurchaseForOthers: boolean;
     canSignWaivers: boolean;
   } | null>(null);
+  const [activeSignedWaiverId, setActiveSignedWaiverId] = useState<string | null>(null);
   const customer = customers.find((entry) => entry.id === customerId);
 
   if (!customer) {
@@ -84,6 +88,11 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
 
   const membership = customer.membershipId ? memberships.find((entry) => entry.id === customer.membershipId) : undefined;
   const waiver = customer.waiverId ? waivers.find((entry) => entry.id === customer.waiverId) : undefined;
+  const signedWaiverRecords = getSignedWaiverRecordsForCustomer(customer.id);
+  const activeSignedWaiver = activeSignedWaiverId
+    ? signedWaiverRecords.find((entry) => entry.id === activeSignedWaiverId)
+    : undefined;
+  const generalWaiverStatus = getWaiverStatusForCustomer(customer.id, "wtpl_general");
   const pass = customer.punchPassId ? punchPasses.find((entry) => entry.id === customer.punchPassId) : undefined;
   const recentCheckIns = checkInRecords
     .filter((entry) => entry.customerId === customer.id)
@@ -283,6 +292,26 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
           ).slice(0, 8),
     [customers, householdRows, householdMemberQuery]
   );
+  const sectionLinks = useMemo(() => {
+    const links: Array<{ id: string; label: string }> = [
+      { id: "overview", label: "Overview" },
+      { id: "profile", label: "Profile" },
+      { id: "access", label: "Access" }
+    ];
+    if (customerStaffProfile) {
+      links.push({ id: "staff-profile", label: "Staff Profile" });
+    }
+    links.push(
+      { id: "household", label: "Household" },
+      { id: "payment", label: "Payment" },
+      { id: "visits", label: "Visits" },
+      { id: "purchases", label: "Purchases" },
+      { id: "registrations", label: "Registrations" },
+      { id: "waiver", label: "Waiver" },
+      { id: "notes", label: "Notes" }
+    );
+    return links;
+  }, [customerStaffProfile]);
 
   const beginEditHouseholdMember = (member: (typeof householdRows)[number]) => {
     setEditingMemberId(member.customerId);
@@ -365,6 +394,33 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     window.addEventListener("hashchange", syncHash);
     return () => window.removeEventListener("hashchange", syncHash);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof IntersectionObserver === "undefined") return;
+    const sectionIds = sectionLinks.map((entry) => entry.id);
+    const sections = sectionIds
+      .map((id) => document.getElementById(id))
+      .filter((node): node is HTMLElement => Boolean(node));
+    if (sections.length === 0) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        const top = visible[0];
+        if (!top) return;
+        const nextId = top.target.id;
+        if (!nextId || nextId === activeSection) return;
+        setActiveSection(nextId);
+      },
+      {
+        rootMargin: "-30% 0px -55% 0px",
+        threshold: [0.1, 0.25, 0.5, 0.75]
+      }
+    );
+    sections.forEach((node) => observer.observe(node));
+    return () => observer.disconnect();
+  }, [sectionLinks, activeSection]);
 
   useEffect(() => {
     if (!showHouseholdDetail) return;
@@ -468,20 +524,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
       <Card aria-label="detail-jump-links" className="sticky top-4 z-20 border border-border/80 bg-background/95 shadow-md backdrop-blur">
         <CardContent className="rounded-xl p-4">
           <nav aria-label="Customer detail sections" className="flex flex-wrap gap-2">
-            {[
-              ["overview", "Overview"],
-              ["profile", "Profile"],
-              ["access", "Access"],
-              ["waiver", "Waiver"],
-              ["visits", "Visits"],
-              ["purchases", "Purchases"],
-              ["registrations", "Registrations"],
-              ["household", "Household"],
-              ["notes", "Notes"],
-              ["payment", "Payment"]
-            ]
-              .concat(customerStaffProfile ? [["staff-profile", "Staff Profile"] as [string, string]] : [])
-              .map(([id, label]) => (
+            {sectionLinks.map(({ id, label }) => (
               <a
                 key={id}
                 href={`#${id}`}
@@ -593,6 +636,11 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
               </div>
               <p className="text-muted-foreground">Expiration: {entry.expirationDate ?? "N/A"}</p>
               <p className="text-muted-foreground">Punches: {typeof entry.remainingPunches === "number" ? entry.remainingPunches : "N/A"}</p>
+              {entry.freezeStartDate || entry.freezeEndDate ? (
+                <p className="text-muted-foreground">
+                  Freeze: {entry.freezeStartDate ?? "—"} to {entry.freezeEndDate ?? "—"}{entry.freezeReason ? ` • ${entry.freezeReason}` : ""}
+                </p>
+              ) : null}
               <p className="text-muted-foreground">Locations: {entry.locationsAllowed?.join(", ") ?? "All"}</p>
               <p className="text-muted-foreground">Waiver requirement: {accessProducts.find((product) => product.id === entry.productId)?.waiverRequired ? "Required" : "Not required"}</p>
               <p className="text-muted-foreground">Access source: {entry.notes ?? entry.type}</p>
@@ -609,29 +657,40 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                     variant="secondary"
                     onClick={() =>
                       updateCustomerAccessRecord(entry.id, {
-                        status: "paused",
-                        pausedAt: new Date().toISOString(),
+                        status: "frozen",
+                        freezeStartDate: new Date().toISOString().slice(0, 10),
+                        freezeEndDate: (() => {
+                          const end = new Date();
+                          end.setDate(end.getDate() + 14);
+                          return end.toISOString().slice(0, 10);
+                        })(),
+                        freezeReason: "Temporary freeze",
+                        freezeStaffNotes: "Frozen from customer profile",
                         updatedByStaffId: activeStaff?.id,
                         updatedByStaffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
                       })
                     }
                   >
-                    Pause
+                    Freeze
                   </Button>
                 ) : null}
-                {entry.status === "paused" ? (
+                {entry.status === "frozen" || entry.status === "paused" ? (
                   <Button
                     className="h-9"
                     variant="secondary"
                     onClick={() =>
                       updateCustomerAccessRecord(entry.id, {
                         status: "active",
+                        freezeStartDate: undefined,
+                        freezeEndDate: undefined,
+                        freezeReason: undefined,
+                        freezeStaffNotes: undefined,
                         updatedByStaffId: activeStaff?.id,
                         updatedByStaffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
                       })
                     }
                   >
-                    Resume
+                    Reactivate
                   </Button>
                 ) : null}
                 {entry.status !== "cancelled" ? (
@@ -667,9 +726,81 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                     Cancel
                   </Button>
                 ) : null}
+                {entry.type === "punch-pass" ? (
+                  <>
+                    <Button
+                      className="h-9"
+                      variant="secondary"
+                      onClick={() =>
+                        updateCustomerAccessRecord(entry.id, {
+                          remainingPunches: Math.max(0, (entry.remainingPunches ?? 0) - 1),
+                          status: Math.max(0, (entry.remainingPunches ?? 0) - 1) <= 0 ? "expired" : entry.status,
+                          updatedByStaffId: activeStaff?.id,
+                          updatedByStaffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
+                        })
+                      }
+                    >
+                      Use 1 Punch
+                    </Button>
+                    <Button
+                      className="h-9"
+                      variant="secondary"
+                      onClick={() =>
+                        updateCustomerAccessRecord(entry.id, {
+                          remainingPunches: (entry.remainingPunches ?? 0) + 1,
+                          status: entry.status === "expired" ? "active" : entry.status,
+                          updatedByStaffId: activeStaff?.id,
+                          updatedByStaffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
+                        })
+                      }
+                    >
+                      Add 1 Punch
+                    </Button>
+                  </>
+                ) : null}
               </div>
+              {entry.type === "punch-pass" ? (
+                <div className="mt-2 rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+                  {recentCheckIns
+                    .filter((record) => record.customerId === customer.id && record.entryMethod === "multi_visit_pass" && typeof record.punchesUsed === "number")
+                    .slice(0, 5)
+                    .map((record) => (
+                      <p key={record.id}>
+                        {new Date(record.checkInTime).toLocaleDateString("en-US")} Visit Used ({record.punchesRemaining ?? 0} remaining)
+                      </p>
+                    ))}
+                  {recentCheckIns.filter((record) => record.customerId === customer.id && record.entryMethod === "multi_visit_pass").length === 0 ? (
+                    <p>No punch usage history yet.</p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           ))}
+        </CardContent>
+      </Card>
+      <Card aria-label="detail-membership-timeline">
+        <CardHeader><CardTitle>Membership Timeline</CardTitle></CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          {accessRecords.filter((entry) => entry.type === "membership" || entry.type === "household-membership").length === 0 ? (
+            <p className="text-muted-foreground">No membership timeline events yet.</p>
+          ) : (
+            accessRecords
+              .filter((entry) => entry.type === "membership" || entry.type === "household-membership")
+              .flatMap((entry) => [
+                { id: `${entry.id}-purchased`, date: entry.purchaseDate ?? entry.startDate, label: "Purchased", detail: entry.notes ?? "Membership" },
+                entry.updatedAt ? { id: `${entry.id}-updated`, date: entry.updatedAt.slice(0, 10), label: "Updated", detail: entry.status } : null,
+                entry.freezeStartDate ? { id: `${entry.id}-frozen`, date: entry.freezeStartDate, label: "Frozen", detail: entry.freezeReason ?? "Membership freeze" } : null,
+                entry.cancelledAt ? { id: `${entry.id}-cancelled`, date: entry.cancelledAt.slice(0, 10), label: "Cancelled", detail: entry.notes ?? "Membership cancelled" } : null
+              ])
+              .filter((event): event is { id: string; date: string; label: string; detail: string } => Boolean(event))
+              .sort((a, b) => b.date.localeCompare(a.date))
+              .map((event) => (
+                <div key={event.id} className="rounded-md border p-2">
+                  <p className="font-medium">{event.label}</p>
+                  <p className="text-muted-foreground">{event.date} • {event.detail}</p>
+                </div>
+              ))
+          )}
         </CardContent>
       </Card>
       </section>
@@ -1422,21 +1553,78 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
 
       <section id="waiver" aria-label="section-waiver" className="scroll-mt-40 space-y-4">
       <Card aria-label="detail-waiver-history">
-        <CardHeader><CardTitle>Waiver History</CardTitle></CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          {waiver ? (
-            <div className="rounded-lg border p-3">
-              <p className={waiver.status === "valid" ? "font-medium text-emerald-800" : "font-medium text-amber-800"}>
-                {waiver.status === "valid" ? "Valid waiver on file" : waiver.status === "expired" ? "Waiver expired" : "Waiver missing"}
-              </p>
-              <p className="text-muted-foreground">Signed: {waiver.signedAt ? new Date(waiver.signedAt).toLocaleDateString() : "N/A"}</p>
-              <p className="text-muted-foreground">Expires: {waiver.expiresAt ?? "N/A"}</p>
-              <p className="text-muted-foreground">Updated by: {waiver.updatedByStaffName ?? "Staff not recorded"}</p>
+        <CardHeader><CardTitle>Waivers</CardTitle></CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <div className="rounded-md border bg-secondary/30 p-3">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Current status</p>
+            <p className="font-medium">
+              {generalWaiverStatus === "valid"
+                ? "Valid"
+                : generalWaiverStatus === "expiring_soon"
+                  ? "Expires Soon"
+                  : generalWaiverStatus === "outdated_version"
+                    ? "Outdated Version"
+                    : generalWaiverStatus === "expired"
+                      ? "Expired"
+                    : "Missing"}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">Updated by: {waiver?.updatedByStaffName ?? "Staff not recorded"}</p>
+          </div>
+          {signedWaiverRecords.length ? (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[620px] text-left text-sm">
+                <thead>
+                  <tr className="border-b text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="px-2 py-2 font-medium">Waiver</th>
+                    <th className="px-2 py-2 font-medium">Status</th>
+                    <th className="px-2 py-2 font-medium">Signed</th>
+                    <th className="px-2 py-2 font-medium">Expires</th>
+                    <th className="px-2 py-2 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {signedWaiverRecords.map((record) => (
+                    <tr key={record.id} className="border-b last:border-b-0">
+                      <td className="px-2 py-2">{record.templateName}</td>
+                      <td className="px-2 py-2">{titleCase(record.status)}</td>
+                      <td className="px-2 py-2">{new Date(record.signedAt).toLocaleDateString()}</td>
+                      <td className="px-2 py-2">{record.expiresAt ? new Date(record.expiresAt).toLocaleDateString() : "Never"}</td>
+                      <td className="px-2 py-2">
+                        <div className="flex flex-wrap gap-2">
+                          <Button className="h-8" variant="secondary" onClick={() => setActiveSignedWaiverId(record.id)}>View Signed Waiver</Button>
+                          <Button className="h-8" variant="secondary" onClick={() => setProfileFeedback("Print waiver copy placeholder.")}>Print</Button>
+                          <Button className="h-8" variant="secondary" onClick={() => setProfileFeedback("Email waiver copy placeholder.")}>Email Copy</Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
             <p className="text-muted-foreground">No waiver history yet.</p>
           )}
           <div className="flex flex-wrap gap-2">
+            <Button
+              className="h-9"
+              variant="outline"
+              onClick={() => {
+                if (!activeStaff) return;
+                const result = signWaiverForCustomer({
+                  customerId: customer.id,
+                  templateId: "wtpl_general",
+                  typedName: `${customer.firstName} ${customer.lastName}`,
+                  signedByName: `${customer.firstName} ${customer.lastName}`,
+                  signedByCustomerId: customer.id,
+                  signedByRelationship: "self",
+                  signedByStaffId: activeStaff.id,
+                  updatedByStaffName: `${activeStaff.firstName} ${activeStaff.lastName}`
+                });
+                setProfileFeedback(result.message);
+              }}
+            >
+              Re-sign
+            </Button>
             <Button
               className="h-9"
               variant="outline"
@@ -1488,6 +1676,51 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
           </div>
         </CardContent>
       </Card>
+      {activeSignedWaiver ? (
+        <ModalShell
+          open
+          ariaLabel="Signed waiver detail"
+          onClose={() => setActiveSignedWaiverId(null)}
+          title={`${activeSignedWaiver.templateName} v${activeSignedWaiver.templateVersion}`}
+          description="Read-only signed waiver record."
+          footer={
+            <div className="flex justify-end">
+              <Button variant="secondary" onClick={() => setActiveSignedWaiverId(null)}>Close</Button>
+            </div>
+          }
+        >
+          <div className="space-y-3 text-sm">
+            <div className="grid gap-2 md:grid-cols-2">
+              <Field label="Signed by" value={activeSignedWaiver.signedByName} />
+              <Field label="Relationship" value={titleCase(activeSignedWaiver.signedByRelationship ?? "self")} />
+              <Field label="Signed for" value={`${customer.firstName} ${customer.lastName}`} />
+              <Field label="Signed" value={new Date(activeSignedWaiver.signedAt).toLocaleString()} />
+              <Field label="Expires" value={activeSignedWaiver.expiresAt ? new Date(activeSignedWaiver.expiresAt).toLocaleDateString() : "Never"} />
+              <Field label="Status" value={titleCase(activeSignedWaiver.status)} />
+            </div>
+            <div>
+              <p className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">Waiver content snapshot</p>
+              <div className="max-h-52 space-y-2 overflow-y-auto rounded-md border bg-white p-3">
+                {activeSignedWaiver.contentSnapshot.map((block) => (
+                  <p key={block.id} className={block.type === "heading" ? "font-semibold" : "text-muted-foreground"}>
+                    {block.content || block.label}
+                  </p>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">Acknowledgement checkboxes</p>
+              <ul className="space-y-1 rounded-md border bg-white p-3">
+                {activeSignedWaiver.acknowledgementChecks.map((entry, index) => (
+                  <li key={`${entry.label}-${index}`} className="text-muted-foreground">[{entry.accepted ? "x" : " "}] {entry.label}</li>
+                ))}
+              </ul>
+            </div>
+            <Field label="Typed signature" value={activeSignedWaiver.typedSignature} />
+            <Field label="Signature timestamp" value={new Date(activeSignedWaiver.createdAt).toLocaleString()} />
+          </div>
+        </ModalShell>
+      ) : null}
       </section>
 
       <section id="notes" aria-label="section-notes" className="scroll-mt-40 space-y-4">
@@ -1498,6 +1731,10 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
       </section>
     </div>
   );
+}
+
+function titleCase(value: string) {
+  return value.replaceAll("_", " ").replace(/\\b\\w/g, (char) => char.toUpperCase());
 }
 
 function Field({ label, value, warning }: { label: string; value: string; warning?: boolean }) {

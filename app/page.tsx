@@ -59,8 +59,11 @@ export default function HomePage() {
             Cairn helps teams manage customers, check-ins, memberships, programs, POS, waivers, households, staff, and reports from one web-based system.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/login" className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:opacity-90">
-              Log In
+            <Link href="/f/summit" className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:opacity-90">
+              Explore Demo Facility
+            </Link>
+            <Link href="/login" className="inline-flex min-h-11 items-center rounded-md border border-slate-300 px-5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+              Staff Login
             </Link>
             <button type="button" className="inline-flex min-h-11 items-center rounded-md border border-slate-300 px-5 text-sm font-medium text-slate-700 hover:bg-slate-50">
               Request Demo
@@ -133,9 +136,12 @@ export default function HomePage() {
 
         <section className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm md:p-10">
           <h2 className="text-2xl font-semibold">Ready to run your facility with Cairn?</h2>
-          <div className="mt-5">
-            <Link href="/login" className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:opacity-90">
-              Log In to Cairn
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+            <Link href="/f/summit" className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:opacity-90">
+              Explore Demo Facility
+            </Link>
+            <Link href="/login" className="inline-flex min-h-11 items-center rounded-md border border-slate-300 px-5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+              Staff Login
             </Link>
           </div>
         </section>

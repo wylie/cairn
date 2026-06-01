@@ -24,8 +24,10 @@ describe("SEO controls", () => {
     const config = robots();
     const rules = Array.isArray(config.rules) ? config.rules[0] : config.rules;
     expect(rules.allow).toContain("/");
+    expect(rules.allow).toContain("/f/");
     expect(rules.disallow).toContain("/login");
     expect(rules.disallow).toContain("/o/");
+    expect(rules.disallow).toContain("/p/*/login");
     expect(rules.disallow).toContain("/p/*/account/");
   });
 
@@ -33,6 +35,7 @@ describe("SEO controls", () => {
     const entries = sitemap();
     const urls = entries.map((entry) => entry.url);
     expect(urls).toContain("https://cairn.example.com/");
+    expect(urls).toContain("https://cairn.example.com/f/summit");
     expect(urls).toContain("https://cairn.example.com/p/summit/programs");
     expect(urls.some((url) => url.includes("/account/"))).toBe(false);
   });

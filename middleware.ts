@@ -30,7 +30,7 @@ export function middleware(req: NextRequest) {
 
   const session = decodeSession(req.cookies.get(AUTH_COOKIE)?.value);
 
-  if (pathname === "/") return NextResponse.next();
+  if (pathname === "/" || pathname.startsWith("/f/")) return NextResponse.next();
 
   if (pathname === "/login") {
     if (session) {
@@ -57,11 +57,7 @@ export function middleware(req: NextRequest) {
   }
 
   if (pathname === "/p/login") {
-    if (session?.kind === "customer") {
-      const org = session.organizationSlugs[0] ?? "summit";
-      return NextResponse.redirect(new URL(`/p/${org}/account/dashboard`, req.url));
-    }
-    return NextResponse.next();
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
   if (pathname.startsWith("/o/")) {
@@ -73,8 +69,19 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL("/no-access", req.url));
     }
 
+    if (rest === "/login") {
+      if (session && session.kind === "staff" && session.organizationSlugs.includes(slug)) {
+        const target = req.nextUrl.searchParams.get("next");
+        if (target && target.startsWith(`/o/${slug}/`)) {
+          return NextResponse.redirect(new URL(target, req.url));
+        }
+        return NextResponse.redirect(new URL(`/o/${slug}/dashboard`, req.url));
+      }
+      return NextResponse.next();
+    }
+
     if (!session || session.kind === "customer") {
-      const loginUrl = new URL("/login", req.url);
+      const loginUrl = new URL(`/o/${slug}/login`, req.url);
       loginUrl.searchParams.set("next", pathname + search);
       return NextResponse.redirect(loginUrl);
     }
@@ -98,15 +105,23 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL("/no-access", req.url));
     }
     const isPublicProgramsRoute =
+      section === "login" ||
       section === "programs" ||
       section === "sessions" ||
       section === "waivers" ||
       section === "kiosk";
     if (isPublicProgramsRoute) {
+      if (section === "login" && session?.kind === "customer" && session.organizationSlugs.includes(slug)) {
+        const target = req.nextUrl.searchParams.get("next");
+        if (target && target.startsWith(`/p/${slug}/`)) {
+          return NextResponse.redirect(new URL(target, req.url));
+        }
+        return NextResponse.redirect(new URL(`/p/${slug}/account/dashboard`, req.url));
+      }
       return NextResponse.next();
     }
     if (!session || session.kind !== "customer") {
-      const loginUrl = new URL("/p/login", req.url);
+      const loginUrl = new URL(`/p/${slug}/login`, req.url);
       loginUrl.searchParams.set("next", pathname + search);
       return NextResponse.redirect(loginUrl);
     }

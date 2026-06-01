@@ -12,6 +12,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: "https://cairn.example.com/p/summit/programs",
       changeFrequency: "daily",
       priority: 0.8
+    },
+    {
+      url: "https://cairn.example.com/f/summit",
+      changeFrequency: "weekly",
+      priority: 0.9
+    },
+    {
+      url: "https://cairn.example.com/f/riverbend",
+      changeFrequency: "weekly",
+      priority: 0.9
     }
   ];
 

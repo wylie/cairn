@@ -13,14 +13,20 @@ describe("middleware auth routing", () => {
     const req = new NextRequest("http://localhost:3000/o/summit/dashboard");
     const res = middleware(req);
     expect(res.status).toBe(307);
-    expect(res.headers.get("location")).toContain("/login?next=%2Fo%2Fsummit%2Fdashboard");
+    expect(res.headers.get("location")).toContain("/o/summit/login?next=%2Fo%2Fsummit%2Fdashboard");
   });
 
   it("redirects customer portal routes to customer login when unauthenticated", () => {
     const req = new NextRequest("http://localhost:3000/p/summit/dashboard");
     const res = middleware(req);
     expect(res.status).toBe(307);
-    expect(res.headers.get("location")).toContain("/p/login?next=%2Fp%2Fsummit%2Fdashboard");
+    expect(res.headers.get("location")).toContain("/p/summit/login?next=%2Fp%2Fsummit%2Fdashboard");
+  });
+
+  it("keeps facility landing page public", () => {
+    const req = new NextRequest("http://localhost:3000/f/summit");
+    const res = middleware(req);
+    expect(res.status).toBe(200);
   });
 
   it("allows public program discovery routes when unauthenticated", () => {

@@ -36,6 +36,14 @@ function toDate(value?: string | null) {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+function getCustomerAge(dateOfBirth?: string) {
+  if (!dateOfBirth) return null;
+  const dob = new Date(`${dateOfBirth}T00:00:00Z`);
+  if (Number.isNaN(dob.getTime())) return null;
+  const now = new Date();
+  return Math.max(0, Math.floor((now.getTime() - dob.getTime()) / (1000 * 60 * 60 * 24 * 365.2425)));
+}
+
 function isSameDay(date: Date, dayKey: string) {
   return date.toISOString().slice(0, 10) === dayKey;
 }
@@ -60,6 +68,11 @@ function waiverWarnings(waiver: Waiver | undefined, dayKey: string) {
 }
 
 function accessUsable(record: CustomerAccessRecord, locationId: string, dayKey: string) {
+  if (record.status === "frozen") {
+    return { ok: false, reason: `${record.type} is frozen${record.freezeEndDate ? ` until ${record.freezeEndDate}` : ""}.` };
+  }
+  if (record.status === "pending") return { ok: false, reason: `${record.type} is pending activation.` };
+  if (record.status === "suspended") return { ok: false, reason: `${record.type} is suspended.` };
   if (record.status !== "active") return { ok: false, reason: `${record.type} is ${record.status}.` };
   const start = toDate(record.startDate);
   const end = toDate(record.expirationDate);
@@ -76,6 +89,9 @@ function accessUsable(record: CustomerAccessRecord, locationId: string, dayKey: 
   }
   if (record.type === "punch-pass" && (record.remainingPunches ?? 0) <= 0) {
     return { ok: false, reason: "No punches remaining." };
+  }
+  if (record.freezeStartDate && record.freezeEndDate && dayKey >= record.freezeStartDate && dayKey <= record.freezeEndDate) {
+    return { ok: false, reason: `Membership frozen through ${record.freezeEndDate}.` };
   }
   return { ok: true };
 }
@@ -130,6 +146,7 @@ export function getEligibleAccess(input: {
   } = input;
 
   const hasWaiver = isWaiverValid(waiver, dayKey);
+  const customerAge = getCustomerAge(customer.dateOfBirth);
   const customerRecords = accessRecords.filter((entry) => entry.customerId === customer.id);
   const { chosen, deniedReasons } = pickBestAccess(customerRecords, locationId, dayKey);
 
@@ -159,6 +176,24 @@ export function getEligibleAccess(input: {
   }
 
   if (chosen) {
+    if (typeof chosen.minimumAge === "number" && typeof customerAge === "number" && customerAge < chosen.minimumAge) {
+      return {
+        eligible: false,
+        reason: `Minimum age is ${chosen.minimumAge}.`,
+        overrideRequired: true,
+        accessType: chosen.type,
+        chosenAccess: chosen
+      };
+    }
+    if (typeof chosen.maximumAge === "number" && typeof customerAge === "number" && customerAge > chosen.maximumAge) {
+      return {
+        eligible: false,
+        reason: `Maximum age is ${chosen.maximumAge}.`,
+        overrideRequired: true,
+        accessType: chosen.type,
+        chosenAccess: chosen
+      };
+    }
     return {
       eligible: true,
       reason: `Eligible via ${chosen.type}.`,
@@ -212,6 +247,7 @@ export function evaluateCustomerAccess(input: {
 
   const reasons: string[] = [];
   const warnings: string[] = [];
+  const customerAge = getCustomerAge(customer.dateOfBirth);
 
   if (!isWaiverValid(waiver, dayKey)) {
     reasons.push(waiver?.status === "expired" ? "Waiver expired." : "Waiver missing.");
@@ -244,6 +280,12 @@ export function evaluateCustomerAccess(input: {
   if (!chosenAccess && !sessionAccess) {
     reasons.push("No valid access found.");
   }
+  if (chosenAccess && typeof chosenAccess.minimumAge === "number" && typeof customerAge === "number" && customerAge < chosenAccess.minimumAge) {
+    reasons.push(`Minimum age is ${chosenAccess.minimumAge}.`);
+  }
+  if (chosenAccess && typeof chosenAccess.maximumAge === "number" && typeof customerAge === "number" && customerAge > chosenAccess.maximumAge) {
+    reasons.push(`Maximum age is ${chosenAccess.maximumAge}.`);
+  }
 
   const accessWarning = chosenAccess?.expirationDate
     ? (() => {
@@ -261,10 +303,11 @@ export function evaluateCustomerAccess(input: {
     warnings.push(`Low punches remaining (${chosenAccess.remainingPunches}).`);
   }
 
-  const allowed = (Boolean(chosenAccess) || Boolean(sessionAccess)) && isWaiverValid(waiver, dayKey);
+  const hasAgeBlock = reasons.some((reason) => /minimum age|maximum age/i.test(reason));
+  const allowed = (Boolean(chosenAccess) || Boolean(sessionAccess)) && isWaiverValid(waiver, dayKey) && !hasAgeBlock;
   const accessSummary: string[] = [];
   if (chosenAccess?.type === "membership") {
-    accessSummary.push(`Active membership${chosenAccess.expirationDate ? ` • Expires ${chosenAccess.expirationDate}` : ""}`);
+    accessSummary.push(`Membership ${chosenAccess.status}${chosenAccess.expirationDate ? ` • Expires ${chosenAccess.expirationDate}` : ""}`);
   } else if (chosenAccess?.type === "day-pass") {
     accessSummary.push(`Day pass available${chosenAccess.expirationDate ? ` • Valid ${chosenAccess.expirationDate}` : ""}`);
   } else if (chosenAccess?.type === "punch-pass") {

@@ -84,16 +84,31 @@ export default function PosPage() {
         .filter((product): product is PosProduct => Boolean(product)),
     [accessProducts, cart]
   );
-  const subtotal = cartProducts.reduce((sum, product) => sum + product.priceCents, 0);
+  const membership = selectedCustomer?.membershipId
+    ? memberships.find((entry) => entry.id === selectedCustomer.membershipId)
+    : undefined;
+  const punchPass = selectedCustomer?.punchPassId
+    ? punchPasses.find((entry) => entry.id === selectedCustomer.punchPassId)
+    : undefined;
+  const waiver = selectedCustomer?.waiverId
+    ? waivers.find((entry) => entry.id === selectedCustomer.waiverId)
+    : undefined;
+  const hasActiveMemberPricing = Boolean(selectedCustomer && membership?.status === "active");
+  const getUnitPriceCents = (product: PosProduct) => {
+    if (hasActiveMemberPricing && typeof product.memberPriceCents === "number") return product.memberPriceCents;
+    if (!hasActiveMemberPricing && typeof product.nonMemberPriceCents === "number") return product.nonMemberPriceCents;
+    return product.priceCents;
+  };
+  const subtotal = cartProducts.reduce((sum, product) => sum + getUnitPriceCents(product), 0);
   const groupedCartItems = useMemo(() => {
-    const map = new Map<string, { product: PosProduct; quantity: number }>();
+    const map = new Map<string, { product: PosProduct; quantity: number; unitPriceCents: number }>();
     for (const product of cartProducts) {
       const current = map.get(product.id);
       if (current) current.quantity += 1;
-      else map.set(product.id, { product, quantity: 1 });
+      else map.set(product.id, { product, quantity: 1, unitPriceCents: getUnitPriceCents(product) });
     }
     return Array.from(map.values());
-  }, [cartProducts]);
+  }, [cartProducts, hasActiveMemberPricing, membership?.status, selectedCustomer]);
   const computedDiscountCents = useMemo(() => {
     if (discountMode === "staff_10") return Math.round(subtotal * 0.1);
     if (discountMode === "manual") return Math.max(0, Math.min(subtotal, manualDiscountCents));
@@ -124,15 +139,6 @@ export default function PosPage() {
         .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
     : [];
 
-  const membership = selectedCustomer?.membershipId
-    ? memberships.find((entry) => entry.id === selectedCustomer.membershipId)
-    : undefined;
-  const punchPass = selectedCustomer?.punchPassId
-    ? punchPasses.find((entry) => entry.id === selectedCustomer.punchPassId)
-    : undefined;
-  const waiver = selectedCustomer?.waiverId
-    ? waivers.find((entry) => entry.id === selectedCustomer.waiverId)
-    : undefined;
   const requiresWaiverInCart = cartProducts.some((product) => product.waiverRequired);
   const waiverInvalid = !!selectedCustomer && waiver?.status !== "valid";
 
@@ -212,7 +218,8 @@ export default function PosPage() {
       paymentProcessor: paymentResult.processorName,
       paymentApprovalCode: paymentResult.approvalCode,
       paymentCardLast4: paymentResult.last4,
-      checkInAfterSale
+      checkInAfterSale,
+      lineItemUnitPriceCents: cartProducts.map((product) => getUnitPriceCents(product))
     });
 
     if (!result.ok) {
@@ -478,7 +485,7 @@ export default function PosPage() {
                         <p className="font-medium">{product.name}</p>
                         <p className="text-xs text-muted-foreground">{product.type}{product.waiverRequired ? " • Waiver required" : ""}</p>
                       </div>
-                      <ProductPriceLabel cents={product.priceCents * quantity} />
+                      <ProductPriceLabel cents={getUnitPriceCents(product) * quantity} />
                     </div>
                     <div className="mt-2 flex items-center gap-2">
                       <Button
@@ -503,6 +510,9 @@ export default function PosPage() {
                       <Button variant="secondary" className="h-9 px-3" onClick={() => setCart((prev) => [...prev, product.id])}>+</Button>
                       <Button variant="secondary" className="ml-auto h-9" onClick={() => setCart((prev) => prev.filter((entry) => entry !== product.id))}>Remove</Button>
                     </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {hasActiveMemberPricing ? "Member price" : "Non-member price"}: {formatCurrency(getUnitPriceCents(product))}
+                    </p>
                   </div>
                 ))}
               </div>

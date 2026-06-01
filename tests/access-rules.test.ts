@@ -59,6 +59,54 @@ describe("access rules", () => {
     expect(decision.reasons.join(" ").toLowerCase()).toContain("paused");
   });
 
+  it("frozen membership blocks check-in", () => {
+    const customer = customers.find((entry) => entry.id === "cust_001")!;
+    const frozen = accessRecords.map((entry) =>
+      entry.customerId === customer.id
+        ? {
+            ...entry,
+            status: "frozen" as const,
+            freezeStartDate: "2026-05-01",
+            freezeEndDate: "2026-05-31"
+          }
+        : entry
+    );
+    const waiver = waivers.find((entry) => entry.id === customer.waiverId);
+    const decision = evaluateCustomerAccess({
+      customer,
+      waiver,
+      locationId: "loc_001",
+      dayKey: "2026-05-20",
+      accessRecords: frozen,
+      registrations,
+      sessions: classCampSessions,
+      programs
+    });
+    expect(decision.allowed).toBe(false);
+    expect(decision.reasons.join(" ").toLowerCase()).toContain("frozen");
+  });
+
+  it("age restriction blocks underage customer", () => {
+    const customer = customers.find((entry) => entry.id === "cust_001")!;
+    const waiver = waivers.find((entry) => entry.id === customer.waiverId);
+    const ageRestricted = accessRecords.map((entry) =>
+      entry.customerId === customer.id ? { ...entry, minimumAge: 99 } : entry
+    );
+    const decision = evaluateCustomerAccess({
+      customer,
+      waiver,
+      locationId: "loc_001",
+      dayKey: "2026-05-20",
+      accessRecords: ageRestricted,
+      registrations,
+      sessions: classCampSessions,
+      programs,
+      allowSessionRegistrationAccess: false
+    });
+    expect(decision.allowed).toBe(false);
+    expect(decision.reasons.join(" ").toLowerCase()).toContain("minimum age");
+  });
+
   it("missing waiver blocks check-in", () => {
     const customer = customers.find((entry) => entry.id === "cust_003")!;
     const decision = evaluateCustomerAccess({

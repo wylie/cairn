@@ -104,4 +104,52 @@ describe("Registrations workstation", () => {
     expect(screen.getByText(/Age Restriction|Needs Waiver|Membership Required|Blocked/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Override & Register" })).toBeInTheDocument();
   });
+
+  it("supports transfer, duplicate, and staff note actions", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <RegistrationsPage />
+      </TestProviders>
+    );
+
+    await activateStaff(user, "2222");
+    await user.clear(screen.getByLabelText("Date to"));
+    await user.type(screen.getByLabelText("Date to"), "2026-06-30");
+
+    const moveSelect = screen.getAllByRole("combobox").find((node) =>
+      Array.from(node.querySelectorAll("option")).some((option) => option.textContent?.includes("Move to another session"))
+    );
+    expect(moveSelect).toBeTruthy();
+    if (!moveSelect) return;
+    await user.selectOptions(moveSelect, "sess_002");
+    await user.click(screen.getAllByRole("button", { name: "Transfer" })[0]);
+    expect(screen.getByRole("status")).toHaveTextContent(/transferred/i);
+
+    await user.click(screen.getAllByRole("button", { name: "Duplicate" })[0]);
+    expect(screen.getByRole("status")).toHaveTextContent(/duplicated|already registered|waitlist|confirmed/i);
+
+    const noteField = screen.getByPlaceholderText("Add staff note");
+    await user.type(noteField, "Needs parent follow-up");
+    await user.click(screen.getAllByRole("button", { name: "Add Note" })[0]);
+    expect(screen.getByRole("status")).toHaveTextContent(/note added/i);
+  });
+
+  it("supports waitlist reordering controls", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <RegistrationsPage />
+      </TestProviders>
+    );
+
+    await activateStaff(user, "2222");
+    await user.clear(screen.getByLabelText("Date to"));
+    await user.type(screen.getByLabelText("Date to"), "2026-06-30");
+    await user.click(screen.getByRole("button", { name: /Summer Adventure Camp/i }));
+    await user.click(screen.getByRole("button", { name: "Move down" }));
+    expect(screen.getByRole("status")).toHaveTextContent(/waitlist order updated|cannot move further/i);
+  });
 });

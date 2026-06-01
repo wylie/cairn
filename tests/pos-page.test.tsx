@@ -38,6 +38,23 @@ async function completeNewCustomerWizardInPos(
 }
 
 describe("POS page", () => {
+  it("applies member pricing for active members in cart", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <PosPage />
+      </TestProviders>
+    );
+    await activateStaff(user, "2222");
+
+    await user.type(screen.getByLabelText("Search customer"), "Maya Patel");
+    await user.keyboard("{ArrowDown}{Enter}");
+    await user.click(screen.getByRole("button", { name: "Add Class Drop-In" }));
+
+    expect(screen.getByText(/Member price: \$10.00/i)).toBeInTheDocument();
+  });
+
   it("supports purchasing for household member or entire household", async () => {
     const user = userEvent.setup();
     render(

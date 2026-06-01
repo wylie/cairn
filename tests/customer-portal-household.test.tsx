@@ -38,6 +38,7 @@ describe("customer portal household", () => {
     expect(screen.getByText("Total programs attended")).toBeInTheDocument();
     expect(screen.getByText("Household spending this year")).toBeInTheDocument();
     expect(screen.getByText("Sam Noaccess")).toBeInTheDocument();
+    expect(screen.getAllByLabelText(/(initials avatar|profile photo)/i).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: "Sign waiver" }).length).toBeGreaterThan(0);
   });
 

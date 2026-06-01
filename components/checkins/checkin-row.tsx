@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { CheckInLogRecord } from "@/types/domain";
+import type { CheckInLogRecord, Customer } from "@/types/domain";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StaffAttributionLabel } from "@/components/staff/staff-attribution-label";
@@ -16,14 +16,18 @@ function normalize(value: string) {
 
 export function CheckInRow({
   record,
+  customer,
   readOnly,
   onCheckOut
 }: {
   record: CheckInLogRecord;
+  customer?: Pick<Customer, "firstName" | "lastName" | "profilePhotoUrl"> | null;
   readOnly: boolean;
   onCheckOut: (recordId: string) => void;
 }) {
   const checkedInByStaffId = record.checkedInByStaffId ?? record.staffUserId;
+  const fallbackNameParts = record.customerName.split(" ");
+  const resolvedName = customer ? `${customer.firstName} ${customer.lastName}` : record.customerName;
 
   return (
     <div
@@ -37,16 +41,18 @@ export function CheckInRow({
       />
       <div className="relative z-10 pointer-events-none flex items-center gap-3">
         <CustomerAvatar
-          customer={{
-            firstName: record.customerName.split(" ")[0] ?? "",
-            lastName: record.customerName.split(" ").slice(1).join(" ") ?? "",
-            profilePhotoUrl: undefined
-          }}
-          sizeClassName="h-10 w-10"
+          customer={
+            customer ?? {
+              firstName: fallbackNameParts[0] ?? "",
+              lastName: fallbackNameParts.slice(1).join(" ") ?? "",
+              profilePhotoUrl: undefined
+            }
+          }
+          size="sm"
           className="bg-card"
         />
         <div>
-          <p className="font-medium">{record.customerName}</p>
+          <p className="font-medium">{resolvedName}</p>
           <p className="text-sm text-muted-foreground">{record.membershipPassType}</p>
         </div>
       </div>

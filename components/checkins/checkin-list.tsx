@@ -473,7 +473,7 @@ export function CheckInList() {
                       className={`w-full rounded-lg border px-3 py-3 text-left transition-colors ${selected || highlightedRow ? "border-primary bg-secondary" : "hover:bg-secondary"}`}
                     >
                       <div className="flex items-start gap-3">
-                        <CustomerAvatar customer={customer} sizeClassName="h-10 w-10" className="bg-card" />
+                        <CustomerAvatar customer={customer} size="sm" className="bg-card" />
                         <div className="min-w-0 flex-1">
                           <p className="font-medium">{customer.firstName} {customer.lastName}</p>
                           <p className="text-xs text-muted-foreground">
@@ -510,7 +510,7 @@ export function CheckInList() {
             ) : (
               <>
                 <div className="flex items-center gap-3">
-                  <CustomerAvatar customer={selectedCustomer} sizeClassName="h-12 w-12" />
+                  <CustomerAvatar customer={selectedCustomer} size="md" />
                   <div>
                     <p className="font-semibold">{selectedCustomer.firstName} {selectedCustomer.lastName}</p>
                     <p className="text-sm text-muted-foreground">{selectedCustomer.memberId}</p>
@@ -747,9 +747,22 @@ export function CheckInList() {
                   const visitDurationMinutes = Math.max(1, Math.floor((Date.now() - checkInAt.getTime()) / 60000));
                   const durationHours = Math.floor(visitDurationMinutes / 60);
                   const durationMinutes = visitDurationMinutes % 60;
+                  const recordCustomer = customers.find((entry) => entry.id === record.customerId);
                   return (
                     <article key={record.id} className="rounded-lg border bg-secondary/20 p-3 text-sm">
-                      <p className="font-medium">{record.customerName}</p>
+                      <div className="flex items-center gap-2">
+                        <CustomerAvatar
+                          customer={
+                            recordCustomer ?? {
+                              firstName: record.customerName.split(" ")[0] ?? "",
+                              lastName: record.customerName.split(" ").slice(1).join(" ") ?? "",
+                              profilePhotoUrl: undefined
+                            }
+                          }
+                          size="xs"
+                        />
+                        <p className="font-medium">{record.customerName}</p>
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {checkInAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} · {record.membershipPassType}
                       </p>
@@ -825,6 +838,7 @@ export function CheckInList() {
             <CheckInRow
               key={record.id}
               record={record}
+              customer={customers.find((entry) => entry.id === record.customerId)}
               readOnly={!isActiveDateToday}
               onCheckOut={handleCheckOut}
             />

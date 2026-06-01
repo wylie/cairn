@@ -91,6 +91,30 @@ describe("CheckInList date behavior", () => {
 
     expect(screen.getByLabelText("Maya Patel initials avatar")).toBeInTheDocument();
   });
+
+  it("check-in search results show customer avatars", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CheckInList />
+      </TestProviders>
+    );
+
+    await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Maya");
+    expect(screen.getAllByLabelText(/Maya Patel (initials avatar|profile photo)/i).length).toBeGreaterThan(0);
+  });
+
+  it("currently checked-in roster shows customer avatars", () => {
+    render(
+      <TestProviders>
+        <TopBar />
+        <CheckInList />
+      </TestProviders>
+    );
+
+    expect(screen.getByLabelText(/Maya Patel (initials avatar|profile photo)/i)).toBeInTheDocument();
+  });
 });
 
 describe("Workstation staff mode", () => {

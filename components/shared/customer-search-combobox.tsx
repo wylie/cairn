@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { RefObject } from "react";
 import type { Customer } from "@/types/domain";
+import { CustomerAvatar } from "@/components/customers/customer-avatar";
 import { SearchInput } from "@/components/shared/search-input";
 import { Button } from "@/components/ui/button";
 
@@ -104,14 +105,17 @@ export function CustomerSearchCombobox({
                   onClick={() => onSelect(customer.id)}
                   className={`flex min-h-11 w-full items-center justify-between rounded-md border px-3 py-2 text-left ${index === highlightIndex ? "border-primary bg-secondary" : "border-border bg-card hover:bg-secondary"}`}
                 >
-                  <span>
-                    <span className="block font-medium">{customer.firstName} {customer.lastName}</span>
-                    <span className="block text-sm text-muted-foreground">{customer.memberId} • {customer.phone}</span>
-                    {getStatusLines ? (
-                      <span className="mt-1 block text-xs text-muted-foreground">
-                        {getStatusLines(customer).join(" • ")}
-                      </span>
-                    ) : null}
+                  <span className="flex items-center gap-3">
+                    <CustomerAvatar customer={customer} size="sm" />
+                    <span>
+                      <span className="block font-medium">{customer.firstName} {customer.lastName}</span>
+                      <span className="block text-sm text-muted-foreground">{customer.memberId} • {customer.phone}</span>
+                      {getStatusLines ? (
+                        <span className="mt-1 block text-xs text-muted-foreground">
+                          {getStatusLines(customer).join(" • ")}
+                        </span>
+                      ) : null}
+                    </span>
                   </span>
                   <span className="text-xs text-muted-foreground">Select</span>
                 </button>

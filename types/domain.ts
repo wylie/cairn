@@ -122,14 +122,30 @@ export interface AuditLogEntry {
   createdAt: string;
 }
 
-export type MembershipState = "active" | "expiring" | "inactive" | "trial";
+export type MembershipState =
+  | "active"
+  | "pending"
+  | "frozen"
+  | "expired"
+  | "cancelled"
+  | "suspended"
+  | "expiring"
+  | "inactive"
+  | "trial";
 
 export interface Membership {
   id: string;
   customerId: string;
   planName: string;
   status: MembershipState;
+  purchaseDate?: string;
+  startDate?: string;
+  expirationDate?: string;
   renewalDate?: string;
+  freezeStartDate?: string;
+  freezeEndDate?: string;
+  freezeReason?: string;
+  freezeStaffNotes?: string;
 }
 
 export interface PunchPass {
@@ -140,6 +156,14 @@ export interface PunchPass {
   remainingUses: number;
   expiresAt?: string;
   type?: "multi_visit" | "day_pass";
+  usageHistory?: Array<{
+    id: string;
+    usedAt: string;
+    staffId?: string;
+    staffName?: string;
+    change: number;
+    note?: string;
+  }>;
 }
 
 export interface Waiver {
@@ -200,6 +224,7 @@ export interface WaiverTemplateVersion {
   active: boolean;
   archived?: boolean;
   blocks: WaiverTemplateBlock[];
+  changeNotes?: string;
   createdAt: string;
   createdByStaffId?: string;
 }
@@ -212,6 +237,7 @@ export interface WaiverTemplate {
   active: boolean;
   archived?: boolean;
   facilityAssignment?: string[];
+  productAssignment?: string[];
   brandingAssignment?: string;
   effectiveDate: string;
   expirationRuleType: WaiverExpirationRuleType;
@@ -223,17 +249,59 @@ export interface WaiverTemplate {
   updatedAt?: string;
 }
 
+export interface SignedWaiverRecord {
+  id: string;
+  organizationId: string;
+  customerId: string;
+  waiverId: string;
+  templateId: string;
+  templateName: string;
+  templateVersionId: string;
+  templateVersion: string;
+  status: "valid" | "expired" | "missing" | "expiring_soon" | "outdated_version";
+  signedAt: string;
+  expiresAt?: string;
+  signedByName: string;
+  signedByCustomerId?: string;
+  signedByRelationship?: HouseholdRelationship | "self";
+  typedName: string;
+  typedSignature: string;
+  acknowledgementChecks: Array<{ label: string; required: boolean; accepted: boolean }>;
+  contentSnapshot: WaiverTemplateBlock[];
+  signedByStaffId?: string;
+  updatedByStaffId?: string;
+  updatedByStaffName?: string;
+  source?: "staff" | "kiosk" | "online" | "registration" | "guest";
+  signingTokenId?: string;
+  ipAddressPlaceholder?: string;
+  pdfUrlPlaceholder?: string;
+  createdAt: string;
+}
+
 export interface CustomerAccessRecord {
   id: string;
   customerId: string;
   productId?: string;
-  type: "membership" | "day-pass" | "punch-pass" | "comp";
-  status: "active" | "expired" | "cancelled" | "paused";
+  type: "membership" | "day-pass" | "punch-pass" | "comp" | "time-pass" | "household-membership" | "staff-access" | "complimentary-access";
+  status: "active" | "pending" | "frozen" | "expired" | "cancelled" | "suspended" | "paused";
   startDate: string;
   expirationDate?: string;
+  purchaseDate?: string;
   remainingPunches?: number;
   unlimitedAccess?: boolean;
   locationsAllowed?: string[];
+  minimumAge?: number;
+  maximumAge?: number;
+  requiredWaiverTemplateIds?: string[];
+  memberRequired?: boolean;
+  allowedProgramIds?: string[];
+  householdId?: string;
+  primaryMemberCustomerId?: string;
+  coveredCustomerIds?: string[];
+  freezeStartDate?: string;
+  freezeEndDate?: string;
+  freezeReason?: string;
+  freezeStaffNotes?: string;
   notes?: string;
   grantedByStaffId?: string;
   grantedByStaffName?: string;
@@ -242,6 +310,7 @@ export interface CustomerAccessRecord {
   updatedByStaffName?: string;
   pausedAt?: string;
   cancelledAt?: string;
+  suspendedAt?: string;
   archivedAt?: string;
 }
 
@@ -359,6 +428,7 @@ export type HouseholdRelationship =
   | "spouse_partner"
   | "sibling"
   | "guardian"
+  | "caregiver"
   | "dependent"
   | "emergency_contact_only"
   | "other";
@@ -492,6 +562,33 @@ export interface Registration {
   paymentStatus?: "paid" | "unpaid" | "included" | "comped";
 }
 
+export type RegistrationActivityAction =
+  | "registered"
+  | "waitlisted"
+  | "promoted"
+  | "checked_in"
+  | "attended"
+  | "absent"
+  | "excused"
+  | "cancelled"
+  | "transferred"
+  | "duplicated"
+  | "note_added";
+
+export interface RegistrationActivityEvent {
+  id: string;
+  registrationId: string;
+  sessionId: string;
+  customerId: string;
+  action: RegistrationActivityAction;
+  statusAfter?: Registration["status"];
+  source?: Registration["registrationSource"] | "staff";
+  note?: string;
+  createdAt: string;
+  staffId?: string;
+  staffName?: string;
+}
+
 export interface PosProduct {
   id: string;
   organizationId: string;
@@ -533,6 +630,8 @@ export interface PosProduct {
   punchQuantity?: number;
   expirationDays?: number;
   waiverRequired?: boolean;
+  memberPriceCents?: number;
+  nonMemberPriceCents?: number;
   taxable?: boolean;
   minimumAge?: number;
   maximumAge?: number;

@@ -28,4 +28,11 @@ describe("middleware auth routing", () => {
     const res = middleware(req);
     expect(res.status).toBe(200);
   });
+
+  it("allows public waiver signing and kiosk routes when unauthenticated", () => {
+    const waiverReq = new NextRequest("http://localhost:3000/p/summit/waivers/wtpl_general");
+    const kioskReq = new NextRequest("http://localhost:3000/p/summit/kiosk/waivers");
+    expect(middleware(waiverReq).status).toBe(200);
+    expect(middleware(kioskReq).status).toBe(200);
+  });
 });

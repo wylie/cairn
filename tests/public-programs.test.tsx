@@ -26,7 +26,7 @@ describe("public program discovery", () => {
     await user.type(screen.getByPlaceholderText("Email login"), "newperson@example.com");
     await user.type(screen.getByPlaceholderText("Full name"), "New Person");
     await user.click(screen.getByRole("button", { name: "Continue" }));
-    await user.click(screen.getByRole("button", { name: /Continue with waiver placeholder/i }));
+    await user.click(screen.getByRole("button", { name: /Continue Anyway/i }));
     expect(screen.getByRole("button", { name: "Join Waitlist" })).toBeInTheDocument();
   });
 

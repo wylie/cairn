@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import type { Program, ClassCampSession, Customer } from "@/types/domain";
 import { getLocationName, getRegistrationStateForCustomer, getSessionStats, getProgramPricing } from "@/lib/public-programs";
 import { customers as seedCustomers } from "@/lib/mocks/customers";
@@ -94,8 +95,16 @@ export function PublicRegistrationPanel({
       {step === "waiver" ? (
         <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50 p-3">
           <p className="text-sm font-medium text-amber-900">Waiver required before registration.</p>
-          <p className="text-sm text-amber-900">Public waiver signing is coming soon. Please complete waiver at front desk.</p>
-          <Button variant="secondary" onClick={() => setStep("confirm")}>Continue with waiver placeholder</Button>
+          <p className="text-sm text-amber-900">Please sign the required waiver before continuing.</p>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href={`/p/${orgSlug}/waivers/${program.requiredWaiverTemplateIds?.[0] ?? "wtpl_general"}${existingCustomer ? `?customerId=${existingCustomer.id}` : ""}`}
+              className="inline-flex h-10 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground"
+            >
+              Sign Waiver
+            </Link>
+            <Button variant="secondary" onClick={() => setStep("confirm")}>Continue Anyway (placeholder)</Button>
+          </div>
         </div>
       ) : null}
 

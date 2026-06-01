@@ -99,7 +99,9 @@ export function middleware(req: NextRequest) {
     }
     const isPublicProgramsRoute =
       section === "programs" ||
-      section === "sessions";
+      section === "sessions" ||
+      section === "waivers" ||
+      section === "kiosk";
     if (isPublicProgramsRoute) {
       return NextResponse.next();
     }

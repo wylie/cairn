@@ -14,6 +14,7 @@ import { registrations as seedRegistrations } from "@/lib/mocks/registrations";
 import { posTransactions as seedPosTransactions } from "@/lib/mocks/transactions";
 import { waivers as seedWaivers } from "@/lib/mocks/waivers";
 import { waiverTemplates as seedWaiverTemplates, waiverTemplateVersions as seedWaiverTemplateVersions } from "@/lib/mocks/waiver-templates";
+import { signedWaiverRecords as seedSignedWaiverRecords } from "@/lib/mocks/waiver-signed-records";
 import { households as seedHouseholds, householdMembers as seedHouseholdMembers } from "@/lib/mocks/households";
 import { buildScopedMockKey, clearScopedMockState, loadMockState, saveMockState } from "@/lib/mock-storage";
 import { buildSystemProductCategories, normalizeCategoryKey } from "@/lib/products/categories";
@@ -49,9 +50,11 @@ import type {
   PunchPass,
   ClassCampSession,
   Registration,
+  RegistrationActivityEvent,
   StaffPermission,
   StaffRole,
   Waiver,
+  SignedWaiverRecord,
   WaiverTemplate,
   WaiverTemplateVersion,
   WaiverExpirationRuleType,
@@ -217,8 +220,10 @@ interface CustomerStateContextValue {
   programs: Program[];
   sessions: ClassCampSession[];
   registrations: Registration[];
+  registrationActivity: RegistrationActivityEvent[];
   customerAccessRecords: CustomerAccessRecord[];
   waivers: Waiver[];
+  signedWaiverRecords: SignedWaiverRecord[];
   waiverTemplates: WaiverTemplate[];
   waiverTemplateVersions: WaiverTemplateVersion[];
   households: Household[];
@@ -264,6 +269,7 @@ interface CustomerStateContextValue {
     paymentApprovalCode?: string;
     paymentCardLast4?: string;
     checkInAfterSale?: boolean;
+    lineItemUnitPriceCents?: number[];
   }) => { ok: boolean; message: string; transactionId?: string; transaction?: PosTransaction };
   refundTransaction: (options: {
     transactionId: string;
@@ -409,6 +415,21 @@ interface CustomerStateContextValue {
     status: "attended" | "absent" | "late" | "excused" | "no_show" | "checked_in" | "completed",
     updatedByStaffId?: string
   ) => { ok: boolean; message: string };
+  transferRegistration: (input: {
+    registrationId: string;
+    targetSessionId: string;
+    override?: boolean;
+    updatedByStaffId?: string;
+    updatedByStaffName?: string;
+  }) => { ok: boolean; message: string; newRegistrationId?: string };
+  duplicateRegistration: (input: {
+    registrationId: string;
+    targetSessionId?: string;
+    updatedByStaffId?: string;
+    updatedByStaffName?: string;
+  }) => { ok: boolean; message: string; newRegistrationId?: string };
+  reorderWaitlistedRegistration: (registrationId: string, direction: "up" | "down") => { ok: boolean; message: string };
+  addRegistrationNote: (registrationId: string, note: string, updatedByStaffId?: string) => { ok: boolean; message: string };
   createProgram: (input: {
     title: string;
     description?: string;
@@ -517,6 +538,17 @@ interface CustomerStateContextValue {
     blocks: WaiverTemplateBlock[];
     createdByStaffId?: string;
   }) => { ok: boolean; message: string; versionId?: string };
+  updateWaiverTemplate: (templateId: string, updates: {
+    name?: string;
+    description?: string;
+    effectiveDate?: string;
+    expirationRuleType?: WaiverExpirationRuleType;
+    expirationDays?: number;
+    facilityAssignment?: string[];
+    productAssignment?: string[];
+    brandingAssignment?: string;
+  }) => { ok: boolean; message: string };
+  archiveWaiverTemplate: (templateId: string) => { ok: boolean; message: string };
   signWaiverForCustomer: (input: {
     customerId: string;
     templateId: string;
@@ -527,8 +559,12 @@ interface CustomerStateContextValue {
     signedByStaffId?: string;
     updatedByStaffName?: string;
     notes?: string;
+    source?: SignedWaiverRecord["source"];
+    signingTokenId?: string;
+    ipAddressPlaceholder?: string;
   }) => { ok: boolean; message: string; waiverId?: string };
   getWaiverStatusForCustomer: (customerId: string, templateId?: string) => "valid" | "missing" | "expired" | "expiring_soon" | "outdated_version";
+  getSignedWaiverRecordsForCustomer: (customerId: string) => SignedWaiverRecord[];
   createHousehold: (input: {
     householdName: string;
     primaryContactCustomerId: string;
@@ -631,6 +667,10 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       ),
     [seededWaiverTemplatesForOrg]
   );
+  const seededSignedWaiverRecordsForOrg = useMemo(
+    () => seedSignedWaiverRecords.filter((entry) => entry.organizationId === activeOrgId),
+    [activeOrgId]
+  );
   const orgLocationIds = useMemo(
     () => seedLocations.filter((entry) => entry.organizationId === activeOrgId).map((entry) => entry.id),
     [activeOrgId]
@@ -656,8 +696,10 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     programs: buildScopedMockKey(activeOrgId, activeLocationId, "programs"),
     sessions: buildScopedMockKey(activeOrgId, activeLocationId, "sessions"),
     registrations: buildScopedMockKey(activeOrgId, activeLocationId, "registrations"),
+    registrationActivity: buildScopedMockKey(activeOrgId, activeLocationId, "registrationActivity"),
     accessRecords: buildScopedMockKey(activeOrgId, activeLocationId, "accessRecords"),
     waivers: buildScopedMockKey(activeOrgId, activeLocationId, "waivers"),
+    signedWaiverRecords: buildScopedMockKey(activeOrgId, activeLocationId, "signedWaiverRecords"),
     waiverTemplates: buildScopedMockKey(activeOrgId, activeLocationId, "waiverTemplates"),
     waiverTemplateVersions: buildScopedMockKey(activeOrgId, activeLocationId, "waiverTemplateVersions"),
     households: buildScopedMockKey(activeOrgId, activeLocationId, "households"),
@@ -690,8 +732,10 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     seededSessionsForOrg.map((session) => normalizeSessionForState(session, seededProgramsForOrg))
   );
   const [registrations, setRegistrations] = useState<Registration[]>(seededRegistrationsForOrg);
+  const [registrationActivity, setRegistrationActivity] = useState<RegistrationActivityEvent[]>([]);
   const [customerAccessRecords, setCustomerAccessRecords] = useState<CustomerAccessRecord[]>(seededAccessRecordsForOrg);
   const [waivers, setWaivers] = useState<Waiver[]>(seededWaiversForOrg);
+  const [signedWaiverRecords, setSignedWaiverRecords] = useState<SignedWaiverRecord[]>(seededSignedWaiverRecordsForOrg);
   const [waiverTemplates, setWaiverTemplates] = useState<WaiverTemplate[]>(seededWaiverTemplatesForOrg);
   const [waiverTemplateVersions, setWaiverTemplateVersions] = useState<WaiverTemplateVersion[]>(seededWaiverTemplateVersionsForOrg);
   const [households, setHouseholds] = useState<Household[]>(seededHouseholdsForOrg);
@@ -779,8 +823,12 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       )
     );
     setRegistrations(loadMockState(storageKeys.registrations, seededRegistrationsForOrg));
+    setRegistrationActivity(loadMockState(storageKeys.registrationActivity, []) as RegistrationActivityEvent[]);
     setCustomerAccessRecords(loadMockState(storageKeys.accessRecords, seededAccessRecordsForOrg) as CustomerAccessRecord[]);
     setWaivers(loadMockState(storageKeys.waivers, seededWaiversForOrg) as Waiver[]);
+    setSignedWaiverRecords(
+      loadMockState(storageKeys.signedWaiverRecords, seededSignedWaiverRecordsForOrg) as SignedWaiverRecord[]
+    );
     setWaiverTemplates(loadMockState(storageKeys.waiverTemplates, seededWaiverTemplatesForOrg) as WaiverTemplate[]);
     setWaiverTemplateVersions(
       loadMockState(storageKeys.waiverTemplateVersions, seededWaiverTemplateVersionsForOrg) as WaiverTemplateVersion[]
@@ -841,12 +889,20 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
   }, [registrations, hydrated]);
   useEffect(() => {
     if (!hydrated) return;
+    saveMockState(storageKeys.registrationActivity, registrationActivity);
+  }, [registrationActivity, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
     saveMockState(storageKeys.accessRecords, customerAccessRecords);
   }, [customerAccessRecords, hydrated]);
   useEffect(() => {
     if (!hydrated) return;
     saveMockState(storageKeys.waivers, waivers);
   }, [waivers, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
+    saveMockState(storageKeys.signedWaiverRecords, signedWaiverRecords);
+  }, [signedWaiverRecords, hydrated]);
   useEffect(() => {
     if (!hydrated) return;
     saveMockState(storageKeys.waiverTemplates, waiverTemplates);
@@ -1171,6 +1227,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     paymentApprovalCode?: string;
     paymentCardLast4?: string;
     checkInAfterSale?: boolean;
+    lineItemUnitPriceCents?: number[];
   }) => {
     const customer = customers.find((entry) => entry.id === options.customerId);
     if (!customer) return { ok: false, message: "Customer not found." };
@@ -1224,7 +1281,8 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
           originalUses: product.punchQuantity ?? 10,
           remainingUses: product.punchQuantity ?? 10,
           expiresAt: "2026-06-30",
-          type: "multi_visit"
+          type: "multi_visit",
+          usageHistory: []
         };
         if (targetCustomer.id === customer.id) {
           nextCustomer = { ...nextCustomer, punchPassId: passId, dayPassProductName: undefined };
@@ -1252,6 +1310,9 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
           customerId: targetCustomer.id,
           planName: product.name,
           status: "active",
+          purchaseDate: activeDateKey,
+          startDate: activeDateKey,
+          expirationDate: "2026-06-20",
           renewalDate: "2026-06-20"
         };
         if (targetCustomer.id === customer.id) {
@@ -1263,6 +1324,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
           productId: product.id,
           type: "membership",
           status: "active",
+          purchaseDate: activeDateKey,
           startDate: activeDateKey,
           expirationDate: "2026-06-20",
           unlimitedAccess: true,
@@ -1282,7 +1344,13 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       prev.map((entry) => (entry.id === customer.id ? nextCustomer : entry))
     );
 
-    const cartItems = selectedProducts.map((product) => normalizeCartItem(product));
+    const cartItems = selectedProducts.map((product, index) => {
+      const overrideCents = options.lineItemUnitPriceCents?.[index];
+      return normalizeCartItem({
+        ...product,
+        priceCents: typeof overrideCents === "number" && Number.isFinite(overrideCents) ? overrideCents : product.priceCents
+      });
+    });
     const invalidCart = cartItems.find((item) => !item.ok);
     if (invalidCart && !invalidCart.ok) {
       return { ok: false, message: invalidCart.message };
@@ -2043,6 +2111,15 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     return { ok: true as const, message: `${existing.title ?? "Session"} cancelled.` };
   };
 
+  const appendRegistrationEvent = (input: Omit<RegistrationActivityEvent, "id" | "createdAt">) => {
+    const event: RegistrationActivityEvent = {
+      ...input,
+      id: `regev_${Math.random().toString(36).slice(2, 9)}`,
+      createdAt: new Date().toISOString()
+    };
+    setRegistrationActivity((prev) => [event, ...prev]);
+  };
+
   const registerCustomerForSession = (input: {
     customerId: string;
     sessionId: string;
@@ -2147,6 +2224,16 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
           : entry
       )
     );
+    appendRegistrationEvent({
+      registrationId,
+      sessionId: session.id,
+      customerId: customer.id,
+      action: sessionIsFull ? "waitlisted" : "registered",
+      statusAfter: sessionIsFull ? "waitlisted" : "confirmed",
+      source: registration.registrationSource,
+      staffId: input.registeredByStaffId,
+      staffName: input.registeredByStaffName
+    });
     return {
       ok: true,
       message: sessionIsFull
@@ -2199,6 +2286,28 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         };
       })
     );
+    appendRegistrationEvent({
+      registrationId: existing.id,
+      sessionId: existing.sessionId,
+      customerId: existing.customerId,
+      action: "cancelled",
+      statusAfter: "cancelled",
+      source: existing.registrationSource
+    });
+    if (promotedId) {
+      const promotedEntry = registrations.find((entry) => entry.id === promotedId);
+      if (promotedEntry) {
+        appendRegistrationEvent({
+          registrationId: promotedEntry.id,
+          sessionId: promotedEntry.sessionId,
+          customerId: promotedEntry.customerId,
+          action: "promoted",
+          statusAfter: "confirmed",
+          source: promotedEntry.registrationSource,
+          note: "Promoted after cancellation opened a spot."
+        });
+      }
+    }
     return { ok: true as const, message: promotedId ? "Registration cancelled. Waitlist promoted automatically." : "Registration cancelled." };
   };
 
@@ -2226,6 +2335,14 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
           : entry
       )
     );
+    appendRegistrationEvent({
+      registrationId: existing.id,
+      sessionId: existing.sessionId,
+      customerId: existing.customerId,
+      action: "promoted",
+      statusAfter: "confirmed",
+      source: existing.registrationSource
+    });
     return { ok: true as const, message: "Waitlisted registration promoted." };
   };
 
@@ -2266,6 +2383,15 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
           : entry
       )
     );
+    appendRegistrationEvent({
+      registrationId: existing.id,
+      sessionId: existing.sessionId,
+      customerId: existing.customerId,
+      action: "waitlisted",
+      statusAfter: "waitlisted",
+      source: existing.registrationSource,
+      note: "Moved from roster to waitlist."
+    });
     return { ok: true as const, message: "Registration moved to waitlist." };
   };
 
@@ -2283,7 +2409,158 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
           : entry
       )
     );
+    const mappedAction =
+      status === "checked_in"
+        ? "checked_in"
+        : status === "attended" || status === "completed" || status === "late"
+          ? "attended"
+          : status === "excused"
+            ? "excused"
+            : "absent";
+    appendRegistrationEvent({
+      registrationId: existing.id,
+      sessionId: existing.sessionId,
+      customerId: existing.customerId,
+      action: mappedAction,
+      statusAfter: status,
+      source: existing.registrationSource,
+      staffId: updatedByStaffId
+    });
     return { ok: true as const, message: `Marked ${status}.` };
+  };
+
+  const reorderWaitlistedRegistration = (registrationId: string, direction: "up" | "down") => {
+    const existing = registrations.find((entry) => entry.id === registrationId);
+    if (!existing || existing.status !== "waitlisted") return { ok: false as const, message: "Waitlisted registration not found." };
+    const waitlisted = registrations
+      .filter((entry) => entry.sessionId === existing.sessionId && entry.status === "waitlisted")
+      .sort((a, b) => (a.waitlistPosition ?? 999) - (b.waitlistPosition ?? 999));
+    const index = waitlisted.findIndex((entry) => entry.id === registrationId);
+    if (index < 0) return { ok: false as const, message: "Waitlist entry not found." };
+    const swapIndex = direction === "up" ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= waitlisted.length) return { ok: false as const, message: "Cannot move further." };
+
+    const current = waitlisted[index];
+    const target = waitlisted[swapIndex];
+    setRegistrations((prev) =>
+      prev.map((entry) => {
+        if (entry.id === current.id) return { ...entry, waitlistPosition: target.waitlistPosition ?? swapIndex + 1 };
+        if (entry.id === target.id) return { ...entry, waitlistPosition: current.waitlistPosition ?? index + 1 };
+        return entry;
+      })
+    );
+    appendRegistrationEvent({
+      registrationId: existing.id,
+      sessionId: existing.sessionId,
+      customerId: existing.customerId,
+      action: "waitlisted",
+      statusAfter: "waitlisted",
+      source: existing.registrationSource,
+      note: `Waitlist reordered ${direction}.`
+    });
+    return { ok: true as const, message: "Waitlist order updated." };
+  };
+
+  const addRegistrationNote = (registrationId: string, note: string, updatedByStaffId?: string) => {
+    const existing = registrations.find((entry) => entry.id === registrationId);
+    if (!existing) return { ok: false as const, message: "Registration not found." };
+    const trimmed = note.trim();
+    if (!trimmed) return { ok: false as const, message: "Enter a note first." };
+    setRegistrations((prev) =>
+      prev.map((entry) =>
+        entry.id === registrationId
+          ? {
+              ...entry,
+              notes: entry.notes ? `${entry.notes}\n${trimmed}` : trimmed,
+              updatedAt: new Date().toISOString(),
+              updatedByStaffId: updatedByStaffId ?? entry.updatedByStaffId
+            }
+          : entry
+      )
+    );
+    appendRegistrationEvent({
+      registrationId: existing.id,
+      sessionId: existing.sessionId,
+      customerId: existing.customerId,
+      action: "note_added",
+      statusAfter: existing.status,
+      note: trimmed,
+      source: existing.registrationSource,
+      staffId: updatedByStaffId
+    });
+    return { ok: true as const, message: "Registration note added." };
+  };
+
+  const transferRegistration = (input: {
+    registrationId: string;
+    targetSessionId: string;
+    override?: boolean;
+    updatedByStaffId?: string;
+    updatedByStaffName?: string;
+  }) => {
+    const existing = registrations.find((entry) => entry.id === input.registrationId);
+    if (!existing) return { ok: false as const, message: "Registration not found." };
+    if (existing.status === "cancelled") return { ok: false as const, message: "Cancelled registration cannot be transferred." };
+    if (existing.sessionId === input.targetSessionId) return { ok: false as const, message: "Already in this session." };
+    const customer = customers.find((entry) => entry.id === existing.customerId);
+    if (!customer) return { ok: false as const, message: "Customer not found." };
+
+    const cancelResult = cancelRegistration(existing.id);
+    if (!cancelResult.ok) return cancelResult;
+    const registerResult = registerCustomerForSession({
+      customerId: existing.customerId,
+      sessionId: input.targetSessionId,
+      override: input.override,
+      registrationSource: existing.registrationSource ?? "front_desk",
+      registeredByStaffId: input.updatedByStaffId,
+      registeredByStaffName: input.updatedByStaffName
+    });
+    if (!registerResult.ok || !registerResult.registrationId) return { ok: false as const, message: registerResult.message };
+
+    appendRegistrationEvent({
+      registrationId: registerResult.registrationId,
+      sessionId: input.targetSessionId,
+      customerId: existing.customerId,
+      action: "transferred",
+      statusAfter: "confirmed",
+      note: `Transferred from session ${existing.sessionId}.`,
+      source: existing.registrationSource,
+      staffId: input.updatedByStaffId,
+      staffName: input.updatedByStaffName
+    });
+    return { ok: true as const, message: `${customer.firstName} ${customer.lastName} transferred.`, newRegistrationId: registerResult.registrationId };
+  };
+
+  const duplicateRegistration = (input: {
+    registrationId: string;
+    targetSessionId?: string;
+    updatedByStaffId?: string;
+    updatedByStaffName?: string;
+  }) => {
+    const existing = registrations.find((entry) => entry.id === input.registrationId);
+    if (!existing) return { ok: false as const, message: "Registration not found." };
+    const targetSessionId = input.targetSessionId ?? existing.sessionId;
+    const result = registerCustomerForSession({
+      customerId: existing.customerId,
+      sessionId: targetSessionId,
+      override: true,
+      registrationSource: existing.registrationSource ?? "admin",
+      registeredByStaffId: input.updatedByStaffId,
+      registeredByStaffName: input.updatedByStaffName
+    });
+    if (!result.ok || !result.registrationId) return { ok: false as const, message: result.message };
+    appendRegistrationEvent({
+      registrationId: result.registrationId,
+      sessionId: targetSessionId,
+      customerId: existing.customerId,
+      action: "duplicated",
+      statusAfter: "confirmed",
+      note: `Duplicated from registration ${existing.id}.`,
+      source: existing.registrationSource,
+      staffId: input.updatedByStaffId,
+      staffName: input.updatedByStaffName
+    });
+    return { ok: true as const, message: "Registration duplicated.", newRegistrationId: result.registrationId };
   };
 
   const createProgram = (input: {
@@ -2880,6 +3157,55 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     return { ok: true as const, message: `Version ${version.version} created.`, versionId };
   };
 
+  const updateWaiverTemplate = (
+    templateId: string,
+    updates: {
+      name?: string;
+      description?: string;
+      effectiveDate?: string;
+      expirationRuleType?: WaiverExpirationRuleType;
+      expirationDays?: number;
+      facilityAssignment?: string[];
+      productAssignment?: string[];
+      brandingAssignment?: string;
+    }
+  ) => {
+    const existing = waiverTemplates.find((entry) => entry.id === templateId);
+    if (!existing) return { ok: false as const, message: "Waiver template not found." };
+    setWaiverTemplates((prev) =>
+      prev.map((entry) =>
+        entry.id === templateId
+          ? {
+              ...entry,
+              name: updates.name?.trim() || entry.name,
+              description: updates.description?.trim() || undefined,
+              effectiveDate: updates.effectiveDate || entry.effectiveDate,
+              expirationRuleType: updates.expirationRuleType ?? entry.expirationRuleType,
+              expirationDays: updates.expirationDays ?? entry.expirationDays,
+              facilityAssignment: updates.facilityAssignment?.length ? updates.facilityAssignment : entry.facilityAssignment,
+              productAssignment: updates.productAssignment?.length ? updates.productAssignment : entry.productAssignment,
+              brandingAssignment: updates.brandingAssignment ?? entry.brandingAssignment,
+              updatedAt: new Date().toISOString()
+            }
+          : entry
+      )
+    );
+    return { ok: true as const, message: "Waiver template updated." };
+  };
+
+  const archiveWaiverTemplate = (templateId: string) => {
+    const existing = waiverTemplates.find((entry) => entry.id === templateId);
+    if (!existing) return { ok: false as const, message: "Waiver template not found." };
+    setWaiverTemplates((prev) =>
+      prev.map((entry) =>
+        entry.id === templateId
+          ? { ...entry, active: false, archived: true, updatedAt: new Date().toISOString() }
+          : entry
+      )
+    );
+    return { ok: true as const, message: `${existing.name} archived.` };
+  };
+
   const getWaiverStatusForCustomer = (customerId: string, templateId?: string) => {
     const record = waivers.find((entry) => entry.customerId === customerId && (!templateId || entry.templateId === templateId));
     if (!record) return "missing" as const;
@@ -2905,6 +3231,9 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     signedByStaffId?: string;
     updatedByStaffName?: string;
     notes?: string;
+    source?: SignedWaiverRecord["source"];
+    signingTokenId?: string;
+    ipAddressPlaceholder?: string;
   }) => {
     const customer = customers.find((entry) => entry.id === input.customerId);
     if (!customer) return { ok: false as const, message: "Customer not found." };
@@ -2939,10 +3268,48 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       if (hasExisting) return prev.map((entry) => (entry.id === waiverId ? nextRecord : entry));
       return [nextRecord, ...prev];
     });
+    const signedRecordId = `swr_${Math.random().toString(36).slice(2, 9)}`;
+    const acknowledgements = currentVersion.blocks
+      .filter((block) => block.type === "required_checkbox" || block.type === "checkbox")
+      .map((block) => ({ label: block.label, required: Boolean(block.required), accepted: true }));
+    const signedRecord: SignedWaiverRecord = {
+      id: signedRecordId,
+      organizationId: activeOrgId,
+      customerId: input.customerId,
+      waiverId,
+      templateId: input.templateId,
+      templateName: template.name,
+      templateVersionId: currentVersion.id,
+      templateVersion: currentVersion.version,
+      status: "valid",
+      signedAt: `${signedAt}T12:00:00Z`,
+      expiresAt,
+      signedByName: (input.signedByName || input.typedName).trim(),
+      signedByCustomerId: input.signedByCustomerId,
+      signedByRelationship: input.signedByRelationship ?? "self",
+      typedName: input.typedName.trim(),
+      typedSignature: input.typedName.trim(),
+      acknowledgementChecks: acknowledgements,
+      contentSnapshot: currentVersion.blocks.map((block) => ({ ...block })),
+      signedByStaffId: input.signedByStaffId,
+      updatedByStaffId: input.signedByStaffId,
+      updatedByStaffName: input.updatedByStaffName,
+      source: input.source ?? "staff",
+      signingTokenId: input.signingTokenId,
+      ipAddressPlaceholder: input.ipAddressPlaceholder,
+      createdAt: new Date().toISOString()
+    };
+    setSignedWaiverRecords((prev) => [signedRecord, ...prev]);
     if (!customer.waiverId) {
       setCustomers((prev) => prev.map((entry) => (entry.id === input.customerId ? { ...entry, waiverId } : entry)));
     }
     return { ok: true as const, message: `${template.name} signed.`, waiverId };
+  };
+
+  const getSignedWaiverRecordsForCustomer = (customerId: string) => {
+    return signedWaiverRecords
+      .filter((entry) => entry.customerId === customerId)
+      .sort((a, b) => b.signedAt.localeCompare(a.signedAt));
   };
 
   const createHousehold = (input: {
@@ -3124,8 +3491,10 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       programs,
       sessions,
       registrations,
+      registrationActivity,
       customerAccessRecords,
       waivers,
+      signedWaiverRecords,
       waiverTemplates,
       waiverTemplateVersions,
       households,
@@ -3181,6 +3550,10 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       promoteWaitlistedRegistration,
       moveRegistrationToWaitlist,
       markRegistrationAttendance,
+      transferRegistration,
+      duplicateRegistration,
+      reorderWaitlistedRegistration,
+      addRegistrationNote,
       createProgram,
       updateProgram,
       createProduct,
@@ -3198,8 +3571,11 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       updateCustomerWaiver,
       createWaiverTemplate,
       createWaiverTemplateVersion,
+      updateWaiverTemplate,
+      archiveWaiverTemplate,
       signWaiverForCustomer,
       getWaiverStatusForCustomer,
+      getSignedWaiverRecordsForCustomer,
       createHousehold,
       addHouseholdMember,
       removeHouseholdMember,
@@ -3218,8 +3594,10 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         setPrograms(seededProgramsForOrg);
         setSessions(seededSessionsForOrg.map((session) => normalizeSessionForState(session, seededProgramsForOrg)));
         setRegistrations(seededRegistrationsForOrg);
+        setRegistrationActivity([]);
         setCustomerAccessRecords(seededAccessRecordsForOrg);
         setWaivers(seededWaiversForOrg);
+        setSignedWaiverRecords(seededSignedWaiverRecordsForOrg);
         setWaiverTemplates(seededWaiverTemplatesForOrg);
         setWaiverTemplateVersions(seededWaiverTemplateVersionsForOrg);
         setHouseholds(seededHouseholdsForOrg);
@@ -3227,7 +3605,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         clearScopedMockState(
           activeOrgId,
           activeLocationId,
-          ["customers", "punchPasses", "checkIns", "memberships", "transactions", "products", "inventoryAudit", "productCategories", "programs", "sessions", "registrations", "accessRecords", "waivers", "waiverTemplates", "waiverTemplateVersions", "households", "householdMembers"]
+          ["customers", "punchPasses", "checkIns", "memberships", "transactions", "products", "inventoryAudit", "productCategories", "programs", "sessions", "registrations", "registrationActivity", "accessRecords", "waivers", "signedWaiverRecords", "waiverTemplates", "waiverTemplateVersions", "households", "householdMembers"]
         );
       }
     }),
@@ -3240,6 +3618,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       productCategories,
       customerAccessRecords,
       waivers,
+      signedWaiverRecords,
       waiverTemplates,
       waiverTemplateVersions,
       households,
@@ -3248,6 +3627,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       programs,
       sessions,
       registrations,
+      registrationActivity,
       checkInLogRecords,
       activeDateKey,
       isActiveDateToday,

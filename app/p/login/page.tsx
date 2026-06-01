@@ -30,7 +30,7 @@ export default function CustomerLoginPage() {
         return;
       }
       if (next && next.startsWith("/p/")) router.push(next);
-      else router.push(`/p/${payload.user?.organizations?.[0] ?? "summit"}/dashboard`);
+      else router.push(`/p/${payload.user?.organizations?.[0] ?? "summit"}/account/dashboard`);
       router.refresh();
     } catch {
       setError("Unable to sign in.");

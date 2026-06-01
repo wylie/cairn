@@ -36,7 +36,7 @@ export function middleware(req: NextRequest) {
     if (session) {
       if (session.kind === "customer") {
         const org = session.organizationSlugs[0] ?? "summit";
-        return NextResponse.redirect(new URL(`/p/${org}/dashboard`, req.url));
+        return NextResponse.redirect(new URL(`/p/${org}/account/dashboard`, req.url));
       }
       if ((session.organizationSlugs?.length ?? 0) > 1) {
         return NextResponse.redirect(new URL("/org-chooser", req.url));
@@ -51,7 +51,7 @@ export function middleware(req: NextRequest) {
     if (!session) return NextResponse.redirect(new URL("/login", req.url));
     if (session.kind === "customer") {
       const org = session.organizationSlugs[0] ?? "summit";
-      return NextResponse.redirect(new URL(`/p/${org}/dashboard`, req.url));
+      return NextResponse.redirect(new URL(`/p/${org}/account/dashboard`, req.url));
     }
     return NextResponse.next();
   }
@@ -59,7 +59,7 @@ export function middleware(req: NextRequest) {
   if (pathname === "/p/login") {
     if (session?.kind === "customer") {
       const org = session.organizationSlugs[0] ?? "summit";
-      return NextResponse.redirect(new URL(`/p/${org}/dashboard`, req.url));
+      return NextResponse.redirect(new URL(`/p/${org}/account/dashboard`, req.url));
     }
     return NextResponse.next();
   }
@@ -93,8 +93,15 @@ export function middleware(req: NextRequest) {
   if (pathname.startsWith("/p/")) {
     const parts = pathname.split("/").filter(Boolean);
     const slug = parts[1];
+    const section = parts[2] ?? "";
     if (!resolveOrganizationBySlug(slug)) {
       return NextResponse.redirect(new URL("/no-access", req.url));
+    }
+    const isPublicProgramsRoute =
+      section === "programs" ||
+      section === "sessions";
+    if (isPublicProgramsRoute) {
+      return NextResponse.next();
     }
     if (!session || session.kind !== "customer") {
       const loginUrl = new URL("/p/login", req.url);

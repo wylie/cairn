@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { metadata as publicMetadata } from "@/app/page";
 import { metadata as loginMetadata } from "@/app/login/layout";
 import { metadata as protectedMetadata } from "@/app/(app)/layout";
+import { metadata as customerAccountMetadata } from "@/app/p/[orgSlug]/account/layout";
 import robots from "@/app/robots";
 import sitemap from "@/app/sitemap";
 
@@ -16,6 +17,7 @@ describe("SEO controls", () => {
   it("login and protected layouts are noindex", () => {
     expect(loginMetadata.robots).toEqual({ index: false, follow: false });
     expect(protectedMetadata.robots).toEqual({ index: false, follow: false });
+    expect(customerAccountMetadata.robots).toEqual({ index: false, follow: false });
   });
 
   it("robots allows public and blocks protected routes", () => {
@@ -24,11 +26,14 @@ describe("SEO controls", () => {
     expect(rules.allow).toContain("/");
     expect(rules.disallow).toContain("/login");
     expect(rules.disallow).toContain("/o/");
+    expect(rules.disallow).toContain("/p/*/account/");
   });
 
-  it("sitemap includes only public homepage", () => {
+  it("sitemap includes only public marketing and program discovery pages", () => {
     const entries = sitemap();
-    expect(entries).toHaveLength(1);
-    expect(entries[0].url).toBe("https://cairn.example.com/");
+    const urls = entries.map((entry) => entry.url);
+    expect(urls).toContain("https://cairn.example.com/");
+    expect(urls).toContain("https://cairn.example.com/p/summit/programs");
+    expect(urls.some((url) => url.includes("/account/"))).toBe(false);
   });
 });

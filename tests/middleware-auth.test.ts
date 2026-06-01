@@ -22,4 +22,10 @@ describe("middleware auth routing", () => {
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/p/login?next=%2Fp%2Fsummit%2Fdashboard");
   });
+
+  it("allows public program discovery routes when unauthenticated", () => {
+    const req = new NextRequest("http://localhost:3000/p/summit/programs");
+    const res = middleware(req);
+    expect(res.status).toBe(200);
+  });
 });

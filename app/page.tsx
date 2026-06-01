@@ -62,12 +62,9 @@ export default function HomePage() {
             <Link href="/f/summit" className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:opacity-90">
               Explore Demo Facility
             </Link>
-            <Link href="/login" className="inline-flex min-h-11 items-center rounded-md border border-slate-300 px-5 text-sm font-medium text-slate-700 hover:bg-slate-50">
-              Staff Login
+            <Link href="/request-demo" className="inline-flex min-h-11 items-center rounded-md border border-slate-300 px-5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+              Request Live Demo
             </Link>
-            <button type="button" className="inline-flex min-h-11 items-center rounded-md border border-slate-300 px-5 text-sm font-medium text-slate-700 hover:bg-slate-50">
-              Request Demo
-            </button>
           </div>
         </section>
 
@@ -140,8 +137,8 @@ export default function HomePage() {
             <Link href="/f/summit" className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:opacity-90">
               Explore Demo Facility
             </Link>
-            <Link href="/login" className="inline-flex min-h-11 items-center rounded-md border border-slate-300 px-5 text-sm font-medium text-slate-700 hover:bg-slate-50">
-              Staff Login
+            <Link href="/request-demo" className="inline-flex min-h-11 items-center rounded-md border border-slate-300 px-5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+              Request Live Demo
             </Link>
           </div>
         </section>

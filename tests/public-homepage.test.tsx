@@ -6,13 +6,14 @@ import { PublicAnalytics, getPublicAnalyticsConfig, shouldLoadPublicAnalytics } 
 import { TestProviders } from "@/tests/test-providers";
 
 describe("Public homepage", () => {
-  it("renders without auth dependency and includes facility and staff CTAs", () => {
+  it("renders without auth dependency and includes marketing CTAs", () => {
     render(<HomePage />);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       /Modern facility operations software/i
     );
     expect(screen.getAllByRole("link", { name: /Explore Demo Facility/i })[0]).toHaveAttribute("href", "/f/summit");
-    expect(screen.getAllByRole("link", { name: /Staff Login/i })[0]).toHaveAttribute("href", "/login");
+    expect(screen.getAllByRole("link", { name: /Request Live Demo/i })[0]).toHaveAttribute("href", "/request-demo");
+    expect(screen.queryByRole("link", { name: /Staff Login/i })).not.toBeInTheDocument();
   });
 
   it("analytics boundary only loads when GA id exists", () => {

@@ -13,23 +13,17 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("Login page demo helpers", () => {
-  it("shows demo accounts helper in development", () => {
-    const prior = process.env.NODE_ENV;
-    process.env.NODE_ENV = "development";
+  it("shows organization-specific staff login chooser", () => {
     render(<LoginPage />);
-    expect(screen.getByText("Demo accounts")).toBeInTheDocument();
-    expect(screen.getByText(/Owner:/i)).toBeInTheDocument();
-    expect(screen.getByText(/Front Desk:/i)).toBeInTheDocument();
-    expect(screen.getByText(/Password signs into Cairn/i)).toBeInTheDocument();
-    process.env.NODE_ENV = prior;
+    expect(screen.getByText("Choose a facility for staff login")).toBeInTheDocument();
+    const links = screen.getAllByRole("link", { name: "Staff Login" });
+    expect(links[0]).toHaveAttribute("href", "/o/summit/login");
   });
 
-  it("hides demo accounts helper in production", () => {
-    const prior = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
+  it("does not render inline credentials in global login chooser", () => {
     render(<LoginPage />);
     expect(screen.queryByText("Demo accounts")).not.toBeInTheDocument();
-    process.env.NODE_ENV = prior;
+    expect(screen.queryByText(/Password signs into Cairn/i)).not.toBeInTheDocument();
   });
 });
 

@@ -22,6 +22,17 @@ Cairn is a modern web-based SaaS app for gym and recreation facility operations.
 - `/reports`
 - `/settings`
 
+## Sample local URLs
+- Public marketing: `/`
+- Demo facility landing: `/f/summit`
+- Customer portal dashboard: `/p/summit/account/dashboard`
+- Customer portal memberships: `/p/summit/account/memberships`
+- Customer portal registrations: `/p/summit/account/registrations`
+- Customer portal purchases: `/p/summit/account/purchases`
+- Customer portal household: `/p/summit/account/household`
+- Public program catalog: `/p/summit/programs`
+- Staff portal dashboard: `/o/summit/dashboard`
+
 ## Run locally
 ```bash
 npm install

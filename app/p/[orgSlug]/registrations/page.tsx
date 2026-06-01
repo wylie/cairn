@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useCustomerPortalData } from "@/lib/portal/use-customer-portal-data";
+import { CustomerPortalContainer } from "@/components/portal/customer-portal-container";
 
 export default function CustomerPortalRegistrationsPage() {
   const { orgSlug } = useParams<{ orgSlug: string }>();
@@ -22,12 +23,14 @@ export default function CustomerPortalRegistrationsPage() {
   const cancelled = rows.filter((row) => row.entry.status === "cancelled");
 
   return (
+    <CustomerPortalContainer>
     <section className="space-y-4">
       <h2 className="text-2xl font-semibold">Program Registrations</h2>
       <RegistrationSection title="Upcoming" rows={upcoming} orgSlug={orgSlug} />
       <RegistrationSection title="Past" rows={past} orgSlug={orgSlug} />
       <RegistrationSection title="Cancelled" rows={cancelled} orgSlug={orgSlug} />
     </section>
+    </CustomerPortalContainer>
   );
 }
 

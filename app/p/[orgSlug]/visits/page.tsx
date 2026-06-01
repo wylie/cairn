@@ -2,12 +2,14 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCustomerPortalData } from "@/lib/portal/use-customer-portal-data";
+import { CustomerPortalContainer } from "@/components/portal/customer-portal-container";
 
 export default function CustomerPortalVisitsPage() {
   const { visibleCustomerIds, checkInRecords } = useCustomerPortalData();
   const visits = checkInRecords.filter((entry) => visibleCustomerIds.includes(entry.customerId)).sort((a, b) => b.checkInTime.localeCompare(a.checkInTime));
 
   return (
+    <CustomerPortalContainer>
     <section className="space-y-4">
       <h2 className="text-2xl font-semibold">Visit History</h2>
       <Card>
@@ -28,5 +30,6 @@ export default function CustomerPortalVisitsPage() {
         </CardContent>
       </Card>
     </section>
+    </CustomerPortalContainer>
   );
 }

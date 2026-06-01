@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { canCustomerViewReceipt } from "@/lib/portal/receipts";
 import { useCustomerPortalData } from "@/lib/portal/use-customer-portal-data";
 import { getLocationName } from "@/lib/public-programs";
+import { CustomerPortalContainer } from "@/components/portal/customer-portal-container";
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" });
 function formatDateSafe(value?: string) {
@@ -139,6 +140,7 @@ export default function CustomerPortalDashboardPage() {
   }).length;
 
   return (
+    <CustomerPortalContainer>
     <section className="space-y-4">
       <h2 className="text-2xl font-semibold">Welcome Back{primaryCustomer ? `, ${primaryCustomer.firstName}` : ""}</h2>
 
@@ -308,6 +310,7 @@ export default function CustomerPortalDashboardPage() {
         </CardContent>
       </Card>
     </section>
+    </CustomerPortalContainer>
   );
 }
 

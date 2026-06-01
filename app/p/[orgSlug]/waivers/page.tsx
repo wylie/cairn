@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useCustomerPortalData } from "@/lib/portal/use-customer-portal-data";
+import { CustomerPortalContainer } from "@/components/portal/customer-portal-container";
 
 export default function CustomerPortalWaiversPage() {
   const pathname = usePathname() ?? "";
@@ -30,6 +31,7 @@ export default function CustomerPortalWaiversPage() {
   );
 
   return (
+    <CustomerPortalContainer>
     <section className="space-y-4">
       <h2 className="text-2xl font-semibold">Waivers</h2>
       <Card>
@@ -65,5 +67,6 @@ export default function CustomerPortalWaiversPage() {
         </CardContent>
       </Card>
     </section>
+    </CustomerPortalContainer>
   );
 }

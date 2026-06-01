@@ -2,11 +2,13 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSettingsState } from "@/lib/state/settings-state";
+import { CustomerPortalContainer } from "@/components/portal/customer-portal-container";
 
 export default function CustomerPortalFacilityPage() {
   const { settings } = useSettingsState();
   const locations = settings.locations;
   return (
+    <CustomerPortalContainer>
     <section className="space-y-4">
       <h2 className="text-2xl font-semibold">Facility Information</h2>
       <Card>
@@ -33,5 +35,6 @@ export default function CustomerPortalFacilityPage() {
         </CardContent>
       </Card>
     </section>
+    </CustomerPortalContainer>
   );
 }

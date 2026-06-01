@@ -10,6 +10,7 @@ import type { ClassCampSession } from "@/types/domain";
 import { canCustomerViewReceipt } from "@/lib/portal/receipts";
 import { formatCurrency } from "@/lib/transactions";
 import { useCustomerPortalData } from "@/lib/portal/use-customer-portal-data";
+import { CustomerPortalContainer } from "@/components/portal/customer-portal-container";
 
 export default function CustomerPortalHouseholdPage() {
   const { orgSlug } = useParams<{ orgSlug: string }>();
@@ -104,6 +105,7 @@ export default function CustomerPortalHouseholdPage() {
   const primaryAccountHolder = memberRows.find((row) => row.member.role === "primary-adult");
 
   return (
+    <CustomerPortalContainer>
     <section className="space-y-4">
       <h2 className="text-2xl font-semibold">Household</h2>
       <Card>
@@ -157,6 +159,7 @@ export default function CustomerPortalHouseholdPage() {
         </CardContent>
       </Card>
     </section>
+    </CustomerPortalContainer>
   );
 }
 

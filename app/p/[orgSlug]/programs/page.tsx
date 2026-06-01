@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ProgramCatalog } from "@/components/public/program-catalog";
+import { CustomerPortalContainer } from "@/components/portal/customer-portal-container";
 import { getOrganizationForPublic, getPublicPrograms, getPublicSessionsForProgram } from "@/lib/public-programs";
 
 export async function generateMetadata({ params }: { params: Promise<{ orgSlug: string }> }): Promise<Metadata> {
@@ -29,6 +30,7 @@ export default async function PublicProgramsPage({ params }: { params: Promise<{
   }));
 
   return (
+    <CustomerPortalContainer>
     <div className="space-y-4">
       <div className="flex justify-end">
         <Link className="inline-flex h-10 items-center rounded-md border border-input px-3 text-sm font-medium hover:bg-secondary" href={`/p/${orgSlug}/account/dashboard`}>
@@ -37,5 +39,6 @@ export default async function PublicProgramsPage({ params }: { params: Promise<{
       </div>
       <ProgramCatalog orgSlug={orgSlug} cards={cards} />
     </div>
+    </CustomerPortalContainer>
   );
 }

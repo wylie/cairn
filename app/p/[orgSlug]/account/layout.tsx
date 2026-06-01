@@ -37,7 +37,6 @@ export default async function CustomerAccountLayout({
           </div>
           <div className="flex items-center gap-2">
             <Link className="inline-flex min-h-11 items-center rounded-md border px-3 text-sm" href={`/p/${orgSlug}/programs`}>Program Catalog</Link>
-            <Link className="inline-flex min-h-11 items-center rounded-md border px-3 text-sm" href={`/o/${orgSlug}/dashboard`}>Staff Portal</Link>
           </div>
         </div>
         <nav className="mx-auto flex max-w-7xl flex-wrap gap-2 px-4 pb-3">
@@ -48,7 +47,7 @@ export default async function CustomerAccountLayout({
           ))}
         </nav>
       </header>
-      <main className="mx-auto max-w-7xl p-4">{children}</main>
+      <main>{children}</main>
     </div>
   );
 }

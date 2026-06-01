@@ -9,6 +9,7 @@ import { getLocationName } from "@/lib/public-programs";
 import { canCustomerViewReceipt, getReceiptStatus, getReceiptStatusLabel } from "@/lib/portal/receipts";
 import { formatCurrency } from "@/lib/transactions";
 import { useCustomerPortalData } from "@/lib/portal/use-customer-portal-data";
+import { CustomerPortalContainer } from "@/components/portal/customer-portal-container";
 
 export default function CustomerPortalPurchasesPage() {
   const { orgSlug } = useParams<{ orgSlug: string }>();
@@ -26,6 +27,7 @@ export default function CustomerPortalPurchasesPage() {
   };
 
   return (
+    <CustomerPortalContainer>
     <section className="space-y-4">
       <h2 className="text-2xl font-semibold">Purchase History</h2>
       <Card>
@@ -62,5 +64,6 @@ export default function CustomerPortalPurchasesPage() {
         </CardContent>
       </Card>
     </section>
+    </CustomerPortalContainer>
   );
 }

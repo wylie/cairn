@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
+import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useCustomerPortalData } from "@/lib/portal/use-customer-portal-data";
 
 export default function CustomerPortalRegistrationsPage() {
+  const { orgSlug } = useParams<{ orgSlug: string }>();
   const { visibleCustomerIds, registrations, sessions, programs } = useCustomerPortalData();
   const rows = registrations
     .filter((entry) => visibleCustomerIds.includes(entry.customerId))
@@ -21,21 +24,23 @@ export default function CustomerPortalRegistrationsPage() {
   return (
     <section className="space-y-4">
       <h2 className="text-2xl font-semibold">Program Registrations</h2>
-      <RegistrationSection title="Upcoming" rows={upcoming} />
-      <RegistrationSection title="Past" rows={past} />
-      <RegistrationSection title="Cancelled" rows={cancelled} />
+      <RegistrationSection title="Upcoming" rows={upcoming} orgSlug={orgSlug} />
+      <RegistrationSection title="Past" rows={past} orgSlug={orgSlug} />
+      <RegistrationSection title="Cancelled" rows={cancelled} orgSlug={orgSlug} />
     </section>
   );
 }
 
 function RegistrationSection({
   title,
+  orgSlug,
   rows
 }: {
   title: string;
+  orgSlug: string;
   rows: Array<{
-    entry: { id: string; status: string };
-    session?: { title?: string; startsAt: string } | undefined;
+    entry: { id: string; status: string; customerId?: string };
+    session?: { id: string; title?: string; startsAt: string } | undefined;
     program?: { title: string } | undefined;
   }>;
 }) {
@@ -50,9 +55,14 @@ function RegistrationSection({
             <p className="text-muted-foreground">{row.session?.startsAt ? new Date(row.session.startsAt).toLocaleString("en-US") : "No date"}</p>
             <p>Status: {row.entry.status}</p>
             <div className="mt-2 flex flex-wrap gap-2">
-              <Button variant="secondary" className="h-9">View Details</Button>
-              <Button variant="secondary" className="h-9">Cancel Registration</Button>
-              <Button variant="secondary" className="h-9">Transfer Request</Button>
+              <Link
+                href={`/p/${orgSlug}/registrations/${row.entry.id}`}
+                className="inline-flex h-9 items-center rounded-md border px-3 text-sm"
+              >
+                View registration
+              </Link>
+              <Button variant="secondary" className="h-9">Add to calendar (Soon)</Button>
+              <Button variant="secondary" className="h-9">Request cancellation (Soon)</Button>
             </div>
           </div>
         ))}

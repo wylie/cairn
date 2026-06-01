@@ -143,6 +143,16 @@ export default function CustomerPortalDashboardPage() {
     <CustomerPortalContainer>
     <section className="space-y-4">
       <h2 className="text-2xl font-semibold">Welcome Back{primaryCustomer ? `, ${primaryCustomer.firstName}` : ""}</h2>
+      <Card>
+        <CardHeader><CardTitle>Quick Actions</CardTitle></CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <Link className="inline-flex min-h-11 items-center rounded-md bg-primary px-3 text-sm text-primary-foreground" href="./registrations">Register for Program</Link>
+          <Link className="inline-flex min-h-11 items-center rounded-md border px-3 text-sm" href="./waivers">Sign Waiver</Link>
+          <Link className="inline-flex min-h-11 items-center rounded-md border px-3 text-sm" href="./memberships">View Membership</Link>
+          <Link className="inline-flex min-h-11 items-center rounded-md border px-3 text-sm" href="./household">Manage Household</Link>
+          <Link className="inline-flex min-h-11 items-center rounded-md border px-3 text-sm" href="./purchases">View Purchases / Receipts</Link>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard title="Active Memberships" value={activeMemberships.length} href="./memberships" />
@@ -300,15 +310,6 @@ export default function CustomerPortalDashboardPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader><CardTitle>Quick Actions</CardTitle></CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Link className="inline-flex min-h-11 items-center rounded-md bg-primary px-3 text-sm text-primary-foreground" href="./registrations">Register for Program</Link>
-          <Link className="inline-flex min-h-11 items-center rounded-md border px-3 text-sm" href="./waivers">Sign Waiver</Link>
-          <Link className="inline-flex min-h-11 items-center rounded-md border px-3 text-sm" href="./memberships">View Membership</Link>
-          <Link className="inline-flex min-h-11 items-center rounded-md border px-3 text-sm" href="./household">Manage Household</Link>
-        </CardContent>
-      </Card>
     </section>
     </CustomerPortalContainer>
   );

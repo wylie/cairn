@@ -63,6 +63,7 @@ import type {
 import { resolveTenant } from "@/lib/tenant/resolve";
 import { getCurrentOrgSlugClient } from "@/lib/tenant/client";
 import { parseOrgSlugFromPathname } from "@/lib/tenant/path";
+import { useSettingsState } from "@/lib/state/settings-state";
 
 const BASE_DATE = "2026-05-20";
 
@@ -602,6 +603,7 @@ interface CustomerStateContextValue {
 const CustomerStateContext = createContext<CustomerStateContextValue | null>(null);
 
 export function CustomerStateProvider({ children }: { children: React.ReactNode }) {
+  const { settings } = useSettingsState();
   const pathname = usePathname() ?? "";
   const fallbackSlug = parseOrgSlugFromPathname(pathname) ?? "summit";
   const [orgSlug, setOrgSlug] = useState(fallbackSlug);
@@ -924,6 +926,49 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     if (!hydrated) return;
     saveMockState(storageKeys.checkins, checkInLogRecords);
   }, [checkInLogRecords, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (settings.operations.open24x7 || !settings.operations.autoCheckoutAtCloseout) return;
+    if (!settings.operations.defaultCloseoutTime) return;
+
+    const closeoutIso = `${activeDateKey}T${settings.operations.defaultCloseoutTime}:00Z`;
+    if (new Date().toISOString() < closeoutIso) return;
+
+    let didUpdate = false;
+    setCheckInLogRecords((prev) =>
+      prev.map((record) => {
+        if (
+          record.locationId !== activeLocationId ||
+          !record.checkInTime.startsWith(activeDateKey) ||
+          record.status !== "checked-in" ||
+          record.checkOutTime
+        ) {
+          return record;
+        }
+        didUpdate = true;
+        return {
+          ...record,
+          status: "checked-out",
+          checkOutTime: closeoutIso,
+          checkInSource: "automatic_closeout",
+          checkedOutByStaffId: "system_closeout",
+          checkedOutByStaffName: "Automatic closeout"
+        };
+      })
+    );
+    if (!didUpdate) return;
+    setCustomers((prev) =>
+      prev.map((entry) => (entry.checkInStatus === "in" ? { ...entry, checkInStatus: "out" } : entry))
+    );
+  }, [
+    activeDateKey,
+    activeLocationId,
+    hydrated,
+    settings.operations.autoCheckoutAtCloseout,
+    settings.operations.defaultCloseoutTime,
+    settings.operations.open24x7
+  ]);
 
   const checkOutRecord = (recordId: string, staffUserId: string, staffName?: string) => {
     if (!isActiveDateToday) return { ok: false, message: "Historical check-in logs are read-only." };

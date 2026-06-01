@@ -25,10 +25,15 @@ Cairn is a modern web-based SaaS app for gym and recreation facility operations.
 ## Sample local URLs
 - Public marketing: `/`
 - Demo facility landing: `/f/summit`
+- Demo facility landing (alt org): `/f/riverbend`
 - Customer portal dashboard: `/p/summit/account/dashboard`
+- Customer portal direct dashboard alias: `/p/summit/dashboard`
 - Customer portal memberships: `/p/summit/account/memberships`
+- Customer membership detail example: `/p/summit/memberships/mem_001`
 - Customer portal registrations: `/p/summit/account/registrations`
+- Customer registration detail example: `/p/summit/registrations/reg_001`
 - Customer portal purchases: `/p/summit/account/purchases`
+- Customer receipt detail example: `/p/summit/purchases/txn_001`
 - Customer portal household: `/p/summit/account/household`
 - Public program catalog: `/p/summit/programs`
 - Staff portal dashboard: `/o/summit/dashboard`

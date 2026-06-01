@@ -330,7 +330,7 @@ export default function RegistrationsPage() {
         </button>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[1.1fr_1.25fr_1fr]" data-testid="registrations-layout">
+      <div className="grid gap-4 xl:grid-cols-[1fr_1.2fr_1fr]" data-testid="registrations-layout">
         <section className="rounded-xl border bg-card p-4 space-y-3" aria-label="session-search-panel">
           <h2 className="text-base font-semibold">Session Search</h2>
           <label className="text-sm">

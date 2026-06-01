@@ -724,6 +724,7 @@ export default function ProductsPage() {
         open={showCreate}
         title="Add Product"
         categories={orderedCategories}
+        knownTags={knownTags}
         onClose={() => setShowCreate(false)}
         onSubmit={(input) => {
           const result = createProduct(input);
@@ -737,6 +738,7 @@ export default function ProductsPage() {
         title="Edit Product"
         product={editingProduct}
         categories={orderedCategories}
+        knownTags={knownTags}
         onClose={() => setEditingProduct(null)}
         onSubmit={(input) => {
           if (!editingProduct) return { ok: false, message: "Product not found." };

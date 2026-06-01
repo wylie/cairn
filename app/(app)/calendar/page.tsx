@@ -17,6 +17,7 @@ type ScheduleView
 } from "@/lib/data/session-schedule";
 import { data } from "@/lib/data";
 import { useCustomerState } from "@/lib/state/customer-state";
+import { useSettingsState } from "@/lib/state/settings-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import type { SessionActivityEvent } from "@/types/calendar";
 
@@ -114,10 +115,11 @@ export default function CalendarPage() {
     waivers,
     householdMembers
   } = useCustomerState();
+  const { settings } = useSettingsState();
   const { activeStaff, assertPermission, staffUsers, requestStaffSwitch } = useWorkstationState();
 
   const [view, setView] = useState<ScheduleView>(() => {
-    return getStoredCalendarView() ?? "week";
+    return getStoredCalendarView() ?? settings.calendar.defaultView ?? "week";
   });
   const [search, setSearch] = useState("");
   const [dateKey, setDateKey] = useState("2026-05-21");
@@ -150,6 +152,14 @@ export default function CalendarPage() {
   useEffect(() => {
     setStoredCalendarView(view);
   }, [view]);
+
+  useEffect(() => {
+    const stored = getStoredCalendarView();
+    if (stored) return;
+    if (view !== settings.calendar.defaultView) {
+      setView(settings.calendar.defaultView);
+    }
+  }, [settings.calendar.defaultView, view]);
 
   const instructors = staffUsers.filter((entry) => (entry.role === "instructor" || entry.canTeach) && entry.activeInstructor !== false);
   const activePrograms = useMemo(() => programs.filter((entry) => entry.active !== false), [programs]);

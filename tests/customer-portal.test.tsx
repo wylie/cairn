@@ -48,6 +48,12 @@ describe("customer portal", () => {
     expect(screen.getByText("Membership Summary")).toBeInTheDocument();
     expect(screen.getByText("Household Visits This Month")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Register for Program" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View Purchases / Receipts" })).toBeInTheDocument();
+    const heading = screen.getByRole("heading", { level: 2, name: /Welcome Back/i });
+    const quickActions = screen.getByRole("heading", { level: 3, name: "Quick Actions" });
+    expect(
+      heading.compareDocumentPosition(quickActions) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
   });
 
   it("shows household portal content and member rows", () => {
@@ -57,7 +63,8 @@ describe("customer portal", () => {
       </TestProviders>
     );
     expect(screen.getByText("Household")).toBeInTheDocument();
-    expect(screen.getAllByText(/Relationship:/i).length).toBeGreaterThan(0);
+    expect(screen.getByText("Primary account holder:")).toBeInTheDocument();
+    expect(screen.getByText("Household members:")).toBeInTheDocument();
   });
 
   it("renders membership, registration, waiver, and receipt sections", () => {

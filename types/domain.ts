@@ -445,7 +445,7 @@ export interface HouseholdMember {
   emergencyContactPriority?: number;
 }
 
-export type CheckInSource = "manual_search" | "barcode_scan" | "pos_sale" | "registration";
+export type CheckInSource = "manual_search" | "barcode_scan" | "pos_sale" | "registration" | "automatic_closeout";
 export type EntryMethod = "membership" | "multi_visit_pass" | "day_pass" | "class_registration" | "camp_registration" | "staff_comp";
 export type CheckInStatus = "checked-in" | "checked-out";
 

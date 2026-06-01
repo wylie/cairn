@@ -8,6 +8,9 @@ describe("facility and portal routing surfaces", () => {
     render(await FacilityLandingPage({ params: Promise.resolve({ orgSlug: "summit" }) }));
     expect(screen.getByRole("link", { name: "Customer Login" })).toHaveAttribute("href", "/p/summit/login");
     expect(screen.getByRole("link", { name: "Staff Login" })).toHaveAttribute("href", "/o/summit/login");
+    expect(screen.getByText("Phone")).toBeInTheDocument();
+    expect(screen.getByText("Email")).toBeInTheDocument();
+    expect(screen.getByText("Primary address")).toBeInTheDocument();
   });
 
   it("staff portal button from customer account layout uses org-scoped route", async () => {
@@ -17,6 +20,7 @@ describe("facility and portal routing surfaces", () => {
         params: Promise.resolve({ orgSlug: "summit" })
       })
     );
-    expect(screen.getByRole("link", { name: "Staff Portal" })).toHaveAttribute("href", "/o/summit/dashboard");
+    expect(screen.getByRole("link", { name: "Program Catalog" })).toHaveAttribute("href", "/p/summit/programs");
+    expect(screen.queryByRole("link", { name: "Staff Portal" })).not.toBeInTheDocument();
   });
 });

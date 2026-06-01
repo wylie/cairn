@@ -105,6 +105,25 @@ describe("Products page", () => {
     expect(screen.getByText("Updated description")).toBeInTheDocument();
   });
 
+  it("renders currency fields, image upload, tag autocomplete, and age rule grouping in product modal", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <ProductsPage />
+      </TestProviders>
+    );
+
+    await activateStaff(user, "2222");
+    await user.click(screen.getAllByRole("button", { name: "Add Product" })[0]);
+
+    expect(screen.getAllByText("$").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByLabelText("Product image")).toBeInTheDocument();
+    expect(screen.getByText("Eligibility / Age Rules")).toBeInTheDocument();
+    const tagsInput = screen.getByLabelText("Product tags");
+    expect(tagsInput).toHaveAttribute("list", "product-tags-autocomplete");
+  });
+
   it("owner can manage products", async () => {
     const user = userEvent.setup();
     render(

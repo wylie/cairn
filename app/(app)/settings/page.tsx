@@ -111,7 +111,9 @@ export default function SettingsPage() {
     updatePosPayments,
     updateBranding,
     updateNotifications,
-    updateAdvanced
+    updateAdvanced,
+    updateOperations,
+    updateCalendar
   } = useSettingsState();
 
   const [activeSection, setActiveSection] = useState<SettingsSection>("facility");
@@ -128,6 +130,8 @@ export default function SettingsPage() {
   const [brandingFiles, setBrandingFiles] = useState<{ logo?: string; favicon?: string; darkMode?: string }>({});
   const [notificationDraft, setNotificationDraft] = useState(settings.notifications);
   const [advancedDraft, setAdvancedDraft] = useState(settings.advanced);
+  const [operationsDraft, setOperationsDraft] = useState(settings.operations);
+  const [calendarDraft, setCalendarDraft] = useState(settings.calendar);
 
   const [locationQuery, setLocationQuery] = useState("");
   const [showLocationModal, setShowLocationModal] = useState(false);
@@ -183,9 +187,12 @@ export default function SettingsPage() {
       pos_payments: JSON.stringify(posDraft) !== JSON.stringify(settings.posPayments),
       branding: JSON.stringify(brandingDraft) !== JSON.stringify(settings.branding),
       notifications: JSON.stringify(notificationDraft) !== JSON.stringify(settings.notifications),
-      advanced: JSON.stringify(advancedDraft) !== JSON.stringify(settings.advanced)
+      advanced:
+        JSON.stringify(advancedDraft) !== JSON.stringify(settings.advanced) ||
+        JSON.stringify(operationsDraft) !== JSON.stringify(settings.operations) ||
+        JSON.stringify(calendarDraft) !== JSON.stringify(settings.calendar)
     }),
-    [settings, facilityDraft, membershipDraft, waiverDraft, posDraft, brandingDraft, notificationDraft, advancedDraft]
+    [settings, facilityDraft, membershipDraft, waiverDraft, posDraft, brandingDraft, notificationDraft, advancedDraft, operationsDraft, calendarDraft]
   );
 
   const hasUnsavedChanges = Object.values(sectionDirtyMap).some(Boolean);
@@ -202,6 +209,8 @@ export default function SettingsPage() {
     setBrandingFiles({});
     setNotificationDraft(settings.notifications);
     setAdvancedDraft(settings.advanced);
+    setOperationsDraft(settings.operations);
+    setCalendarDraft(settings.calendar);
   }, [settings, hasUnsavedChanges]);
 
   useEffect(() => {
@@ -895,8 +904,25 @@ export default function SettingsPage() {
                     <CheckboxField label="Enforce role permissions" helperText="When enabled, staff can only access actions allowed by their assigned role." checked={advancedDraft.strictRoleChecks} onChange={(value) => setAdvancedDraft((p) => ({ ...p, strictRoleChecks: value }))} />
                     <FormField label="Audit log retention (days)" helperText="How long staff activity and system events are retained."><TextInput type="number" value={advancedDraft.auditLogRetentionDays} onChange={(e) => setAdvancedDraft((p) => ({ ...p, auditLogRetentionDays: Number(e.target.value) || 0 }))} /></FormField>
                     <CheckboxField label="Require reason for manager overrides" helperText="Staff must enter a reason when bypassing access, waiver, or guardian restrictions." checked={advancedDraft.requireReasonForOverrides} onChange={(value) => setAdvancedDraft((p) => ({ ...p, requireReasonForOverrides: value }))} />
+                    <CheckboxField label="Facility is open 24/7" checked={operationsDraft.open24x7} onChange={(value) => setOperationsDraft((p) => ({ ...p, open24x7: value }))} />
+                    <FormField label="Default closeout time">
+                      <TextInput type="time" value={operationsDraft.defaultCloseoutTime} disabled={operationsDraft.open24x7} onChange={(e) => setOperationsDraft((p) => ({ ...p, defaultCloseoutTime: e.target.value }))} />
+                    </FormField>
+                    <CheckboxField label="Auto check-out active visitors at closeout" checked={operationsDraft.autoCheckoutAtCloseout} onChange={(value) => setOperationsDraft((p) => ({ ...p, autoCheckoutAtCloseout: value }))} />
+                    <FormField label="Default calendar view">
+                      <SelectInput value={calendarDraft.defaultView} onChange={(e) => setCalendarDraft((p) => ({ ...p, defaultView: e.target.value as "day" | "week" | "month" | "agenda" }))}>
+                        <option value="day">Day</option>
+                        <option value="week">Week</option>
+                        <option value="month">Month</option>
+                        <option value="agenda">Agenda</option>
+                      </SelectInput>
+                    </FormField>
                   </FormGrid>
-                  <div className="flex justify-end"><Button onClick={() => saveSection("advanced", () => updateAdvanced(advancedDraft), "System controls saved.")} disabled={!sectionDirtyMap.advanced || savingSection === "advanced"}>{savingSection === "advanced" ? "Saving..." : "Save System Controls"}</Button></div>
+                  <div className="flex justify-end"><Button onClick={() => saveSection("advanced", () => {
+                    updateAdvanced(advancedDraft);
+                    updateOperations(operationsDraft);
+                    updateCalendar(calendarDraft);
+                  }, "System controls saved.")} disabled={!sectionDirtyMap.advanced || savingSection === "advanced"}>{savingSection === "advanced" ? "Saving..." : "Save System Controls"}</Button></div>
                 </CardContent>
               </Card>
             ) : null}

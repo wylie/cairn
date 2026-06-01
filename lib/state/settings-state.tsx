@@ -78,6 +78,16 @@ type AdvancedSettings = {
   requireReasonForOverrides: boolean;
 };
 
+type OperationsSettings = {
+  open24x7: boolean;
+  defaultCloseoutTime: string;
+  autoCheckoutAtCloseout: boolean;
+};
+
+type CalendarSettings = {
+  defaultView: "day" | "week" | "month" | "agenda";
+};
+
 type SettingsStateSnapshot = {
   facilityProfile: FacilityProfile & {
     legalBusinessName?: string;
@@ -96,6 +106,8 @@ type SettingsStateSnapshot = {
   branding: BrandingSettings;
   notifications: NotificationSettings;
   advanced: AdvancedSettings;
+  operations: OperationsSettings;
+  calendar: CalendarSettings;
 };
 
 function mapRoleNameToSystemRoleId(name: string) {
@@ -241,6 +253,14 @@ const defaultSettings: SettingsStateSnapshot = {
     strictRoleChecks: true,
     auditLogRetentionDays: 365,
     requireReasonForOverrides: true
+  },
+  operations: {
+    open24x7: false,
+    defaultCloseoutTime: "21:00",
+    autoCheckoutAtCloseout: true
+  },
+  calendar: {
+    defaultView: "week"
   }
 };
 
@@ -264,6 +284,8 @@ type SettingsContextValue = {
   updateBranding: (patch: Partial<BrandingSettings>) => void;
   updateNotifications: (patch: Partial<NotificationSettings>) => void;
   updateAdvanced: (patch: Partial<AdvancedSettings>) => void;
+  updateOperations: (patch: Partial<OperationsSettings>) => void;
+  updateCalendar: (patch: Partial<CalendarSettings>) => void;
 };
 
 const SettingsStateContext = createContext<SettingsContextValue | null>(null);
@@ -297,7 +319,20 @@ export function SettingsStateProvider({ children }: { children: React.ReactNode 
       settings: SettingsStateSnapshot;
       activeLocationId: string;
     } | null>(settingsStorageKey, null);
-    return stored?.settings ?? defaultSettingsForOrg;
+    if (!stored?.settings) return defaultSettingsForOrg;
+    return {
+      ...defaultSettingsForOrg,
+      ...stored.settings,
+      facilityProfile: { ...defaultSettingsForOrg.facilityProfile, ...stored.settings.facilityProfile },
+      membershipAccess: { ...defaultSettingsForOrg.membershipAccess, ...stored.settings.membershipAccess },
+      waiver: { ...defaultSettingsForOrg.waiver, ...stored.settings.waiver },
+      posPayments: { ...defaultSettingsForOrg.posPayments, ...stored.settings.posPayments },
+      branding: { ...defaultSettingsForOrg.branding, ...stored.settings.branding },
+      notifications: { ...defaultSettingsForOrg.notifications, ...stored.settings.notifications },
+      advanced: { ...defaultSettingsForOrg.advanced, ...stored.settings.advanced },
+      operations: { ...defaultSettingsForOrg.operations, ...stored.settings.operations },
+      calendar: { ...defaultSettingsForOrg.calendar, ...stored.settings.calendar }
+    };
   });
   const [activeLocationId, setActiveLocationIdState] = useState<string>(() => {
     const stored = loadMockState<{
@@ -524,6 +559,12 @@ export function SettingsStateProvider({ children }: { children: React.ReactNode 
   const updateAdvanced = (patch: Partial<AdvancedSettings>) => {
     applySettings((prev) => ({ ...prev, advanced: { ...prev.advanced, ...patch } }));
   };
+  const updateOperations = (patch: Partial<OperationsSettings>) => {
+    applySettings((prev) => ({ ...prev, operations: { ...prev.operations, ...patch } }));
+  };
+  const updateCalendar = (patch: Partial<CalendarSettings>) => {
+    applySettings((prev) => ({ ...prev, calendar: { ...prev.calendar, ...patch } }));
+  };
 
   const value = useMemo<SettingsContextValue>(
     () => ({
@@ -545,7 +586,9 @@ export function SettingsStateProvider({ children }: { children: React.ReactNode 
       updatePosPayments,
       updateBranding,
       updateNotifications,
-      updateAdvanced
+      updateAdvanced,
+      updateOperations,
+      updateCalendar
     }),
     [settings, activeLocationId]
   );

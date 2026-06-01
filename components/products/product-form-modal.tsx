@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { CheckboxField, FormField, FormGrid, SelectInput } from "@/components/shared/form-layout";
+import { FileUploadField } from "@/components/shared/file-upload-field";
 import {
   colorTokenLabels,
   colorTokenTone,
@@ -73,7 +74,8 @@ export function ProductFormModal({
   product,
   onClose,
   onSubmit,
-  categories = []
+  categories = [],
+  knownTags = []
 }: {
   open: boolean;
   title: string;
@@ -81,10 +83,12 @@ export function ProductFormModal({
   onClose: () => void;
   onSubmit: (input: ProductFormInput) => { ok: boolean; message: string };
   categories?: ProductCategoryRecord[];
+  knownTags?: string[];
 }) {
   const [form, setForm] = useState<ProductFormInput>(() => toFormState(product));
   const [error, setError] = useState("");
   const [colorAuto, setColorAuto] = useState(!product?.colorToken);
+  const [imageFilename, setImageFilename] = useState("");
   const nameInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -92,6 +96,7 @@ export function ProductFormModal({
     setForm(toFormState(product));
     setError("");
     setColorAuto(!product?.colorToken);
+    setImageFilename("");
   }, [open, product]);
 
   useEffect(() => {
@@ -123,6 +128,10 @@ export function ProductFormModal({
     onClose();
   };
 
+  const normalizedKnownTags = Array.from(new Set(knownTags.map((tag) => tag.trim()).filter(Boolean))).sort((a, b) =>
+    a.localeCompare(b)
+  );
+
   return (
     <ModalShell
       open={open}
@@ -152,7 +161,10 @@ export function ProductFormModal({
           </FormField>
 
           <FormField label="Price">
-            <Input aria-label="Product price" type="number" min="0" step="0.01" value={String(form.price)} onChange={(event) => setForm((prev) => ({ ...prev, price: event.target.value }))} />
+            <div className="relative">
+              <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+              <Input className="pl-7" aria-label="Product price" type="number" min="0" step="0.01" value={String(form.price)} onChange={(event) => setForm((prev) => ({ ...prev, price: event.target.value }))} />
+            </div>
           </FormField>
           <FormField label="SKU">
             <Input aria-label="Product SKU" value={form.sku ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, sku: event.target.value }))} />
@@ -161,17 +173,21 @@ export function ProductFormModal({
             <Input aria-label="Product barcode" value={form.barcode ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, barcode: event.target.value }))} />
           </FormField>
           <FormField label="Cost">
-            <Input
-              aria-label="Product cost"
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.costCents ? String((form.costCents / 100).toFixed(2)) : ""}
-              onChange={(event) => {
-                const amount = Number(event.target.value);
-                setForm((prev) => ({ ...prev, costCents: Number.isFinite(amount) ? Math.round(amount * 100) : undefined }));
-              }}
-            />
+            <div className="relative">
+              <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+              <Input
+                className="pl-7"
+                aria-label="Product cost"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.costCents ? String((form.costCents / 100).toFixed(2)) : ""}
+                onChange={(event) => {
+                  const amount = Number(event.target.value);
+                  setForm((prev) => ({ ...prev, costCents: Number.isFinite(amount) ? Math.round(amount * 100) : undefined }));
+                }}
+              />
+            </div>
           </FormField>
 
           <FormField label="Description" className="md:col-span-2">
@@ -230,20 +246,65 @@ export function ProductFormModal({
           </FormField>
           <FormField label="Tags">
             <Input
+              list="product-tags-autocomplete"
               aria-label="Product tags"
               placeholder="Youth, Climbing, Camp"
               value={(form.tags ?? []).join(", ")}
               onChange={(event) =>
                 setForm((prev) => ({
                   ...prev,
-                  tags: event.target.value
+                  tags: Array.from(
+                    new Set(
+                      event.target.value
                     .split(",")
                     .map((tag) => tag.trim())
-                    .filter(Boolean)
+                        .filter(Boolean)
+                        .map((tag) => {
+                          const lower = tag.toLowerCase().replace(/[\s-_]+/g, "");
+                          const existing = normalizedKnownTags.find(
+                            (knownTag) => knownTag.toLowerCase().replace(/[\s-_]+/g, "") === lower
+                          );
+                          return existing ?? tag;
+                        })
+                    )
+                  )
                 }))
               }
             />
+            <datalist id="product-tags-autocomplete">
+              {normalizedKnownTags.map((tag) => (
+                <option key={tag} value={tag} />
+              ))}
+            </datalist>
           </FormField>
+            <FileUploadField
+              className="md:col-span-2"
+              label="Product image"
+              accept="image/*"
+              filename={imageFilename}
+              helperText="Upload a product image for product cards and POS browsing."
+              onFileSelect={(file) => {
+                if (!file) return;
+                setImageFilename(file.name);
+                const reader = new FileReader();
+                reader.onload = () => {
+                const image = typeof reader.result === "string" ? reader.result : "";
+                if (!image) return;
+                setForm((prev) => ({ ...prev, imageUrls: [image] }));
+              };
+              reader.readAsDataURL(file);
+              }}
+              onRemove={() => {
+                setImageFilename("");
+                setForm((prev) => ({ ...prev, imageUrls: [] }));
+              }}
+            />
+          {form.imageUrls?.[0] ? (
+            <div className="md:col-span-2 rounded-md border p-3">
+              <p className="mb-2 text-sm font-medium">Image preview</p>
+              <img src={form.imageUrls[0]} alt="Product preview" className="h-28 w-28 rounded-md object-cover" />
+            </div>
+          ) : null}
 
           <FormField label="Access behavior">
             <SelectInput
@@ -302,14 +363,13 @@ export function ProductFormModal({
             checked={Boolean(form.pickupAvailable)}
             onChange={(next) => setForm((prev) => ({ ...prev, pickupAvailable: next }))}
           />
-          <label className="space-y-1 text-sm">
-            <span>Minimum age</span>
+          <p className="md:col-span-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Eligibility / Age Rules</p>
+          <FormField label="Minimum age">
             <Input aria-label="Minimum age" type="number" min="0" value={form.minimumAge ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, minimumAge: event.target.value ? Number(event.target.value) : undefined }))} />
-          </label>
-          <label className="space-y-1 text-sm">
-            <span>Maximum age</span>
+          </FormField>
+          <FormField label="Maximum age">
             <Input aria-label="Maximum age" type="number" min="0" value={form.maximumAge ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, maximumAge: event.target.value ? Number(event.target.value) : undefined }))} />
-          </label>
+          </FormField>
 
           <div className="space-y-1 text-sm md:col-span-2">
             <span>Product color</span>

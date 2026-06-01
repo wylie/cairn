@@ -203,6 +203,22 @@ describe("Settings system MVP", () => {
     expect(screen.queryByRole("button", { name: "Create Role" })).not.toBeInTheDocument();
   });
 
+  it("renders closeout and calendar default controls in system controls", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <SettingsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "1111");
+    await user.click(screen.getByRole("button", { name: "System Controls" }));
+    expect(screen.getByLabelText("Facility is open 24/7")).toBeInTheDocument();
+    expect(screen.getByLabelText("Default closeout time")).toBeInTheDocument();
+    expect(screen.getByLabelText("Auto check-out active visitors at closeout")).toBeInTheDocument();
+    expect(screen.getByLabelText("Default calendar view")).toBeInTheDocument();
+  });
+
   it("renders human-readable permissions and hides raw permission keys", async () => {
     const user = userEvent.setup();
     render(

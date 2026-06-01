@@ -19,6 +19,48 @@ import { ROLE_LABELS } from "@/lib/staff/capabilities";
 import { PERMISSION_LABELS } from "@/lib/staff/permissions";
 import type { StaffRole } from "@/types/domain";
 
+type CustomerDocumentType =
+  | "waiver"
+  | "medical"
+  | "incident_report"
+  | "membership"
+  | "consent_form"
+  | "general_document"
+  | "photo";
+
+type CustomerDocumentRecord = {
+  id: string;
+  customerId: string;
+  name: string;
+  type: CustomerDocumentType;
+  uploadedBy: string;
+  uploadedAt: string;
+  status: "active" | "archived";
+};
+
+type CustomerCommunicationType = "email" | "sms" | "system" | "staff_note";
+type CustomerCommunicationRecord = {
+  id: string;
+  customerId: string;
+  sentAt: string;
+  type: CustomerCommunicationType;
+  subject: string;
+  status: "sent" | "queued" | "failed";
+  sentBy: string;
+  body: string;
+};
+
+type CustomerAlertSeverity = "info" | "warning" | "critical";
+type CustomerAlertRecord = {
+  id: string;
+  customerId: string;
+  label: string;
+  severity: CustomerAlertSeverity;
+  status: "open" | "resolved" | "archived";
+  createdBy: string;
+  createdAt: string;
+};
+
 export function CustomerDetailView({ customerId }: { customerId: string }) {
   const {
     customers,
@@ -80,6 +122,10 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     canSignWaivers: boolean;
   } | null>(null);
   const [activeSignedWaiverId, setActiveSignedWaiverId] = useState<string | null>(null);
+  const [timelineFilter, setTimelineFilter] = useState<
+    "all" | "profile" | "access" | "waivers" | "registrations" | "visits" | "purchases" | "communications" | "staff_actions"
+  >("all");
+  const [communicationFilter, setCommunicationFilter] = useState<"all" | "email" | "sms" | "system" | "staff_note">("all");
   const customer = customers.find((entry) => entry.id === customerId);
 
   if (!customer) {
@@ -94,6 +140,59 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     : undefined;
   const generalWaiverStatus = getWaiverStatusForCustomer(customer.id, "wtpl_general");
   const pass = customer.punchPassId ? punchPasses.find((entry) => entry.id === customer.punchPassId) : undefined;
+  const [documents, setDocuments] = useState<CustomerDocumentRecord[]>([
+    {
+      id: `doc-waiver-${customer.id}`,
+      customerId: customer.id,
+      name: "Signed General Facility Waiver",
+      type: "waiver",
+      uploadedBy: "System",
+      uploadedAt: "2026-03-02T11:22:00Z",
+      status: "active"
+    },
+    {
+      id: `doc-membership-${customer.id}`,
+      customerId: customer.id,
+      name: "Membership Agreement",
+      type: "membership",
+      uploadedBy: "Maya Lopez",
+      uploadedAt: "2026-02-15T09:10:00Z",
+      status: "active"
+    }
+  ]);
+  const [communications, setCommunications] = useState<CustomerCommunicationRecord[]>([
+    {
+      id: `comm-reg-${customer.id}`,
+      customerId: customer.id,
+      sentAt: "2026-05-21T10:00:00Z",
+      type: "system",
+      subject: "Registration confirmation",
+      status: "sent",
+      sentBy: "System",
+      body: "Your registration has been confirmed."
+    },
+    {
+      id: `comm-reminder-${customer.id}`,
+      customerId: customer.id,
+      sentAt: "2026-05-20T08:30:00Z",
+      type: "email",
+      subject: "Membership renewal reminder",
+      status: "sent",
+      sentBy: "Maya Lopez",
+      body: "Your membership expires soon."
+    }
+  ]);
+  const [customerAlerts, setCustomerAlerts] = useState<CustomerAlertRecord[]>([
+    {
+      id: `alert-waiver-${customer.id}`,
+      customerId: customer.id,
+      label: "Missing Waiver",
+      severity: "critical",
+      status: generalWaiverStatus === "valid" ? "resolved" : "open",
+      createdBy: "System",
+      createdAt: "2026-05-01T09:00:00Z"
+    }
+  ]);
   const recentCheckIns = checkInRecords
     .filter((entry) => entry.customerId === customer.id)
     .sort((a, b) => b.checkInTime.localeCompare(a.checkInTime))
@@ -298,17 +397,18 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
       { id: "profile", label: "Profile" },
       { id: "access", label: "Access" }
     ];
-    if (customerStaffProfile) {
-      links.push({ id: "staff-profile", label: "Staff Profile" });
-    }
+    if (customerStaffProfile) links.push({ id: "staff-profile", label: "Staff Profile" });
     links.push(
-      { id: "household", label: "Household" },
+      { id: "relationships", label: "Relationships" },
       { id: "payment", label: "Payment" },
       { id: "visits", label: "Visits" },
       { id: "purchases", label: "Purchases" },
+      { id: "documents", label: "Documents" },
+      { id: "communications", label: "Communications" },
       { id: "registrations", label: "Registrations" },
-      { id: "waiver", label: "Waiver" },
-      { id: "notes", label: "Notes" }
+      { id: "waiver", label: "Waivers" },
+      { id: "notes", label: "Notes" },
+      { id: "timeline", label: "Activity Timeline" }
     );
     return links;
   }, [customerStaffProfile]);
@@ -335,7 +435,8 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
       occurredAt: entry.completedAt,
       title: "POS Purchase",
       detail: `${(entry.items ?? []).map((item) => item.productName ?? "Unknown item").join(", ") || "Unknown item"} • ${formatCurrency(entry.total)}`,
-      staff: entry.soldByStaffName ?? "Staff not recorded"
+      staff: entry.soldByStaffName ?? "Staff not recorded",
+      category: "purchases" as const
     })),
     ...(waiver
       ? [
@@ -344,7 +445,8 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
             occurredAt: waiver.signedAt ?? waiver.expiresAt ?? "2026-05-20",
             title: "Waiver Update",
             detail: `Status: ${waiver.status}`,
-            staff: waiver.updatedByStaffName ?? "Staff not recorded"
+            staff: waiver.updatedByStaffName ?? "Staff not recorded",
+            category: "waivers" as const
           }
         ]
       : []),
@@ -353,14 +455,16 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
       occurredAt: entry.session?.startsAt ?? "2026-05-20",
       title: "Session Registration",
       detail: `${entry.session?.title ?? entry.program?.title ?? "Session"} • ${entry.registration.status}`,
-      staff: "Staff not recorded"
+      staff: "Staff not recorded",
+      category: "registrations" as const
     })),
     ...accessRecords.slice(0, 4).map((entry) => ({
       id: `access-${entry.id}`,
       occurredAt: entry.startDate ?? "2026-05-20",
       title: "Access Change",
       detail: `${entry.notes ?? entry.type} • ${entry.status}`,
-      staff: entry.grantedByStaffName ?? "Staff not recorded"
+      staff: entry.grantedByStaffName ?? "Staff not recorded",
+      category: "access" as const
     })),
     ...(customer.updatedAt
       ? [
@@ -369,7 +473,8 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
             occurredAt: customer.updatedAt,
             title: "Profile Update",
             detail: "Customer profile details updated",
-            staff: customer.updatedByStaffName ?? "Staff not recorded"
+            staff: customer.updatedByStaffName ?? "Staff not recorded",
+            category: "profile" as const
           }
         ]
       : []),
@@ -380,9 +485,42 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
         occurredAt: entry.checkInTime,
         title: "Manager Override",
         detail: entry.overrideReason ?? "Override applied",
-        staff: entry.checkedInByStaffName ?? "Staff not recorded"
+        staff: entry.checkedInByStaffName ?? "Staff not recorded",
+        category: "staff_actions" as const
       }))
+    ,
+    ...documents.map((entry) => ({
+      id: `document-${entry.id}`,
+      occurredAt: entry.uploadedAt,
+      title: "Document Uploaded",
+      detail: `${entry.name} • ${titleCase(entry.type)}`,
+      staff: entry.uploadedBy,
+      category: "profile" as const
+    })),
+    ...communications.map((entry) => ({
+      id: `communication-${entry.id}`,
+      occurredAt: entry.sentAt,
+      title: "Communication Logged",
+      detail: `${entry.subject} • ${titleCase(entry.type)}`,
+      staff: entry.sentBy,
+      category: "communications" as const
+    })),
+    ...customerAlerts.map((entry) => ({
+      id: `alert-${entry.id}`,
+      occurredAt: entry.createdAt,
+      title: "Alert Updated",
+      detail: `${entry.label} • ${titleCase(entry.status)}`,
+      staff: entry.createdBy,
+      category: "staff_actions" as const
+    }))
   ].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+  const filteredTimelineEvents = timelineFilter === "all"
+    ? timelineEvents
+    : timelineEvents.filter((entry) => entry.category === timelineFilter);
+  const filteredCommunications = communicationFilter === "all"
+    ? communications
+    : communications.filter((entry) => entry.type === communicationFilter);
+  const openAlerts = customerAlerts.filter((entry) => entry.status === "open");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -518,6 +656,18 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
               ))}
             </div>
           ) : null}
+          {openAlerts.length > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-2" aria-label="detail-customer-flags">
+              {openAlerts.map((alert) => (
+                <Badge
+                  key={alert.id}
+                  tone={alert.severity === "critical" ? "danger" : alert.severity === "warning" ? "warning" : "muted"}
+                >
+                  {alert.label}
+                </Badge>
+              ))}
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -563,6 +713,67 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
             )}
           </CardContent>
         </Card>
+        <Card aria-label="detail-alerts">
+          <CardHeader><CardTitle>Alerts & Flags</CardTitle></CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                className="h-9"
+                variant="secondary"
+                onClick={() => {
+                  const now = new Date().toISOString();
+                  setCustomerAlerts((prev) => [
+                    {
+                      id: `alert_${Math.random().toString(36).slice(2, 9)}`,
+                      customerId: customer.id,
+                      label: "Staff Attention Required",
+                      severity: "warning",
+                      status: "open",
+                      createdBy: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : "Staff",
+                      createdAt: now
+                    },
+                    ...prev
+                  ]);
+                }}
+              >
+                Create Alert
+              </Button>
+            </div>
+            {customerAlerts.map((entry) => (
+              <div key={entry.id} className="rounded-md border p-3">
+                <p className="font-medium">{entry.label}</p>
+                <p className="text-muted-foreground">
+                  {titleCase(entry.severity)} • {titleCase(entry.status)} • {entry.createdBy} • {new Date(entry.createdAt).toLocaleString("en-US")}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button className="h-8" variant="secondary" onClick={() => setProfileFeedback(`Edit alert placeholder: ${entry.label}`)}>Edit Alert</Button>
+                  <Button
+                    className="h-8"
+                    variant="secondary"
+                    onClick={() =>
+                      setCustomerAlerts((prev) =>
+                        prev.map((alert) => (alert.id === entry.id ? { ...alert, status: alert.status === "resolved" ? "open" : "resolved" } : alert))
+                      )
+                    }
+                  >
+                    {entry.status === "resolved" ? "Reopen Alert" : "Resolve Alert"}
+                  </Button>
+                  <Button
+                    className="h-8"
+                    variant="secondary"
+                    onClick={() =>
+                      setCustomerAlerts((prev) =>
+                        prev.map((alert) => (alert.id === entry.id ? { ...alert, status: "archived" } : alert))
+                      )
+                    }
+                  >
+                    Archive Alert
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="detail-summary-cards">
           <CustomerSummaryCard
             title="Access Status"
@@ -583,6 +794,16 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
             title="Upcoming Registration"
             value={latestUpcomingSession ? latestUpcomingSession.session?.title ?? "Scheduled Session" : "No upcoming session"}
             detail={latestUpcomingSession?.session?.startsAt ? new Date(latestUpcomingSession.session.startsAt).toLocaleString("en-US") : "No upcoming registrations"}
+          />
+          <CustomerSummaryCard
+            title="Alerts"
+            value={`${openAlerts.length}`}
+            detail={openAlerts.length ? "Needs attention" : "No open alerts"}
+          />
+          <CustomerSummaryCard
+            title="Documents"
+            value={`${documents.length}`}
+            detail={documents.filter((entry) => entry.status === "archived").length ? "Includes archived files" : "All active"}
           />
         </div>
       </section>
@@ -886,9 +1107,9 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
         </section>
       ) : null}
 
-      <section id="household" aria-label="section-household" className="scroll-mt-40 space-y-4">
+      <section id="relationships" aria-label="section-relationships" className="scroll-mt-40 space-y-4">
       <Card aria-label="detail-household">
-        <CardHeader><CardTitle>Household</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Relationships</CardTitle></CardHeader>
         <CardContent className="space-y-3 text-sm">
           {!household ? (
             <>
@@ -986,6 +1207,9 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                         <p className="text-muted-foreground">
                           {member.memberType === "adult" ? "Adult" : "Child"} · {formatHouseholdRelationship(member.relationship)} · Priority {member.emergencyContactPriority ?? "—"}
                           {household?.primaryContactCustomerId === member.customerId ? " · Primary Adult" : ""}
+                        </p>
+                        <p className="text-muted-foreground">
+                          {member.customer?.phone ?? "No phone"} • {member.customer?.email ?? "No email"}
                         </p>
                         <div className="mt-2 flex flex-wrap gap-2">
                           {member.canCheckInOthers ? <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs text-emerald-800">Check-in others</span> : null}
@@ -1472,21 +1696,6 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
       {profileFeedback ? <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{profileFeedback}</p> : null}
 
       <section id="visits" aria-label="section-visits" className="scroll-mt-40 space-y-4">
-      <Card aria-label="detail-timeline">
-        <CardHeader><CardTitle>Customer Timeline</CardTitle></CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          {timelineEvents.length === 0 ? <p className="text-muted-foreground">No activity recorded yet.</p> : null}
-          {timelineEvents.slice(0, 12).map((entry) => (
-            <div key={entry.id} className="rounded-lg border p-3">
-              <p className="font-medium">{entry.title}</p>
-              <p className="text-muted-foreground">{entry.detail}</p>
-              <p className="text-muted-foreground">{new Date(entry.occurredAt).toLocaleString("en-US")}</p>
-              <p className="text-muted-foreground">Staff: {entry.staff}</p>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
       <Card aria-label="detail-visit-history">
         <CardHeader><CardTitle>Visit History</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
@@ -1523,6 +1732,133 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
           {purchaseHistoryEntries.length > 3 ? <p className="text-xs text-muted-foreground">Showing recent purchases only.</p> : null}
         </CardContent>
       </Card>
+      </section>
+
+      <section id="documents" aria-label="section-documents" className="scroll-mt-40 space-y-4">
+        <Card aria-label="detail-documents">
+          <CardHeader><CardTitle>Documents</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                className="h-9"
+                onClick={() => {
+                  const now = new Date().toISOString();
+                  setDocuments((prev) => [
+                    {
+                      id: `doc_${Math.random().toString(36).slice(2, 9)}`,
+                      customerId: customer.id,
+                      name: "Uploaded Document",
+                      type: "general_document",
+                      uploadedBy: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : "Staff",
+                      uploadedAt: now,
+                      status: "active"
+                    },
+                    ...prev
+                  ]);
+                }}
+              >
+                Upload Document
+              </Button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[680px] text-left">
+                <thead>
+                  <tr className="border-b text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="px-2 py-2 font-medium">Document Name</th>
+                    <th className="px-2 py-2 font-medium">Type</th>
+                    <th className="px-2 py-2 font-medium">Uploaded By</th>
+                    <th className="px-2 py-2 font-medium">Upload Date</th>
+                    <th className="px-2 py-2 font-medium">Status</th>
+                    <th className="px-2 py-2 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {documents.map((entry) => (
+                    <tr key={entry.id} className="border-b last:border-b-0">
+                      <td className="px-2 py-2">{entry.name}</td>
+                      <td className="px-2 py-2">{titleCase(entry.type)}</td>
+                      <td className="px-2 py-2">{entry.uploadedBy}</td>
+                      <td className="px-2 py-2">{new Date(entry.uploadedAt).toLocaleString("en-US")}</td>
+                      <td className="px-2 py-2">{titleCase(entry.status)}</td>
+                      <td className="px-2 py-2">
+                        <div className="flex flex-wrap gap-2">
+                          <Button className="h-8" variant="secondary" onClick={() => setProfileFeedback(`Viewing ${entry.name}`)}>View</Button>
+                          <Button className="h-8" variant="secondary" onClick={() => setProfileFeedback(`Download placeholder for ${entry.name}`)}>Download</Button>
+                          <Button
+                            className="h-8"
+                            variant="secondary"
+                            onClick={() => setDocuments((prev) => prev.map((doc) => doc.id === entry.id ? { ...doc, status: doc.status === "archived" ? "active" : "archived" } : doc))}
+                          >
+                            {entry.status === "archived" ? "Restore" : "Archive"}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section id="communications" aria-label="section-communications" className="scroll-mt-40 space-y-4">
+        <Card aria-label="detail-communications">
+          <CardHeader><CardTitle>Communications</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                aria-label="Communication filter"
+                className="h-10 rounded-md border border-input bg-white px-3 text-sm"
+                value={communicationFilter}
+                onChange={(event) => setCommunicationFilter(event.target.value as typeof communicationFilter)}
+              >
+                <option value="all">All</option>
+                <option value="email">Email</option>
+                <option value="sms">SMS</option>
+                <option value="system">System</option>
+                <option value="staff_note">Staff Notes</option>
+              </select>
+              <Button
+                className="h-9"
+                variant="secondary"
+                onClick={() => {
+                  const now = new Date().toISOString();
+                  setCommunications((prev) => [
+                    {
+                      id: `comm_${Math.random().toString(36).slice(2, 9)}`,
+                      customerId: customer.id,
+                      sentAt: now,
+                      type: "staff_note",
+                      subject: "Manual communication log",
+                      status: "sent",
+                      sentBy: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : "Staff",
+                      body: "Communication logged manually."
+                    },
+                    ...prev
+                  ]);
+                }}
+              >
+                Log Communication
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {filteredCommunications.map((entry) => (
+                <div key={entry.id} className="rounded-md border p-3">
+                  <p className="font-medium">{entry.subject}</p>
+                  <p className="text-muted-foreground">
+                    {new Date(entry.sentAt).toLocaleString("en-US")} • {titleCase(entry.type)} • {titleCase(entry.status)} • {entry.sentBy}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Button className="h-8" variant="secondary" onClick={() => setProfileFeedback(entry.body)}>View Message</Button>
+                    <Button className="h-8" variant="secondary" onClick={() => setProfileFeedback("Resend placeholder.")}>Resend</Button>
+                  </div>
+                </div>
+              ))}
+              {filteredCommunications.length === 0 ? <p className="text-muted-foreground">No communications found.</p> : null}
+            </div>
+          </CardContent>
+        </Card>
       </section>
 
       <section id="registrations" aria-label="section-registrations" className="scroll-mt-40 space-y-4">
@@ -1728,6 +2064,45 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
         <CardHeader><CardTitle>Notes</CardTitle></CardHeader>
         <CardContent><p className="text-sm text-muted-foreground">{customer.notes ?? "No internal notes yet."}</p></CardContent>
       </Card>
+      </section>
+
+      <section id="timeline" aria-label="section-timeline" className="scroll-mt-40 space-y-4">
+        <Card aria-label="detail-timeline">
+          <CardHeader><CardTitle>Activity Timeline</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex flex-wrap gap-2">
+              {[
+                ["all", "All"],
+                ["profile", "Profile"],
+                ["access", "Access"],
+                ["waivers", "Waivers"],
+                ["registrations", "Registrations"],
+                ["visits", "Visits"],
+                ["purchases", "Purchases"],
+                ["communications", "Communications"],
+                ["staff_actions", "Staff Actions"]
+              ].map(([value, label]) => (
+                <Button
+                  key={value}
+                  className="h-8"
+                  variant={timelineFilter === value ? "default" : "secondary"}
+                  onClick={() => setTimelineFilter(value as typeof timelineFilter)}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+            {filteredTimelineEvents.length === 0 ? <p className="text-muted-foreground">No activity recorded yet.</p> : null}
+            {filteredTimelineEvents.slice(0, 20).map((entry) => (
+              <div key={entry.id} className="rounded-lg border p-3">
+                <p className="font-medium">{entry.title}</p>
+                <p className="text-muted-foreground">{entry.detail}</p>
+                <p className="text-muted-foreground">{new Date(entry.occurredAt).toLocaleString("en-US")}</p>
+                <p className="text-muted-foreground">Staff: {entry.staff}</p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </section>
     </div>
   );

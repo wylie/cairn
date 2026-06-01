@@ -73,7 +73,7 @@ describe("CustomerDetailPage", () => {
     const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
     render(<TestProviders>{page}</TestProviders>);
     const jumpRow = screen.getByLabelText("detail-jump-links");
-    const labels = ["Overview", "Profile", "Access", "Household", "Payment", "Visits", "Purchases", "Registrations", "Waiver", "Notes"];
+    const labels = ["Overview", "Profile", "Access", "Relationships", "Payment", "Visits", "Purchases", "Documents", "Communications", "Registrations", "Waivers", "Notes", "Activity Timeline"];
     labels.forEach((label) => {
       const link = within(jumpRow).getByRole("link", { name: label });
       expect(link.getAttribute("href")).toMatch(/^#/);
@@ -98,13 +98,16 @@ describe("CustomerDetailPage", () => {
       "#overview",
       "#profile",
       "#access",
-      "#household",
+      "#relationships",
       "#payment",
       "#visits",
       "#purchases",
+      "#documents",
+      "#communications",
       "#registrations",
       "#waiver",
-      "#notes"
+      "#notes",
+      "#timeline"
     ]);
   });
 
@@ -135,7 +138,7 @@ describe("CustomerDetailPage", () => {
     render(<TestProviders>{page}</TestProviders>);
     const jumpRow = screen.getByLabelText("detail-jump-links");
     const overviewLink = within(jumpRow).getByRole("link", { name: "Overview" });
-    const waiverLink = within(jumpRow).getByRole("link", { name: "Waiver" });
+    const waiverLink = within(jumpRow).getByRole("link", { name: "Waivers" });
     expect(overviewLink.className).toContain("bg-primary");
     expect(waiverLink.className).not.toContain("bg-primary");
 
@@ -201,7 +204,7 @@ describe("CustomerDetailPage", () => {
   it("sections include scroll margin for sticky nav offsets", async () => {
     const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
     const { container } = render(<TestProviders>{page}</TestProviders>);
-    ["overview", "profile", "access", "waiver", "visits", "purchases", "registrations", "household", "notes", "payment"].forEach((id) => {
+    ["overview", "profile", "access", "relationships", "payment", "visits", "purchases", "documents", "communications", "registrations", "waiver", "notes", "timeline"].forEach((id) => {
       const section = container.querySelector(`#${id}`) as HTMLElement;
       expect(section).toBeTruthy();
       expect(section.className).toContain("scroll-mt-40");
@@ -240,6 +243,71 @@ describe("CustomerDetailPage", () => {
     expect(screen.getAllByText(/Punches used: 1/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Punches remaining: 8/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Checked in by: Taylor Nguyen/i).length).toBeGreaterThan(0);
+  });
+
+  it("documents section supports upload and archive", async () => {
+    const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
+    render(
+      <TestProviders>
+        <TopBar />
+        {page}
+      </TestProviders>
+    );
+    const user = userEvent.setup();
+    await activateStaff(user, "2222");
+    const section = screen.getByLabelText("detail-documents");
+    await user.click(within(section).getByRole("button", { name: "Upload Document" }));
+    expect(section).toHaveTextContent("Uploaded Document");
+    const archiveButtons = within(section).getAllByRole("button", { name: "Archive" });
+    await user.click(archiveButtons[0]);
+    expect(section).toHaveTextContent(/archived/i);
+  });
+
+  it("communications section renders history and supports logging entries", async () => {
+    const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
+    render(
+      <TestProviders>
+        <TopBar />
+        {page}
+      </TestProviders>
+    );
+    const user = userEvent.setup();
+    await activateStaff(user, "2222");
+    const section = screen.getByLabelText("detail-communications");
+    expect(section).toHaveTextContent("Registration confirmation");
+    await user.click(within(section).getByRole("button", { name: "Log Communication" }));
+    expect(section).toHaveTextContent("Manual communication log");
+  });
+
+  it("alerts section displays and can resolve alerts", async () => {
+    const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
+    render(
+      <TestProviders>
+        <TopBar />
+        {page}
+      </TestProviders>
+    );
+    const user = userEvent.setup();
+    await activateStaff(user, "2222");
+    const alerts = screen.getByLabelText("detail-alerts");
+    expect(alerts).toBeInTheDocument();
+    await user.click(within(alerts).getAllByRole("button", { name: /Resolve Alert|Reopen Alert/i })[0]);
+    expect(alerts).toHaveTextContent(/Resolved|Open/i);
+  });
+
+  it("timeline filtering updates visible activity rows", async () => {
+    const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
+    render(
+      <TestProviders>
+        <TopBar />
+        {page}
+      </TestProviders>
+    );
+    const user = userEvent.setup();
+    await activateStaff(user, "2222");
+    const timeline = screen.getByLabelText("detail-timeline");
+    await user.click(within(timeline).getByRole("button", { name: "Communications" }));
+    expect(timeline).toHaveTextContent("Communication Logged");
   });
 
   it("renders header action buttons", async () => {

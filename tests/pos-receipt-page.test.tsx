@@ -76,4 +76,50 @@ describe("Receipt detail", () => {
     await user.click(screen.getByRole("button", { name: "Confirm Refund" }));
     expect(screen.getByRole("status")).toHaveTextContent(/Refunded \$28.00/i);
   });
+
+  it("hides refund action when staff lacks permission", async () => {
+    const transactionsKey = buildScopedMockKey("org_summit", "loc_001", "transactions");
+    window.localStorage.setItem(
+      transactionsKey,
+      JSON.stringify([
+        {
+          id: "txn_receipt_test",
+          organizationId: "org_summit",
+          locationId: "loc_001",
+          customerId: "cust_004",
+          customerName: "Sam Noaccess",
+          transactionType: "sale",
+          returnStatus: "none",
+          items: [
+            {
+              productId: "prd_001",
+              productName: "Day Pass",
+              category: "day_passes",
+              type: "access",
+              quantity: 1,
+              unitPrice: 28,
+              lineTotal: 28
+            }
+          ],
+          subtotal: 28,
+          total: 28,
+          paymentType: "card",
+          completedAt: "2026-05-25T12:00:00Z",
+          checkInTriggered: false,
+          receiptNumber: "R-TEST01"
+        }
+      ])
+    );
+
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <ReceiptDetailPage />
+      </TestProviders>
+    );
+
+    await activateStaff(user, "3333");
+    expect(screen.queryByRole("button", { name: "Refund" })).not.toBeInTheDocument();
+  });
 });

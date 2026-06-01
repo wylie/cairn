@@ -724,6 +724,10 @@ export interface PosTransaction {
   customerName: string;
   customerEmail?: string;
   customerMemberId?: string;
+  purchaserCustomerId?: string;
+  purchaserCustomerName?: string;
+  purchasedForCustomerIds?: string[];
+  householdId?: string;
   transactionType: "sale" | "return";
   originalTransactionId?: string;
   returnStatus: "none" | "partially_returned" | "fully_returned";
@@ -736,6 +740,7 @@ export interface PosTransaction {
   total: number;
   completedAt: string;
   paymentType: "mock" | "card" | "cash" | "comp" | "gift_card" | "account_credit" | "split";
+  receiptStatus?: "paid" | "pending" | "refunded" | "partially_refunded" | "voided" | "comped";
   paymentBreakdown?: Array<{ method: "card" | "cash" | "comp" | "gift_card" | "account_credit"; amountCents: number }>;
   discountCents?: number;
   taxCents?: number;

@@ -1245,6 +1245,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     );
     const targetCustomers = customers.filter((entry) => targetCustomerIds.includes(entry.id));
     if (targetCustomers.length === 0) return { ok: false, message: "Select a customer to complete sale." };
+    const purchaserHouseholdMembership = householdMembers.find((entry) => entry.customerId === options.customerId);
 
     let nextCustomer = customer;
     const newAccessRecords: CustomerAccessRecord[] = [];
@@ -1372,6 +1373,10 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       customerName: `${customer.firstName} ${customer.lastName}`,
       customerEmail: customer.email,
       customerMemberId: customer.memberId,
+      purchaserCustomerId: customer.id,
+      purchaserCustomerName: `${customer.firstName} ${customer.lastName}`,
+      purchasedForCustomerIds: targetCustomerIds,
+      householdId: purchaserHouseholdMembership?.householdId,
       transactionType: "sale",
       returnStatus: "none",
       soldByStaffId: options.soldByStaffId,
@@ -1381,6 +1386,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       total,
       completedAt: `${activeDateKey}T15:30:00Z`,
       paymentType: options.paymentType ?? "mock",
+      receiptStatus: (options.paymentType ?? "mock") === "comp" ? "comped" : "paid",
       paymentProcessor: options.paymentProcessor,
       paymentApprovalCode: options.paymentApprovalCode,
       paymentCardLast4: options.paymentCardLast4,
@@ -1488,6 +1494,10 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       customerName: original.customerName,
       customerEmail: original.customerEmail,
       customerMemberId: original.customerMemberId,
+      purchaserCustomerId: original.purchaserCustomerId ?? original.customerId,
+      purchaserCustomerName: original.purchaserCustomerName ?? original.customerName,
+      purchasedForCustomerIds: original.purchasedForCustomerIds ?? [original.customerId],
+      householdId: original.householdId,
       transactionType: "return",
       originalTransactionId: original.id,
       returnStatus: "none",
@@ -1498,6 +1508,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       total: -requested,
       completedAt: new Date().toISOString(),
       paymentType: original.paymentType,
+      receiptStatus: "refunded",
       paymentProcessor: original.paymentProcessor,
       paymentApprovalCode: original.paymentApprovalCode,
       paymentCardLast4: original.paymentCardLast4,
@@ -1513,6 +1524,9 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         return {
           ...entry,
           refundedTotal: totalRefunded,
+          receiptStatus: (totalRefunded >= entry.total ? "refunded" : "partially_refunded") as
+            | "refunded"
+            | "partially_refunded",
           returnStatus: (totalRefunded >= entry.total ? "fully_returned" : "partially_returned") as
             | "fully_returned"
             | "partially_returned"

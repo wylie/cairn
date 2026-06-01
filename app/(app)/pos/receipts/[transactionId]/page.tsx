@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
+import { getReceiptStatus, getReceiptStatusLabel } from "@/lib/portal/receipts";
+import { getLocationName } from "@/lib/public-programs";
 import { formatCurrency } from "@/lib/transactions";
 
 export default function ReceiptDetailPage() {
   const { transactionId } = useParams<{ transactionId: string }>();
-  const { transactions, refundTransaction } = useCustomerState();
+  const { transactions, refundTransaction, customers } = useCustomerState();
   const { activeStaff, hasPermission } = useWorkstationState();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [reason, setReason] = useState("Customer request");
@@ -33,6 +35,11 @@ export default function ReceiptDetailPage() {
   }
 
   const canRefund = hasPermission("refundTransaction") && receipt.transactionType === "sale";
+  const receiptStatus = getReceiptStatus(receipt);
+  const purchasedForNames = (receipt.purchasedForCustomerIds ?? [receipt.customerId])
+    .map((id) => customers.find((entry) => entry.id === id))
+    .filter(Boolean)
+    .map((entry) => `${entry!.firstName} ${entry!.lastName}`);
 
   return (
     <section className="space-y-4">
@@ -40,6 +47,7 @@ export default function ReceiptDetailPage() {
         <div>
           <h2 className="text-2xl font-semibold">Receipt {receipt.receiptNumber}</h2>
           <p className="text-sm text-muted-foreground">{new Date(receipt.completedAt).toLocaleString()}</p>
+          <p className="text-sm text-muted-foreground">Status: {getReceiptStatusLabel(receiptStatus)}</p>
         </div>
         <div className="flex items-center gap-2">
           <Link href="/pos/history" className="text-sm underline">Back to Sales History</Link>
@@ -55,7 +63,9 @@ export default function ReceiptDetailPage() {
         <div className="grid gap-2 text-sm md:grid-cols-2">
           <p><span className="text-muted-foreground">Customer:</span> {receipt.customerName || "Unknown customer"}</p>
           <p><span className="text-muted-foreground">Staff:</span> {receipt.soldByStaffName || "Staff not recorded"}</p>
-          <p><span className="text-muted-foreground">Location:</span> {receipt.locationId}</p>
+          <p><span className="text-muted-foreground">Location:</span> {getLocationName(receipt.locationId)}</p>
+          <p><span className="text-muted-foreground">Purchased by:</span> {(receipt.purchaserCustomerName ?? receipt.customerName) || "Unknown customer"}</p>
+          <p><span className="text-muted-foreground">Purchased for:</span> {purchasedForNames.join(", ") || "Not recorded"}</p>
           <p><span className="text-muted-foreground">Payment:</span> {receipt.paymentType.replace(/_/g, " ")}</p>
           <p><span className="text-muted-foreground">Processor:</span> {receipt.paymentProcessor || "Mock Payments"}</p>
           <p><span className="text-muted-foreground">Approval:</span> {receipt.paymentApprovalCode || "—"}</p>

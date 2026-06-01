@@ -91,6 +91,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
   } = useCustomerState();
   const {
     activeStaff,
+    hasPermission,
     resetStaffPin,
     resetPasswordPlaceholder,
     suspendStaffMember,
@@ -198,7 +199,12 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     .sort((a, b) => b.checkInTime.localeCompare(a.checkInTime))
     .slice(0, 6);
   const recentPurchases = transactions
-    .filter((entry) => entry.customerId === customer.id)
+    .filter(
+      (entry) =>
+        entry.customerId === customer.id ||
+        entry.purchaserCustomerId === customer.id ||
+        (entry.purchasedForCustomerIds ?? []).includes(customer.id)
+    )
     .sort((a, b) => b.completedAt.localeCompare(a.completedAt))
     .slice(0, 6);
   const customerSessionHistory = registrations
@@ -326,6 +332,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
         }))
         .sort((a, b) => (a.emergencyContactPriority ?? 999) - (b.emergencyContactPriority ?? 999))
     : [];
+  const householdCustomerIdSet = new Set(householdRows.map((row) => row.customerId));
   const householdPrimaryContact = household
     ? customers.find((entry) => entry.id === household.primaryContactCustomerId)
     : undefined;
@@ -363,11 +370,11 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     .sort((a, b) => (a.session?.startsAt ?? "").localeCompare(b.session?.startsAt ?? ""))
     .slice(0, 6);
   const householdPurchases = transactions
-    .filter((transaction) =>
-      transaction.customerId
-        ? householdRows.some((row) => row.customerId === transaction.customerId)
-        : false
-    )
+    .filter((transaction) => {
+      if (transaction.customerId && householdCustomerIdSet.has(transaction.customerId)) return true;
+      if (transaction.purchaserCustomerId && householdCustomerIdSet.has(transaction.purchaserCustomerId)) return true;
+      return (transaction.purchasedForCustomerIds ?? []).some((id) => householdCustomerIdSet.has(id));
+    })
     .sort((a, b) => b.completedAt.localeCompare(a.completedAt))
     .slice(0, 6);
   const alerts: Array<{ id: string; tone: "warning" | "danger" | "success"; message: string }> = [];
@@ -1726,6 +1733,24 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                 <p>Total: {formatCurrency(entry.total)}</p>
                 <p className="text-muted-foreground">Sold by {entry.soldByStaffName ?? "Staff not recorded"}</p>
                 <p className="text-muted-foreground">Receipt #{entry.receiptNumber}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {"transactionType" in entry ? (
+                    <Link href={`/pos/receipts/${entry.id}`} className="inline-flex h-8 items-center rounded-md border px-3 text-xs">
+                      View Receipt
+                    </Link>
+                  ) : null}
+                  <Button variant="secondary" className="h-8 text-xs" onClick={() => window.print()}>
+                    Print Receipt
+                  </Button>
+                  <Button variant="secondary" className="h-8 text-xs">
+                    Email Receipt (Soon)
+                  </Button>
+                  {"transactionType" in entry && hasPermission("refundTransaction") ? (
+                    <Button variant="destructiveSubtle" className="h-8 text-xs">
+                      Refund (Soon)
+                    </Button>
+                  ) : null}
+                </div>
               </div>
             ))
           )}

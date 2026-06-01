@@ -103,6 +103,9 @@ describe("POS sales history", () => {
     expect(stored[0].customerName).toBe("Sam Noaccess");
     expect(stored[0].customerEmail).toBe("sam.noaccess@example.com");
     expect(stored[0].customerMemberId).toBe("M-1004");
+    expect(stored[0].purchaserCustomerId).toBe("cust_004");
+    expect(stored[0].purchasedForCustomerIds).toContain("cust_004");
+    expect(stored[0].receiptStatus).toBe("paid");
     expect(stored[0].items[0].unitPrice).toBe(28);
     expect(stored[0].items[0].lineTotal).toBe(28);
     expect(stored[0].subtotal).toBe(28);
@@ -131,11 +134,11 @@ describe("POS sales history", () => {
     await user.type(screen.getByLabelText("Search sales history"), "day pass");
     expect(screen.getAllByText(/Day Pass/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText("$28.00").length).toBeGreaterThan(0);
-    expect(screen.getByText(/Sold by Maya Lopez/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Sold by Maya Lopez/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Sam Noaccess/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Day Pass x1 — \$28.00 \(\$28.00\)/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Day Pass x1 — \$28.00 \(\$28.00\)/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Total: \$28.00/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Check-in fulfillment/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Check-in fulfillment/i).length).toBeGreaterThan(0);
   });
 
   it("staff comp can create a zero-dollar transaction", async () => {

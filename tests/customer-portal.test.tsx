@@ -15,7 +15,8 @@ vi.mock("next/navigation", () => ({
     push: vi.fn(),
     refresh: vi.fn()
   }),
-  usePathname: () => "/p/summit/dashboard"
+  usePathname: () => "/p/summit/dashboard",
+  useParams: () => ({ orgSlug: "summit" })
 }));
 
 function setCustomerSessionCookie() {
@@ -43,7 +44,9 @@ describe("customer portal", () => {
     );
     expect(screen.getByText(/Welcome Back/i)).toBeInTheDocument();
     expect(screen.getByText("Active Memberships")).toBeInTheDocument();
-    expect(screen.getByText("Upcoming Programs")).toBeInTheDocument();
+    expect(screen.getAllByText("Upcoming Programs").length).toBeGreaterThan(0);
+    expect(screen.getByText("Membership Summary")).toBeInTheDocument();
+    expect(screen.getByText("Household Visits This Month")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Register for Program" })).toBeInTheDocument();
   });
 

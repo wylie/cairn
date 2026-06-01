@@ -132,6 +132,14 @@ export function normalizeTransaction(entry: Partial<PosTransaction>, products: P
     customerName: typeof entry.customerName === "string" ? entry.customerName : "",
     customerEmail: entry.customerEmail,
     customerMemberId: entry.customerMemberId,
+    purchaserCustomerId: entry.purchaserCustomerId ?? entry.customerId,
+    purchaserCustomerName: entry.purchaserCustomerName ?? entry.customerName,
+    purchasedForCustomerIds: Array.isArray(entry.purchasedForCustomerIds)
+      ? entry.purchasedForCustomerIds.filter((value): value is string => typeof value === "string")
+      : entry.customerId
+      ? [entry.customerId]
+      : [],
+    householdId: entry.householdId,
     transactionType: entry.transactionType ?? "sale",
     originalTransactionId: entry.originalTransactionId,
     returnStatus: entry.returnStatus ?? "none",
@@ -147,9 +155,19 @@ export function normalizeTransaction(entry: Partial<PosTransaction>, products: P
       entry.paymentType === "cash" ||
       entry.paymentType === "comp" ||
       entry.paymentType === "gift_card" ||
-      entry.paymentType === "account_credit"
+      entry.paymentType === "account_credit" ||
+      entry.paymentType === "split"
         ? entry.paymentType
         : "mock",
+    receiptStatus:
+      entry.receiptStatus === "pending" ||
+      entry.receiptStatus === "refunded" ||
+      entry.receiptStatus === "partially_refunded" ||
+      entry.receiptStatus === "voided" ||
+      entry.receiptStatus === "comped" ||
+      entry.receiptStatus === "paid"
+        ? entry.receiptStatus
+        : (entry.paymentType === "comp" ? "comped" : "paid"),
     paymentProcessor: entry.paymentProcessor,
     paymentApprovalCode: entry.paymentApprovalCode,
     paymentCardLast4: entry.paymentCardLast4,

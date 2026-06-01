@@ -11,6 +11,7 @@ import { canCustomerViewReceipt } from "@/lib/portal/receipts";
 import { formatCurrency } from "@/lib/transactions";
 import { useCustomerPortalData } from "@/lib/portal/use-customer-portal-data";
 import { CustomerPortalContainer } from "@/components/portal/customer-portal-container";
+import { CustomerAvatar } from "@/components/customers/customer-avatar";
 
 export default function CustomerPortalHouseholdPage() {
   const { orgSlug } = useParams<{ orgSlug: string }>();
@@ -124,7 +125,10 @@ export default function CustomerPortalHouseholdPage() {
           {memberRows.map((row) => (
             <div key={row.customer.id} className="space-y-2 rounded-md border p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-medium">{row.customer.firstName} {row.customer.lastName}</p>
+                <div className="flex items-center gap-2">
+                  <CustomerAvatar customer={row.customer} sizeClassName="h-10 w-10" />
+                  <p className="font-medium">{row.customer.firstName} {row.customer.lastName}</p>
+                </div>
                 <div className="flex flex-wrap gap-2">
                   <Badge tone={row.access?.status === "active" ? "success" : row.access?.status === "expired" ? "danger" : "warning"}>
                     {row.access?.status === "active" ? "Membership Active" : row.access?.status === "expired" ? "Membership Expired" : "No Membership"}

@@ -24,6 +24,7 @@ describe("Registrations workstation", () => {
     expect(screen.getByLabelText("session-details-panel")).toBeInTheDocument();
     expect(screen.getByLabelText("customer-enrollment-panel")).toBeInTheDocument();
     expect(screen.getByTestId("registrations-layout").className).toContain("xl:grid-cols-[1fr_1.2fr_1fr]");
+    expect(screen.getAllByLabelText(/initials avatar/i).length).toBeGreaterThan(0);
   });
 
   it("creates a registration and records audit metadata", async () => {

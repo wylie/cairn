@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CustomerDetailPage from "@/app/(app)/customers/[id]/page";
 import { CheckInList } from "@/components/checkins/checkin-list";
@@ -806,27 +806,30 @@ describe("CustomerDetailPage", () => {
     storage.restore();
   });
 
-  it("profile photo URL displays and clearing photo returns to initials", async () => {
+  it("supports photo upload, replacement, and removal", async () => {
     const user = userEvent.setup();
     const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
-    render(
+    const view = render(
       <TestProviders>
         <TopBar />
         {page}
       </TestProviders>
     );
     await activateStaff(user, "2222");
-    await user.click(screen.getByRole("button", { name: "Edit Profile" }));
-    await user.clear(screen.getByLabelText("Profile photo URL"));
-    await user.type(screen.getByLabelText("Profile photo URL"), "https://example.com/maya.jpg");
-    await user.click(screen.getByRole("button", { name: "Save Changes" }));
-    expect(screen.getByRole("img", { name: "Maya Patel profile" })).toBeInTheDocument();
+    const fileInput = view.container.querySelector("input[type='file']") as HTMLInputElement;
+    expect(fileInput).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Edit Profile" }));
-    await user.clear(screen.getByLabelText("Profile photo URL"));
-    await user.click(screen.getByRole("button", { name: "Save Changes" }));
-    expect(screen.queryByRole("img", { name: "Maya Patel profile" })).not.toBeInTheDocument();
-    expect(screen.getByText("MP")).toBeInTheDocument();
+    const jpg = new File(["avatar"], "maya.jpg", { type: "image/jpeg" });
+    fireEvent.change(fileInput, { target: { files: [jpg] } });
+    expect(await screen.findByRole("img", { name: "Maya Patel profile photo" })).toBeInTheDocument();
+
+    const png = new File(["avatar-2"], "maya-2.png", { type: "image/png" });
+    fireEvent.change(fileInput, { target: { files: [png] } });
+    expect(await screen.findByRole("img", { name: "Maya Patel profile photo" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Remove Photo" }));
+    expect(screen.queryByRole("img", { name: "Maya Patel profile photo" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Maya Patel initials avatar")).toBeInTheDocument();
   });
 
   it("household member can be added and duplicate member is blocked", async () => {

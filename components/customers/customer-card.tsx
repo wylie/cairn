@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CustomerBadges } from "@/components/customers/customer-badges";
 import { Badge } from "@/components/ui/badge";
+import { CustomerAvatar } from "@/components/customers/customer-avatar";
 
 export function CustomerCard({
   customer,
@@ -60,10 +61,15 @@ export function CustomerCard({
     <Card className="h-full transition hover:-translate-y-0.5 hover:shadow">
       <CardContent className="flex h-full flex-col gap-3 p-4">
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="flex items-start gap-3">
+            <Link href={`/customers/${customer.id}`} aria-label={`Open customer profile for ${customer.firstName} ${customer.lastName}`}>
+              <CustomerAvatar customer={customer} sizeClassName="h-16 w-16" />
+            </Link>
+            <div>
             <p className="font-semibold">{displayFirstName} {customer.lastName}</p>
             {legalNameDiffers ? <p className="text-sm text-muted-foreground">Legal: {customer.firstName} {customer.lastName}</p> : null}
             <p className="mt-1 text-sm text-muted-foreground">{customer.memberId}</p>
+            </div>
           </div>
           {isBirthdayToday ? (
             <div className="shrink-0 rounded-md bg-amber-100/70 px-2.5 py-1.5 text-amber-900">

@@ -343,6 +343,7 @@ export interface Customer {
   profilePhotoUrl?: string;
   profilePhotoUpdatedAt?: string;
   profilePhotoUpdatedByStaffId?: string;
+  profilePhotoUpdatedBy?: string;
   updatedByStaffId?: string;
   updatedByStaffName?: string;
   updatedAt?: string;

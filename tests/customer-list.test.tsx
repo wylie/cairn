@@ -95,6 +95,7 @@ describe("CustomerList", () => {
     expect(screen.getByText("Maya Patel")).toBeInTheDocument();
     expect(screen.getByText("Jordy Kim")).toBeInTheDocument();
     expect(screen.getByText("Legal: Jordan Kim")).toBeInTheDocument();
+    expect(screen.getByLabelText("Maya Patel initials avatar")).toBeInTheDocument();
   });
 
   it("preferred name displays with legal name when different", () => {

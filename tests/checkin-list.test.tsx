@@ -80,6 +80,17 @@ describe("CheckInList date behavior", () => {
     const profileLink = within(row).getByRole("link", { name: /open customer profile for maya patel/i });
     expect(profileLink).toHaveAttribute("href", "/customers/cust_001");
   });
+
+  it("check-in rows render customer avatar fallback", () => {
+    render(
+      <TestProviders>
+        <TopBar />
+        <CheckInList />
+      </TestProviders>
+    );
+
+    expect(screen.getByLabelText("Maya Patel initials avatar")).toBeInTheDocument();
+  });
 });
 
 describe("Workstation staff mode", () => {

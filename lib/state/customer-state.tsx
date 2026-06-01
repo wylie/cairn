@@ -365,6 +365,12 @@ interface CustomerStateContextValue {
     updatedByStaffId: string;
     updatedByStaffName?: string;
   }) => { ok: boolean; message: string };
+  updateCustomerPhoto: (input: {
+    customerId: string;
+    profilePhotoUrl?: string;
+    updatedByStaffId: string;
+    updatedByStaffName?: string;
+  }) => { ok: boolean; message: string };
   addCustomerRelationship: (
     customerId: string,
     input: { relatedCustomerId: string; relationshipType: CustomerRelationshipType; notes?: string }
@@ -1999,6 +2005,8 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
               profilePhotoUpdatedAt: input.profilePhotoUrl?.trim() !== entry.profilePhotoUrl ? updatedAt : entry.profilePhotoUpdatedAt,
               profilePhotoUpdatedByStaffId:
                 input.profilePhotoUrl?.trim() !== entry.profilePhotoUrl ? input.updatedByStaffId : entry.profilePhotoUpdatedByStaffId,
+              profilePhotoUpdatedBy:
+                input.profilePhotoUrl?.trim() !== entry.profilePhotoUrl ? input.updatedByStaffName : entry.profilePhotoUpdatedBy,
               updatedByStaffId: input.updatedByStaffId,
               updatedByStaffName: input.updatedByStaffName,
               updatedAt
@@ -2007,6 +2015,31 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     );
 
     return { ok: true as const, message: "Profile updated." };
+  };
+
+  const updateCustomerPhoto: CustomerStateContextValue["updateCustomerPhoto"] = (input) => {
+    if (!input.updatedByStaffId) return { ok: false, message: "Select staff PIN to continue." };
+    const customer = customers.find((entry) => entry.id === input.customerId);
+    if (!customer) return { ok: false, message: "Customer not found." };
+    const updatedAt = new Date().toISOString();
+    const nextPhoto = input.profilePhotoUrl?.trim() || undefined;
+    setCustomers((prev) =>
+      prev.map((entry) =>
+        entry.id !== input.customerId
+          ? entry
+          : {
+              ...entry,
+              profilePhotoUrl: nextPhoto,
+              profilePhotoUpdatedAt: updatedAt,
+              profilePhotoUpdatedByStaffId: input.updatedByStaffId,
+              profilePhotoUpdatedBy: input.updatedByStaffName,
+              updatedByStaffId: input.updatedByStaffId,
+              updatedByStaffName: input.updatedByStaffName,
+              updatedAt
+            }
+      )
+    );
+    return { ok: true, message: nextPhoto ? "Profile photo updated." : "Profile photo removed." };
   };
 
   const addCustomerRelationship = (
@@ -3599,6 +3632,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       updateStaffProfileForCustomer,
       clearStaffProfileForCustomer,
       updateCustomerProfile,
+      updateCustomerPhoto,
       addCustomerRelationship,
       removeCustomerRelationship,
       createSession,

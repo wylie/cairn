@@ -3,6 +3,7 @@ import type { CheckInLogRecord } from "@/types/domain";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StaffAttributionLabel } from "@/components/staff/staff-attribution-label";
+import { CustomerAvatar } from "@/components/customers/customer-avatar";
 
 function formatTime(value: string | null) {
   if (!value) return "-";
@@ -34,9 +35,20 @@ export function CheckInRow({
         aria-label={`Open customer profile for ${record.customerName}`}
         className="absolute inset-0 rounded-lg transition-colors hover:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       />
-      <div className="relative z-10 pointer-events-none">
-        <p className="font-medium">{record.customerName}</p>
-        <p className="text-sm text-muted-foreground">{record.membershipPassType}</p>
+      <div className="relative z-10 pointer-events-none flex items-center gap-3">
+        <CustomerAvatar
+          customer={{
+            firstName: record.customerName.split(" ")[0] ?? "",
+            lastName: record.customerName.split(" ").slice(1).join(" ") ?? "",
+            profilePhotoUrl: undefined
+          }}
+          sizeClassName="h-10 w-10"
+          className="bg-card"
+        />
+        <div>
+          <p className="font-medium">{record.customerName}</p>
+          <p className="text-sm text-muted-foreground">{record.membershipPassType}</p>
+        </div>
       </div>
       <div className="relative z-10 pointer-events-none text-sm text-muted-foreground">In: {formatTime(record.checkInTime)}</div>
       <div className="relative z-10 pointer-events-none text-sm text-muted-foreground">Out: {formatTime(record.checkOutTime)}</div>

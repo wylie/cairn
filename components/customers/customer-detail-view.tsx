@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRef } from "react";
 import { CustomerBadges } from "@/components/customers/customer-badges";
 import { ActivityTimeline } from "@/components/customers/activity-timeline";
 import { CustomerDetailActions } from "@/components/customers/customer-detail-actions";
@@ -11,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ModalShell } from "@/components/ui/modal-shell";
+import { CustomerAvatar } from "@/components/customers/customer-avatar";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import { filterCustomers } from "@/lib/data/customer-search";
@@ -87,7 +89,8 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     removeHouseholdMember,
     updateHouseholdMember,
     familyCheckIn,
-    updateStaffProfileForCustomer
+    updateStaffProfileForCustomer,
+    updateCustomerPhoto
   } = useCustomerState();
   const {
     activeStaff,
@@ -127,6 +130,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     "all" | "profile" | "access" | "waivers" | "registrations" | "visits" | "purchases" | "communications" | "staff_actions"
   >("all");
   const [communicationFilter, setCommunicationFilter] = useState<"all" | "email" | "sms" | "system" | "staff_note">("all");
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
   const customer = customers.find((entry) => entry.id === customerId);
 
   if (!customer) {
@@ -311,6 +315,11 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
   };
   const householdMembership = householdMembers.find((entry) => entry.customerId === customer.id);
   const customerStaffProfile = customer.staffProfile?.isStaff ? customer.staffProfile : null;
+  const photoUpdatedBy =
+    customer.profilePhotoUpdatedBy ||
+    (customer.profilePhotoUpdatedByStaffId
+      ? `${activeStaff?.id === customer.profilePhotoUpdatedByStaffId ? `${activeStaff.firstName} ${activeStaff.lastName}` : "Staff member"}`
+      : "Not recorded");
   const openEditStaffProfile = () => {
     if (!customerStaffProfile) return;
     setStaffProfileDraft({
@@ -585,18 +594,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="space-y-3 flex-1 min-w-[320px]">
               <div className="flex items-start gap-3">
-              {customer.profilePhotoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={customer.profilePhotoUrl}
-                  alt={`${customer.firstName} ${customer.lastName} profile`}
-                  className="h-14 w-14 rounded-full border object-cover"
-                />
-              ) : (
-                <div className="flex h-14 w-14 items-center justify-center rounded-full border bg-secondary text-sm font-semibold text-muted-foreground">
-                  {customer.firstName[0]}{customer.lastName[0]}
-                </div>
-              )}
+              <CustomerAvatar customer={customer} sizeClassName="h-32 w-32" />
               <div>
                 <h2 className="text-2xl font-semibold">{customer.firstName} {customer.lastName}</h2>
                 <p className="text-sm text-muted-foreground">{customer.memberId}</p>
@@ -611,6 +609,62 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                 {isBirthdayToday ? (
                   <p className="mt-2 inline-flex items-center rounded-full bg-amber-100/80 px-2.5 py-1 text-xs font-semibold text-amber-900">🎂 Birthday today</p>
                 ) : null}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="sr-only"
+                    onChange={(event) => {
+                      const file = event.currentTarget.files?.[0];
+                      if (!file) return;
+                      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+                        setProfileFeedback("Unsupported file type. Use JPG, PNG, or WEBP.");
+                        return;
+                      }
+                      if (file.size > 3 * 1024 * 1024) {
+                        setProfileFeedback("Image is too large. Max size is 3MB.");
+                        return;
+                      }
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        const url = typeof reader.result === "string" ? reader.result : "";
+                        if (!url) return;
+                        const result = updateCustomerPhoto({
+                          customerId: customer.id,
+                          profilePhotoUrl: url,
+                          updatedByStaffId: activeStaff?.id ?? "",
+                          updatedByStaffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
+                        });
+                        setProfileFeedback(result.message);
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                  <Button variant="secondary" className="h-9" onClick={() => photoInputRef.current?.click()}>
+                    {customer.profilePhotoUrl ? "Replace Photo" : "Upload Photo"}
+                  </Button>
+                  {customer.profilePhotoUrl ? (
+                    <Button
+                      variant="destructiveSubtle"
+                      className="h-9"
+                      onClick={() => {
+                        const result = updateCustomerPhoto({
+                          customerId: customer.id,
+                          profilePhotoUrl: "",
+                          updatedByStaffId: activeStaff?.id ?? "",
+                          updatedByStaffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
+                        });
+                        setProfileFeedback(result.message);
+                      }}
+                    >
+                      Remove Photo
+                    </Button>
+                  ) : null}
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Photo updated: {customer.profilePhotoUpdatedAt ? new Date(customer.profilePhotoUpdatedAt).toLocaleString("en-US") : "Never"} • {photoUpdatedBy}
+                </p>
               </div>
             </div>
               <div className="grid min-w-0 gap-2 md:grid-cols-2">
@@ -821,13 +875,10 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
           <CardContent className="grid gap-3 text-sm md:grid-cols-2">
             <div className="space-y-2 rounded-lg border p-3">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Photo & Profile Metadata</p>
-              {customer.profilePhotoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={customer.profilePhotoUrl} alt="Profile" className="mt-2 h-20 w-20 rounded-lg border object-cover" />
-              ) : (
-                <p className="text-xs text-muted-foreground">Profile photo not set</p>
-              )}
-              <Field label="Profile photo URL" value={customer.profilePhotoUrl || "Not set"} />
+              <CustomerAvatar customer={customer} sizeClassName="h-24 w-24" className="rounded-lg" />
+              <Field label="Profile photo" value={customer.profilePhotoUrl ? "Uploaded" : "Not set"} />
+              <Field label="Photo updated by" value={photoUpdatedBy} />
+              <Field label="Photo updated at" value={customer.profilePhotoUpdatedAt ? new Date(customer.profilePhotoUpdatedAt).toLocaleString("en-US") : "Not set"} />
               <Field label="Updated by" value={customer.updatedByStaffName || "Not set"} />
               <Field label="Last updated" value={customer.updatedAt ? new Date(customer.updatedAt).toLocaleString("en-US") : "Not set"} />
             </div>

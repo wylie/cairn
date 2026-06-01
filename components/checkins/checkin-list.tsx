@@ -11,6 +11,7 @@ import { SellAccessModal } from "@/components/pos/sell-access-modal";
 import { StaffSwitcher } from "@/components/staff/staff-switcher";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
+import { CustomerAvatar } from "@/components/customers/customer-avatar";
 
 export function CheckInList() {
   const {
@@ -472,14 +473,7 @@ export function CheckInList() {
                       className={`w-full rounded-lg border px-3 py-3 text-left transition-colors ${selected || highlightedRow ? "border-primary bg-secondary" : "hover:bg-secondary"}`}
                     >
                       <div className="flex items-start gap-3">
-                        {customer.profilePhotoUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={customer.profilePhotoUrl} alt={`${customer.firstName} ${customer.lastName} profile`} className="h-10 w-10 rounded-full border object-cover" />
-                        ) : (
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full border bg-card text-xs font-semibold text-muted-foreground">
-                            {customer.firstName[0]}{customer.lastName[0]}
-                          </div>
-                        )}
+                        <CustomerAvatar customer={customer} sizeClassName="h-10 w-10" className="bg-card" />
                         <div className="min-w-0 flex-1">
                           <p className="font-medium">{customer.firstName} {customer.lastName}</p>
                           <p className="text-xs text-muted-foreground">
@@ -516,9 +510,7 @@ export function CheckInList() {
             ) : (
               <>
                 <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full border bg-secondary font-medium text-muted-foreground">
-                    {selectedCustomer.firstName[0]}{selectedCustomer.lastName[0]}
-                  </div>
+                  <CustomerAvatar customer={selectedCustomer} sizeClassName="h-12 w-12" />
                   <div>
                     <p className="font-semibold">{selectedCustomer.firstName} {selectedCustomer.lastName}</p>
                     <p className="text-sm text-muted-foreground">{selectedCustomer.memberId}</p>

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import { parseOrgSlugFromPathname } from "@/lib/tenant/path";
+import { CustomerAvatar } from "@/components/customers/customer-avatar";
 import type { ClassCampSession, Customer, Program, Registration } from "@/types/domain";
 
 type RegistrationFilter = "all" | "registered" | "waitlisted" | "checked_in" | "attended" | "absent" | "cancelled";
@@ -407,7 +408,10 @@ export default function RegistrationsPage() {
                       <article key={entry.id} className="rounded-lg border p-2 text-sm" onClick={() => setSelectedRegistrationId(entry.id)}>
                         <div className="grid gap-2 md:grid-cols-[1fr_auto] md:items-start">
                           <div>
-                            <p className="font-medium">{customer.firstName} {customer.lastName}</p>
+                            <div className="flex items-center gap-2">
+                              <CustomerAvatar customer={customer} sizeClassName="h-9 w-9" />
+                              <p className="font-medium">{customer.firstName} {customer.lastName}</p>
+                            </div>
                             <p className="text-xs text-muted-foreground">Registered: {formatDateTime(entry.registeredAt)} • Status: {entry.status} • {entry.registrationSource ?? "front_desk"}</p>
                             <p className="text-xs text-muted-foreground">Check-in: {checkedIn ? "✓ Present" : "Not checked in"}</p>
                           </div>
@@ -446,7 +450,10 @@ export default function RegistrationsPage() {
                     if (!customer) return null;
                     return (
                       <article key={entry.id} className="rounded-lg border p-2 text-sm" onClick={() => setSelectedRegistrationId(entry.id)}>
-                        <p className="font-medium">#{entry.waitlistPosition ?? index + 1} {customer.firstName} {customer.lastName}</p>
+                        <div className="flex items-center gap-2">
+                          <CustomerAvatar customer={customer} sizeClassName="h-9 w-9" />
+                          <p className="font-medium">#{entry.waitlistPosition ?? index + 1} {customer.firstName} {customer.lastName}</p>
+                        </div>
                         <p className="text-xs text-muted-foreground">Added {formatDateTime(entry.registeredAt)}</p>
                         <div className="mt-2 flex flex-wrap gap-2">
                           <Button className="h-8" variant="secondary" onClick={() => runPromote(entry.id)}>Promote from waitlist</Button>
@@ -476,7 +483,10 @@ export default function RegistrationsPage() {
               const isFull = selectedSession ? selectedSession.enrolled >= selectedSession.capacity : false;
               return (
                 <article key={customer.id} className="rounded-lg border p-3 text-sm">
-                  <p className="font-medium">{customer.firstName} {customer.lastName}</p>
+                  <div className="flex items-center gap-2">
+                    <CustomerAvatar customer={customer} sizeClassName="h-10 w-10" />
+                    <p className="font-medium">{customer.firstName} {customer.lastName}</p>
+                  </div>
                   <p className="text-xs text-muted-foreground">{customer.memberId} • {customer.phone}</p>
                   <div className="mt-1"><Badge tone={eligibility.state === "eligible" ? "success" : eligibility.state === "warning" ? "warning" : "danger"}>{eligibility.label}</Badge></div>
                   <ul className="mt-2 list-disc pl-4 text-xs text-muted-foreground">{eligibility.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>

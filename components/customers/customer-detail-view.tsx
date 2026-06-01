@@ -930,6 +930,11 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                 Updated: {entry.updatedAt ? new Date(entry.updatedAt).toLocaleString("en-US") : "—"}{entry.updatedByStaffName ? ` • ${entry.updatedByStaffName}` : ""}
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
+                {(entry.type === "membership" || entry.type === "household-membership") ? (
+                  <Link href={`/memberships?membershipId=${entry.id}`} className="inline-flex">
+                    <Button className="h-9" variant="secondary">Open in Memberships</Button>
+                  </Link>
+                ) : null}
                 {entry.status === "active" ? (
                   <Button
                     className="h-9"

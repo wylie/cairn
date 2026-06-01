@@ -3,9 +3,11 @@ import { cookies } from "next/headers";
 export const AUTH_COOKIE = "cairn_mock_auth";
 
 export interface MockSession {
+  kind?: "staff" | "customer";
   userId: string;
   email: string;
   organizationSlugs: string[];
+  customerId?: string;
 }
 
 export function encodeSession(session: MockSession): string {

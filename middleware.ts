@@ -34,6 +34,10 @@ export function middleware(req: NextRequest) {
 
   if (pathname === "/login") {
     if (session) {
+      if (session.kind === "customer") {
+        const org = session.organizationSlugs[0] ?? "summit";
+        return NextResponse.redirect(new URL(`/p/${org}/dashboard`, req.url));
+      }
       if ((session.organizationSlugs?.length ?? 0) > 1) {
         return NextResponse.redirect(new URL("/org-chooser", req.url));
       }
@@ -45,6 +49,18 @@ export function middleware(req: NextRequest) {
 
   if (pathname === "/org-chooser") {
     if (!session) return NextResponse.redirect(new URL("/login", req.url));
+    if (session.kind === "customer") {
+      const org = session.organizationSlugs[0] ?? "summit";
+      return NextResponse.redirect(new URL(`/p/${org}/dashboard`, req.url));
+    }
+    return NextResponse.next();
+  }
+
+  if (pathname === "/p/login") {
+    if (session?.kind === "customer") {
+      const org = session.organizationSlugs[0] ?? "summit";
+      return NextResponse.redirect(new URL(`/p/${org}/dashboard`, req.url));
+    }
     return NextResponse.next();
   }
 
@@ -57,7 +73,7 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL("/no-access", req.url));
     }
 
-    if (!session) {
+    if (!session || session.kind === "customer") {
       const loginUrl = new URL("/login", req.url);
       loginUrl.searchParams.set("next", pathname + search);
       return NextResponse.redirect(loginUrl);
@@ -72,6 +88,23 @@ export function middleware(req: NextRequest) {
     const response = NextResponse.rewrite(url);
     response.cookies.set("cairn_org_slug", slug, { path: "/", sameSite: "lax", httpOnly: false });
     return response;
+  }
+
+  if (pathname.startsWith("/p/")) {
+    const parts = pathname.split("/").filter(Boolean);
+    const slug = parts[1];
+    if (!resolveOrganizationBySlug(slug)) {
+      return NextResponse.redirect(new URL("/no-access", req.url));
+    }
+    if (!session || session.kind !== "customer") {
+      const loginUrl = new URL("/p/login", req.url);
+      loginUrl.searchParams.set("next", pathname + search);
+      return NextResponse.redirect(loginUrl);
+    }
+    if (!session.organizationSlugs.includes(slug)) {
+      return NextResponse.redirect(new URL("/no-access", req.url));
+    }
+    return NextResponse.next();
   }
 
   if (isProtected(pathname)) {

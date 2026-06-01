@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   }
 
   const response = NextResponse.json({ ok: true, user: { id: user.id, email: user.email, organizations: user.organizationSlugs } });
-  response.cookies.set(AUTH_COOKIE, encodeSession({ userId: user.id, email: user.email, organizationSlugs: user.organizationSlugs }), {
+  response.cookies.set(AUTH_COOKIE, encodeSession({ kind: "staff", userId: user.id, email: user.email, organizationSlugs: user.organizationSlugs }), {
     path: "/",
     sameSite: "lax",
     secure: false,

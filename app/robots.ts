@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: ["/"],
-        disallow: ["/login", "/o/"]
+        disallow: ["/login", "/o/", "/p/login", "/p/"]
       }
     ],
     sitemap: "https://cairn.example.com/sitemap.xml"

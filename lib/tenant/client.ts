@@ -25,17 +25,25 @@ export function getAllowedOrgSlugsFromSessionCookie(): string[] | null {
   }
 }
 
-export function getSessionFromCookieClient(): { userId: string; email: string; organizationSlugs: string[] } | null {
+export function getSessionFromCookieClient(): {
+  kind?: "staff" | "customer";
+  userId: string;
+  email: string;
+  organizationSlugs: string[];
+  customerId?: string;
+} | null {
   const raw = getCookieValue("cairn_mock_auth");
   if (!raw) return null;
   try {
     const json = atob(raw.replaceAll("-", "+").replaceAll("_", "/"));
-    const parsed = JSON.parse(json) as { userId?: string; email?: string; organizationSlugs?: string[] };
+    const parsed = JSON.parse(json) as { kind?: "staff" | "customer"; userId?: string; email?: string; organizationSlugs?: string[]; customerId?: string };
     if (!parsed.userId || !parsed.email || !Array.isArray(parsed.organizationSlugs)) return null;
     return {
       userId: parsed.userId,
       email: parsed.email,
-      organizationSlugs: parsed.organizationSlugs
+      organizationSlugs: parsed.organizationSlugs,
+      kind: parsed.kind,
+      customerId: parsed.customerId
     };
   } catch {
     return null;

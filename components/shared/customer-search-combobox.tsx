@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import type { Customer } from "@/types/domain";
 import { CustomerAvatar } from "@/components/customers/customer-avatar";
@@ -34,7 +34,9 @@ export function CustomerSearchCombobox({
   inputRef?: RefObject<HTMLInputElement | null>;
   showLabel?: boolean;
 }) {
+  const maxVisibleResults = 50;
   const [highlightIndex, setHighlightIndex] = useState(0);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const open = query.trim().length > 0;
 
@@ -42,7 +44,7 @@ export function CustomerSearchCombobox({
     setHighlightIndex(0);
   }, [query, customers.length]);
 
-  const displayedCustomers = useMemo(() => {
+  const sortedCustomers = useMemo(() => {
     return [...customers].sort((a, b) => {
       const aStaff = a.staffProfile?.isStaff ? 1 : 0;
       const bStaff = b.staffProfile?.isStaff ? 1 : 0;
@@ -52,8 +54,16 @@ export function CustomerSearchCombobox({
       return a.firstName.localeCompare(b.firstName, "en", { sensitivity: "base" });
     });
   }, [customers]);
+  const displayedCustomers = useMemo(() => sortedCustomers.slice(0, maxVisibleResults), [sortedCustomers]);
 
   const highlighted = useMemo(() => displayedCustomers[highlightIndex], [displayedCustomers, highlightIndex]);
+
+  useEffect(() => {
+    const highlightedOption = optionRefs.current[highlightIndex];
+    if (highlightedOption && typeof highlightedOption.scrollIntoView === "function") {
+      highlightedOption.scrollIntoView({ block: "nearest" });
+    }
+  }, [highlightIndex]);
 
   return (
     <div className="w-full">
@@ -70,7 +80,7 @@ export function CustomerSearchCombobox({
           if (!open) return;
           if (event.key === "ArrowDown") {
             event.preventDefault();
-            setHighlightIndex((prev) => Math.min(prev + 1, Math.max(customers.length - 1, 0)));
+            setHighlightIndex((prev) => Math.min(prev + 1, Math.max(displayedCustomers.length - 1, 0)));
             return;
           }
           if (event.key === "ArrowUp") {
@@ -94,11 +104,22 @@ export function CustomerSearchCombobox({
 
       {open ? (
         <div className="mt-2 space-y-2 rounded-xl border bg-card p-3">
+          <p className="text-xs text-muted-foreground" aria-live="polite">
+            Showing {displayedCustomers.length} of {sortedCustomers.length} matching customers
+            {sortedCustomers.length > maxVisibleResults ? ". Refine your search to narrow results." : "."}
+          </p>
           {customers.length > 0 ? (
-            <div className="space-y-2" role="listbox" aria-label="Customer search results">
+            <div
+              className="max-h-[50vh] space-y-2 overflow-y-auto pr-1 md:max-h-[420px]"
+              role="listbox"
+              aria-label="Customer search results"
+            >
               {displayedCustomers.map((customer, index) => (
                 <button
                   key={customer.id}
+                  ref={(node) => {
+                    optionRefs.current[index] = node;
+                  }}
                   role="option"
                   aria-selected={index === highlightIndex}
                   onMouseEnter={() => setHighlightIndex(index)}
@@ -109,7 +130,20 @@ export function CustomerSearchCombobox({
                     <CustomerAvatar customer={customer} size="sm" />
                     <span>
                       <span className="block font-medium">{customer.firstName} {customer.lastName}</span>
+                      {customer.preferredName && customer.preferredName.toLowerCase() !== customer.firstName.toLowerCase() ? (
+                        <span className="block text-xs text-muted-foreground">Preferred: {customer.preferredName}</span>
+                      ) : null}
                       <span className="block text-sm text-muted-foreground">{customer.memberId} • {customer.phone}</span>
+                      <span className="mt-1 flex flex-wrap gap-1">
+                        <span className={`rounded-full px-2 py-0.5 text-[11px] ${customer.checkInStatus === "in" ? "bg-sky-100 text-sky-900" : "bg-slate-100 text-slate-700"}`}>
+                          {customer.checkInStatus === "in" ? "Checked In" : "Checked Out"}
+                        </span>
+                        {customer.staffProfile?.isStaff ? (
+                          <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] text-violet-900">
+                            Staff
+                          </span>
+                        ) : null}
+                      </span>
                       {getStatusLines ? (
                         <span className="mt-1 block text-xs text-muted-foreground">
                           {getStatusLines(customer).join(" • ")}

@@ -56,6 +56,7 @@ export function CheckInList() {
   const [overrideOtherReason, setOverrideOtherReason] = useState("");
   const [checkedInFilter, setCheckedInFilter] = useState<"all" | "facility" | "program" | "kids" | "waiver_issues">("all");
   const [checkedInQuery, setCheckedInQuery] = useState("");
+  const maxSearchResults = 50;
   const searchInputRef = useRef<HTMLInputElement>(null!);
   const sellCustomer = useMemo(() => customers.find((entry) => entry.id === sellCustomerId) ?? null, [customers, sellCustomerId]);
 
@@ -66,7 +67,8 @@ export function CheckInList() {
     if (quickFilter === "eligible") return queryResults.filter((entry) => evaluateCustomerEntry(entry.id).allowed);
     return queryResults.filter((entry) => !evaluateCustomerEntry(entry.id).allowed);
   }, [queryResults, quickFilter, evaluateCustomerEntry]);
-  const highlighted = filteredResults[Math.min(highlightIndex, Math.max(filteredResults.length - 1, 0))];
+  const visibleResults = useMemo(() => filteredResults.slice(0, maxSearchResults), [filteredResults]);
+  const highlighted = visibleResults[Math.min(highlightIndex, Math.max(visibleResults.length - 1, 0))];
   const selectedCustomer = customers.find((entry) => entry.id === selectedCustomerId);
   const selectedDecision = selectedCustomer ? evaluateCustomerEntry(selectedCustomer.id) : null;
   const activeRecord = selectedCustomer
@@ -408,7 +410,7 @@ export function CheckInList() {
               onKeyDown={(event) => {
                 if (event.key === "ArrowDown") {
                   event.preventDefault();
-                  setHighlightIndex((prev) => Math.min(prev + 1, Math.max(filteredResults.length - 1, 0)));
+                  setHighlightIndex((prev) => Math.min(prev + 1, Math.max(visibleResults.length - 1, 0)));
                 } else if (event.key === "ArrowUp") {
                   event.preventDefault();
                   setHighlightIndex((prev) => Math.max(prev - 1, 0));
@@ -445,8 +447,13 @@ export function CheckInList() {
                 <Button variant="outline" className="min-h-11" onClick={() => setShowAddCustomer(true)}>Create Customer</Button>
               </div>
             ) : (
-              <div className="space-y-2" role="listbox" aria-label="Customer search results">
-                {filteredResults.map((customer, index) => {
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground" aria-live="polite">
+                  Showing {visibleResults.length} of {filteredResults.length} matching customers
+                  {filteredResults.length > maxSearchResults ? ". Refine your search to narrow results." : "."}
+                </p>
+                <div className="max-h-[50vh] space-y-2 overflow-y-auto pr-1 md:max-h-[420px]" role="listbox" aria-label="Customer search results">
+                {visibleResults.map((customer, index) => {
                   const decision = evaluateCustomerEntry(customer.id);
                   const selected = selectedCustomerId === customer.id;
                   const highlightedRow = index === highlightIndex;
@@ -500,6 +507,7 @@ export function CheckInList() {
                     </button>
                   );
                 })}
+                </div>
               </div>
             )}
           </div>

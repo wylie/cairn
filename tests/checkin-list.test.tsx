@@ -103,6 +103,10 @@ describe("CheckInList date behavior", () => {
 
     await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Maya");
     expect(screen.getAllByLabelText(/Maya Patel (initials avatar|profile photo)/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Showing \d+ of \d+ matching customers/i)).toBeInTheDocument();
+    const list = screen.getByRole("listbox", { name: "Customer search results" });
+    expect(list.className).toContain("max-h-[50vh]");
+    expect(list.className).toContain("md:max-h-[420px]");
   });
 
   it("currently checked-in roster shows customer avatars", () => {

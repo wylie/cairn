@@ -1,14 +1,14 @@
 import { WaiverSigningForm } from "@/components/public/waiver-signing-form";
 import { getOrganizationForPublic } from "@/lib/public-programs";
-import { waiverTemplates, waiverTemplateVersions } from "@/lib/mocks/waiver-templates";
+import { getDefaultPublicWaiverTemplate, getWaiverTemplateVersionById } from "@/lib/public-waivers";
 
 export default async function KioskWaiversPage({ params }: { params: Promise<{ orgSlug: string }> }) {
   const { orgSlug } = await params;
   const org = getOrganizationForPublic(orgSlug);
   if (!org) return <main className="p-6"><p className="text-sm text-muted-foreground">Organization not found.</p></main>;
 
-  const template = waiverTemplates.find((entry) => entry.organizationId === org.id && entry.active && !entry.archived) ?? waiverTemplates[0];
-  const version = waiverTemplateVersions.find((entry) => entry.id === template.currentVersionId);
+  const template = getDefaultPublicWaiverTemplate(orgSlug);
+  const version = template ? getWaiverTemplateVersionById(template.currentVersionId) : undefined;
   if (!template || !version) return <main className="p-6"><p className="text-sm text-muted-foreground">No active waiver template.</p></main>;
 
   return (

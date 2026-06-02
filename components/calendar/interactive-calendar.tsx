@@ -1,6 +1,7 @@
 import type { SessionScheduleCardModel, ScheduleView } from "@/lib/data/session-schedule";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { formatDate, formatTime } from "@/lib/format/date";
 
 function toDateKey(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -14,10 +15,6 @@ function fromDateKey(dateKey: string) {
     return today;
   }
   return parsed;
-}
-
-function formatTime(dateIso: string) {
-  return new Date(dateIso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
 function formatRange(startIso: string, endIso: string) {
@@ -41,18 +38,18 @@ function startOfWeek(date: Date) {
 
 function viewTitle(view: ScheduleView, dateKey: string) {
   const date = fromDateKey(dateKey);
-  if (view === "month") return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  if (view === "month") return formatDate(date, "-", { month: "long", year: "numeric" });
   if (view === "week") {
     const start = startOfWeek(date);
     const end = addDays(start, 6);
-    return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    return `${formatDate(start, "-", { month: "short", day: "numeric" })} - ${formatDate(end, "-", { month: "short", day: "numeric", year: "numeric" })}`;
   }
   if (view === "agenda") {
     const start = startOfWeek(date);
     const end = addDays(start, 6);
-    return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    return `${formatDate(start, "-", { month: "short", day: "numeric" })} - ${formatDate(end, "-", { month: "short", day: "numeric", year: "numeric" })}`;
   }
-  return date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  return formatDate(date, "-", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 }
 
 function shiftDate(dateKey: string, view: ScheduleView, direction: -1 | 1) {

@@ -1,29 +1,17 @@
-const SHORT_DATE_FORMATTER = new Intl.DateTimeFormat("en-GB", {
-  day: "2-digit",
-  month: "2-digit",
-  year: "numeric",
-  timeZone: "UTC"
-});
+export type DateFormatPreference = "MM/DD/YYYY" | "DD/MM/YYYY" | "YYYY-MM-DD" | "Month D, YYYY";
+export type TimeFormatPreference = "12-hour" | "24-hour";
 
-const LONG_DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
-  month: "long",
-  day: "numeric",
-  year: "numeric",
-  timeZone: "UTC"
-});
+type FormattingPreferences = {
+  dateFormat: DateFormatPreference;
+  timeFormat: TimeFormatPreference;
+};
 
-const DATE_TIME_FORMATTER = new Intl.DateTimeFormat("en-GB", {
-  day: "2-digit",
-  month: "2-digit",
-  year: "numeric",
-  hour: "numeric",
-  minute: "2-digit"
-});
+const DEFAULT_FORMATTING_PREFERENCES: FormattingPreferences = {
+  dateFormat: "MM/DD/YYYY",
+  timeFormat: "12-hour"
+};
 
-const TIME_FORMATTER = new Intl.DateTimeFormat("en-US", {
-  hour: "numeric",
-  minute: "2-digit"
-});
+let activeFormattingPreferences: FormattingPreferences = DEFAULT_FORMATTING_PREFERENCES;
 
 function normalizeDateInput(value: Date | string) {
   if (value instanceof Date) return value;
@@ -31,30 +19,89 @@ function normalizeDateInput(value: Date | string) {
   return new Date(value);
 }
 
-export function formatShortDate(value?: Date | string | null, fallback = "-") {
-  if (!value) return fallback;
-  const date = normalizeDateInput(value);
-  if (Number.isNaN(date.getTime())) return fallback;
-  return SHORT_DATE_FORMATTER.format(date);
+function pad(value: number) {
+  return value.toString().padStart(2, "0");
 }
 
-export function formatLongDate(value?: Date | string | null, fallback = "-") {
+function buildDateParts(date: Date) {
+  return {
+    day: pad(date.getUTCDate()),
+    month: pad(date.getUTCMonth() + 1),
+    year: date.getUTCFullYear().toString()
+  };
+}
+
+export function setGlobalDateTimeFormatting(preferences: Partial<FormattingPreferences>) {
+  activeFormattingPreferences = {
+    ...activeFormattingPreferences,
+    ...preferences
+  };
+}
+
+export function getGlobalDateTimeFormatting() {
+  return activeFormattingPreferences;
+}
+
+export function resetGlobalDateTimeFormatting() {
+  activeFormattingPreferences = DEFAULT_FORMATTING_PREFERENCES;
+}
+
+export function formatDate(
+  value?: Date | string | null,
+  fallback = "-",
+  options?: Intl.DateTimeFormatOptions
+) {
   if (!value) return fallback;
   const date = normalizeDateInput(value);
   if (Number.isNaN(date.getTime())) return fallback;
-  return LONG_DATE_FORMATTER.format(date);
+  if (options) return new Intl.DateTimeFormat("en-US", options).format(date);
+
+  const { day, month, year } = buildDateParts(date);
+  if (activeFormattingPreferences.dateFormat === "DD/MM/YYYY") return `${day}/${month}/${year}`;
+  if (activeFormattingPreferences.dateFormat === "YYYY-MM-DD") return `${year}-${month}-${day}`;
+  if (activeFormattingPreferences.dateFormat === "Month D, YYYY") {
+    return new Intl.DateTimeFormat("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC"
+    }).format(date);
+  }
+  return `${month}/${day}/${year}`;
+}
+
+export function formatTime(
+  value?: Date | string | null,
+  fallback = "-",
+  options?: Intl.DateTimeFormatOptions
+) {
+  if (!value) return fallback;
+  const date = normalizeDateInput(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: activeFormattingPreferences.timeFormat === "12-hour",
+    ...options
+  }).format(date);
 }
 
 export function formatDateTime(value?: Date | string | null, fallback = "-") {
   if (!value) return fallback;
   const date = normalizeDateInput(value);
   if (Number.isNaN(date.getTime())) return fallback;
-  return DATE_TIME_FORMATTER.format(date);
+  return `${formatDate(date, fallback)}, ${formatTime(date, fallback)}`;
 }
 
-export function formatTime(value?: Date | string | null, fallback = "-") {
+export function formatDateWithAge(value?: Date | string | null, fallback = "-") {
   if (!value) return fallback;
   const date = normalizeDateInput(value);
   if (Number.isNaN(date.getTime())) return fallback;
-  return TIME_FORMATTER.format(date);
+  const age = Math.max(0, Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24 * 365.2425)));
+  return `${formatDate(date, fallback)} (${age})`;
+}
+
+export const formatShortDate = formatDate;
+export function formatLongDate(value?: Date | string | null, fallback = "-") {
+  return formatDate(value, fallback, { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
 }

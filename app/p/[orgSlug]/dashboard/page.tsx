@@ -6,7 +6,7 @@ import { canCustomerViewReceipt } from "@/lib/portal/receipts";
 import { useCustomerPortalData } from "@/lib/portal/use-customer-portal-data";
 import { getLocationName } from "@/lib/public-programs";
 import { CustomerPortalContainer } from "@/components/portal/customer-portal-container";
-import { formatShortDate } from "@/lib/format/date";
+import { formatDate, formatShortDate } from "@/lib/format/date";
 
 function formatDateSafe(value?: string) {
   return value ? formatShortDate(value, "Date unavailable") : "Date unavailable";
@@ -127,7 +127,7 @@ export default function CustomerPortalDashboardPage() {
     }).length;
     return {
       key,
-      label: new Date(year, month - 1, 1).toLocaleString("en-US", { month: "short" }),
+      label: formatDate(new Date(year, month - 1, 1), "-", { month: "short" }),
       count
     };
   });

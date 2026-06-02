@@ -11,27 +11,14 @@ import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import { parseOrgSlugFromPathname } from "@/lib/tenant/path";
 import { CustomerAvatar } from "@/components/customers/customer-avatar";
+import { formatDate, formatDateTime, formatTime } from "@/lib/format/date";
 import type { ClassCampSession, Customer, Program, Registration } from "@/types/domain";
 import { buildCustomerDetailHref } from "@/lib/navigation/detail-navigation";
 
 type RegistrationFilter = "all" | "registered" | "waitlisted" | "checked_in" | "attended" | "absent" | "cancelled";
 
-function formatDateTime(iso?: string) {
-  if (!iso) return "-";
-  const d = new Date(iso);
-  return `${d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} ${d.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit"
-  })}`;
-}
-
 function formatDateRange(start: string, end: string) {
-  const s = new Date(start);
-  const e = new Date(end);
-  return `${s.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} • ${s.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit"
-  })} - ${e.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
+  return `${formatDate(start, "-", { weekday: "short", month: "short", day: "numeric" })} • ${formatTime(start)} - ${formatTime(end)}`;
 }
 
 function getSessionStatus(session: ClassCampSession): "Open" | "Full" | "Waitlist Active" | "Cancelled" {

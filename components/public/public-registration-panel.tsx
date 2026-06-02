@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { formatDateTime } from "@/lib/format/date";
 import type { Program, ClassCampSession, Customer } from "@/types/domain";
 import { getLocationName, getRegistrationStateForCustomer, getSessionStats, getProgramPricing } from "@/lib/public-programs";
 import { customers as seedCustomers } from "@/lib/mocks/customers";
@@ -111,7 +112,7 @@ export function PublicRegistrationPanel({
       {step === "confirm" ? (
         <div className="space-y-2">
           <p className="text-sm">Program: {program.title}</p>
-          <p className="text-sm">Session: {new Date(session.startsAt).toLocaleString("en-US")}</p>
+          <p className="text-sm">Session: {formatDateTime(session.startsAt)}</p>
           <p className="text-sm">Instructor: {session.instructorName ?? "TBD"}</p>
           <p className="text-sm">Location: {getLocationName(session.locationId)}</p>
           <p className="text-sm">Registration ID: REG-{session.id.toUpperCase()}</p>

@@ -1,10 +1,19 @@
 import { render, screen, within } from "@testing-library/react";
-import { vi } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 import { CustomerCard } from "@/components/customers/customer-card";
+import { resetGlobalDateTimeFormatting, setGlobalDateTimeFormatting } from "@/lib/format/date";
 import type { Customer } from "@/types/domain";
 import { TestProviders } from "@/tests/test-providers";
 
 describe("CustomerCard quick info", () => {
+  beforeEach(() => {
+    resetGlobalDateTimeFormatting();
+  });
+
+  afterEach(() => {
+    resetGlobalDateTimeFormatting();
+  });
+
   it("shows warning values for missing preferred name, pronouns, DOB, and phone", () => {
     const customer: Customer = {
       id: "cust_missing_001",
@@ -223,5 +232,41 @@ describe("CustomerCard quick info", () => {
     const actionWrapper = screen.getByRole("button", { name: "View Profile" }).closest("div")?.parentElement;
     expect(actionWrapper?.className).toContain("mt-auto");
     expect(container.querySelector(".h-full.flex-col")).toBeTruthy();
+  });
+
+  it("updates displayed dates when formatting settings change", () => {
+    const customer: Customer = {
+      id: "cust_format_001",
+      memberId: "M-9601",
+      organizationId: "org_summit",
+      locationId: "loc_001",
+      firstName: "Format",
+      lastName: "Check",
+      preferredName: "Format",
+      pronouns: "They/them",
+      dateOfBirth: "1992-03-01",
+      email: "format@example.com",
+      phone: "(212) 555-9898",
+      tags: [],
+      checkInStatus: "out"
+    };
+
+    setGlobalDateTimeFormatting({ dateFormat: "MM/DD/YYYY" });
+    const { rerender } = render(
+      <TestProviders>
+        <CustomerCard customer={customer} canCheckIn onSellAccess={() => {}} onToggleCheckIn={() => {}} />
+      </TestProviders>
+    );
+
+    expect(screen.getByText(/03\/01\/1992/)).toBeInTheDocument();
+
+    setGlobalDateTimeFormatting({ dateFormat: "DD/MM/YYYY" });
+    rerender(
+      <TestProviders>
+        <CustomerCard customer={customer} canCheckIn onSellAccess={() => {}} onToggleCheckIn={() => {}} />
+      </TestProviders>
+    );
+
+    expect(screen.getByText(/01\/03\/1992/)).toBeInTheDocument();
   });
 });

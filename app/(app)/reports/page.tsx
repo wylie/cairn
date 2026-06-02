@@ -6,6 +6,7 @@ import { PermissionGate } from "@/components/staff/permission-gate";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import { buildReportModel, getEmptyReportModel, type ReportFilters } from "@/lib/reports/metrics";
+import { formatDateTime } from "@/lib/format/date";
 import { ReportFiltersBar } from "@/components/reports/report-filters";
 import { AlertCard, ListCard, MetricCard, StatusCard } from "@/components/reports/dashboard-cards";
 import { BarBreakdownCard, TrendLineCard } from "@/components/reports/charts";
@@ -333,7 +334,7 @@ export default function ReportsPage() {
                               {row.receipt}
                             </button>
                           </td>
-                          <td className="py-2 pr-3">{new Date(row.date).toLocaleString()}</td>
+                          <td className="py-2 pr-3">{formatDateTime(row.date)}</td>
                           <td className="py-2 pr-3">{row.customer}</td>
                           <td className="py-2 pr-3">{row.staff}</td>
                           <td className="py-2 pr-3">{row.paymentMethod}</td>
@@ -505,7 +506,7 @@ export default function ReportsPage() {
               items={report.programs.upcomingSessions.map((row) => ({
                 id: row.id,
                 primary: row.title,
-                secondary: `${new Date(row.startsAt).toLocaleString()} · ${row.registered}/${row.capacity} registered`
+                secondary: `${formatDateTime(row.startsAt)} · ${row.registered}/${row.capacity} registered`
               }))}
             />
           </div>

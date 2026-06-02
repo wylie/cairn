@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ProductPriceLabel } from "@/components/pos/product-price-label";
 import { categoryLabels, colorTokenLabels, getProductCategory, productColorTokens, typeLabels } from "@/lib/products/catalog";
+import { formatDateTime } from "@/lib/format/date";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import type { PosProduct, ProductCategoryRecord } from "@/types/domain";
@@ -692,7 +693,7 @@ export default function ProductsPage() {
               {inventoryAuditEntries.slice(0, 8).map((entry) => (
                 <li key={entry.id} className="rounded-md border px-3 py-2">
                   <p className="font-medium">{entry.action.replace("_", " ")} {entry.quantityDelta > 0 ? `+${entry.quantityDelta}` : entry.quantityDelta}</p>
-                  <p className="text-xs text-muted-foreground">{new Date(entry.createdAt).toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">{formatDateTime(entry.createdAt)}</p>
                 </li>
               ))}
               {inventoryAuditEntries.length === 0 ? <li className="text-muted-foreground">No inventory activity yet.</li> : null}

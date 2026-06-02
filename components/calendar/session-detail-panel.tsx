@@ -4,6 +4,7 @@ import { CustomerSearchCombobox } from "@/components/shared/customer-search-comb
 import { Button } from "@/components/ui/button";
 import { filterCustomers } from "@/lib/data/customer-search";
 import { Badge } from "@/components/ui/badge";
+import { formatDate, formatDateTime, formatTime } from "@/lib/format/date";
 import type { SessionActivityEvent } from "@/types/calendar";
 
 export function SessionDetailPanel({
@@ -87,12 +88,8 @@ export function SessionDetailPanel({
             ? "Full"
             : "Open";
   const summaryTone = summaryStatus === "Open" ? "success" : summaryStatus === "Cancelled" || summaryStatus === "Closed" ? "danger" : "warning";
-  const dayLabel = new Date(session.startsAt).toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric"
-  });
-  const timeLabel = `${new Date(session.startsAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}–${new Date(session.endsAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
+  const dayLabel = formatDate(session.startsAt, "-", { weekday: "long", month: "long", day: "numeric" });
+  const timeLabel = `${formatTime(session.startsAt)}–${formatTime(session.endsAt)}`;
   const sessionActivity = activityEvents
     .filter((entry) => entry.sessionId === session.id)
     .slice(0, 10);
@@ -308,7 +305,7 @@ export function SessionDetailPanel({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <p>{entry.waitlistPosition ? `#${entry.waitlistPosition}` : "#—"} • {customer ? `${customer.firstName} ${customer.lastName}` : "Unknown customer"}</p>
-                      <p className="text-xs text-muted-foreground">Joined {entry.registeredAt ? new Date(entry.registeredAt).toLocaleString("en-US") : "unknown"}</p>
+                      <p className="text-xs text-muted-foreground">Joined {entry.registeredAt ? formatDateTime(entry.registeredAt) : "unknown"}</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Button className="h-9" variant="secondary" onClick={() => onPromoteWaitlist(entry.id)}>Promote</Button>
@@ -328,7 +325,7 @@ export function SessionDetailPanel({
         {sessionActivity.map((event) => (
           <div key={event.id} className="text-xs text-muted-foreground">
             <span className="font-medium text-foreground">{event.customerName ?? "Customer"}</span>{" "}
-            {event.action.replaceAll("_", " ")} • {new Date(event.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+            {event.action.replaceAll("_", " ")} • {formatTime(event.createdAt)}
             {event.staffName ? ` • ${event.staffName}` : ""}
           </div>
         ))}

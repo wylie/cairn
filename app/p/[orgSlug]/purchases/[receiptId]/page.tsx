@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatDateTime } from "@/lib/format/date";
 import { canCustomerViewReceipt, getReceiptStatus, getReceiptStatusLabel } from "@/lib/portal/receipts";
 import { useCustomerPortalData } from "@/lib/portal/use-customer-portal-data";
 import { getLocationName } from "@/lib/public-programs";
@@ -50,7 +51,7 @@ export default function CustomerPortalReceiptDetailPage() {
       <header className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-2xl font-semibold">Receipt {receipt.receiptNumber}</h2>
-          <p className="text-sm text-muted-foreground">{new Date(receipt.completedAt).toLocaleString("en-US")}</p>
+          <p className="text-sm text-muted-foreground">{formatDateTime(receipt.completedAt)}</p>
         </div>
         <div className="flex items-center gap-2">
           <Badge tone={toneForStatus}>{getReceiptStatusLabel(status)}</Badge>

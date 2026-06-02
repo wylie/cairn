@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
+import { formatTime } from "@/lib/format/date";
 import { buildReportModel } from "@/lib/reports/metrics";
 
 function formatCurrency(cents: number) {
@@ -109,7 +110,7 @@ export default function DashboardPage() {
                 <li key={session.id} className="rounded-md bg-muted/30 px-3 py-2">
                   <p className="font-medium">{session.title}</p>
                   <p className="text-muted-foreground">
-                    {new Date(session.startsAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · {session.registered}/{session.capacity} registered
+                    {formatTime(session.startsAt)} · {session.registered}/{session.capacity} registered
                   </p>
                 </li>
               ))}

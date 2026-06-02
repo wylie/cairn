@@ -9,6 +9,7 @@ import type { FacilityProfile, Location, StaffPermission, StaffRoleDefinition, S
 import { resolveTenant } from "@/lib/tenant/resolve";
 import { getCurrentOrgSlugClient } from "@/lib/tenant/client";
 import { parseOrgSlugFromPathname } from "@/lib/tenant/path";
+import { setGlobalDateTimeFormatting } from "@/lib/format/date";
 
 const DEFAULT_ORGANIZATION_NAME = "Summit Rec Collective";
 const DEFAULT_ORGANIZATION_TIMEZONE = "America/New_York";
@@ -187,7 +188,9 @@ const defaultSettings: SettingsStateSnapshot = {
     currency: "USD",
     logoUrl: "",
     description: "Community-centered climbing and movement facility.",
-    emergencyContact: "(212) 555-1999"
+    emergencyContact: "(212) 555-1999",
+    dateFormat: "MM/DD/YYYY",
+    timeFormat: "12-hour"
   },
   locations: (data.locations ?? []).map((entry, index) => ({
     ...entry,
@@ -352,6 +355,13 @@ export function SettingsStateProvider({ children }: { children: React.ReactNode 
   useEffect(() => {
     saveMockState(settingsStorageKey, { settings, activeLocationId });
   }, [settings, activeLocationId, settingsStorageKey]);
+
+  useEffect(() => {
+    setGlobalDateTimeFormatting({
+      dateFormat: settings.facilityProfile.dateFormat ?? "MM/DD/YYYY",
+      timeFormat: settings.facilityProfile.timeFormat ?? "12-hour"
+    });
+  }, [settings.facilityProfile.dateFormat, settings.facilityProfile.timeFormat]);
 
   const setActiveLocationId = (locationId: string) => setActiveLocationIdState(locationId);
 

@@ -15,7 +15,7 @@ import { useWorkstationState } from "@/lib/state/workstation-state";
 import { CustomerAvatar } from "@/components/customers/customer-avatar";
 import { InfoField } from "@/components/shared/info-field";
 import { buildCustomerDetailHref } from "@/lib/navigation/detail-navigation";
-import { formatShortDate, formatTime } from "@/lib/format/date";
+import { formatDateWithAge, formatShortDate, formatTime } from "@/lib/format/date";
 
 export function CheckInList() {
   const pathname = usePathname();
@@ -569,11 +569,7 @@ export function CheckInList() {
                     <InfoField label="Pronouns" value={selectedCustomer.pronouns || "Not set"} />
                     <InfoField
                       label="DOB / Age"
-                      value={
-                        selectedCustomer.dateOfBirth
-                          ? `${formatShortDate(selectedCustomer.dateOfBirth)} (${Math.max(0, Math.floor((Date.now() - new Date(`${selectedCustomer.dateOfBirth}T00:00:00Z`).getTime()) / (1000 * 60 * 60 * 24 * 365.2425)))})`
-                          : "Not set"
-                      }
+                        value={selectedCustomer.dateOfBirth ? formatDateWithAge(selectedCustomer.dateOfBirth) : "Not set"}
                     />
                     <InfoField label="Phone" value={selectedCustomer.phone || "Not set"} />
                     <InfoField label="Emergency Contact" value={selectedCustomer.emergencyContactName || "Not set"} />

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicRegistrationPanel } from "@/components/public/public-registration-panel";
+import { formatDate, formatTime } from "@/lib/format/date";
 import { getLocationName, getOrganizationForPublic, getPublicSession, getSessionStats } from "@/lib/public-programs";
 
 export async function generateMetadata({
@@ -14,7 +15,7 @@ export async function generateMetadata({
   const orgName = org?.name ?? "Cairn";
   const title = `${session?.program?.title ?? "Session"} | ${orgName}`;
   const description = session
-    ? `${session.program?.title ?? "Session"} on ${new Date(session.startsAt).toLocaleDateString("en-US", { dateStyle: "long" })} at ${orgName}.`
+    ? `${session.program?.title ?? "Session"} on ${formatDate(session.startsAt, "-", { dateStyle: "long" })} at ${orgName}.`
     : `View session details at ${orgName}.`;
 
   return {
@@ -67,8 +68,8 @@ export default async function PublicSessionDetailPage({
         <article className="rounded-xl border bg-card p-4">
           <h2 className="text-lg font-semibold">Session Information</h2>
           <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-            <div><dt className="text-muted-foreground">Date</dt><dd>{new Date(session.startsAt).toLocaleDateString("en-US", { dateStyle: "full" })}</dd></div>
-            <div><dt className="text-muted-foreground">Time</dt><dd>{new Date(session.startsAt).toLocaleTimeString("en-US", { timeStyle: "short" })} - {new Date(session.endsAt).toLocaleTimeString("en-US", { timeStyle: "short" })}</dd></div>
+            <div><dt className="text-muted-foreground">Date</dt><dd>{formatDate(session.startsAt, "-", { dateStyle: "full" })}</dd></div>
+            <div><dt className="text-muted-foreground">Time</dt><dd>{formatTime(session.startsAt)} - {formatTime(session.endsAt)}</dd></div>
             <div><dt className="text-muted-foreground">Instructor</dt><dd>{session.instructorName ?? "TBD"}</dd></div>
             <div><dt className="text-muted-foreground">Location</dt><dd>{getLocationName(session.locationId)}</dd></div>
             <div><dt className="text-muted-foreground">Capacity</dt><dd>{session.capacity}</dd></div>

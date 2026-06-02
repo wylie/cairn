@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicRegistrationPanel } from "@/components/public/public-registration-panel";
+import { formatDateTime } from "@/lib/format/date";
 import { getLocationName, getOrganizationForPublic, getProgramPricing, getPublicProgram, getPublicSessionsForProgram, getSessionStats } from "@/lib/public-programs";
 
 export async function generateMetadata({
@@ -80,7 +81,7 @@ export default async function PublicProgramDetailPage({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <p className="font-medium">{session.title?.trim() || program.title}</p>
-                      <p className="text-sm text-muted-foreground">{new Date(session.startsAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })} • {getLocationName(session.locationId)}</p>
+                      <p className="text-sm text-muted-foreground">{formatDateTime(session.startsAt)} • {getLocationName(session.locationId)}</p>
                     </div>
                     <div className="text-right text-sm">
                       <p>{stats.registered}/{session.capacity} registered</p>

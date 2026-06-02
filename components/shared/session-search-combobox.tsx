@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Program } from "@/types/domain";
+import { formatDate, formatTime } from "@/lib/format/date";
 import { SearchInput } from "@/components/shared/search-input";
 import { Button } from "@/components/ui/button";
 
@@ -23,8 +24,7 @@ const PROGRAM_CATEGORY_LABELS: Record<Program["category"], string> = {
 };
 
 function formatSessionDate(startsAt: string) {
-  const date = new Date(startsAt);
-  return `${date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} • ${date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
+  return `${formatDate(startsAt, "-", { month: "short", day: "numeric", year: "numeric" })} • ${formatTime(startsAt)}`;
 }
 
 export function SessionSearchCombobox({

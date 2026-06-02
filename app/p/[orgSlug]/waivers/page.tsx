@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { formatDateTime } from "@/lib/format/date";
 import { useCustomerPortalData } from "@/lib/portal/use-customer-portal-data";
 import { CustomerPortalContainer } from "@/components/portal/customer-portal-container";
 
@@ -60,7 +61,7 @@ export default function CustomerPortalWaiversPage() {
           {visibleSigned.map((entry) => (
             <div key={entry.id} className="rounded-md border p-3">
               <p className="font-medium">{entry.templateName} v{entry.templateVersion}</p>
-              <p>Signed: {entry.signedAt ? new Date(entry.signedAt).toLocaleString("en-US") : "Unknown"}</p>
+              <p>Signed: {entry.signedAt ? formatDateTime(entry.signedAt) : "Unknown"}</p>
               <p>Status: {entry.status}</p>
             </div>
           ))}

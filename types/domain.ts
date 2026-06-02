@@ -26,17 +26,24 @@ export interface Location {
 export interface FacilityProfile {
   organizationId: string;
   facilityName: string;
+  legalBusinessName?: string;
   shortName?: string;
   businessType?: string;
   phone?: string;
   email?: string;
   website?: string;
+  taxId?: string;
+  currency?: string;
   addressLine1?: string;
   addressLine2?: string;
   city?: string;
   state?: string;
   postalCode?: string;
+  description?: string;
+  emergencyContact?: string;
   timezone: string;
+  dateFormat?: "MM/DD/YYYY" | "DD/MM/YYYY" | "YYYY-MM-DD" | "Month D, YYYY";
+  timeFormat?: "12-hour" | "24-hour";
 }
 
 export interface StaffRoleDefinition {

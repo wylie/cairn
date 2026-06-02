@@ -17,7 +17,7 @@ import { CustomerAvatar } from "@/components/customers/customer-avatar";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import { filterCustomers } from "@/lib/data/customer-search";
-import { formatDateTime, formatShortDate } from "@/lib/format/date";
+import { formatDate, formatDateTime, formatDateWithAge, formatShortDate, formatTime } from "@/lib/format/date";
 import { formatCurrency } from "@/lib/transactions";
 import { ROLE_LABELS } from "@/lib/staff/capabilities";
 import { PERMISSION_LABELS } from "@/lib/staff/permissions";
@@ -804,7 +804,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
               <div key={entry.id} className="rounded-md border p-3">
                 <p className="font-medium">{entry.label}</p>
                 <p className="text-muted-foreground">
-                  {titleCase(entry.severity)} • {titleCase(entry.status)} • {entry.createdBy} • {new Date(entry.createdAt).toLocaleString("en-US")}
+                  {titleCase(entry.severity)} • {titleCase(entry.status)} • {entry.createdBy} • {formatDateTime(entry.createdAt)}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <Button className="h-8" variant="secondary" onClick={() => setProfileFeedback(`Edit alert placeholder: ${entry.label}`)}>Edit Alert</Button>
@@ -844,7 +844,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
           <CustomerSummaryCard
             title="Waiver Status"
             value={waiver?.status === "valid" ? "Valid" : waiver?.status === "expired" ? "Expired" : "Missing"}
-            detail={waiver?.expiresAt ? `Expires ${waiver.expiresAt}` : "No waiver on file"}
+            detail={waiver?.expiresAt ? `Expires ${formatDate(waiver.expiresAt)}` : "No waiver on file"}
           />
           <CustomerSummaryCard
             title="Current Access"
@@ -854,7 +854,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
           <CustomerSummaryCard
             title="Upcoming Registration"
             value={latestUpcomingSession ? latestUpcomingSession.session?.title ?? "Scheduled Session" : "No upcoming session"}
-            detail={latestUpcomingSession?.session?.startsAt ? new Date(latestUpcomingSession.session.startsAt).toLocaleString("en-US") : "No upcoming registrations"}
+            detail={latestUpcomingSession?.session?.startsAt ? formatDateTime(latestUpcomingSession.session.startsAt) : "No upcoming registrations"}
           />
           <CustomerSummaryCard
             title="Alerts"
@@ -886,7 +886,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Data Completeness</p>
               <Field label="Preferred name" value={customer.preferredName || "Not set"} warning={requiredMissing.preferredName} />
               <Field label="Pronouns" value={displayedPronouns || "Not set"} warning={requiredMissing.pronouns} />
-              <Field label="DOB / Age" value={hasValidDob ? `${formatShortDate(dobDate)} (${age})` : "Not set"} warning={requiredMissing.dateOfBirth} />
+              <Field label="DOB / Age" value={hasValidDob ? formatDateWithAge(dobDate) : "Not set"} warning={requiredMissing.dateOfBirth} />
             </div>
           </CardContent>
         </Card>
@@ -913,11 +913,11 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                   {entry.status}
                 </span>
               </div>
-              <p className="text-muted-foreground">Expiration: {entry.expirationDate ?? "N/A"}</p>
+              <p className="text-muted-foreground">Expiration: {entry.expirationDate ? formatDate(entry.expirationDate) : "N/A"}</p>
               <p className="text-muted-foreground">Punches: {typeof entry.remainingPunches === "number" ? entry.remainingPunches : "N/A"}</p>
               {entry.freezeStartDate || entry.freezeEndDate ? (
                 <p className="text-muted-foreground">
-                  Freeze: {entry.freezeStartDate ?? "—"} to {entry.freezeEndDate ?? "—"}{entry.freezeReason ? ` • ${entry.freezeReason}` : ""}
+                  Freeze: {entry.freezeStartDate ? formatDate(entry.freezeStartDate) : "—"} to {entry.freezeEndDate ? formatDate(entry.freezeEndDate) : "—"}{entry.freezeReason ? ` • ${entry.freezeReason}` : ""}
                 </p>
               ) : null}
               <p className="text-muted-foreground">Locations: {entry.locationsAllowed?.join(", ") ?? "All"}</p>
@@ -927,7 +927,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                 Eligibility preview: {decision.allowed ? "✓ Can use now" : `✕ ${decision.reasons[0] ?? "Blocked"}`}
               </p>
               <p className="text-xs text-muted-foreground">
-                Updated: {entry.updatedAt ? new Date(entry.updatedAt).toLocaleString("en-US") : "—"}{entry.updatedByStaffName ? ` • ${entry.updatedByStaffName}` : ""}
+                Updated: {entry.updatedAt ? formatDateTime(entry.updatedAt) : "—"}{entry.updatedByStaffName ? ` • ${entry.updatedByStaffName}` : ""}
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(entry.type === "membership" || entry.type === "household-membership") ? (
@@ -1050,7 +1050,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                     .slice(0, 5)
                     .map((record) => (
                       <p key={record.id}>
-                        {new Date(record.checkInTime).toLocaleDateString("en-US")} Visit Used ({record.punchesRemaining ?? 0} remaining)
+                        {formatDate(record.checkInTime)} Visit Used ({record.punchesRemaining ?? 0} remaining)
                       </p>
                     ))}
                   {recentCheckIns.filter((record) => record.customerId === customer.id && record.entryMethod === "multi_visit_pass").length === 0 ? (
@@ -1544,7 +1544,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                   <div key={entry.registration.id} className="rounded-md border p-2">
                     <p className="font-medium">{entry.customer?.firstName} {entry.customer?.lastName}</p>
                     <p className="text-muted-foreground">{entry.program?.title ?? entry.session?.title ?? "Session"}</p>
-                    <p className="text-muted-foreground">{entry.session?.startsAt ? new Date(entry.session.startsAt).toLocaleString("en-US") : "Date pending"} · {entry.registration.status}</p>
+                    <p className="text-muted-foreground">{entry.session?.startsAt ? formatDateTime(entry.session.startsAt) : "Date pending"} · {entry.registration.status}</p>
                   </div>
                 ))}
               </div>
@@ -1777,7 +1777,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
           ) : (
             purchaseHistoryEntries.slice(0, 3).map((entry) => (
               <div key={entry.id} className="rounded-lg border p-3">
-                <p className="font-medium">{new Date(entry.completedAt).toLocaleDateString()}</p>
+                <p className="font-medium">{formatDate(entry.completedAt)}</p>
                 <ul className="mt-1 space-y-1 text-sm text-muted-foreground">
                   {(entry.items ?? []).map((item, index) => (
                     <li key={`${entry.id}-${item.productId}-${index}`}>
@@ -1859,7 +1859,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                       <td className="px-2 py-2">{entry.name}</td>
                       <td className="px-2 py-2">{titleCase(entry.type)}</td>
                       <td className="px-2 py-2">{entry.uploadedBy}</td>
-                      <td className="px-2 py-2">{new Date(entry.uploadedAt).toLocaleString("en-US")}</td>
+                      <td className="px-2 py-2">{formatDateTime(entry.uploadedAt)}</td>
                       <td className="px-2 py-2">{titleCase(entry.status)}</td>
                       <td className="px-2 py-2">
                         <div className="flex flex-wrap gap-2">
@@ -1928,7 +1928,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                 <div key={entry.id} className="rounded-md border p-3">
                   <p className="font-medium">{entry.subject}</p>
                   <p className="text-muted-foreground">
-                    {new Date(entry.sentAt).toLocaleString("en-US")} • {titleCase(entry.type)} • {titleCase(entry.status)} • {entry.sentBy}
+                    {formatDateTime(entry.sentAt)} • {titleCase(entry.type)} • {titleCase(entry.status)} • {entry.sentBy}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <Button className="h-8" variant="secondary" onClick={() => setProfileFeedback(entry.body)}>View Message</Button>
@@ -1951,7 +1951,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
             {upcomingSessions.length === 0 ? <p className="text-muted-foreground">No upcoming sessions.</p> : null}
             {upcomingSessions.slice(0, 4).map((entry) => (
               <p key={entry.registration.id} className="text-muted-foreground">
-                {entry.session?.title ?? entry.program?.title ?? "Session"} • {new Date(entry.session?.startsAt ?? "").toLocaleString("en-US")} • {entry.registration.status}
+                {entry.session?.title ?? entry.program?.title ?? "Session"} • {formatDateTime(entry.session?.startsAt)} • {entry.registration.status}
               </p>
             ))}
           </div>
@@ -1960,7 +1960,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
             {pastSessions.length === 0 ? <p className="text-muted-foreground">No past sessions.</p> : null}
             {pastSessions.slice(0, 4).map((entry) => (
               <p key={entry.registration.id} className="text-muted-foreground">
-                {entry.session?.title ?? entry.program?.title ?? "Session"} • {new Date(entry.session?.startsAt ?? "").toLocaleString("en-US")} • {(entry.session?.status ?? entry.registration.status)}
+                {entry.session?.title ?? entry.program?.title ?? "Session"} • {formatDateTime(entry.session?.startsAt)} • {(entry.session?.status ?? entry.registration.status)}
               </p>
             ))}
           </div>
@@ -2004,8 +2004,8 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                     <tr key={record.id} className="border-b last:border-b-0">
                       <td className="px-2 py-2">{record.templateName}</td>
                       <td className="px-2 py-2">{titleCase(record.status)}</td>
-                      <td className="px-2 py-2">{new Date(record.signedAt).toLocaleDateString()}</td>
-                      <td className="px-2 py-2">{record.expiresAt ? new Date(record.expiresAt).toLocaleDateString() : "Never"}</td>
+                      <td className="px-2 py-2">{formatDate(record.signedAt)}</td>
+                      <td className="px-2 py-2">{record.expiresAt ? formatDate(record.expiresAt) : "Never"}</td>
                       <td className="px-2 py-2">
                         <div className="flex flex-wrap gap-2">
                           <Button className="h-8" variant="secondary" onClick={() => setActiveSignedWaiverId(record.id)}>View Signed Waiver</Button>
@@ -2111,8 +2111,8 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
               <Field label="Signed by" value={activeSignedWaiver.signedByName} />
               <Field label="Relationship" value={titleCase(activeSignedWaiver.signedByRelationship ?? "self")} />
               <Field label="Signed for" value={`${customer.firstName} ${customer.lastName}`} />
-              <Field label="Signed" value={new Date(activeSignedWaiver.signedAt).toLocaleString()} />
-              <Field label="Expires" value={activeSignedWaiver.expiresAt ? new Date(activeSignedWaiver.expiresAt).toLocaleDateString() : "Never"} />
+              <Field label="Signed" value={formatDateTime(activeSignedWaiver.signedAt)} />
+              <Field label="Expires" value={activeSignedWaiver.expiresAt ? formatDate(activeSignedWaiver.expiresAt) : "Never"} />
               <Field label="Status" value={titleCase(activeSignedWaiver.status)} />
             </div>
             <div>
@@ -2134,7 +2134,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
               </ul>
             </div>
             <Field label="Typed signature" value={activeSignedWaiver.typedSignature} />
-            <Field label="Signature timestamp" value={new Date(activeSignedWaiver.createdAt).toLocaleString()} />
+            <Field label="Signature timestamp" value={formatDateTime(activeSignedWaiver.createdAt)} />
           </div>
         </ModalShell>
       ) : null}
@@ -2178,7 +2178,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
               <div key={entry.id} className="rounded-lg border p-3">
                 <p className="font-medium">{entry.title}</p>
                 <p className="text-muted-foreground">{entry.detail}</p>
-                <p className="text-muted-foreground">{new Date(entry.occurredAt).toLocaleString("en-US")}</p>
+                <p className="text-muted-foreground">{formatDateTime(entry.occurredAt)}</p>
                 <p className="text-muted-foreground">Staff: {entry.staff}</p>
               </div>
             ))}

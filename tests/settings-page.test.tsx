@@ -149,6 +149,31 @@ describe("Settings system MVP", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Save Facility Settings" })).toBeDisabled());
   });
 
+  it("renders and saves global date/time formatting settings", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <SettingsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "1111");
+
+    const dateFormat = screen.getByLabelText("Date format");
+    const timeFormat = screen.getByLabelText("Time format");
+
+    expect(dateFormat).toHaveValue("MM/DD/YYYY");
+    expect(timeFormat).toHaveValue("12-hour");
+
+    await user.selectOptions(dateFormat, "DD/MM/YYYY");
+    await user.selectOptions(timeFormat, "24-hour");
+    await user.click(screen.getByRole("button", { name: "Save Facility Settings" }));
+
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Facility settings saved"));
+    expect(screen.getByLabelText("Date format")).toHaveValue("DD/MM/YYYY");
+    expect(screen.getByLabelText("Time format")).toHaveValue("24-hour");
+  });
+
   it("closes modals with Escape and outside click", async () => {
     const user = userEvent.setup();
     render(

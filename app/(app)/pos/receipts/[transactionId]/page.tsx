@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
+import { formatDateTime } from "@/lib/format/date";
 import { getReceiptStatus, getReceiptStatusLabel } from "@/lib/portal/receipts";
 import { getLocationName } from "@/lib/public-programs";
 import { formatCurrency } from "@/lib/transactions";
@@ -46,7 +47,7 @@ export default function ReceiptDetailPage() {
       <header className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-semibold">Receipt {receipt.receiptNumber}</h2>
-          <p className="text-sm text-muted-foreground">{new Date(receipt.completedAt).toLocaleString()}</p>
+          <p className="text-sm text-muted-foreground">{formatDateTime(receipt.completedAt)}</p>
           <p className="text-sm text-muted-foreground">Status: {getReceiptStatusLabel(receiptStatus)}</p>
         </div>
         <div className="flex items-center gap-2">

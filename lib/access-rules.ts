@@ -1,3 +1,4 @@
+import { formatDate } from "@/lib/format/date";
 import type { ClassCampSession, Customer, CustomerAccessRecord, Program, Registration, Waiver } from "@/types/domain";
 
 export type AccessOutcome = "approved" | "attention" | "denied";
@@ -62,7 +63,7 @@ function waiverWarnings(waiver: Waiver | undefined, dayKey: string) {
   const base = new Date(`${dayKey}T00:00:00Z`);
   const days = Math.ceil((exp.getTime() - base.getTime()) / MS_IN_DAY);
   if (days <= 14) {
-    return [`Waiver expires on ${exp.toLocaleDateString("en-US")}.`];
+    return [`Waiver expires on ${formatDate(exp)}.`];
   }
   return [];
 }
@@ -79,8 +80,8 @@ function accessUsable(record: CustomerAccessRecord, locationId: string, dayKey: 
   const day = toDate(`${dayKey}T12:00:00Z`)!;
   const startKey = record.startDate?.slice(0, 10);
   const endKey = record.expirationDate?.slice(0, 10);
-  if (startKey && dayKey < startKey) return { ok: false, reason: `${record.type} starts on ${start?.toLocaleDateString("en-US") ?? startKey}.` };
-  if (endKey && dayKey > endKey) return { ok: false, reason: `${record.type} expired on ${end?.toLocaleDateString("en-US") ?? endKey}.` };
+  if (startKey && dayKey < startKey) return { ok: false, reason: `${record.type} starts on ${start ? formatDate(start) : startKey}.` };
+  if (endKey && dayKey > endKey) return { ok: false, reason: `${record.type} expired on ${end ? formatDate(end) : endKey}.` };
   if (record.locationsAllowed?.length && !record.locationsAllowed.includes(locationId)) {
     return { ok: false, reason: `${record.type} is not valid at this location.` };
   }

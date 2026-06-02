@@ -1,8 +1,8 @@
 import type { ClassCampSession, Program } from "@/types/domain";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatDate, formatTime } from "@/lib/format/date";
 
 export function CalendarCard({ program, session }: { program: Program; session: ClassCampSession }) {
-  const start = new Date(session.startsAt);
   return (
     <Card>
       <CardHeader>
@@ -11,7 +11,7 @@ export function CalendarCard({ program, session }: { program: Program; session: 
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground">
-          {start.toLocaleDateString()} at {start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+          {formatDate(session.startsAt)} at {formatTime(session.startsAt)}
         </p>
         <p className="mt-1 text-sm">{session.enrolled}/{session.capacity} enrolled</p>
       </CardContent>

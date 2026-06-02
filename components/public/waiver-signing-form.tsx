@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { formatDateTime } from "@/lib/format/date";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useCustomerPortalData } from "@/lib/portal/use-customer-portal-data";
 import { getSessionFromCookieClient } from "@/lib/tenant/client";
@@ -214,7 +215,7 @@ export function WaiverSigningForm({
         <div className="rounded-md border bg-secondary/20 p-3 text-sm">
           <p>Signing for: <strong>{signingForLabel}</strong></p>
           <p>Status: {selectedStatus === "valid" ? "Valid" : selectedStatus === "expiring_soon" ? "Expiring Soon" : selectedStatus === "outdated_version" ? "Outdated Version" : selectedStatus === "expired" ? "Expired" : "Missing"}</p>
-          {latestSigned ? <p>Last signed: {new Date(latestSigned.signedAt).toLocaleString("en-US")}</p> : null}
+          {latestSigned ? <p>Last signed: {formatDateTime(latestSigned.signedAt)}</p> : null}
           {householdGuardianHint ? <p>Household guardian(s): {householdGuardianHint}</p> : null}
         </div>
       ) : null}

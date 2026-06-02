@@ -19,6 +19,7 @@ import { data } from "@/lib/data";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useSettingsState } from "@/lib/state/settings-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
+import { formatDate, formatDateTime, formatTime } from "@/lib/format/date";
 import type { SessionActivityEvent } from "@/types/calendar";
 
 function buildIsoDateTime(date: string, time: string) {
@@ -33,13 +34,11 @@ function addDays(dateKey: string, days: number) {
 
 function formatDayAgendaTitle(dateKey: string) {
   const date = new Date(`${dateKey}T00:00:00`);
-  return date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  return formatDate(date, "-", { month: "long", day: "numeric", year: "numeric" });
 }
 
 function formatSessionTimeRange(startIso: string, endIso: string) {
-  const start = new Date(startIso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-  const end = new Date(endIso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-  return `${start} - ${end}`;
+  return `${formatTime(startIso)} - ${formatTime(endIso)}`;
 }
 
 function getSessionDisplay(sessionTitle: string | undefined, programTitle: string | undefined) {
@@ -1130,10 +1129,10 @@ export default function CalendarPage() {
           }
         >
           <p className="text-sm text-muted-foreground">
-            From: {new Date(moveDraft.fromStart).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+            From: {formatDateTime(moveDraft.fromStart)}
           </p>
           <p className="text-sm text-muted-foreground">
-            To: {new Date(moveDraft.toStart).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+            To: {formatDateTime(moveDraft.toStart)}
           </p>
           <div className="mt-3 space-y-2 rounded-md border bg-secondary/20 p-2 text-xs text-muted-foreground">
             <p className="font-medium text-foreground">Apply move to:</p>

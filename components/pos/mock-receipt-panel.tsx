@@ -1,4 +1,5 @@
 import type { PosTransaction } from "@/types/domain";
+import { formatDateTime } from "@/lib/format/date";
 import { formatCurrency } from "@/lib/transactions";
 
 export function MockReceiptPanel({ transaction }: { transaction: PosTransaction | null }) {
@@ -17,7 +18,7 @@ export function MockReceiptPanel({ transaction }: { transaction: PosTransaction 
         ))}
       </ul>
       <p className="mt-1">Total: {formatCurrency(transaction.total)}</p>
-      <p>{new Date(transaction.completedAt).toLocaleString()}</p>
+      <p>{formatDateTime(transaction.completedAt)}</p>
       <p>{transaction.checkInTriggered ? "Customer checked in" : "Sale completed"}</p>
     </div>
   );

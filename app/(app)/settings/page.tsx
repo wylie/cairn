@@ -60,6 +60,9 @@ const timezoneOptions = [
   "Pacific/Honolulu"
 ] as const;
 
+const dateFormatOptions = ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD", "Month D, YYYY"] as const;
+const timeFormatOptions = ["12-hour", "24-hour"] as const;
+
 const roleColorChipClass: Record<string, string> = {
   slate: "border-slate-300 bg-slate-100 text-slate-800",
   blue: "border-sky-300 bg-sky-100 text-sky-800",
@@ -478,6 +481,28 @@ export default function SettingsPage() {
                       <SelectInput value={facilityDraft.timezone} onChange={(e) => setFacilityDraft((p) => ({ ...p, timezone: e.target.value }))}>
                         {timezoneOptions.map((zone) => (
                           <option key={zone} value={zone}>{zone}</option>
+                        ))}
+                      </SelectInput>
+                    </FormField>
+                    <FormField label="Date format">
+                      <SelectInput
+                        value={facilityDraft.dateFormat ?? "MM/DD/YYYY"}
+                        onChange={(e) => setFacilityDraft((p) => ({ ...p, dateFormat: e.target.value as (typeof dateFormatOptions)[number] }))}
+                      >
+                        {dateFormatOptions.map((option) => (
+                          <option key={option} value={option}>{option}</option>
+                        ))}
+                      </SelectInput>
+                    </FormField>
+                    <FormField label="Time format">
+                      <SelectInput
+                        value={facilityDraft.timeFormat ?? "12-hour"}
+                        onChange={(e) => setFacilityDraft((p) => ({ ...p, timeFormat: e.target.value as (typeof timeFormatOptions)[number] }))}
+                      >
+                        {timeFormatOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option === "12-hour" ? "12-hour, example: 8:45 AM" : "24-hour, example: 20:45"}
+                          </option>
                         ))}
                       </SelectInput>
                     </FormField>

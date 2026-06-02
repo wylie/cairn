@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatDate, formatDateTime } from "@/lib/format/date";
 import { canCustomerViewReceipt } from "@/lib/portal/receipts";
 import { useCustomerPortalData } from "@/lib/portal/use-customer-portal-data";
 import { getLocationName } from "@/lib/public-programs";
@@ -109,7 +110,7 @@ export default function CustomerPortalRegistrationDetailPage() {
           <p><span className="text-muted-foreground">Program:</span> {program?.title ?? "Not set"}</p>
           <p><span className="text-muted-foreground">Instructor:</span> {session?.instructorName ?? "TBD"}</p>
           <p><span className="text-muted-foreground">Location:</span> {getLocationName(session?.locationId)}</p>
-          <p><span className="text-muted-foreground">Schedule:</span> {session?.startsAt ? new Date(session.startsAt).toLocaleString("en-US") : "No schedule"}</p>
+          <p><span className="text-muted-foreground">Schedule:</span> {session?.startsAt ? formatDateTime(session.startsAt) : "No schedule"}</p>
           <p><span className="text-muted-foreground">Waitlist status:</span> {registration.status === "waitlisted" ? `Position ${registration.waitlistPosition ?? "TBD"}` : "Not waitlisted"}</p>
           <p><span className="text-muted-foreground">Waiver status:</span> {waiver?.status ?? "missing"}</p>
         </CardContent>
@@ -118,13 +119,13 @@ export default function CustomerPortalRegistrationDetailPage() {
       <Card>
         <CardHeader><CardTitle>Upcoming</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
-          <p><span className="text-muted-foreground">Next session:</span> {nextSession ? new Date(nextSession.startsAt).toLocaleString("en-US") : "No upcoming session"}</p>
+          <p><span className="text-muted-foreground">Next session:</span> {nextSession ? formatDateTime(nextSession.startsAt) : "No upcoming session"}</p>
           <p><span className="text-muted-foreground">Remaining sessions:</span> {remainingSessions.length}</p>
           <div className="rounded-md border p-3">
             <p className="font-medium">Calendar view</p>
             <ul className="mt-2 space-y-1 text-muted-foreground">
               {remainingSessions.slice(0, 6).map((entry) => (
-                <li key={entry.id}>{new Date(entry.startsAt).toLocaleDateString("en-US")} · {entry.title ?? program?.title}</li>
+                <li key={entry.id}>{formatDate(entry.startsAt)} · {entry.title ?? program?.title}</li>
               ))}
               {remainingSessions.length === 0 ? <li>No remaining sessions</li> : null}
             </ul>
@@ -140,7 +141,7 @@ export default function CustomerPortalRegistrationDetailPage() {
             {attendanceHistory.map((row) => (
               <div key={row.session.id} className="rounded-md border p-2">
                 <p className="font-medium">{row.session.title ?? program?.title}</p>
-                <p className="text-muted-foreground">{new Date(row.session.startsAt).toLocaleString("en-US")}</p>
+                <p className="text-muted-foreground">{formatDateTime(row.session.startsAt)}</p>
                 <p>Status: {row.status}</p>
               </div>
             ))}
@@ -160,7 +161,7 @@ export default function CustomerPortalRegistrationDetailPage() {
             {relatedReceipts.map((entry) => (
               <div key={entry.id} className="rounded-md border p-2">
                 <p className="font-medium">{entry.receiptNumber}</p>
-                <p>{new Date(entry.completedAt).toLocaleString("en-US")} · {formatCurrency(entry.total)}</p>
+                <p>{formatDateTime(entry.completedAt)} · {formatCurrency(entry.total)}</p>
                 <Link href={`/p/${orgSlug}/purchases/${entry.id}`} className="inline-flex h-8 items-center rounded-md border px-3 text-xs">
                   View receipt
                 </Link>
@@ -179,4 +180,3 @@ export default function CustomerPortalRegistrationDetailPage() {
     </section>
   );
 }
-

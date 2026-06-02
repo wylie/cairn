@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCustomerPortalData } from "@/lib/portal/use-customer-portal-data";
 import { canCustomerViewReceipt } from "@/lib/portal/receipts";
+import { formatDateTime } from "@/lib/format/date";
 import { getLocationName } from "@/lib/public-programs";
 import { formatCurrency } from "@/lib/transactions";
 
@@ -192,7 +193,7 @@ export default function CustomerPortalMembershipDetailPage() {
           {relatedReceipts.map((receipt) => (
             <div key={receipt.id} className="rounded-md border p-3">
               <p className="font-medium">{receipt.receiptNumber}</p>
-              <p className="text-muted-foreground">{new Date(receipt.completedAt).toLocaleString("en-US")}</p>
+              <p className="text-muted-foreground">{formatDateTime(receipt.completedAt)}</p>
               <p>{receipt.items.map((item) => item.productName).join(", ")}</p>
               <p>Total: {formatCurrency(receipt.total)}</p>
               <Link href={`/p/${orgSlug}/purchases/${receipt.id}`} className="mt-2 inline-flex h-8 items-center rounded-md border px-3 text-xs">
@@ -214,4 +215,3 @@ export default function CustomerPortalMembershipDetailPage() {
     </section>
   );
 }
-

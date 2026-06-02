@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useCustomerPortalData } from "@/lib/portal/use-customer-portal-data";
 import { CustomerPortalContainer } from "@/components/portal/customer-portal-container";
+import { formatDateTime } from "@/lib/format/date";
 
 export default function CustomerPortalRegistrationsPage() {
   const { orgSlug } = useParams<{ orgSlug: string }>();
@@ -55,7 +56,7 @@ function RegistrationSection({
         {rows.map((row) => (
           <div key={row.entry.id} className="rounded-md border p-3 text-sm">
             <p className="font-medium">{row.program?.title ?? row.session?.title ?? "Session"}</p>
-            <p className="text-muted-foreground">{row.session?.startsAt ? new Date(row.session.startsAt).toLocaleString("en-US") : "No date"}</p>
+            <p className="text-muted-foreground">{row.session?.startsAt ? formatDateTime(row.session.startsAt) : "No date"}</p>
             <p>Status: {row.entry.status}</p>
             <div className="mt-2 flex flex-wrap gap-2">
               <Link

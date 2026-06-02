@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { FormField } from "@/components/shared/form-layout";
 import { SearchInput } from "@/components/shared/search-input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatDateTime } from "@/lib/format/date";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { formatCurrency } from "@/lib/transactions";
 import { useWorkstationState } from "@/lib/state/workstation-state";
@@ -107,7 +108,7 @@ export default function PosHistoryPage() {
                   <div>
                     <p className="font-medium">{displayCustomerName}</p>
                     <p className="text-xs text-muted-foreground">Receipt #{transaction.receiptNumber}</p>
-                    <p className="text-xs text-muted-foreground">{new Date(transaction.completedAt).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">{formatDateTime(transaction.completedAt)}</p>
                   </div>
                   <div>
                     <p className="text-sm">Sold by {displayStaffName}</p>

@@ -4,11 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StaffAttributionLabel } from "@/components/staff/staff-attribution-label";
 import { CustomerAvatar } from "@/components/customers/customer-avatar";
-
-function formatTime(value: string | null) {
-  if (!value) return "-";
-  return new Date(value).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-}
+import { InfoField } from "@/components/shared/info-field";
+import { formatTime } from "@/lib/format/date";
 
 function normalize(value: string) {
   return value.replace(/_/g, " ");
@@ -34,14 +31,14 @@ export function CheckInRow({
   return (
     <div
       data-testid={`checkin-row-${record.customerId}`}
-      className="relative grid grid-cols-1 gap-3 rounded-lg border bg-card p-4 md:grid-cols-[1.3fr_1fr_1fr_1.2fr_auto] md:items-center"
+      className="relative grid grid-cols-1 gap-4 rounded-lg border bg-card p-4 md:grid-cols-[minmax(0,1.45fr)_minmax(0,1.05fr)_auto] md:items-start"
     >
       <Link
         href={viewCustomerHref ?? `/customers/${record.customerId}`}
         aria-label={`Open customer profile for ${record.customerName}`}
         className="absolute inset-0 rounded-lg transition-colors hover:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       />
-      <div className="relative z-10 pointer-events-none flex items-center gap-3">
+      <div className="relative z-10 pointer-events-none flex items-start gap-3">
         <CustomerAvatar
           customer={
             customer ?? {
@@ -53,26 +50,32 @@ export function CheckInRow({
           size="sm"
           className="bg-card"
         />
-        <div>
-          <p className="font-medium">{resolvedName}</p>
-          <p className="text-sm text-muted-foreground">{record.membershipPassType}</p>
+        <div className="space-y-2">
+          <div>
+            <p className="font-medium">{resolvedName}</p>
+            <p className="text-sm text-muted-foreground">{record.membershipPassType}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone="muted">{normalize(record.entryMethod)}</Badge>
+            <Badge tone="muted">{normalize(record.checkInSource)}</Badge>
+            <Badge tone={record.status === "checked-in" ? "success" : "muted"}>{record.status === "checked-in" ? "Checked In" : "Checked Out"}</Badge>
+          </div>
         </div>
       </div>
-      <div className="relative z-10 pointer-events-none text-sm text-muted-foreground">In: {formatTime(record.checkInTime)}</div>
-      <div className="relative z-10 pointer-events-none text-sm text-muted-foreground">Out: {formatTime(record.checkOutTime)}</div>
-      <div className="relative z-10 pointer-events-none flex flex-wrap items-center gap-2">
-        <Badge tone="muted">{normalize(record.entryMethod)}</Badge>
-        <Badge tone="muted">{normalize(record.checkInSource)}</Badge>
-        <Badge tone={record.status === "checked-in" ? "success" : "muted"}>{record.status === "checked-in" ? "Checked In" : "Checked Out"}</Badge>
+      <div className="relative z-10 pointer-events-none grid gap-3 sm:grid-cols-2">
+        <InfoField label="Check In" value={formatTime(record.checkInTime)} />
+        <InfoField label="Check Out" value={formatTime(record.checkOutTime)} />
       </div>
-      {record.status === "checked-in" && !readOnly ? (
-        <Button className="relative z-10" onClick={() => onCheckOut(record.id)} aria-label={`Check Out ${record.customerName}`}>Check Out</Button>
-      ) : (
-        <Link className="relative z-10" href={viewCustomerHref ?? `/customers/${record.customerId}`}>
-          <Button variant="outline">View Customer</Button>
-        </Link>
-      )}
-      <div className="relative z-10 pointer-events-none md:col-span-5 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+      <div className="relative z-10 flex flex-col items-stretch gap-2 md:items-end">
+        {record.status === "checked-in" && !readOnly ? (
+          <Button className="relative z-10 min-h-11 w-full md:w-auto" onClick={() => onCheckOut(record.id)} aria-label={`Check Out ${record.customerName}`}>Check Out</Button>
+        ) : (
+          <Link className="relative z-10 w-full md:w-auto" href={viewCustomerHref ?? `/customers/${record.customerId}`}>
+            <Button variant="secondary" className="w-full md:w-auto">View Customer</Button>
+          </Link>
+        )}
+      </div>
+      <div className="relative z-10 pointer-events-none grid gap-2 text-sm md:col-span-3 md:grid-cols-2">
         <StaffAttributionLabel
           label="Checked in by"
           staffId={checkedInByStaffId}

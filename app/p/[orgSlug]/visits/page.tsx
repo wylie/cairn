@@ -3,6 +3,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCustomerPortalData } from "@/lib/portal/use-customer-portal-data";
 import { CustomerPortalContainer } from "@/components/portal/customer-portal-container";
+import { getLocationName } from "@/lib/public-programs";
+import { formatShortDate, formatTime } from "@/lib/format/date";
 
 export default function CustomerPortalVisitsPage() {
   const { visibleCustomerIds, checkInRecords } = useCustomerPortalData();
@@ -19,10 +21,10 @@ export default function CustomerPortalVisitsPage() {
           {visits.map((visit) => {
             return (
               <div key={visit.id} className="rounded-md border p-3">
-                <p>Date: {new Date(visit.checkInTime).toLocaleDateString("en-US")}</p>
-                <p>Check-In: {new Date(visit.checkInTime).toLocaleTimeString("en-US")}</p>
-                <p>Check-Out: {visit.checkOutTime ? new Date(visit.checkOutTime).toLocaleTimeString("en-US") : "In progress"}</p>
-                <p>Location: {visit.locationId}</p>
+                <p>Date: {formatShortDate(visit.checkInTime)}</p>
+                <p>Check-In: {formatTime(visit.checkInTime)}</p>
+                <p>Check-Out: {visit.checkOutTime ? formatTime(visit.checkOutTime) : "In progress"}</p>
+                <p>Location: {getLocationName(visit.locationId)}</p>
                 <p>Programs Attended: {visit.entryMethod === "class_registration" || visit.entryMethod === "camp_registration" ? visit.membershipPassType : "General facility visit"}</p>
               </div>
             );

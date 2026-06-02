@@ -16,6 +16,7 @@ import { useSettingsState } from "@/lib/state/settings-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import type { CustomerAccessRecord } from "@/types/domain";
 import { buildCustomerDetailHref } from "@/lib/navigation/detail-navigation";
+import { formatShortDate } from "@/lib/format/date";
 
 type MembershipFilter = "all" | "active" | "expiring_30" | "expiring_7" | "frozen" | "cancelled" | "expired" | "pending_renewal";
 
@@ -30,11 +31,6 @@ type StaffAction =
   | "add_note";
 
 const ONE_DAY_MS = 1000 * 60 * 60 * 24;
-
-function formatDate(value?: string) {
-  if (!value) return "-";
-  return new Date(`${value}T00:00:00Z`).toLocaleDateString("en-US");
-}
 
 function statusLabel(record: CustomerAccessRecord): "Active" | "Expiring Soon" | "Frozen" | "Expired" | "Canceled" | "Pending Renewal" {
   const now = new Date();
@@ -188,7 +184,7 @@ export default function MembershipsWorkspacePage() {
         ...basePatch,
         status: "active",
         expirationDate: next,
-        notes: `Renewed by ${activeStaff?.firstName ?? "staff"} ${new Date().toLocaleDateString("en-US")}`
+        notes: `Renewed by ${activeStaff?.firstName ?? "staff"} ${formatShortDate(new Date())}`
       });
       setFeedback(result.message);
       return;
@@ -228,7 +224,7 @@ export default function MembershipsWorkspacePage() {
       }
       const result = updateCustomerAccessRecord(recordId, {
         ...basePatch,
-        notes: `${record.notes ? `${record.notes}\n` : ""}[${new Date().toLocaleDateString("en-US")}] ${note}`
+        notes: `${record.notes ? `${record.notes}\n` : ""}[${formatShortDate(new Date())}] ${note}`
       });
       setStaffNote("");
       setFeedback(result.message);
@@ -418,9 +414,9 @@ export default function MembershipsWorkspacePage() {
                         </td>
                         <td className="px-3 py-2">{row.product?.name ?? row.record.type}</td>
                         <td className="px-3 py-2"><Badge tone={statusTone(row.label)}>{row.label}</Badge></td>
-                        <td className="px-3 py-2">{formatDate(row.record.startDate)}</td>
-                        <td className="px-3 py-2">{formatDate(row.record.expirationDate)}</td>
-                        <td className="px-3 py-2">{formatDate(row.record.expirationDate)}</td>
+                        <td className="px-3 py-2">{formatShortDate(row.record.startDate)}</td>
+                        <td className="px-3 py-2">{formatShortDate(row.record.expirationDate)}</td>
+                        <td className="px-3 py-2">{formatShortDate(row.record.expirationDate)}</td>
                         <td className="px-3 py-2">{row.record.type === "membership" || row.record.type === "household-membership" ? "Monthly" : "One-time"}</td>
                         <td className="px-3 py-2">{row.household?.householdName ?? "—"}</td>
                         <td className="px-3 py-2">{row.locationNames.length ? row.locationNames.join(", ") : "All"}</td>
@@ -452,9 +448,9 @@ export default function MembershipsWorkspacePage() {
                   <Field label="Member" value={`${selected.customer?.firstName} ${selected.customer?.lastName}`} />
                   <Field label="Household" value={selected.household?.householdName ?? "Not assigned"} />
                   <Field label="Membership Type" value={selected.product?.name ?? selected.record.type} />
-                  <Field label="Start Date" value={formatDate(selected.record.startDate)} />
-                  <Field label="Renewal Date" value={formatDate(selected.record.expirationDate)} />
-                  <Field label="Expiration Date" value={formatDate(selected.record.expirationDate)} />
+                  <Field label="Start Date" value={formatShortDate(selected.record.startDate)} />
+                  <Field label="Renewal Date" value={formatShortDate(selected.record.expirationDate)} />
+                  <Field label="Expiration Date" value={formatShortDate(selected.record.expirationDate)} />
                   <Field label="Billing Frequency" value={selected.record.type === "membership" || selected.record.type === "household-membership" ? "Monthly" : "One-time"} />
                   <Field label="Location" value={selected.locationNames.length ? selected.locationNames.join(", ") : "All locations"} />
                   <Field label="Status" value={selected.label} />
@@ -463,12 +459,12 @@ export default function MembershipsWorkspacePage() {
                 <div className="rounded-lg border p-3" aria-label="membership-timeline">
                   <p className="mb-2 font-medium">Membership Timeline</p>
                   <ul className="space-y-1 text-xs text-muted-foreground">
-                    <li>Purchased • {formatDate(selected.record.purchaseDate ?? selected.record.startDate)}</li>
-                    {selected.record.expirationDate ? <li>Renewed • {formatDate(selected.record.expirationDate)}</li> : null}
-                    {selected.record.freezeStartDate ? <li>Frozen • {formatDate(selected.record.freezeStartDate)}</li> : null}
-                    {selected.record.freezeEndDate ? <li>Unfrozen • {formatDate(selected.record.freezeEndDate)}</li> : null}
-                    {selected.record.cancelledAt ? <li>Canceled • {new Date(selected.record.cancelledAt).toLocaleDateString("en-US")}</li> : null}
-                    {selected.record.notes?.includes("changed") ? <li>Changed type • {formatDate(selected.record.startDate)}</li> : null}
+                    <li>Purchased • {formatShortDate(selected.record.purchaseDate ?? selected.record.startDate)}</li>
+                    {selected.record.expirationDate ? <li>Renewed • {formatShortDate(selected.record.expirationDate)}</li> : null}
+                    {selected.record.freezeStartDate ? <li>Frozen • {formatShortDate(selected.record.freezeStartDate)}</li> : null}
+                    {selected.record.freezeEndDate ? <li>Unfrozen • {formatShortDate(selected.record.freezeEndDate)}</li> : null}
+                    {selected.record.cancelledAt ? <li>Canceled • {formatShortDate(selected.record.cancelledAt)}</li> : null}
+                    {selected.record.notes?.includes("changed") ? <li>Changed type • {formatShortDate(selected.record.startDate)}</li> : null}
                   </ul>
                 </div>
 
@@ -550,7 +546,7 @@ export default function MembershipsWorkspacePage() {
                   <p className="font-medium">{row.customer?.firstName} {row.customer?.lastName}</p>
                   <Badge tone="warning">Pending Renewal</Badge>
                 </div>
-                <p className="text-muted-foreground">{row.product?.name ?? row.record.type} • Renewal {formatDate(row.record.expirationDate)}</p>
+                <p className="text-muted-foreground">{row.product?.name ?? row.record.type} • Renewal {formatShortDate(row.record.expirationDate)}</p>
                 <p className="text-muted-foreground">Failure reason: {row.record.notes ?? "Payment retry required"}</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <Button variant="secondary" className="h-9" disabled={!canManageMemberships}>Retry Payment</Button>

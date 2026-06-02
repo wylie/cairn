@@ -18,10 +18,13 @@ import { filterCustomers } from "@/lib/data/customer-search";
 import type { StaffRole } from "@/types/domain";
 import { CheckboxField, FormField, FormGrid, SelectInput, TextInput } from "@/components/shared/form-layout";
 import { buildCustomerDetailHref } from "@/lib/navigation/detail-navigation";
+import { StaffAvatar } from "@/components/staff/staff-avatar";
+import { InfoField } from "@/components/shared/info-field";
+import { formatDateTime } from "@/lib/format/date";
 
 function formatLastActive(value?: string) {
   if (!value) return "No recent activity";
-  return new Date(value).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  return formatDateTime(value);
 }
 
 export default function StaffPage() {
@@ -146,21 +149,24 @@ export default function StaffPage() {
                 <Card key={person.id} aria-label={`staff-card-${person.id}`}>
                   <CardContent className="pt-5">
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-lg font-semibold">{person.firstName} {person.lastName}</p>
-                        <p className="text-sm text-muted-foreground">{ROLE_LABELS[staff.role]}</p>
+                      <div className="flex items-start gap-3">
+                        <StaffAvatar staff={person} sizeClassName="h-14 w-14" />
+                        <div>
+                          <p className="text-lg font-semibold">{person.firstName} {person.lastName}</p>
+                          <p className="text-sm text-muted-foreground">{ROLE_LABELS[staff.role]}</p>
+                        </div>
                       </div>
                       <div className="flex flex-col items-end gap-1">
                         <Badge tone="muted">Staff: {ROLE_LABELS[staff.role]}</Badge>
                         <Badge tone={staff.status === "active" ? "success" : "muted"}>{staff.status === "active" ? "Active" : "Suspended"}</Badge>
                       </div>
                     </div>
-                    <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-                      <p><span className="text-muted-foreground">Email:</span> {person.email}</p>
-                      <p><span className="text-muted-foreground">Phone:</span> {person.phone ?? "Not set"}</p>
-                      <p className="sm:col-span-2"><span className="text-muted-foreground">Locations:</span> {staff.locations.map(locationName).join(", ")}</p>
-                      <p><span className="text-muted-foreground">Last active:</span> {formatLastActive(staff.lastActive)}</p>
-                      <p className="sm:col-span-2"><span className="text-muted-foreground">Assigned programs:</span> {assignedPrograms.length > 0 ? assignedPrograms.join(", ") : "None assigned"}</p>
+                    <div className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+                      <InfoField label="Email" value={person.email} />
+                      <InfoField label="Phone" value={person.phone ?? "Not set"} />
+                      <InfoField className="sm:col-span-2" label="Locations" value={staff.locations.map(locationName).join(", ")} />
+                      <InfoField label="Last active" value={formatLastActive(staff.lastActive)} />
+                      <InfoField className="sm:col-span-2" label="Assigned programs" value={assignedPrograms.length > 0 ? assignedPrograms.join(", ") : "None assigned"} />
                     </div>
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Link href={`${buildCustomerDetailHref({
@@ -194,7 +200,12 @@ export default function StaffPage() {
                       const staff = person.staffProfile!;
                       return (
                         <tr key={person.id} className="border-t">
-                          <td className="py-2">{person.firstName} {person.lastName}</td>
+                          <td className="py-2">
+                            <div className="flex items-center gap-2">
+                              <StaffAvatar staff={person} size="sm" />
+                              <span>{person.firstName} {person.lastName}</span>
+                            </div>
+                          </td>
                           <td className="py-2">{ROLE_LABELS[staff.role]}</td>
                           <td className="py-2">{staff.locations.map(locationName).join(", ")}</td>
                           <td className="py-2">{staff.status === "active" ? "Active" : "Suspended"}</td>

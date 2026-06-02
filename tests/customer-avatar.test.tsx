@@ -10,12 +10,17 @@ describe("CustomerAvatar", () => {
       />
     );
 
-    expect(screen.getByRole("img", { name: "Maya Patel profile photo" })).toBeInTheDocument();
+    const avatar = screen.getByRole("img", { name: "Maya Patel profile photo" });
+    expect(avatar).toBeInTheDocument();
+    expect(avatar.className).toContain("rounded-full");
+    expect(avatar.className).toContain("aspect-square");
   });
 
   it("renders initials fallback when no photo exists", () => {
     render(<CustomerAvatar customer={{ firstName: "Jordan", lastName: "Kim", profilePhotoUrl: "" }} size="sm" />);
-    expect(screen.getByLabelText("Jordan Kim initials avatar")).toBeInTheDocument();
+    const avatar = screen.getByLabelText("Jordan Kim initials avatar");
+    expect(avatar).toBeInTheDocument();
+    expect(avatar.className).toContain("rounded-full");
+    expect(avatar.className).toContain("aspect-square");
   });
 });
-

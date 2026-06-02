@@ -16,7 +16,9 @@ import { QuickButtonLayoutModal } from "@/components/products/quick-button-layou
 import { PermissionGate } from "@/components/staff/permission-gate";
 import { StaffSwitcher } from "@/components/staff/staff-switcher";
 import { Button } from "@/components/ui/button";
+import { InfoField } from "@/components/shared/info-field";
 import { filterCustomers } from "@/lib/data/customer-search";
+import { formatShortDate } from "@/lib/format/date";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import { mockPaymentProvider, type PaymentMethod } from "@/lib/payments/provider";
@@ -352,11 +354,11 @@ export default function PosPage() {
                   punchPass={punchPass}
                   waiverStatus={waiver?.status ?? "missing"}
                 />
-                <div className="grid gap-2 text-sm sm:grid-cols-2">
-                  <p><span className="text-muted-foreground">Pronouns:</span> {selectedCustomer.pronouns || "Not set"}</p>
-                  <p><span className="text-muted-foreground">DOB/Age:</span> {selectedCustomer.dateOfBirth || "Not set"}</p>
-                  <p><span className="text-muted-foreground">Phone:</span> {selectedCustomer.phone || "Not set"}</p>
-                  <p><span className="text-muted-foreground">Emergency:</span> {selectedCustomer.emergencyContactName || "Not set"}</p>
+                <div className="grid gap-3 text-sm sm:grid-cols-2">
+                  <InfoField label="Pronouns" value={selectedCustomer.pronouns || "Not set"} />
+                  <InfoField label="DOB / Age" value={selectedCustomer.dateOfBirth ? formatShortDate(selectedCustomer.dateOfBirth) : "Not set"} />
+                  <InfoField label="Phone" value={selectedCustomer.phone || "Not set"} />
+                  <InfoField label="Emergency Contact" value={selectedCustomer.emergencyContactName || "Not set"} />
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Link href={buildCustomerDetailHref({
@@ -572,10 +574,10 @@ export default function PosPage() {
                   Checkout
                 </Button>
                 <Button className="min-h-11" disabled={!canCheckout} onClick={() => submit(true)}>Charge + Check In</Button>
-                <div className="grid gap-2 sm:grid-cols-3">
+                <div className="grid gap-2 md:grid-cols-3">
                   <Button variant="secondary" className="min-h-11" onClick={() => setCart([])}>Clear</Button>
                   <Button variant="secondary" className="min-h-11" disabled={!canCheckout} onClick={() => submit(false)}>Complete</Button>
-                  <Button variant="secondary" className="min-h-11 whitespace-normal text-center" disabled={!canCheckout} onClick={() => submit(true)}>Complete + Check In</Button>
+                  <Button variant="secondary" className="min-h-11 min-w-0 px-3 text-center leading-tight whitespace-normal" disabled={!canCheckout} onClick={() => submit(true)}>Complete + Check In</Button>
                 </div>
               </div>
               {requiresWaiverInCart && waiverInvalid ? (

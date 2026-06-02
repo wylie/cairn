@@ -55,6 +55,20 @@ describe("POS page", () => {
     expect(screen.getByText(/Member price: \$10.00/i)).toBeInTheDocument();
   });
 
+  it("keeps Complete + Check In button text contained with multiline-safe styling", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <PosPage />
+      </TestProviders>
+    );
+    await activateStaff(user, "2222");
+    const button = screen.getByRole("button", { name: "Complete + Check In" });
+    expect(button.className).toContain("whitespace-normal");
+    expect(button.className).toContain("leading-tight");
+  });
+
   it("supports purchasing for household member or entire household", async () => {
     const user = userEvent.setup();
     render(

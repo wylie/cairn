@@ -58,6 +58,18 @@ describe("Staff management MVP", () => {
     expect(screen.queryByText("Sam Rivera")).not.toBeInTheDocument();
   });
 
+  it("renders staff avatars in list cards", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <StaffPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "2222");
+    expect(screen.getByLabelText(/Maya Lopez staff initials avatar|Maya Lopez staff photo/i)).toBeInTheDocument();
+  });
+
   it("supports adding staff and shows feedback", async () => {
     const user = userEvent.setup();
     render(

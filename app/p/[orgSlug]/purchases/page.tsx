@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getLocationName } from "@/lib/public-programs";
 import { canCustomerViewReceipt, getReceiptStatus, getReceiptStatusLabel } from "@/lib/portal/receipts";
+import { formatDateTime } from "@/lib/format/date";
 import { formatCurrency } from "@/lib/transactions";
 import { useCustomerPortalData } from "@/lib/portal/use-customer-portal-data";
 import { CustomerPortalContainer } from "@/components/portal/customer-portal-container";
@@ -40,7 +41,7 @@ export default function CustomerPortalPurchasesPage() {
                 <p className="font-medium">{purchase.receiptNumber}</p>
                 <Badge tone={toneForStatus(getReceiptStatus(purchase))}>{getReceiptStatusLabel(getReceiptStatus(purchase))}</Badge>
               </div>
-              <p>{new Date(purchase.completedAt).toLocaleString("en-US")}</p>
+              <p>{formatDateTime(purchase.completedAt)}</p>
               <p>Summary: {purchase.items.slice(0, 2).map((item) => item.productName).join(", ")}{purchase.items.length > 2 ? ` +${purchase.items.length - 2} more` : ""}</p>
               <p>Total: {formatCurrency(purchase.total)}</p>
               <p>Payment: {purchase.paymentType.replaceAll("_", " ")}</p>

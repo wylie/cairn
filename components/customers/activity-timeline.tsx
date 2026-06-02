@@ -1,15 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { StaffAttributionLabel } from "@/components/staff/staff-attribution-label";
+import { formatShortDate, formatTime } from "@/lib/format/date";
 import type { CheckInLogRecord } from "@/types/domain";
-
-function formatTime(value: string | null) {
-  if (!value) return "-";
-  return new Date(value).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-}
-
-function formatDate(value: string) {
-  return new Date(value).toLocaleDateString();
-}
 
 function normalize(value: string) {
   return value.replace(/_/g, " ");
@@ -27,7 +19,7 @@ export function ActivityTimeline({ visits }: { visits: CheckInLogRecord[] }) {
         return (
         <div key={visit.id} className="rounded-lg border bg-card p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm font-medium">{formatDate(visit.checkInTime)}</p>
+            <p className="text-sm font-medium">{formatShortDate(visit.checkInTime)}</p>
             <Badge tone={visit.status === "checked-in" ? "success" : "muted"}>{visit.status === "checked-in" ? "Checked In" : "Checked Out"}</Badge>
           </div>
           <div className="mt-2 grid gap-1 text-sm text-muted-foreground sm:grid-cols-2">

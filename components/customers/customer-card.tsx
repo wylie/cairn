@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CustomerBadges } from "@/components/customers/customer-badges";
 import { Badge } from "@/components/ui/badge";
 import { CustomerAvatar } from "@/components/customers/customer-avatar";
+import { formatShortDate } from "@/lib/format/date";
 
 export function CustomerCard({
   customer,
@@ -50,7 +51,7 @@ export function CustomerCard({
         Math.floor((Date.now() - (dobDate as Date).getTime()) / (1000 * 60 * 60 * 24 * 365.2425))
       )
     : null;
-  const dobDisplay = hasValidDob ? `${(dobDate as Date).toLocaleDateString("en-US")} (${age})` : "Missing ⚠";
+  const dobDisplay = hasValidDob ? `${formatShortDate(dobDate)} (${age})` : "Missing ⚠";
   const isBirthdayToday = hasValidDob
     ? (() => {
         const now = new Date();
@@ -85,7 +86,7 @@ export function CustomerCard({
         <div aria-label="Quick Info" className="grid grid-cols-2 gap-1.5">
           <QuickInfoItem label="Preferred" value={preferredLabel} warning={!hasPreferred} />
           <QuickInfoItem label="Pronouns" value={pronounsLabel} warning={!hasPronouns} />
-          <QuickInfoItem label="DOB" value={dobDisplay} warning={!hasValidDob} />
+          <QuickInfoItem label="DOB / Age" value={dobDisplay} warning={!hasValidDob} />
           <QuickInfoItem label="Phone" value={phoneLabel} warning={!hasPhone} />
           <QuickInfoItem label="Emergency Contact" value={emergencyLabel} warning={!hasEmergency} className="col-span-2" />
         </div>

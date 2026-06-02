@@ -13,7 +13,9 @@ import { StaffSwitcher } from "@/components/staff/staff-switcher";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import { CustomerAvatar } from "@/components/customers/customer-avatar";
+import { InfoField } from "@/components/shared/info-field";
 import { buildCustomerDetailHref } from "@/lib/navigation/detail-navigation";
+import { formatShortDate, formatTime } from "@/lib/format/date";
 
 export function CheckInList() {
   const pathname = usePathname();
@@ -545,7 +547,7 @@ export function CheckInList() {
                         return (
                           <div key={programEntry.id} className="rounded-md bg-card px-2 py-1">
                             <p className="font-medium">
-                              {new Date(programEntry.startsAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} · {programEntry.title}
+                              {formatTime(programEntry.startsAt)} · {programEntry.title}
                             </p>
                             {startedMinutes > 0 ? (
                               <p className="text-xs text-amber-800">
@@ -563,21 +565,24 @@ export function CheckInList() {
                 ) : null}
                 <div className="rounded-lg border bg-secondary/40 p-3">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Operational Context</p>
-                  <div className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
-                    <p><span className="text-muted-foreground">Pronouns:</span> {selectedCustomer.pronouns || "Not set"}</p>
-                    <p>
-                      <span className="text-muted-foreground">Age:</span>{" "}
-                      {selectedCustomer.dateOfBirth
-                        ? Math.max(0, Math.floor((Date.now() - new Date(`${selectedCustomer.dateOfBirth}T00:00:00Z`).getTime()) / (1000 * 60 * 60 * 24 * 365.2425)))
-                        : "Not set"}
-                    </p>
-                    <p><span className="text-muted-foreground">Phone:</span> {selectedCustomer.phone || "Not set"}</p>
-                    <p><span className="text-muted-foreground">Emergency:</span> {selectedCustomer.emergencyContactName || "Not set"}</p>
+                  <div className="mt-2 grid gap-3 text-sm sm:grid-cols-2">
+                    <InfoField label="Pronouns" value={selectedCustomer.pronouns || "Not set"} />
+                    <InfoField
+                      label="DOB / Age"
+                      value={
+                        selectedCustomer.dateOfBirth
+                          ? `${formatShortDate(selectedCustomer.dateOfBirth)} (${Math.max(0, Math.floor((Date.now() - new Date(`${selectedCustomer.dateOfBirth}T00:00:00Z`).getTime()) / (1000 * 60 * 60 * 24 * 365.2425)))})`
+                          : "Not set"
+                      }
+                    />
+                    <InfoField label="Phone" value={selectedCustomer.phone || "Not set"} />
+                    <InfoField label="Emergency Contact" value={selectedCustomer.emergencyContactName || "Not set"} />
                     {selectedHouseholdMembership ? (
-                      <p className="sm:col-span-2">
-                        <span className="text-muted-foreground">Household role:</span>{" "}
-                        {selectedHouseholdMembership.memberType === "child" ? "Child" : "Adult"} · {selectedHouseholdMembership.relationship.replace(/_/g, " ")}
-                      </p>
+                      <InfoField
+                        label="Household role"
+                        value={`${selectedHouseholdMembership.memberType === "child" ? "Child" : "Adult"} · ${selectedHouseholdMembership.relationship.replace(/_/g, " ")}`}
+                        className="sm:col-span-2"
+                      />
                     ) : null}
                   </div>
                 </div>
@@ -586,7 +591,7 @@ export function CheckInList() {
                     <Button className="w-full min-h-11" disabled>
                       Already Checked In
                     </Button>
-                    <p className="text-sm text-muted-foreground">Checked in at {new Date(activeRecord.checkInTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</p>
+                    <p className="text-sm text-muted-foreground">Checked in at {formatTime(activeRecord.checkInTime)}</p>
                   </div>
                 ) : selectedDecision?.allowed ? (
                   <div className="space-y-2">
@@ -715,7 +720,7 @@ export function CheckInList() {
                     <div className="mt-2 space-y-1 text-sm text-muted-foreground">
                       {selectedRecentVisits.map((visit) => (
                         <p key={visit.id}>
-                          {new Date(visit.checkInTime).toLocaleDateString("en-US", { weekday: "short" })} — {new Date(visit.checkInTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                          {formatShortDate(visit.checkInTime)} — {formatTime(visit.checkInTime)}
                         </p>
                       ))}
                     </div>
@@ -781,7 +786,7 @@ export function CheckInList() {
                         <p className="font-medium">{record.customerName}</p>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {checkInAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} · {record.membershipPassType}
+                        {formatTime(checkInAt)} · {record.membershipPassType}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Staff: {record.checkedInByStaffName ?? "Staff not recorded"}

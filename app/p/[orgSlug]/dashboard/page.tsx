@@ -6,12 +6,10 @@ import { canCustomerViewReceipt } from "@/lib/portal/receipts";
 import { useCustomerPortalData } from "@/lib/portal/use-customer-portal-data";
 import { getLocationName } from "@/lib/public-programs";
 import { CustomerPortalContainer } from "@/components/portal/customer-portal-container";
+import { formatShortDate } from "@/lib/format/date";
 
-const DATE_FORMATTER = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" });
 function formatDateSafe(value?: string) {
-  if (!value) return "Date unavailable";
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? "Date unavailable" : DATE_FORMATTER.format(parsed);
+  return value ? formatShortDate(value, "Date unavailable") : "Date unavailable";
 }
 
 export default function CustomerPortalDashboardPage() {

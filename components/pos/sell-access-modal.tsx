@@ -106,10 +106,10 @@ export function SellAccessModal({
             <span className="text-sm text-muted-foreground">Subtotal</span>
             <ProductPriceLabel cents={subtotal} />
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 grid gap-2 md:grid-cols-3">
             <Button variant="outline" className="min-h-11" onClick={() => setCart([])}>Clear</Button>
             <Button className="min-h-11" onClick={() => submit(false)}>Complete</Button>
-            <Button className="min-h-11 whitespace-normal text-center" onClick={() => submit(true)}>Complete + Check In</Button>
+            <Button className="min-h-11 min-w-0 px-3 text-center leading-tight whitespace-normal" onClick={() => submit(true)}>Complete + Check In</Button>
           </div>
         </div>
 

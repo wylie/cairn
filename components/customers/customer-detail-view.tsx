@@ -17,6 +17,7 @@ import { CustomerAvatar } from "@/components/customers/customer-avatar";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import { filterCustomers } from "@/lib/data/customer-search";
+import { formatDateTime, formatShortDate } from "@/lib/format/date";
 import { formatCurrency } from "@/lib/transactions";
 import { ROLE_LABELS } from "@/lib/staff/capabilities";
 import { PERMISSION_LABELS } from "@/lib/staff/permissions";
@@ -603,7 +604,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                   <span>{displayedPronouns || "Not set"}</span>
                   <span>•</span>
-                  <span>{hasValidDob ? `${(dobDate as Date).toLocaleDateString("en-US")} (${age})` : "DOB not set"}</span>
+                  <span>{hasValidDob ? `${formatShortDate(dobDate)} (${age})` : "DOB not set"}</span>
                 </div>
                 {isBirthdayToday ? (
                   <p className="mt-2 inline-flex items-center rounded-full bg-amber-100/80 px-2.5 py-1 text-xs font-semibold text-amber-900">🎂 Birthday today</p>
@@ -662,7 +663,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                   ) : null}
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Photo updated: {customer.profilePhotoUpdatedAt ? new Date(customer.profilePhotoUpdatedAt).toLocaleString("en-US") : "Never"} • {photoUpdatedBy}
+                  Photo updated: {customer.profilePhotoUpdatedAt ? formatDateTime(customer.profilePhotoUpdatedAt) : "Never"} • {photoUpdatedBy}
                 </p>
               </div>
             </div>
@@ -874,18 +875,18 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
           <CardContent className="grid gap-3 text-sm md:grid-cols-2">
             <div className="space-y-2 rounded-lg border p-3">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Photo & Profile Metadata</p>
-              <CustomerAvatar customer={customer} sizeClassName="h-24 w-24" className="rounded-lg" />
+              <CustomerAvatar customer={customer} sizeClassName="h-24 w-24" />
               <Field label="Profile photo" value={customer.profilePhotoUrl ? "Uploaded" : "Not set"} />
               <Field label="Photo updated by" value={photoUpdatedBy} />
-              <Field label="Photo updated at" value={customer.profilePhotoUpdatedAt ? new Date(customer.profilePhotoUpdatedAt).toLocaleString("en-US") : "Not set"} />
+              <Field label="Photo updated at" value={customer.profilePhotoUpdatedAt ? formatDateTime(customer.profilePhotoUpdatedAt) : "Not set"} />
               <Field label="Updated by" value={customer.updatedByStaffName || "Not set"} />
-              <Field label="Last updated" value={customer.updatedAt ? new Date(customer.updatedAt).toLocaleString("en-US") : "Not set"} />
+              <Field label="Last updated" value={customer.updatedAt ? formatDateTime(customer.updatedAt) : "Not set"} />
             </div>
             <div className="space-y-2 rounded-lg border p-3">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Data Completeness</p>
               <Field label="Preferred name" value={customer.preferredName || "Not set"} warning={requiredMissing.preferredName} />
               <Field label="Pronouns" value={displayedPronouns || "Not set"} warning={requiredMissing.pronouns} />
-              <Field label="DOB" value={hasValidDob ? (dobDate as Date).toLocaleDateString("en-US") : "Not set"} warning={requiredMissing.dateOfBirth} />
+              <Field label="DOB / Age" value={hasValidDob ? `${formatShortDate(dobDate)} (${age})` : "Not set"} warning={requiredMissing.dateOfBirth} />
             </div>
           </CardContent>
         </Card>
@@ -1104,7 +1105,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                 label="Permissions"
                 value={customerStaffProfile.permissions.map((permission) => PERMISSION_LABELS[permission]).join(", ") || "None"}
               />
-              <Field label="Last active" value={customerStaffProfile.lastActive ? new Date(customerStaffProfile.lastActive).toLocaleString("en-US") : "No recent activity"} />
+              <Field label="Last active" value={customerStaffProfile.lastActive ? formatDateTime(customerStaffProfile.lastActive) : "No recent activity"} />
               <div className="mt-3 flex flex-wrap gap-2">
                 <Button
                   variant="secondary"
@@ -2194,9 +2195,9 @@ function titleCase(value: string) {
 
 function Field({ label, value, warning }: { label: string; value: string; warning?: boolean }) {
   return (
-    <div>
-      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className={`text-sm ${warning ? "text-amber-700" : "text-foreground"}`}>{value}</p>
+    <div className="space-y-1">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className={`break-words text-sm font-medium leading-5 ${warning ? "text-amber-700" : "text-foreground"}`}>{value}</p>
     </div>
   );
 }
@@ -2216,8 +2217,8 @@ function HeaderField({
 }) {
   return (
     <div className={`min-w-0 rounded-md bg-secondary/35 px-3 py-2 ${className ?? ""}`}>
-      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className={`text-sm ${warning ? "text-amber-700" : "text-foreground"} break-words ${wrapAnywhere ? "[overflow-wrap:anywhere]" : ""}`}>{value}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className={`break-words text-sm font-medium leading-5 ${warning ? "text-amber-700" : "text-foreground"} ${wrapAnywhere ? "[overflow-wrap:anywhere]" : ""}`}>{value}</p>
     </div>
   );
 }

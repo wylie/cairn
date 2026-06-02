@@ -17,7 +17,7 @@ describe("SidebarNav", () => {
 
     expect(screen.getByText("Operations")).toBeInTheDocument();
     expect(screen.getByText("Management")).toBeInTheDocument();
-    ["Dashboard", "Alerts", "Customers", "Memberships", "Check-in", "Calendar", "Registrations", "Programs", "Products", "Waivers", "POS", "Reports", "Staff", "Settings"].forEach((label) => {
+    ["Dashboard", "Alerts", "Customers", "Households", "Memberships", "Check-in", "Calendar", "Registrations", "Programs", "Products", "Waivers", "POS", "Reports", "Staff", "Settings"].forEach((label) => {
       expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
     });
   });
@@ -27,6 +27,7 @@ describe("SidebarNav", () => {
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("href", "/o/summit/dashboard");
     expect(screen.getByRole("link", { name: "Alerts" })).toHaveAttribute("href", "/o/summit/alerts");
     expect(screen.getByRole("link", { name: "Customers" })).toHaveAttribute("href", "/o/summit/customers");
+    expect(screen.getByRole("link", { name: "Households" })).toHaveAttribute("href", "/o/summit/households");
     expect(screen.getByRole("link", { name: "Memberships" })).toHaveAttribute("href", "/o/summit/memberships");
     expect(screen.getByRole("link", { name: "Registrations" })).toHaveAttribute("href", "/o/summit/registrations");
     expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("href", "/o/summit/reports");
@@ -49,7 +50,7 @@ describe("SidebarNav", () => {
       />
     );
 
-    ["Dashboard", "Alerts", "Check-in", "Customers", "Memberships", "Calendar", "Registrations", "POS"].forEach((label) => {
+    ["Dashboard", "Alerts", "Check-in", "Customers", "Households", "Memberships", "Calendar", "Registrations", "POS"].forEach((label) => {
       expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
     });
     ["Products", "Waivers", "Staff", "Settings", "Programs"].forEach((label) => {
@@ -100,7 +101,7 @@ describe("SidebarNav", () => {
         hasPermission={hasPermission}
       />
     );
-    ["Dashboard", "Alerts", "Check-in", "Customers", "Memberships", "Calendar", "Registrations", "POS", "Programs", "Products", "Waivers", "Reports", "Staff", "Settings"].forEach((label) => {
+    ["Dashboard", "Alerts", "Check-in", "Customers", "Households", "Memberships", "Calendar", "Registrations", "POS", "Programs", "Products", "Waivers", "Reports", "Staff", "Settings"].forEach((label) => {
       expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
     });
   });

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { TestProviders } from "@/tests/test-providers";
 import DashboardPage from "@/app/(app)/dashboard/page";
 import CustomersPage from "@/app/(app)/customers/page";
+import HouseholdsPage from "@/app/(app)/households/page";
 import CheckInPage from "@/app/(app)/check-in/page";
 import CalendarPage from "@/app/(app)/calendar/page";
 import ProgramsPage from "@/app/(app)/programs/page";
@@ -23,6 +24,7 @@ describe("Primary routes smoke", () => {
   const pages = [
     DashboardPage,
     CustomersPage,
+    HouseholdsPage,
     CheckInPage,
     CalendarPage,
     RegistrationsPage,

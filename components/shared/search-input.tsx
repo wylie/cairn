@@ -11,7 +11,12 @@ export function SearchInput({
   autoFocus,
   className,
   onKeyDown,
-  inputRef
+  inputRef,
+  role,
+  ariaExpanded,
+  ariaControls,
+  ariaActiveDescendant,
+  ariaAutoComplete
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -22,6 +27,11 @@ export function SearchInput({
   className?: string;
   onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
   inputRef?: RefObject<HTMLInputElement | null>;
+  role?: string;
+  ariaExpanded?: boolean;
+  ariaControls?: string;
+  ariaActiveDescendant?: string;
+  ariaAutoComplete?: "none" | "inline" | "list" | "both";
 }) {
   return (
     <div className="space-y-1">
@@ -37,6 +47,11 @@ export function SearchInput({
           className={`h-11 pl-9 ${className ?? ""}`.trim()}
           autoFocus={autoFocus}
           onKeyDown={onKeyDown}
+          role={role}
+          aria-expanded={ariaExpanded}
+          aria-controls={ariaControls}
+          aria-activedescendant={ariaActiveDescendant}
+          aria-autocomplete={ariaAutoComplete}
         />
       </label>
     </div>

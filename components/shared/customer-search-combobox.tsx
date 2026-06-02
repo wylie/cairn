@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import type { Customer } from "@/types/domain";
 import { CustomerAvatar } from "@/components/customers/customer-avatar";
@@ -37,6 +37,7 @@ export function CustomerSearchCombobox({
   const maxVisibleResults = 50;
   const [highlightIndex, setHighlightIndex] = useState(0);
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const listboxId = useId();
 
   const open = query.trim().length > 0;
 
@@ -57,13 +58,14 @@ export function CustomerSearchCombobox({
   const displayedCustomers = useMemo(() => sortedCustomers.slice(0, maxVisibleResults), [sortedCustomers]);
 
   const highlighted = useMemo(() => displayedCustomers[highlightIndex], [displayedCustomers, highlightIndex]);
+  const activeOptionId = highlighted ? `${listboxId}-option-${highlighted.id}` : undefined;
 
   useEffect(() => {
     const highlightedOption = optionRefs.current[highlightIndex];
     if (highlightedOption && typeof highlightedOption.scrollIntoView === "function") {
-      highlightedOption.scrollIntoView({ block: "nearest" });
+      highlightedOption.scrollIntoView({ block: "nearest", inline: "nearest" });
     }
-  }, [highlightIndex]);
+  }, [highlightIndex, displayedCustomers, listboxId]);
 
   return (
     <div className="w-full">
@@ -76,6 +78,11 @@ export function CustomerSearchCombobox({
         autoFocus={autoFocus}
         className="h-12 text-base"
         inputRef={inputRef}
+        role="combobox"
+        ariaExpanded={open}
+        ariaControls={open ? listboxId : undefined}
+        ariaActiveDescendant={open ? activeOptionId : undefined}
+        ariaAutoComplete="list"
         onKeyDown={(event) => {
           if (!open) return;
           if (event.key === "ArrowDown") {
@@ -110,12 +117,14 @@ export function CustomerSearchCombobox({
           </p>
           {customers.length > 0 ? (
             <div
+              id={listboxId}
               className="max-h-[50vh] space-y-2 overflow-y-auto pr-1 md:max-h-[420px]"
               role="listbox"
               aria-label="Customer search results"
             >
               {displayedCustomers.map((customer, index) => (
                 <button
+                  id={`${listboxId}-option-${customer.id}`}
                   key={customer.id}
                   ref={(node) => {
                     optionRefs.current[index] = node;

@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { PageHeader } from "@/components/shared/page-header";
 import { CustomerAvatar } from "@/components/customers/customer-avatar";
+import { HouseholdAvatar } from "@/components/households/household-avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,34 +14,20 @@ import { useSettingsState } from "@/lib/state/settings-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import { formatDate, formatDateTime } from "@/lib/format/date";
 import { formatCurrency } from "@/lib/transactions";
-import { buildDetailHref } from "@/lib/navigation/detail-navigation";
+import { buildCustomerDetailHref, buildDetailHref } from "@/lib/navigation/detail-navigation";
+import {
+  formatHouseholdRelationship,
+  formatHouseholdRole,
+  getHouseholdHealthLabel,
+  getHouseholdHealthStatus,
+  type HouseholdHealthStatus
+} from "@/lib/households/presentation";
 
 function titleCase(value: string) {
   return value
     .replaceAll("_", " ")
     .replaceAll("-", " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function formatHouseholdRole(role: string) {
-  switch (role) {
-    case "primary-adult":
-      return "Primary Adult";
-    case "secondary-adult":
-      return "Secondary Adult";
-    case "guardian":
-      return "Guardian";
-    case "dependent":
-      return "Dependent";
-    case "child":
-      return "Child";
-    case "emergency-contact-only":
-      return "Emergency Contact";
-    case "other":
-      return "Other";
-    default:
-      return titleCase(role);
-  }
 }
 
 function buildHouseholdHref(householdId: string, pathname: string, currentSearch = "") {
@@ -74,7 +61,9 @@ export function HouseholdsWorkspace({
     transactions,
     operationsAlerts,
     operationsTasks,
-    familyCheckIn
+    familyCheckIn,
+    checkOutRecord,
+    updateHouseholdPhoto
   } = useCustomerState();
   const { settings } = useSettingsState();
   const { activeStaff } = useWorkstationState();
@@ -82,6 +71,7 @@ export function HouseholdsWorkspace({
   const [feedback, setFeedback] = useState("");
   const [selectedHouseholdId, setSelectedHouseholdId] = useState(initialHouseholdId ?? households[0]?.id ?? "");
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const householdPhotoInputRef = useRef<HTMLInputElement | null>(null);
 
   const householdRows = useMemo(() => {
     const todayKey = new Date().toISOString().slice(0, 10);
@@ -95,6 +85,7 @@ export function HouseholdsWorkspace({
         .filter((entry): entry is { membership: (typeof householdMembers)[number]; customer: NonNullable<typeof entry.customer> } => Boolean(entry.customer));
       const memberIds = members.map((entry) => entry.customer.id);
       const primaryContact = customers.find((entry) => entry.id === household.primaryContactCustomerId);
+      const secondaryContact = customers.find((entry) => entry.id === household.secondaryContactCustomerId);
       const billingContact = customers.find((entry) => entry.id === household.billingCustomerId);
       const activeMemberships = customerAccessRecords.filter(
         (entry) =>
@@ -126,6 +117,7 @@ export function HouseholdsWorkspace({
         .filter((entry) => memberIds.includes(entry.customerId))
         .sort((a, b) => b.checkInTime.localeCompare(a.checkInTime));
       const currentlyIn = recentVisits.filter((entry) => entry.status === "checked-in" && !entry.checkOutTime);
+      const recentCheckedOut = recentVisits.filter((entry) => entry.status === "checked-out" || entry.checkOutTime);
       const recentPurchases = transactions
         .filter(
           (entry) =>
@@ -143,6 +135,18 @@ export function HouseholdsWorkspace({
           ...method,
           customerName: `${member.customer.firstName} ${member.customer.lastName}`
         }))
+      );
+      const expiredMemberships = customerAccessRecords.filter(
+        (entry) =>
+          (entry.householdId === household.id || memberIds.includes(entry.customerId)) &&
+          (entry.type === "membership" || entry.type === "household-membership") &&
+          entry.status === "expired"
+      );
+      const incompleteProfiles = members.filter(
+        (entry) => !entry.customer.phone?.trim() || !entry.customer.email?.trim() || !entry.customer.dateOfBirth
+      );
+      const missingEmergencyContacts = members.filter(
+        (entry) => !entry.customer.emergencyContactName?.trim() || !entry.customer.emergencyContactPhone?.trim()
       );
       const alerts = operationsAlerts.filter(
         (entry) =>
@@ -162,28 +166,66 @@ export function HouseholdsWorkspace({
           visits: recentVisits.filter((visit) => visit.customerId === member.customer.id && visit.checkInTime.startsWith(todayKey.slice(0, 7))).length
         }))
         .sort((a, b) => b.visits - a.visits)[0];
+      const currentWaivers = waiverRows.filter((entry) => entry.waiver?.status === "valid");
+      const healthStatus: HouseholdHealthStatus = getHouseholdHealthStatus({
+        missingWaivers: missingWaivers.length,
+        expiredMemberships: expiredMemberships.length,
+        outstandingBalanceCents: outstandingBalance,
+        incompleteProfiles: incompleteProfiles.length,
+        missingEmergencyContacts: missingEmergencyContacts.length
+      });
+      const recentActivity = [
+        ...recentVisits.slice(0, 4).map((visit) => ({
+          id: `visit-${visit.id}`,
+          title: `${visit.customerName} checked ${visit.checkOutTime ? "out" : "in"}`,
+          occurredAt: visit.checkOutTime ?? visit.checkInTime
+        })),
+        ...recentPurchases.slice(0, 3).map((purchase) => ({
+          id: `purchase-${purchase.id}`,
+          title: `${purchase.receiptNumber} processed`,
+          occurredAt: purchase.completedAt
+        })),
+        ...upcomingRegistrations.slice(0, 3).map((entry) => ({
+          id: `registration-${entry.registration.id}`,
+          title: `${customers.find((customer) => customer.id === entry.registration.customerId)?.firstName ?? "Member"} registered`,
+          occurredAt: entry.session?.startsAt ?? todayKey
+        })),
+        ...alerts.slice(0, 2).map((alert) => ({
+          id: `alert-${alert.id}`,
+          title: alert.title,
+          occurredAt: alert.createdAt ?? todayKey
+        }))
+      ].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
 
       return {
         household,
         members,
         memberIds,
         primaryContact,
+        secondaryContact,
         billingContact,
         activeMemberships,
+        expiredMemberships,
         missingWaivers,
+        currentWaivers,
         expiringWaivers,
         expiredWaivers,
+        incompleteProfiles,
+        missingEmergencyContacts,
         upcomingRegistrations,
         waitlists,
         attendanceHistory,
         recentVisits,
         currentlyIn,
+        recentCheckedOut,
         recentPurchases,
         outstandingBalance,
         paymentMethods,
         alerts,
         tasks,
-        topVisitor
+        topVisitor,
+        healthStatus,
+        recentActivity
       };
     });
   }, [
@@ -208,7 +250,15 @@ export function HouseholdsWorkspace({
         row.household.householdName,
         row.primaryContact ? `${row.primaryContact.firstName} ${row.primaryContact.lastName}` : "",
         row.billingContact ? `${row.billingContact.firstName} ${row.billingContact.lastName}` : "",
-        ...row.members.map((entry) => `${entry.customer.firstName} ${entry.customer.lastName}`)
+        row.household.email ?? "",
+        row.household.phone ?? "",
+        row.household.defaultAddress ?? "",
+        ...row.members.flatMap((entry) => [
+          `${entry.customer.firstName} ${entry.customer.lastName}`,
+          entry.customer.memberId,
+          entry.customer.email,
+          entry.customer.phone
+        ])
       ]
         .join(" ")
         .toLowerCase();
@@ -219,10 +269,10 @@ export function HouseholdsWorkspace({
   const selected = filteredHouseholds.find((row) => row.household.id === selectedHouseholdId) ?? filteredHouseholds[0];
   const householdHealthCards = selected
     ? [
-        { label: "Members", value: `${selected.members.length}` },
+        { label: "Household Members", value: `${selected.members.length}` },
         { label: "Active Memberships", value: `${selected.activeMemberships.length}` },
-        { label: "Waivers Missing", value: `${selected.missingWaivers.length}` },
-        { label: "Programs Registered", value: `${selected.upcomingRegistrations.length}` },
+        { label: "Upcoming Programs", value: `${selected.upcomingRegistrations.length}` },
+        { label: "Current Waivers", value: `${selected.currentWaivers.length}` },
         { label: "Outstanding Balance", value: formatCurrency(selected.outstandingBalance) },
         { label: "Recent Visits", value: `${selected.recentVisits.length}` }
       ]
@@ -236,6 +286,7 @@ export function HouseholdsWorkspace({
   const upcomingRenewals = householdRows.filter((row) =>
     row.activeMemberships.some((membership) => membership.expirationDate && membership.expirationDate <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10))
   );
+  const locationName = selected ? settings.locations.find((entry) => entry.id === selected.household.locationId)?.name ?? selected.household.locationId : "";
 
   return (
     <section className="space-y-4" data-testid="households-workspace">
@@ -246,11 +297,12 @@ export function HouseholdsWorkspace({
 
       {feedback ? <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{feedback}</p> : null}
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="household-dashboard-widgets">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5" aria-label="household-dashboard-widgets">
         <SummaryCard label="Households Missing Waivers" value={`${householdRows.filter((row) => row.missingWaivers.length > 0).length}`} />
         <SummaryCard label="Households With Outstanding Balance" value={`${householdRows.filter((row) => row.outstandingBalance > 0).length}`} />
         <SummaryCard label="Households With Upcoming Renewals" value={`${upcomingRenewals.length}`} />
         <SummaryCard label="Top Visiting Households" value={topVisitingHouseholds[0]?.household.householdName ?? "No visit data"} />
+        <SummaryCard label="Recent Household Activity" value={householdRows.reduce((sum, row) => sum + row.recentActivity.length, 0).toString()} />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[320px_1fr]">
@@ -277,14 +329,20 @@ export function HouseholdsWorkspace({
                   }}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-medium">{row.household.householdName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {row.primaryContact ? `${row.primaryContact.firstName} ${row.primaryContact.lastName}` : "No primary contact"} · {row.members.length} members
-                      </p>
+                    <div className="flex items-start gap-3">
+                      <HouseholdAvatar household={row.household} size="sm" />
+                      <div>
+                        <p className="font-medium">{row.household.householdName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {row.primaryContact ? `${row.primaryContact.firstName} ${row.primaryContact.lastName}` : "No primary contact"} · {row.members.length} members
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {row.household.phone ?? row.household.email ?? "No contact info"}
+                        </p>
+                      </div>
                     </div>
-                    <Badge tone={row.missingWaivers.length > 0 || row.outstandingBalance > 0 ? "warning" : "success"}>
-                      {row.missingWaivers.length > 0 || row.outstandingBalance > 0 ? "Needs attention" : "Healthy"}
+                    <Badge tone={row.healthStatus === "critical" ? "danger" : row.healthStatus === "needs_attention" ? "warning" : "success"}>
+                      {getHouseholdHealthLabel(row.healthStatus)}
                     </Badge>
                   </div>
                 </button>
@@ -304,6 +362,80 @@ export function HouseholdsWorkspace({
                   <CardTitle>{selected.household.householdName}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4 text-sm">
+                  <input
+                    ref={householdPhotoInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="sr-only"
+                    onChange={(event) => {
+                      const file = event.currentTarget.files?.[0];
+                      if (!file) return;
+                      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+                        setFeedback("Unsupported file type. Use JPG, PNG, or WEBP.");
+                        return;
+                      }
+                      if (file.size > 3 * 1024 * 1024) {
+                        setFeedback("Image is too large. Max size is 3MB.");
+                        return;
+                      }
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        const url = typeof reader.result === "string" ? reader.result : "";
+                        if (!url) return;
+                        const result = updateHouseholdPhoto(selected.household.id, {
+                          profilePhotoUrl: url,
+                          updatedByStaffId: activeStaff?.id ?? "",
+                          updatedByStaffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
+                        });
+                        setFeedback(result.message);
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                  <div className="flex flex-wrap items-start justify-between gap-4 rounded-xl border p-4">
+                    <div className="flex items-start gap-4">
+                      <HouseholdAvatar household={selected.household} size="xl" />
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge tone={selected.household.householdStatus === "archived" ? "danger" : selected.household.householdStatus === "inactive" ? "warning" : "success"}>
+                            {titleCase(selected.household.householdStatus ?? "active")}
+                          </Badge>
+                          <Badge tone={selected.healthStatus === "critical" ? "danger" : selected.healthStatus === "needs_attention" ? "warning" : "success"}>
+                            {getHouseholdHealthLabel(selected.healthStatus)}
+                          </Badge>
+                          <Badge tone="muted">{locationName}</Badge>
+                        </div>
+                        <div className="grid gap-2 md:grid-cols-2">
+                          <InfoLine label="Primary Contact" value={selected.primaryContact ? `${selected.primaryContact.firstName} ${selected.primaryContact.lastName}` : "Not assigned"} />
+                          <InfoLine label="Secondary Contact" value={selected.secondaryContact ? `${selected.secondaryContact.firstName} ${selected.secondaryContact.lastName}` : "Not assigned"} />
+                          <InfoLine label="Preferred Contact" value={titleCase(selected.household.preferredCommunicationMethod ?? "email")} />
+                          <InfoLine label="Created" value={formatDate(selected.household.createdAt)} />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="secondary" className="h-9" onClick={() => householdPhotoInputRef.current?.click()}>
+                        {selected.household.profilePhotoUrl ? "Replace Photo" : "Upload Photo"}
+                      </Button>
+                      {selected.household.profilePhotoUrl ? (
+                        <Button
+                          variant="destructiveSubtle"
+                          className="h-9"
+                          onClick={() => {
+                            const result = updateHouseholdPhoto(selected.household.id, {
+                              profilePhotoUrl: "",
+                              updatedByStaffId: activeStaff?.id ?? "",
+                              updatedByStaffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
+                            });
+                            setFeedback(result.message);
+                          }}
+                        >
+                          Remove Photo
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+
                   <div className="flex flex-wrap gap-2">
                     <Button
                       onClick={() => {
@@ -340,16 +472,34 @@ export function HouseholdsWorkspace({
                     ))}
                   </div>
 
-                  <div className="grid gap-4 xl:grid-cols-2">
-                    <InfoCard title="Primary Contact">
-                      <p>{selected.primaryContact ? `${selected.primaryContact.firstName} ${selected.primaryContact.lastName}` : "Not assigned"}</p>
-                      <p className="text-muted-foreground">{selected.primaryContact?.email ?? "No email on file"}</p>
-                      <p className="text-muted-foreground">{selected.primaryContact?.phone ?? "No phone on file"}</p>
+                  <div className="grid gap-4 xl:grid-cols-3">
+                    <InfoCard title="Household Profile">
+                      <InfoLine label="Household Name" value={selected.household.householdName} />
+                      <InfoLine label="Address" value={selected.household.defaultAddress ?? "Not set"} />
+                      <InfoLine label="Phone" value={selected.household.phone ?? selected.primaryContact?.phone ?? "Not set"} />
+                      <InfoLine label="Email" value={selected.household.email ?? selected.primaryContact?.email ?? "Not set"} />
+                      <InfoLine
+                        label="Emergency Contacts"
+                        value={
+                          selected.household.defaultEmergencyContactName
+                            ? `${selected.household.defaultEmergencyContactName}${selected.household.defaultEmergencyContactPhone ? ` • ${selected.household.defaultEmergencyContactPhone}` : ""}`
+                            : "Not set"
+                        }
+                      />
+                      <InfoLine label="Notes" value={selected.household.notes ?? "No household notes"} />
                     </InfoCard>
                     <InfoCard title="Billing">
-                      <p>Billing contact: {selected.billingContact ? `${selected.billingContact.firstName} ${selected.billingContact.lastName}` : "Not assigned"}</p>
-                      <p>Outstanding balance: {formatCurrency(selected.outstandingBalance)}</p>
-                      <p>Upcoming renewals: {selected.activeMemberships.filter((entry) => entry.expirationDate).length}</p>
+                      <InfoLine label="Billing Contact" value={selected.billingContact ? `${selected.billingContact.firstName} ${selected.billingContact.lastName}` : "Not assigned"} />
+                      <InfoLine label="Outstanding Balance" value={formatCurrency(selected.outstandingBalance)} />
+                      <InfoLine label="Recent Purchases" value={String(selected.recentPurchases.length)} />
+                      <InfoLine label="Upcoming Renewals" value={String(selected.activeMemberships.filter((entry) => entry.expirationDate).length)} />
+                    </InfoCard>
+                    <InfoCard title="Household Health Score">
+                      <InfoLine label="Status" value={getHouseholdHealthLabel(selected.healthStatus)} />
+                      <InfoLine label="Missing Waivers" value={String(selected.missingWaivers.length)} />
+                      <InfoLine label="Expired Memberships" value={String(selected.expiredMemberships.length)} />
+                      <InfoLine label="Incomplete Profiles" value={String(selected.incompleteProfiles.length)} />
+                      <InfoLine label="Missing Emergency Contacts" value={String(selected.missingEmergencyContacts.length)} />
                     </InfoCard>
                   </div>
                 </CardContent>
@@ -367,6 +517,9 @@ export function HouseholdsWorkspace({
                         ? (programs.find((program) => program.id === nextSession.programId)?.title ?? nextSession.title ?? "Session")
                         : null;
                       const lastVisit = selected.recentVisits.find((row) => row.customerId === entry.customer.id);
+                      const currentAccess = selected.activeMemberships.find(
+                        (row) => row.customerId === entry.customer.id || row.coveredCustomerIds?.includes(entry.customer.id)
+                      );
                       return (
                         <div key={entry.customer.id} className="rounded-lg border p-3">
                           <div className="flex items-start justify-between gap-2">
@@ -374,7 +527,9 @@ export function HouseholdsWorkspace({
                               <CustomerAvatar customer={entry.customer} sizeClassName="h-10 w-10" />
                               <div>
                                 <p className="font-medium">{entry.customer.firstName} {entry.customer.lastName}</p>
-                                <p className="text-xs text-muted-foreground">{formatHouseholdRole(entry.membership.role)}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {formatHouseholdRole(entry.membership.role)} · {entry.customer.dateOfBirth ? formatDate(entry.customer.dateOfBirth) : "DOB not set"}
+                                </p>
                               </div>
                             </div>
                             <input
@@ -391,12 +546,56 @@ export function HouseholdsWorkspace({
                           <div className="mt-3 grid gap-2 md:grid-cols-2">
                             <p>Membership: {membership ? titleCase(membership.status) : "No active membership"}</p>
                             <p>Waiver: {waiver?.status ? titleCase(waiver.status) : "Missing"}</p>
+                            <p>Current access: {currentAccess ? titleCase(currentAccess.status) : "Blocked"}</p>
                             <p>Upcoming program: {nextSession && nextProgramTitle ? `${nextProgramTitle} · ${formatDateTime(nextSession.startsAt)}` : "None"}</p>
                             <p>Recent visit: {lastVisit ? formatDateTime(lastVisit.checkInTime) : "No visits yet"}</p>
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <Link href={buildCustomerDetailHref({ customerId: entry.customer.id, currentPathname: pathname, currentSearch })}>
+                              <Button variant="secondary" className="h-9">View Profile</Button>
+                            </Link>
+                            <Button variant="secondary" className="h-9" onClick={() => setFeedback(`Edit relationship controls live on the customer profile for ${entry.customer.firstName}.`)}>
+                              Edit Relationship
+                            </Button>
+                            <Button variant="secondary" className="h-9" onClick={() => setFeedback(`Use the household detail actions on ${entry.customer.firstName}'s customer profile to remove this member.`)}>
+                              Remove From Household
+                            </Button>
                           </div>
                         </div>
                       );
                     })}
+                  </div>
+                </SectionCard>
+
+                <SectionCard title="Household Relationships" ariaLabel="household-relationships-section">
+                  <div className="space-y-3">
+                    <div className="rounded-lg border p-3">
+                      <p className="font-medium">{selected.primaryContact ? `${selected.primaryContact.firstName} ${selected.primaryContact.lastName}` : selected.household.householdName}</p>
+                      <div className="mt-2 space-y-2 pl-4">
+                        {selected.members
+                          .filter((entry) => entry.customer.id !== selected.primaryContact?.id)
+                          .map((entry) => (
+                            <div key={entry.customer.id} className="flex items-center gap-2 text-sm">
+                              <span className="text-muted-foreground">├──</span>
+                              <span>{entry.customer.firstName} {entry.customer.lastName}</span>
+                              <span className="text-muted-foreground">· {formatHouseholdRelationship(entry.membership.relationship)}</span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  </div>
+                </SectionCard>
+
+                <SectionCard title="Household Access" ariaLabel="household-access-section">
+                  <div className="space-y-3">
+                    <p>Who can currently enter: {selected.activeMemberships.map((entry) => customers.find((customer) => customer.id === entry.customerId)?.firstName).filter(Boolean).join(", ") || "None"}</p>
+                    <p>Who is blocked: {selected.members.filter((entry) => !selected.activeMemberships.some((row) => row.customerId === entry.customer.id || row.coveredCustomerIds?.includes(entry.customer.id))).map((entry) => `${entry.customer.firstName} ${entry.customer.lastName}`).join(", ") || "None"}</p>
+                    <p>Missing waivers: {selected.missingWaivers.map((entry) => `${entry.customer.firstName} ${entry.customer.lastName}`).join(", ") || "None"}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="secondary" className="h-9">Sell Access</Button>
+                      <Button variant="secondary" className="h-9">Renew Membership</Button>
+                      <Button variant="secondary" className="h-9">Resolve Issues</Button>
+                    </div>
                   </div>
                 </SectionCard>
 
@@ -465,6 +664,23 @@ export function HouseholdsWorkspace({
                     <p>Already checked in: {selected.currentlyIn.map((entry) => entry.customerName).join(", ") || "No one currently in"}</p>
                     <p>Blocked: {selected.members.filter((entry) => !selectedCheckInIds.includes(entry.customer.id) && selected.missingWaivers.some((row) => row.customer.id === entry.customer.id)).map((entry) => `${entry.customer.firstName} ${entry.customer.lastName}`).join(", ") || "None"}</p>
                     <p>Missing waivers: {selected.missingWaivers.map((entry) => `${entry.customer.firstName} ${entry.customer.lastName}`).join(", ") || "None"}</p>
+                    <p>Recently checked in: {selected.recentVisits.slice(0, 3).map((entry) => `${entry.customerName} (${formatDateTime(entry.checkInTime)})`).join(", ") || "None"}</p>
+                    <p>Recently checked out: {selected.recentCheckedOut.slice(0, 3).map((entry) => `${entry.customerName} (${entry.checkOutTime ? formatDateTime(entry.checkOutTime) : "No check-out time"})`).join(", ") || "None"}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="secondary"
+                        className="h-9"
+                        onClick={() => {
+                          const checkedOut = selected.currentlyIn.map((entry) =>
+                            checkOutRecord(entry.id, activeStaff?.id ?? "stf_002", activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined)
+                          );
+                          const successCount = checkedOut.filter((result) => result.ok).length;
+                          setFeedback(successCount > 0 ? `Checked out ${successCount} household member${successCount === 1 ? "" : "s"}.` : "No household members were checked out.");
+                        }}
+                      >
+                        Check Out Household
+                      </Button>
+                    </div>
                   </div>
                 </SectionCard>
 
@@ -519,10 +735,36 @@ export function HouseholdsWorkspace({
                   </div>
                 </SectionCard>
 
+                <SectionCard title="Household Purchase History" ariaLabel="household-purchases-section">
+                  <div className="space-y-2">
+                    {selected.recentPurchases.length === 0 ? <p className="text-sm text-muted-foreground">No household purchases yet.</p> : null}
+                    {selected.recentPurchases.slice(0, 8).map((purchase) => (
+                      <div key={purchase.id} className="rounded-lg border p-3 text-sm">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="font-medium">{purchase.receiptNumber}</p>
+                          <Badge tone={purchase.receiptStatus === "paid" ? "success" : purchase.receiptStatus === "pending" ? "warning" : "muted"}>
+                            {titleCase(purchase.receiptStatus ?? "paid")}
+                          </Badge>
+                        </div>
+                        <p className="text-muted-foreground">
+                          {formatDateTime(purchase.completedAt)} · {formatCurrency(purchase.total)} · {purchase.items.map((item) => item.productName).join(", ")}
+                        </p>
+                      </div>
+                    ))}
+                    <Button variant="secondary" className="h-9">Export Purchase History</Button>
+                  </div>
+                </SectionCard>
+
                 <SectionCard title="Household Communications" ariaLabel="household-communications-section">
                   <div className="space-y-3">
-                    <p>Emails sent / SMS messages / notes are tracked alongside alerts and tasks.</p>
+                    <p>Emails, SMS reminders, alerts, tasks, and internal notes are tracked in one household timeline.</p>
                     <div className="space-y-2">
+                      {selected.recentPurchases.slice(0, 2).map((purchase) => (
+                        <div key={`comm-receipt-${purchase.id}`} className="rounded-lg border p-3 text-sm">
+                          <p className="font-medium">Receipt delivered</p>
+                          <p className="text-muted-foreground">{formatDateTime(purchase.completedAt)} · Sent to household billing contact</p>
+                        </div>
+                      ))}
                       {selected.alerts.slice(0, 4).map((alert) => (
                         <div key={alert.id} className="rounded-lg border p-3 text-sm">
                           <p className="font-medium">{alert.title}</p>
@@ -533,6 +775,14 @@ export function HouseholdsWorkspace({
                         <div key={task.id} className="rounded-lg border p-3 text-sm">
                           <p className="font-medium">{task.title}</p>
                           <p className="text-muted-foreground">{titleCase(task.status)} · Due {task.dueDate ? formatDate(task.dueDate) : "not set"}</p>
+                        </div>
+                      ))}
+                      {selected.upcomingRegistrations.slice(0, 2).map((entry) => (
+                        <div key={`comm-registration-${entry.registration.id}`} className="rounded-lg border p-3 text-sm">
+                          <p className="font-medium">Registration confirmation</p>
+                          <p className="text-muted-foreground">
+                            {(programs.find((program) => program.id === entry.session!.programId)?.title ?? entry.session?.title ?? "Session")} · {formatDateTime(entry.session!.startsAt)}
+                          </p>
                         </div>
                       ))}
                       {selected.household.notes ? (
@@ -547,35 +797,12 @@ export function HouseholdsWorkspace({
 
                 <SectionCard title="Household Timeline" ariaLabel="household-timeline-section">
                   <div className="space-y-2">
-                    {[
-                      ...selected.recentVisits.slice(0, 4).map((visit) => ({
-                        id: `visit-${visit.id}`,
-                        title: `${visit.customerName} checked in`,
-                        detail: `${visit.passProductUsed ?? visit.membershipPassType} · ${formatDateTime(visit.checkInTime)}`
-                      })),
-                      ...selected.upcomingRegistrations.slice(0, 3).map((registration) => ({
-                        id: `reg-${registration.registration.id}`,
-                        title: `${customers.find((customer) => customer.id === registration.registration.customerId)?.firstName ?? "Member"} registered`,
-                        detail: `${programs.find((program) => program.id === registration.session!.programId)?.title ?? registration.session?.title ?? "Session"} · ${titleCase(registration.registration.status)}`
-                      })),
-                      ...selected.recentPurchases.slice(0, 3).map((purchase) => ({
-                        id: `purchase-${purchase.id}`,
-                        title: "Purchase made",
-                        detail: `${purchase.receiptNumber} · ${formatCurrency(purchase.total)}`
-                      })),
-                      ...selected.alerts.slice(0, 2).map((alert) => ({
-                        id: `alert-${alert.id}`,
-                        title: alert.title,
-                        detail: alert.description ?? titleCase(alert.type)
-                      }))
-                    ]
-                      .slice(0, 10)
-                      .map((entry) => (
-                        <div key={entry.id} className="rounded-lg border p-3 text-sm">
-                          <p className="font-medium">{entry.title}</p>
-                          <p className="text-muted-foreground">{entry.detail}</p>
-                        </div>
-                      ))}
+                    {selected.recentActivity.slice(0, 10).map((entry) => (
+                      <div key={entry.id} className="rounded-lg border p-3 text-sm">
+                        <p className="font-medium">{entry.title}</p>
+                        <p className="text-muted-foreground">{formatDateTime(entry.occurredAt)}</p>
+                      </div>
+                    ))}
                   </div>
                 </SectionCard>
               </div>
@@ -620,6 +847,15 @@ function InfoCard({ title, children }: { title: string; children: React.ReactNod
     <div className="rounded-lg border p-3 text-sm">
       <p className="mb-2 font-medium">{title}</p>
       <div className="space-y-1 text-muted-foreground">{children}</div>
+    </div>
+  );
+}
+
+function InfoLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-sm font-medium text-foreground">{value}</p>
     </div>
   );
 }

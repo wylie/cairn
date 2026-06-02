@@ -632,8 +632,44 @@ interface CustomerStateContextValue {
     primaryContactCustomerId: string;
     billingCustomerId?: string;
     locationId: string;
+    secondaryContactCustomerId?: string;
+    householdStatus?: Household["householdStatus"];
+    preferredCommunicationMethod?: Household["preferredCommunicationMethod"];
+    email?: string;
+    phone?: string;
+    defaultAddress?: string;
+    defaultEmergencyContactName?: string;
+    defaultEmergencyContactPhone?: string;
     notes?: string;
   }) => { ok: boolean; message: string; householdId?: string };
+  updateHousehold: (
+    householdId: string,
+    updates: Partial<
+      Pick<
+        Household,
+        | "householdName"
+        | "primaryContactCustomerId"
+        | "secondaryContactCustomerId"
+        | "billingCustomerId"
+        | "householdStatus"
+        | "preferredCommunicationMethod"
+        | "email"
+        | "phone"
+        | "defaultAddress"
+        | "defaultEmergencyContactName"
+        | "defaultEmergencyContactPhone"
+        | "notes"
+      >
+    >
+  ) => { ok: boolean; message: string };
+  updateHouseholdPhoto: (
+    householdId: string,
+    input: {
+      profilePhotoUrl?: string;
+      updatedByStaffId: string;
+      updatedByStaffName?: string;
+    }
+  ) => { ok: boolean; message: string };
   addHouseholdMember: (input: {
     householdId: string;
     customerId: string;
@@ -4194,6 +4230,14 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     primaryContactCustomerId: string;
     billingCustomerId?: string;
     locationId: string;
+    secondaryContactCustomerId?: string;
+    householdStatus?: Household["householdStatus"];
+    preferredCommunicationMethod?: Household["preferredCommunicationMethod"];
+    email?: string;
+    phone?: string;
+    defaultAddress?: string;
+    defaultEmergencyContactName?: string;
+    defaultEmergencyContactPhone?: string;
     notes?: string;
   }) => {
     const householdName = input.householdName.trim();
@@ -4206,8 +4250,16 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       id: householdId,
       householdName,
       primaryContactCustomerId: input.primaryContactCustomerId,
+      secondaryContactCustomerId: input.secondaryContactCustomerId,
       billingCustomerId,
       locationId: input.locationId,
+      householdStatus: input.householdStatus ?? "active",
+      preferredCommunicationMethod: input.preferredCommunicationMethod ?? "email",
+      email: input.email?.trim() || primary.email,
+      phone: input.phone?.trim() || primary.phone,
+      defaultAddress: input.defaultAddress?.trim() || primary.addressLine1,
+      defaultEmergencyContactName: input.defaultEmergencyContactName?.trim() || primary.emergencyContactName,
+      defaultEmergencyContactPhone: input.defaultEmergencyContactPhone?.trim() || primary.emergencyContactPhone,
       notes: input.notes?.trim() || undefined,
       createdAt: new Date().toISOString()
     };
@@ -4233,6 +4285,57 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       ];
     });
     return { ok: true as const, message: `Household created: ${householdName}.`, householdId };
+  };
+
+  const updateHousehold: CustomerStateContextValue["updateHousehold"] = (householdId, updates) => {
+    const exists = households.some((entry) => entry.id === householdId);
+    if (!exists) return { ok: false as const, message: "Household not found." };
+
+    setHouseholds((prev) =>
+      prev.map((entry) =>
+        entry.id === householdId
+          ? {
+              ...entry,
+              ...updates,
+              householdName: updates.householdName?.trim() || entry.householdName,
+              email: updates.email?.trim() || undefined,
+              phone: updates.phone?.trim() || undefined,
+              defaultAddress: updates.defaultAddress?.trim() || undefined,
+              defaultEmergencyContactName: updates.defaultEmergencyContactName?.trim() || undefined,
+              defaultEmergencyContactPhone: updates.defaultEmergencyContactPhone?.trim() || undefined,
+              notes: updates.notes?.trim() || undefined
+            }
+          : entry
+      )
+    );
+
+    return { ok: true as const, message: "Household updated." };
+  };
+
+  const updateHouseholdPhoto: CustomerStateContextValue["updateHouseholdPhoto"] = (householdId, input) => {
+    const exists = households.some((entry) => entry.id === householdId);
+    if (!exists) return { ok: false as const, message: "Household not found." };
+
+    const updatedAt = new Date().toISOString();
+    const nextPhoto = input.profilePhotoUrl?.trim() || undefined;
+    setHouseholds((prev) =>
+      prev.map((entry) =>
+        entry.id === householdId
+          ? {
+              ...entry,
+              profilePhotoUrl: nextPhoto,
+              profilePhotoUpdatedAt: updatedAt,
+              profilePhotoUpdatedByStaffId: input.updatedByStaffId,
+              profilePhotoUpdatedBy: input.updatedByStaffName
+            }
+          : entry
+      )
+    );
+
+    return {
+      ok: true as const,
+      message: nextPhoto ? "Household photo updated." : "Household photo removed."
+    };
   };
 
   const addHouseholdMember = (input: {
@@ -4462,6 +4565,8 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       createOperationsTask,
       updateOperationsTask,
       createHousehold,
+      updateHousehold,
+      updateHouseholdPhoto,
       addHouseholdMember,
       removeHouseholdMember,
       updateHouseholdMember,

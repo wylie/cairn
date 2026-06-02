@@ -19,6 +19,7 @@ import { useWorkstationState } from "@/lib/state/workstation-state";
 import { filterCustomers } from "@/lib/data/customer-search";
 import { formatDate, formatDateTime, formatDateWithAge, formatShortDate, formatTime } from "@/lib/format/date";
 import { formatCurrency } from "@/lib/transactions";
+import { buildDetailHref } from "@/lib/navigation/detail-navigation";
 import { ROLE_LABELS } from "@/lib/staff/capabilities";
 import { PERMISSION_LABELS } from "@/lib/staff/permissions";
 import type { StaffRole } from "@/types/domain";
@@ -1210,6 +1211,9 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                     : "No household payment method"}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
+                  <Link href={buildDetailHref({ destination: "household", entityId: household.id, currentPathname: `/customers/${customer.id}`, sourceOverride: "customers" })}>
+                    <Button variant="secondary" className="h-9">Open Household Dashboard</Button>
+                  </Link>
                   <Button variant="secondary" className="h-9" onClick={() => {
                     setSelectedHouseholdCheckInIds(householdRows.map((member) => member.customerId));
                     setShowHouseholdDetail(true);

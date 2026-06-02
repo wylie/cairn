@@ -96,6 +96,22 @@ describe("Reports dashboards", () => {
     expect(screen.getByText("Comp Transactions")).toBeInTheDocument();
   });
 
+  it("renders household report cards", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <ReportsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "2222");
+
+    await user.click(screen.getByRole("button", { name: "Households" }));
+    expect(screen.getByText("Total Households")).toBeInTheDocument();
+    expect(screen.getByText("Top Visiting Households")).toBeInTheDocument();
+    expect(screen.getByText("Household Revenue")).toBeInTheDocument();
+  });
+
   it("instructor is blocked from Reports", async () => {
     const user = userEvent.setup();
     render(

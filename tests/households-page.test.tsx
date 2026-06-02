@@ -31,11 +31,15 @@ describe("Households workspace", () => {
     expect(screen.getByTestId("households-workspace")).toBeInTheDocument();
     expect(screen.getAllByText("Rivera Family").length).toBeGreaterThan(0);
     expect(screen.getByLabelText("household-members-section")).toBeInTheDocument();
+    expect(screen.getByLabelText("household-relationships-section")).toBeInTheDocument();
+    expect(screen.getByLabelText("household-access-section")).toBeInTheDocument();
     expect(screen.getByLabelText("household-waivers-section")).toBeInTheDocument();
     expect(screen.getByLabelText("household-billing-section")).toBeInTheDocument();
+    expect(screen.getByLabelText("household-purchases-section")).toBeInTheDocument();
     expect(screen.getByLabelText("household-communications-section")).toBeInTheDocument();
-    expect(screen.getByText("Primary Adult")).toBeInTheDocument();
-    expect(screen.getByText("Child")).toBeInTheDocument();
+    expect(screen.getByText(/Primary Adult/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Child/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /upload photo|replace photo/i })).toBeInTheDocument();
   });
 
   it("shows membership coverage, registrations, visits, and communication history", async () => {
@@ -54,6 +58,7 @@ describe("Households workspace", () => {
     expect(screen.getByLabelText("household-checkin-section")).toBeInTheDocument();
     expect(screen.getByLabelText("household-timeline-section")).toBeInTheDocument();
     expect(screen.getByLabelText("household-dashboard-widgets")).toHaveTextContent("Households Missing Waivers");
+    expect(screen.getByLabelText("household-dashboard-widgets")).toHaveTextContent("Recent Household Activity");
   });
 
   it("supports household check-in and billing visibility", async () => {

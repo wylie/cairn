@@ -37,6 +37,9 @@ describe("customer portal household", () => {
     expect(screen.getByText("Total visits this month")).toBeInTheDocument();
     expect(screen.getByText("Total programs attended")).toBeInTheDocument();
     expect(screen.getByText("Household spending this year")).toBeInTheDocument();
+    expect(screen.getByText("Preferred communication:")).toBeInTheDocument();
+    expect(screen.getByText("Recent Purchases")).toBeInTheDocument();
+    expect(screen.getByText("Household Activity")).toBeInTheDocument();
     expect(screen.getByText("Sam Noaccess")).toBeInTheDocument();
     expect(screen.getAllByLabelText(/(initials avatar|profile photo)/i).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: "Sign waiver" }).length).toBeGreaterThan(0);
@@ -51,6 +54,7 @@ describe("customer portal household", () => {
 
     expect(screen.getAllByText("Alex Rivera").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Sam Noaccess").length).toBeGreaterThan(0);
+    expect(screen.getByText("Secondary Adult")).toBeInTheDocument();
     expect(screen.queryByText("Jimbo James")).not.toBeInTheDocument();
   });
 

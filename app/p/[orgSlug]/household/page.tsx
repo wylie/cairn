@@ -12,6 +12,9 @@ import { formatCurrency } from "@/lib/transactions";
 import { useCustomerPortalData } from "@/lib/portal/use-customer-portal-data";
 import { CustomerPortalContainer } from "@/components/portal/customer-portal-container";
 import { CustomerAvatar } from "@/components/customers/customer-avatar";
+import { HouseholdAvatar } from "@/components/households/household-avatar";
+import { formatDate, formatDateTime } from "@/lib/format/date";
+import { formatHouseholdRelationship, formatHouseholdRole, getHouseholdHealthLabel, getHouseholdHealthStatus } from "@/lib/households/presentation";
 
 export default function CustomerPortalHouseholdPage() {
   const { orgSlug } = useParams<{ orgSlug: string }>();
@@ -104,6 +107,40 @@ export default function CustomerPortalHouseholdPage() {
     return { mostActive, totalVisitsThisMonth, totalProgramsAttended, spendingThisYear };
   }, [memberRows, transactions, visibleCustomerIds, currentYear]);
   const primaryAccountHolder = memberRows.find((row) => row.member.role === "primary-adult");
+  const missingWaivers = memberRows.filter((row) => row.waiver?.status !== "valid");
+  const expiredMemberships = memberRows.filter((row) => row.access?.status === "expired");
+  const missingEmergencyContacts = memberRows.filter((row) => !row.customer.emergencyContactName || !row.customer.emergencyContactPhone);
+  const incompleteProfiles = memberRows.filter((row) => !row.customer.email || !row.customer.phone || !row.customer.dateOfBirth);
+  const outstandingBalance = transactions
+    .filter((entry) => canCustomerViewReceipt(entry, visibleCustomerIds))
+    .filter((entry) => entry.receiptStatus === "pending")
+    .reduce((sum, entry) => sum + entry.total, 0);
+  const householdHealth = getHouseholdHealthStatus({
+    missingWaivers: missingWaivers.length,
+    expiredMemberships: expiredMemberships.length,
+    outstandingBalanceCents: outstandingBalance,
+    incompleteProfiles: incompleteProfiles.length,
+    missingEmergencyContacts: missingEmergencyContacts.length
+  });
+  const recentPurchases = transactions
+    .filter((entry) => canCustomerViewReceipt(entry, visibleCustomerIds))
+    .sort((a, b) => b.completedAt.localeCompare(a.completedAt))
+    .slice(0, 5);
+  const recentActivity = [
+    ...checkInRecords
+      .filter((entry) => visibleCustomerIds.includes(entry.customerId))
+      .slice(0, 4)
+      .map((entry) => ({
+        id: `visit-${entry.id}`,
+        title: `${entry.customerName} checked ${entry.checkOutTime ? "out" : "in"}`,
+        occurredAt: entry.checkOutTime ?? entry.checkInTime
+      })),
+    ...recentPurchases.map((entry) => ({
+      id: `receipt-${entry.id}`,
+      title: `${entry.receiptNumber} processed`,
+      occurredAt: entry.completedAt
+    }))
+  ].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
 
   return (
     <CustomerPortalContainer>
@@ -112,6 +149,35 @@ export default function CustomerPortalHouseholdPage() {
       <Card>
         <CardHeader><CardTitle>{household?.householdName ?? "No Household Found"}</CardTitle></CardHeader>
         <CardContent className="space-y-4 text-sm">
+          {household ? (
+            <div className="flex flex-wrap items-start justify-between gap-4 rounded-xl border p-4">
+              <div className="flex items-start gap-4">
+                <HouseholdAvatar household={household} size="lg" />
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge tone={household.householdStatus === "archived" ? "danger" : household.householdStatus === "inactive" ? "warning" : "success"}>
+                      {household.householdStatus ?? "active"}
+                    </Badge>
+                    <Badge tone={householdHealth === "critical" ? "danger" : householdHealth === "needs_attention" ? "warning" : "success"}>
+                      {getHouseholdHealthLabel(householdHealth)}
+                    </Badge>
+                  </div>
+                  <p><span className="text-muted-foreground">Primary account holder:</span> {primaryAccountHolder ? `${primaryAccountHolder.customer.firstName} ${primaryAccountHolder.customer.lastName}` : "Not set"}</p>
+                  <p><span className="text-muted-foreground">Preferred communication:</span> {household.preferredCommunicationMethod ?? "email"}</p>
+                  <p><span className="text-muted-foreground">Address:</span> {household.defaultAddress ?? "Not set"}</p>
+                  <p><span className="text-muted-foreground">Created:</span> {formatDate(household.createdAt)}</p>
+                </div>
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                <MetricCard label="Household members" value={String(memberRows.length)} />
+                <MetricCard label="Active memberships" value={String(memberRows.filter((row) => row.access?.status === "active").length)} />
+                <MetricCard label="Upcoming programs" value={String(memberRows.reduce((sum, row) => sum + row.upcomingProgramTitles.length, 0))} />
+                <MetricCard label="Current waivers" value={String(memberRows.filter((row) => row.waiver?.status === "valid").length)} />
+                <MetricCard label="Outstanding balance" value={formatCurrency(outstandingBalance)} />
+                <MetricCard label="Recent visits" value={String(householdMetrics.totalVisitsThisMonth)} />
+              </div>
+            </div>
+          ) : null}
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <MetricCard label="Most active member" value={householdMetrics.mostActive ? `${householdMetrics.mostActive.name} (${householdMetrics.mostActive.visits})` : "No visits yet"} />
             <MetricCard label="Total visits this month" value={String(householdMetrics.totalVisitsThisMonth)} />
@@ -130,6 +196,7 @@ export default function CustomerPortalHouseholdPage() {
                   <p className="font-medium">{row.customer.firstName} {row.customer.lastName}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  <Badge tone="muted">{formatHouseholdRole(row.member.role)}</Badge>
                   <Badge tone={row.access?.status === "active" ? "success" : row.access?.status === "expired" ? "danger" : "warning"}>
                     {row.access?.status === "active" ? "Membership Active" : row.access?.status === "expired" ? "Membership Expired" : "No Membership"}
                   </Badge>
@@ -141,6 +208,7 @@ export default function CustomerPortalHouseholdPage() {
               <div className="grid gap-2 md:grid-cols-2">
                 <p>Name: {row.customer.firstName} {row.customer.lastName}</p>
                 <p>Age: {row.age ?? "Unknown"}</p>
+                <p>Relationship: {formatHouseholdRelationship(row.member.relationship)}</p>
                 <p>Membership status: {row.access?.status ?? "none"}</p>
                 <p>Waiver status: {row.waiver?.status ?? "missing"}</p>
                 <p>Upcoming programs: {row.upcomingProgramTitles.length ? row.upcomingProgramTitles.join(", ") : "None"}</p>
@@ -159,6 +227,29 @@ export default function CustomerPortalHouseholdPage() {
             <Button variant="secondary" className="h-9">Remove household member (Soon)</Button>
             <Button variant="secondary" className="h-9">Invite guardian (Soon)</Button>
           </div>
+          <Card>
+            <CardHeader><CardTitle>Recent Purchases</CardTitle></CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              {recentPurchases.length === 0 ? <p className="text-muted-foreground">No household purchases yet.</p> : null}
+              {recentPurchases.map((entry) => (
+                <div key={entry.id} className="rounded-md border p-3">
+                  <p className="font-medium">{entry.receiptNumber}</p>
+                  <p className="text-muted-foreground">{formatDateTime(entry.completedAt)} · {formatCurrency(entry.total)}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle>Household Activity</CardTitle></CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              {recentActivity.map((entry) => (
+                <div key={entry.id} className="rounded-md border p-3">
+                  <p className="font-medium">{entry.title}</p>
+                  <p className="text-muted-foreground">{formatDateTime(entry.occurredAt)}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
           <p className="text-xs text-muted-foreground">Guardians only see members in their own household.</p>
         </CardContent>
       </Card>

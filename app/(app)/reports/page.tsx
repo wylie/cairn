@@ -163,6 +163,26 @@ export default function ReportsPage() {
   }, [activeStaff?.role, report.sales.byStaff]);
 
   const showFinancial = hasPermission("viewFinancialReports") || activeStaff?.role === "owner";
+  const householdReportRows = useMemo(
+    () =>
+      households.map((household) => {
+        const memberIds = householdMembers.filter((entry) => entry.householdId === household.id).map((entry) => entry.customerId);
+        const visits = checkInRecords.filter((entry) => memberIds.includes(entry.customerId)).length;
+        const revenue = transactions
+          .filter((entry) => entry.householdId === household.id || memberIds.includes(entry.customerId) || memberIds.includes(entry.purchaserCustomerId ?? ""))
+          .reduce((sum, entry) => sum + entry.total, 0);
+        const waiverIssues = customers.filter((customer) => memberIds.includes(customer.id) && customer.waiverId === undefined).length;
+        return {
+          id: household.id,
+          name: household.householdName,
+          visits,
+          revenue,
+          waiverIssues,
+          size: memberIds.length
+        };
+      }),
+    [households, householdMembers, checkInRecords, transactions, customers]
+  );
 
   return (
     <PermissionGate permission="viewReports">
@@ -515,11 +535,41 @@ export default function ReportsPage() {
         ) : null}
 
         {activeCategory === "households" ? (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <StatusCard title="Total Households" value={`${report.households.total}`} />
-            <StatusCard title="Average Household Size" value={`${report.households.averageSize}`} />
-            <StatusCard title="Youth Members" value={`${report.households.youthMembers}`} />
-            <StatusCard title="Adult Members" value={`${report.households.adultMembers}`} />
+          <div className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <StatusCard title="Total Households" value={`${report.households.total}`} />
+              <StatusCard title="Average Household Size" value={`${report.households.averageSize}`} />
+              <StatusCard title="Youth Members" value={`${report.households.youthMembers}`} />
+              <StatusCard title="Adult Members" value={`${report.households.adultMembers}`} />
+            </div>
+            <div className="grid gap-3 lg:grid-cols-2">
+              <ListCard
+                title="Top Visiting Households"
+                emptyText="No household visits yet."
+                items={householdReportRows
+                  .slice()
+                  .sort((a, b) => b.visits - a.visits)
+                  .slice(0, 5)
+                  .map((row) => ({
+                    id: row.id,
+                    primary: row.name,
+                    secondary: `${row.visits} visits · ${row.size} members`
+                  }))}
+              />
+              <ListCard
+                title="Household Revenue"
+                emptyText="No household revenue yet."
+                items={householdReportRows
+                  .slice()
+                  .sort((a, b) => b.revenue - a.revenue)
+                  .slice(0, 5)
+                  .map((row) => ({
+                    id: row.id,
+                    primary: row.name,
+                    secondary: `${formatCurrency(row.revenue)} · ${row.waiverIssues} waiver issue${row.waiverIssues === 1 ? "" : "s"}`
+                  }))}
+              />
+            </div>
           </div>
         ) : null}
 

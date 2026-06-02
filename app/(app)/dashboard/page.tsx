@@ -154,7 +154,8 @@ export default function DashboardPage() {
         { label: "Households missing waivers", value: households.filter((household) => householdMembers.filter((member) => member.householdId === household.id).some((member) => getWaiverStatusForCustomer(member.customerId, "wtpl_general") !== "valid")).length },
         { label: "Outstanding balance", value: households.filter((household) => transactions.some((transaction) => transaction.householdId === household.id && transaction.receiptStatus === "pending")).length },
         { label: "Upcoming renewals", value: customerAccessRecords.filter((record) => record.householdId && record.expirationDate && record.expirationDate >= todayKey && record.expirationDate <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)).length },
-        { label: "Top visiting household", value: households[0]?.householdName ?? "No data yet" }
+        { label: "Top visiting household", value: households[0]?.householdName ?? "No data yet" },
+        { label: "Recent household activity", value: checkInRecords.filter((record) => householdMembers.some((member) => member.customerId === record.customerId)).length }
       ]
     },
     {

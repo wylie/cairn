@@ -473,20 +473,31 @@ export interface Household {
   primaryContactCustomerId: string;
   billingCustomerId: string;
   locationId: string;
+  secondaryContactCustomerId?: string;
+  householdStatus?: "active" | "inactive" | "archived";
+  preferredCommunicationMethod?: "email" | "sms" | "phone";
+  email?: string;
+  phone?: string;
   defaultAddress?: string;
   defaultEmergencyContactName?: string;
   defaultEmergencyContactPhone?: string;
+  profilePhotoUrl?: string;
+  profilePhotoUpdatedAt?: string;
+  profilePhotoUpdatedByStaffId?: string;
+  profilePhotoUpdatedBy?: string;
   notes?: string;
   createdAt: string;
 }
 
 export type HouseholdMemberRole =
   | "primary-adult"
+  | "secondary-adult"
   | "adult"
   | "guardian"
   | "dependent"
   | "child"
-  | "emergency-contact-only";
+  | "emergency-contact-only"
+  | "other";
 
 export type HouseholdRelationship =
   | "parent"
@@ -496,11 +507,14 @@ export type HouseholdRelationship =
   | "partner"
   | "spouse_partner"
   | "sibling"
+  | "grandparent"
+  | "grandchild"
   | "guardian"
   | "caregiver"
   | "dependent"
   | "emergency_contact_only"
-  | "other";
+  | "other"
+  | "custom";
 
 export interface HouseholdMember {
   householdId: string;

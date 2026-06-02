@@ -54,6 +54,8 @@ describe("Dashboard command center", () => {
     expect(screen.getByRole("link", { name: /program health/i })).toHaveAttribute("href", "/registrations");
     expect(screen.getByRole("link", { name: /waiver health/i })).toHaveAttribute("href", "/waivers");
     expect(screen.getByRole("link", { name: /financial snapshot/i })).toHaveAttribute("href", "/reports?category=sales&range=today");
+    expect(screen.getByRole("link", { name: /household health/i })).toHaveAttribute("href", "/households");
+    expect(screen.getByText("Recent household activity")).toBeInTheDocument();
 
     const scheduleLinks = screen.getAllByRole("link", { name: /open registration detail →/i });
     expect(scheduleLinks.length).toBeGreaterThan(0);

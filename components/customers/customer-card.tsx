@@ -13,6 +13,7 @@ export function CustomerCard({
   waiver,
   canCheckIn,
   blockedReason,
+  viewProfileHref,
   onToggleCheckIn,
   onSellAccess
 }: {
@@ -22,6 +23,7 @@ export function CustomerCard({
   waiver?: Waiver;
   canCheckIn: boolean;
   blockedReason?: string;
+  viewProfileHref?: string;
   onToggleCheckIn: (customerId: string) => void;
   onSellAccess: (customerId: string) => void;
 }) {
@@ -39,6 +41,7 @@ export function CustomerCard({
   const emergencyPhone = customer.emergencyContactPhone?.trim() || "";
   const hasEmergency = Boolean(emergencyName && emergencyPhone);
   const emergencyLabel = hasEmergency ? `${emergencyName}\n${emergencyPhone}` : "Missing ⚠";
+  const profileHref = viewProfileHref ?? `/customers/${customer.id}`;
   const dobDate = customer.dateOfBirth ? new Date(`${customer.dateOfBirth}T00:00:00Z`) : null;
   const hasValidDob = !!dobDate && !Number.isNaN(dobDate.getTime());
   const age = hasValidDob
@@ -62,7 +65,7 @@ export function CustomerCard({
       <CardContent className="flex h-full flex-col gap-3 p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
-            <Link href={`/customers/${customer.id}`} aria-label={`Open customer profile for ${customer.firstName} ${customer.lastName}`}>
+            <Link href={profileHref} aria-label={`Open customer profile for ${customer.firstName} ${customer.lastName}`}>
               <CustomerAvatar customer={customer} sizeClassName="h-16 w-16" />
             </Link>
             <div>
@@ -94,7 +97,7 @@ export function CustomerCard({
 
         <div className="mt-auto">
           <div className="flex flex-wrap gap-2">
-          <Link href={`/customers/${customer.id}`}>
+          <Link href={profileHref}>
             <Button variant="secondary" className="min-h-11">View Profile</Button>
           </Link>
           <Button onClick={() => onSellAccess(customer.id)} variant="secondary" className="min-h-11">Sell Access</Button>

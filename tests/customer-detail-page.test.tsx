@@ -8,6 +8,14 @@ import PosPage from "@/app/(app)/pos/page";
 import { TestProviders } from "@/tests/test-providers";
 import { vi } from "vitest";
 
+vi.mock("next/navigation", async () => {
+  const actual = await vi.importActual<typeof import("next/navigation")>("next/navigation");
+  return {
+    ...actual,
+    useSearchParams: () => new URLSearchParams(window.location.search)
+  };
+});
+
 function installStorageMock() {
   const store = new Map<string, string>();
   const original = window.localStorage;
@@ -71,11 +79,27 @@ describe("CustomerDetailPage", () => {
   });
 
   it("renders context-aware back link when opened from check-in", async () => {
-    window.history.pushState({}, "", "/customers/cust_001?from=check-in&returnTo=%2Fcheck-in%3Fquery%3DMaya");
+    window.history.pushState({}, "", "/customers/cust_001?from=check-in&fromLabel=Check-In&returnTo=%2Fo%2Fsummit%2Fcheck-in%3Fquery%3DMaya%26filter%3Dkids");
     const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
     render(<TestProviders>{page}</TestProviders>);
     const backLink = screen.getByRole("link", { name: /back to check-in/i });
-    expect(backLink).toHaveAttribute("href", "/check-in?query=Maya");
+    expect(backLink).toHaveAttribute("href", "/o/summit/check-in?query=Maya&filter=kids");
+  });
+
+  it("renders context-aware back link when opened from registrations", async () => {
+    window.history.pushState({}, "", "/customers/cust_001?from=registrations&returnTo=%2Fo%2Fsummit%2Fregistrations%3Fstatus%3Dwaitlisted%26session%3Dsess_001");
+    const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
+    render(<TestProviders>{page}</TestProviders>);
+    const backLink = screen.getByRole("link", { name: /back to registrations/i });
+    expect(backLink).toHaveAttribute("href", "/o/summit/registrations?status=waitlisted&session=sess_001");
+  });
+
+  it("ignores external return URLs and falls back safely", async () => {
+    window.history.pushState({}, "", "/customers/cust_001?from=reports&returnTo=https%3A%2F%2Fevil.example");
+    const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
+    render(<TestProviders>{page}</TestProviders>);
+    const backLink = screen.getByRole("link", { name: /back to reports/i });
+    expect(backLink).toHaveAttribute("href", "/customers");
   });
 
   it("renders jump links targeting customer sections", async () => {

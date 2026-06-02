@@ -6,6 +6,11 @@ import { CustomerList } from "@/components/customers/customer-list";
 import { TopBar } from "@/components/layout/top-bar";
 import { TestProviders } from "@/tests/test-providers";
 
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/customers",
+  useSearchParams: () => new URLSearchParams(window.location.search)
+}));
+
 function installStorageMock() {
   const store = new Map<string, string>();
   const original = window.localStorage;
@@ -96,6 +101,21 @@ describe("CustomerList", () => {
     expect(screen.getByText("Jordy Kim")).toBeInTheDocument();
     expect(screen.getByText("Legal: Jordan Kim")).toBeInTheDocument();
     expect(screen.getByLabelText("Maya Patel initials avatar")).toBeInTheDocument();
+  });
+
+  it("customer cards preserve customers-page return context in profile links", () => {
+    window.history.pushState({}, "", "/customers?query=maya&status=active");
+    render(
+      <TestProviders>
+        <CustomerList />
+      </TestProviders>
+    );
+
+    const profileLink = screen.getByRole("link", { name: /open customer profile for maya patel/i });
+    const href = profileLink.getAttribute("href") ?? "";
+    expect(href).toContain("/customers/cust_001?");
+    expect(href).toContain("from=customers");
+    expect(href).toContain("returnTo=%2Fcustomers%3Fquery%3Dmaya%26status%3Dactive");
   });
 
   it("preferred name displays with legal name when different", () => {

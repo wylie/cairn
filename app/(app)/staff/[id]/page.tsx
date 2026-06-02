@@ -2,22 +2,33 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
+import { buildCustomerDetailHref } from "@/lib/navigation/detail-navigation";
 
 export default function StaffDetailRedirectPage() {
   const params = useParams<{ id: string }>();
+  const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const customerId = params.id;
+  const currentSearch = searchParams?.toString?.() ?? "";
+  const destinationHref = customerId
+    ? `${buildCustomerDetailHref({
+        customerId,
+        currentPathname: pathname,
+        currentSearch
+      })}#staff-profile`
+    : "/customers";
 
   useEffect(() => {
     if (!customerId) return;
-    router.replace(`/customers/${customerId}#staff-profile`);
-  }, [customerId, router]);
+    router.replace(destinationHref);
+  }, [customerId, destinationHref, router]);
 
   return (
     <section className="space-y-2">
       <p className="text-sm text-muted-foreground">Redirecting to customer profile…</p>
-      <Link href={customerId ? `/customers/${customerId}#staff-profile` : "/customers"} className="text-sm text-primary underline">
+      <Link href={destinationHref} className="text-sm text-primary underline">
         Open customer profile
       </Link>
     </section>

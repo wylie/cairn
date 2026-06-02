@@ -7,12 +7,84 @@ const SOURCE_LABELS: Record<string, string> = {
   reports: "Reports",
   household: "Household",
   memberships: "Memberships",
-  staff: "Staff"
+  staff: "Staff",
+  waivers: "Waivers",
+  products: "Products"
+};
+
+type DetailDestination = "customer" | "session" | "program" | "product" | "household" | "membership" | "staff" | "receipt" | "waiver";
+
+type BuildDetailHrefInput = {
+  destination: DetailDestination;
+  entityId: string;
+  currentPathname: string;
+  currentSearch?: string;
+  currentHash?: string;
+  sourceOverride?: string;
+  anchor?: string;
+};
+
+type SharedDetailHrefOptions = Omit<BuildDetailHrefInput, "destination" | "entityId">;
+
+type ResolvedBackLink = {
+  href: string;
+  label: string;
+  source: string;
 };
 
 function normalizePath(pathname: string) {
   if (!pathname) return "/";
   return pathname.startsWith("/") ? pathname : `/${pathname}`;
+}
+
+function normalizeSearch(search?: string) {
+  const value = search?.trim() ?? "";
+  if (!value) return "";
+  return value.startsWith("?") ? value : `?${value}`;
+}
+
+function normalizeHash(hash?: string) {
+  const value = hash?.trim() ?? "";
+  if (!value) return "";
+  return value.startsWith("#") ? value : `#${value}`;
+}
+
+function buildReturnTo(pathname: string, search?: string, hash?: string) {
+  return `${normalizePath(pathname)}${normalizeSearch(search)}${normalizeHash(hash)}`;
+}
+
+function buildDestinationPath(destination: DetailDestination, entityId: string) {
+  switch (destination) {
+    case "customer":
+      return `/customers/${entityId}`;
+    case "session":
+      return `/sessions/${entityId}`;
+    case "program":
+      return `/programs/${entityId}`;
+    case "product":
+      return `/products/${entityId}`;
+    case "household":
+      return `/households/${entityId}`;
+    case "membership":
+      return `/memberships/${entityId}`;
+    case "staff":
+      return `/staff/${entityId}`;
+    case "receipt":
+      return `/pos/receipts/${entityId}`;
+    case "waiver":
+      return `/waivers/${entityId}`;
+    default:
+      return `/customers/${entityId}`;
+  }
+}
+
+function isSafeInternalRoute(route: string) {
+  return route.startsWith("/") && !route.startsWith("//") && !/^[a-z]+:/i.test(route);
+}
+
+function parseOrgSlugFromRoute(route: string) {
+  const match = route.match(/^\/[opf]\/([^/?#]+)/);
+  return match?.[1] ?? null;
 }
 
 export function sourceFromPath(pathname: string) {
@@ -26,6 +98,8 @@ export function sourceFromPath(pathname: string) {
   if (path.includes("/household")) return "household";
   if (path.includes("/memberships")) return "memberships";
   if (path.includes("/staff")) return "staff";
+  if (path.includes("/waivers")) return "waivers";
+  if (path.includes("/products")) return "products";
   return "customers";
 }
 
@@ -34,33 +108,56 @@ export function sourceLabel(source: string | null | undefined) {
   return SOURCE_LABELS[source] ?? "Customers";
 }
 
-export function buildCustomerDetailHref(input: {
-  customerId: string;
-  currentPathname: string;
-  currentSearch?: string;
-  sourceOverride?: string;
-}) {
+export function buildDetailHref(input: BuildDetailHrefInput) {
   const pathname = normalizePath(input.currentPathname);
-  const search = input.currentSearch?.trim().replace(/^\?/, "") ?? "";
   const from = input.sourceOverride ?? sourceFromPath(pathname);
-  const returnTo = `${pathname}${search ? `?${search}` : ""}`;
+  const returnTo = buildReturnTo(pathname, input.currentSearch, input.currentHash);
+  const contextOrg = parseOrgSlugFromRoute(returnTo);
   const params = new URLSearchParams();
   params.set("from", from);
+  params.set("fromLabel", sourceLabel(from));
   params.set("returnTo", returnTo);
-  return `/customers/${input.customerId}?${params.toString()}`;
+  if (contextOrg) {
+    params.set("contextOrg", contextOrg);
+  }
+  return `${buildDestinationPath(input.destination, input.entityId)}?${params.toString()}${normalizeHash(input.anchor)}`;
 }
 
-export function resolveDetailBackLink(searchParams: URLSearchParams) {
-  const from = searchParams.get("from");
-  const label = sourceLabel(from);
+export function buildCustomerDetailHref(input: SharedDetailHrefOptions & { customerId: string }) {
+  return buildDetailHref({
+    destination: "customer",
+    entityId: input.customerId,
+    currentPathname: input.currentPathname,
+    currentSearch: input.currentSearch,
+    currentHash: input.currentHash,
+    sourceOverride: input.sourceOverride,
+    anchor: input.anchor
+  });
+}
+
+export function resolveContextBackLink(
+  searchParams: URLSearchParams,
+  fallbackHref = "/customers",
+  fallbackLabel = "Customers"
+): ResolvedBackLink {
+  const source = searchParams.get("from") ?? "customers";
+  const requestedLabel = searchParams.get("fromLabel");
+  const label = requestedLabel?.trim() || sourceLabel(source) || fallbackLabel;
   const requestedReturnTo = searchParams.get("returnTo");
-  const safeReturnTo =
-    requestedReturnTo && requestedReturnTo.startsWith("/") && !requestedReturnTo.startsWith("//")
-      ? requestedReturnTo
-      : "/customers";
+  const contextOrg = searchParams.get("contextOrg");
+
+  let href = fallbackHref;
+  if (requestedReturnTo && isSafeInternalRoute(requestedReturnTo)) {
+    const fallbackOrg = parseOrgSlugFromRoute(fallbackHref);
+    const returnOrg = parseOrgSlugFromRoute(requestedReturnTo);
+    const mismatchedFallbackOrg = fallbackOrg && returnOrg && fallbackOrg !== returnOrg;
+    const mismatchedContextOrg = contextOrg && returnOrg && contextOrg !== returnOrg;
+    href = mismatchedFallbackOrg || mismatchedContextOrg ? fallbackHref : requestedReturnTo;
+  }
+
   return {
-    href: safeReturnTo,
-    label: `← Back to ${label}`
+    href,
+    label: `← Back to ${label}`,
+    source
   };
 }
-

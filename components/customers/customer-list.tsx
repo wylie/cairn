@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { AddCustomerModal } from "@/components/customers/add-customer-modal";
 import { CustomerCard } from "@/components/customers/customer-card";
 import { SellAccessModal } from "@/components/pos/sell-access-modal";
@@ -10,10 +11,14 @@ import { StaffSwitcher } from "@/components/staff/staff-switcher";
 import { Button } from "@/components/ui/button";
 import { filterCustomers } from "@/lib/data/customer-search";
 import { getMembershipForCustomer, getPassForCustomer, getWaiverForCustomer } from "@/lib/data/selectors";
+import { buildCustomerDetailHref } from "@/lib/navigation/detail-navigation";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 
 export function CustomerList() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentSearch = searchParams?.toString?.() ?? "";
   const { customers, households, householdMembers, accessProducts, runCustomerCheckInAction, sellAccessProducts, addCustomer, evaluateCustomerEntry } = useCustomerState();
   const { activeStaff, assertPermission, requestStaffSwitch, hasPermission } = useWorkstationState();
   const [query, setQuery] = useState("");
@@ -106,6 +111,11 @@ export function CustomerList() {
               waiver={getWaiverForCustomer(customer)}
               canCheckIn={canCheckIn}
               blockedReason={blockedReason}
+              viewProfileHref={buildCustomerDetailHref({
+                customerId: customer.id,
+                currentPathname: pathname,
+                currentSearch
+              })}
               onToggleCheckIn={handleToggleCheckIn}
               onSellAccess={setSellCustomerId}
             />

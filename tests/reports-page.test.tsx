@@ -6,6 +6,11 @@ import { TopBar } from "@/components/layout/top-bar";
 import { buildScopedMockKey } from "@/lib/mock-storage";
 import { TestProviders } from "@/tests/test-providers";
 
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/reports",
+  useSearchParams: () => new URLSearchParams(window.location.search)
+}));
+
 function installStorageMock() {
   const store = new Map<string, string>();
   const original = window.localStorage;
@@ -42,6 +47,25 @@ async function switchStaff(user: ReturnType<typeof userEvent.setup>, pin: string
 }
 
 describe("Reports dashboards", () => {
+  beforeEach(() => {
+    window.history.pushState({}, "", "/reports");
+  });
+
+  it("supports report category and range from query params", async () => {
+    const user = userEvent.setup();
+    window.history.pushState({}, "", "/reports?category=attendance&range=today");
+    render(
+      <TestProviders>
+        <TopBar />
+        <ReportsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "2222");
+
+    expect(screen.getByText("Show-up Rate")).toBeInTheDocument();
+    expect(screen.getByText("Attendance")).toBeInTheDocument();
+  });
+
   it("shows front desk operational dashboard and hides owner financial cards", async () => {
     const user = userEvent.setup();
     render(

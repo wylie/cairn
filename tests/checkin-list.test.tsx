@@ -497,7 +497,7 @@ describe("Check-in desk workflow", () => {
         <CheckInList />
       </TestProviders>
     );
-    expect(screen.getByTestId("occupancy-count")).toHaveAttribute("href", "/check-in#recent-checkins");
+    expect(screen.getByTestId("occupancy-count")).toHaveAttribute("href", "/check-in#current-roster");
     expect(screen.getByText("Recent check-ins")).toBeInTheDocument();
   });
 

@@ -90,6 +90,10 @@ async function completeNewCustomerWizard(
 }
 
 describe("CustomerList", () => {
+  beforeEach(() => {
+    window.history.pushState({}, "", "/customers");
+  });
+
   it("renders customers", () => {
     render(
       <TestProviders>

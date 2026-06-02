@@ -83,6 +83,7 @@ export default function RegistrationsPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentSearch = searchParams?.toString?.() ?? "";
+  const todayKey = new Date().toISOString().slice(0, 10);
   const orgSlug = parseOrgSlugFromPathname(pathname) ?? "summit";
   const {
     sessions,
@@ -109,26 +110,27 @@ export default function RegistrationsPage() {
   const [programFilter, setProgramFilter] = useState("all");
   const [instructorFilter, setInstructorFilter] = useState("all");
   const [locationFilter, setLocationFilter] = useState("all");
-  const [dateFrom, setDateFrom] = useState("2026-05-01");
-  const [dateTo, setDateTo] = useState("2026-06-30");
+  const [dateFrom, setDateFrom] = useState(searchParams?.get("dateFrom") ?? "2026-05-01");
+  const [dateTo, setDateTo] = useState(searchParams?.get("dateTo") ?? "2026-06-30");
   const [ageGroup, setAgeGroup] = useState<"all" | "youth" | "adult">("all");
   const [availableOnly, setAvailableOnly] = useState(false);
   const [waitlistOnly, setWaitlistOnly] = useState(false);
-  const [registrationFilter, setRegistrationFilter] = useState<RegistrationFilter>("all");
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [registrationFilter, setRegistrationFilter] = useState<RegistrationFilter>((searchParams?.get("status") as RegistrationFilter) || "all");
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(searchParams?.get("sessionId"));
   const [selectedRegistrationId, setSelectedRegistrationId] = useState<string | null>(null);
   const [transferTargetByRegistration, setTransferTargetByRegistration] = useState<Record<string, string>>({});
   const [noteDraftByRegistration, setNoteDraftByRegistration] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState("");
 
+  const createdFilter = searchParams?.get("created");
+
   const activeMembershipCustomerIds = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
     return new Set(
       customerAccessRecords
-        .filter((entry) => entry.type === "membership" && entry.status === "active" && (!entry.expirationDate || entry.expirationDate >= today))
+        .filter((entry) => entry.type === "membership" && entry.status === "active" && (!entry.expirationDate || entry.expirationDate >= todayKey))
         .map((entry) => entry.customerId)
     );
-  }, [customerAccessRecords]);
+  }, [customerAccessRecords, todayKey]);
 
   const sessionProgramMap = useMemo(() => new Map(programs.map((p) => [p.id, p])), [programs]);
 
@@ -147,11 +149,17 @@ export default function RegistrationsPage() {
       if (ageGroup === "adult" && (p.maximumAge ?? 99) < 18) return false;
       if (availableOnly && session.enrolled >= session.capacity) return false;
       if (waitlistOnly && (session.waitlistCount ?? 0) === 0) return false;
+      if (createdFilter === "today") {
+        const hasTodayRegistration = registrations.some(
+          (entry) => entry.sessionId === session.id && (entry.registeredAt ?? "").slice(0, 10) === todayKey
+        );
+        if (!hasTodayRegistration) return false;
+      }
       if (!q) return true;
       const haystack = `${session.title ?? ""} ${p.title} ${session.instructorName ?? ""} ${session.locationId}`.toLowerCase();
       return haystack.includes(q);
     });
-  }, [sessions, sessionProgramMap, sessionQuery, programFilter, instructorFilter, locationFilter, dateFrom, dateTo, ageGroup, availableOnly, waitlistOnly]);
+  }, [sessions, sessionProgramMap, sessionQuery, programFilter, instructorFilter, locationFilter, dateFrom, dateTo, ageGroup, availableOnly, waitlistOnly, createdFilter, registrations, todayKey]);
 
   const selectedSession = useMemo(() => sessions.find((s) => s.id === selectedSessionId) ?? filteredSessions[0] ?? null, [sessions, selectedSessionId, filteredSessions]);
   const selectedProgram = selectedSession ? sessionProgramMap.get(selectedSession.programId) : undefined;
@@ -159,12 +167,15 @@ export default function RegistrationsPage() {
   const sessionRegistrations = useMemo(() => {
     if (!selectedSession) return [];
     const base = registrations.filter((entry) => entry.sessionId === selectedSession.id);
-    if (registrationFilter === "all") return base;
-    if (registrationFilter === "registered") return base.filter((entry) => entry.status === "confirmed");
-    if (registrationFilter === "waitlisted") return base.filter((entry) => entry.status === "waitlisted");
-    if (registrationFilter === "cancelled") return base.filter((entry) => entry.status === "cancelled");
-    return base.filter((entry) => entry.status === registrationFilter);
-  }, [registrations, selectedSession, registrationFilter]);
+    const createdFiltered = createdFilter === "today"
+      ? base.filter((entry) => (entry.registeredAt ?? "").slice(0, 10) === todayKey)
+      : base;
+    if (registrationFilter === "all") return createdFiltered;
+    if (registrationFilter === "registered") return createdFiltered.filter((entry) => entry.status === "confirmed");
+    if (registrationFilter === "waitlisted") return createdFiltered.filter((entry) => entry.status === "waitlisted");
+    if (registrationFilter === "cancelled") return createdFiltered.filter((entry) => entry.status === "cancelled");
+    return createdFiltered.filter((entry) => entry.status === registrationFilter);
+  }, [registrations, selectedSession, registrationFilter, createdFilter, todayKey]);
 
   const registered = useMemo(
     () => sessionRegistrations.filter((entry) => ["confirmed", "attended", "checked_in", "late", "completed", "absent", "no_show", "excused"].includes(entry.status)),

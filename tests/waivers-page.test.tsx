@@ -1,8 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { vi } from "vitest";
 import WaiversPage from "@/app/(app)/waivers/page";
 import { TopBar } from "@/components/layout/top-bar";
 import { TestProviders } from "@/tests/test-providers";
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/waivers",
+  useSearchParams: () => new URLSearchParams(window.location.search)
+}));
 
 async function switchStaff(user: ReturnType<typeof userEvent.setup>, pin: string) {
   await user.click(screen.getByRole("button", { name: "Switch" }));
@@ -11,6 +17,10 @@ async function switchStaff(user: ReturnType<typeof userEvent.setup>, pin: string
 }
 
 describe("Waivers platform v1", () => {
+  beforeEach(() => {
+    window.history.pushState({}, "", "/waivers");
+  });
+
   it("manager can open waivers management and create template", async () => {
     const user = userEvent.setup();
     render(
@@ -63,5 +73,20 @@ describe("Waivers platform v1", () => {
     await switchStaff(user, "3333");
     expect(screen.getByText("You do not have permission to perform this action.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Switch Staff" })).toBeInTheDocument();
+  });
+
+  it("applies waiver status filter from query params", async () => {
+    const user = userEvent.setup();
+    window.history.pushState({}, "", "/waivers?status=expired");
+    render(
+      <TestProviders>
+        <TopBar />
+        <WaiversPage />
+      </TestProviders>
+    );
+
+    await switchStaff(user, "2222");
+    expect(screen.getByText("Filter: Expired")).toBeInTheDocument();
+    expect(screen.getByText("Waiver Compliance")).toBeInTheDocument();
   });
 });

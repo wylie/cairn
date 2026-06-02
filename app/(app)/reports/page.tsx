@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { PermissionGate } from "@/components/staff/permission-gate";
 import { useCustomerState } from "@/lib/state/customer-state";
@@ -64,6 +65,7 @@ const CATEGORY_LABELS: Record<ReportCategory, string> = {
 };
 
 export default function ReportsPage() {
+  const searchParams = useSearchParams();
   const {
     customers,
     checkInRecords,
@@ -80,11 +82,11 @@ export default function ReportsPage() {
   const { activeStaff, hasPermission, staffUsers } = useWorkstationState();
 
   const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState<ReportCategory>("sales");
+  const [activeCategory, setActiveCategory] = useState<ReportCategory>((searchParams?.get("category") as ReportCategory) || "sales");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedProduct, setSelectedProduct] = useState<string>("all");
   const [filters, setFilters] = useState<ReportFilters>({
-    rangeKey: "today",
+    rangeKey: (searchParams?.get("range") as ReportFilters["rangeKey"]) || "today",
     locationId: undefined,
     programType: "all",
     instructorId: "all",

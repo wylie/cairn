@@ -390,7 +390,7 @@ export function CheckInList() {
           </div>
         </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          <Link href="/check-in#recent-checkins" data-testid="occupancy-count" className="rounded-md bg-secondary px-3 py-2 text-sm transition-colors hover:bg-secondary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="View current check-ins">
+          <Link href="/check-in#current-roster" data-testid="occupancy-count" className="rounded-md bg-secondary px-3 py-2 text-sm transition-colors hover:bg-secondary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="View current check-ins">
             Currently In: {occupancyCount}
           </Link>
           <p className="rounded-md bg-secondary px-3 py-2 text-sm">{occupancyBreakdown.adults} adults · {occupancyBreakdown.youth} youth</p>
@@ -726,7 +726,7 @@ export function CheckInList() {
             )}
           </div>
 
-          <aside className="space-y-3 rounded-xl border bg-card p-4">
+          <aside id="current-roster" className="space-y-3 rounded-xl border bg-card p-4">
             <div className="flex items-center justify-between gap-2">
               <h4 className="text-base font-semibold">Currently Checked In</h4>
               <span className="rounded-full bg-secondary px-2 py-0.5 text-xs text-muted-foreground">{checkedInList.length}</span>

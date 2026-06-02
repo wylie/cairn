@@ -19,9 +19,12 @@ export function CustomerList() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentSearch = searchParams?.toString?.() ?? "";
+  const initialQuery = searchParams?.get("query") ?? "";
+  const waiverFilter = searchParams?.get("waiver");
+  const birthdayFilter = searchParams?.get("birthday");
   const { customers, households, householdMembers, accessProducts, runCustomerCheckInAction, sellAccessProducts, addCustomer, evaluateCustomerEntry } = useCustomerState();
   const { activeStaff, assertPermission, requestStaffSwitch, hasPermission } = useWorkstationState();
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [feedback, setFeedback] = useState("");
   const [warning, setWarning] = useState("");
   const [showSwitchPrompt, setShowSwitchPrompt] = useState(false);
@@ -29,8 +32,27 @@ export function CustomerList() {
   const [showAddCustomer, setShowAddCustomer] = useState(false);
 
   const filtered = useMemo(
-    () => filterCustomers(customers, query, { households, householdMembers }),
-    [customers, query, households, householdMembers]
+    () =>
+      filterCustomers(customers, query, { households, householdMembers }).filter((customer) => {
+        if (waiverFilter === "missing") {
+          const decision = evaluateCustomerEntry(customer.id);
+          const hasWaiverIssue =
+            decision.reasons.some((reason) => reason.toLowerCase().includes("waiver")) ||
+            decision.warnings.some((warning) => warning.toLowerCase().includes("waiver"));
+          if (!hasWaiverIssue) return false;
+        }
+
+        if (birthdayFilter === "today") {
+          if (!customer.dateOfBirth) return false;
+          const dob = new Date(`${customer.dateOfBirth}T00:00:00Z`);
+          if (Number.isNaN(dob.getTime())) return false;
+          const now = new Date();
+          if (dob.getUTCMonth() !== now.getUTCMonth() || dob.getUTCDate() !== now.getUTCDate()) return false;
+        }
+
+        return true;
+      }),
+    [customers, query, households, householdMembers, waiverFilter, birthdayFilter, evaluateCustomerEntry]
   );
   const sellCustomer = useMemo(() => customers.find((entry) => entry.id === sellCustomerId) ?? null, [customers, sellCustomerId]);
 
@@ -76,6 +98,8 @@ export function CustomerList() {
           />
         </div>
         <Button className="min-h-11" variant="outline" onClick={() => setShowAddCustomer(true)}>Add Customer</Button>
+        {waiverFilter === "missing" ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-900">Waiver Status: Missing</span> : null}
+        {birthdayFilter === "today" ? <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-900">Birthday: Today</span> : null}
       </div>
       {feedback ? <div role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{feedback}</div> : null}
       {warning ? (

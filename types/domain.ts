@@ -326,6 +326,7 @@ export interface Customer {
   memberId: string;
   organizationId: string;
   locationId: string;
+  createdAt?: string;
   firstName: string;
   lastName: string;
   preferredName?: string;

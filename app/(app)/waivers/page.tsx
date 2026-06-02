@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { PermissionGate } from "@/components/staff/permission-gate";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -77,7 +77,9 @@ function renderBlocks(blocks: WaiverTemplateBlock[]) {
 
 export default function WaiversPage() {
   const pathname = usePathname() ?? "";
+  const searchParams = useSearchParams();
   const orgSlug = pathname.split("/").filter(Boolean)[1] ?? "summit";
+  const statusFilter = searchParams?.get("status");
   const { activeStaff } = useWorkstationState();
   const {
     waiverTemplates,
@@ -160,6 +162,20 @@ export default function WaiversPage() {
     });
     return { missing, expired, expiringSoon, outdated, signed: waivers.length };
   }, [customers, waivers.length, getWaiverStatusForCustomer]);
+
+  const complianceRows = useMemo(
+    () =>
+      customers
+        .map((customer) => ({
+          customer,
+          status: getWaiverStatusForCustomer(customer.id, "wtpl_general")
+        }))
+        .filter((entry) => {
+          if (!statusFilter) return true;
+          return entry.status === statusFilter;
+        }),
+    [customers, getWaiverStatusForCustomer, statusFilter]
+  );
 
   const openTemplate = (templateId: string) => {
     setSelectedTemplateId(templateId);
@@ -253,6 +269,26 @@ export default function WaiversPage() {
           </section>
 
           <section className="space-y-4">
+            <article className="rounded-xl border bg-card p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-base font-semibold">Waiver Compliance</h3>
+                {statusFilter ? <Badge tone="warning">Filter: {titleCase(statusFilter)}</Badge> : null}
+              </div>
+              <div className="space-y-2 text-sm">
+                {complianceRows.length === 0 ? <p className="text-muted-foreground">No customers match this waiver filter.</p> : null}
+                {complianceRows.slice(0, 12).map((entry) => (
+                  <div key={entry.customer.id} className="flex items-center justify-between rounded-md border p-2">
+                    <div>
+                      <p className="font-medium">{entry.customer.firstName} {entry.customer.lastName}</p>
+                      <p className="text-xs text-muted-foreground">{entry.customer.memberId}</p>
+                    </div>
+                    <Badge tone={entry.status === "valid" ? "success" : entry.status === "expiring_soon" ? "warning" : "danger"}>
+                      {titleCase(entry.status)}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </article>
             {selectedTemplate ? (
               <>
                 <article className="rounded-xl border bg-card p-4 space-y-3">

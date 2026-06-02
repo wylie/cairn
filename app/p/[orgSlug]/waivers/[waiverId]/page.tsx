@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { WaiverSigningForm } from "@/components/public/waiver-signing-form";
+import { getServerSession } from "@/lib/auth/session";
 import { getOrganizationForPublic } from "@/lib/public-programs";
 import { getPublicWaiverTemplate, getWaiverTemplateVersionById } from "@/lib/public-waivers";
 
@@ -25,11 +26,17 @@ export default async function PublicWaiverPage({
   const { customerId } = await searchParams;
   const org = getOrganizationForPublic(orgSlug);
   const template = getPublicWaiverTemplate(orgSlug, waiverId);
+  const session = await getServerSession();
 
   if (!org || !template) return <main className="mx-auto max-w-4xl p-6"><p className="text-sm text-muted-foreground">Waiver not found.</p></main>;
 
   const version = getWaiverTemplateVersionById(template.currentVersionId);
   if (!version) return <main className="mx-auto max-w-4xl p-6"><p className="text-sm text-muted-foreground">Waiver version unavailable.</p></main>;
+  const isCustomerPortalSession =
+    session?.kind === "customer" &&
+    session.organizationSlugs.includes(orgSlug);
+  const signingMode = isCustomerPortalSession ? "account" : "public";
+  const defaultCustomerId = isCustomerPortalSession ? customerId ?? session.customerId : customerId;
 
   return (
     <main className="mx-auto max-w-4xl space-y-4 p-4 md:p-6">
@@ -38,7 +45,13 @@ export default async function PublicWaiverPage({
         <h1 className="text-2xl font-semibold">{template.name}</h1>
         <p className="text-sm text-muted-foreground">{template.description}</p>
       </header>
-      <WaiverSigningForm orgSlug={orgSlug} template={template} version={version} mode="public" defaultCustomerId={customerId} />
+      <WaiverSigningForm
+        orgSlug={orgSlug}
+        template={template}
+        version={version}
+        mode={signingMode}
+        defaultCustomerId={defaultCustomerId}
+      />
     </main>
   );
 }

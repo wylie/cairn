@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useCustomerPortalData } from "@/lib/portal/use-customer-portal-data";
+import { getSessionFromCookieClient } from "@/lib/tenant/client";
 import type { WaiverTemplate, WaiverTemplateVersion, HouseholdRelationship } from "@/types/domain";
 
 type SigningMode = "public" | "account" | "kiosk";
@@ -38,7 +39,8 @@ export function WaiverSigningForm({
     getWaiverStatusForCustomer,
     getSignedWaiverRecordsForCustomer
   } = useCustomerState();
-  const { visibleCustomerIds } = useCustomerPortalData();
+  const { visibleCustomerIds, primaryCustomerId } = useCustomerPortalData();
+  const session = getSessionFromCookieClient();
 
   const [query, setQuery] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState(defaultCustomerId ?? "");
@@ -47,18 +49,66 @@ export function WaiverSigningForm({
   const [relationship, setRelationship] = useState<"self" | HouseholdRelationship>("self");
   const [checks, setChecks] = useState<Record<string, boolean>>({});
   const [feedback, setFeedback] = useState("");
+  const [error, setError] = useState("");
 
   const requiredChecks = useMemo(
     () => version.blocks.filter((block) => block.type === "required_checkbox" || block.type === "checkbox"),
     [version.blocks]
   );
 
-  const customerPool = useMemo(() => {
-    if (mode === "account") {
-      return customers.filter((entry) => visibleCustomerIds.includes(entry.id));
+  const lookupScope = useMemo(() => {
+    if (mode === "kiosk") {
+      return session?.kind === "staff" && session.organizationSlugs.includes(orgSlug) ? "staff_lookup" : "exact_only";
     }
-    return customers.filter((entry) => entry.organizationId === template.organizationId);
-  }, [mode, customers, visibleCustomerIds, template.organizationId]);
+    if (mode === "account" || (session?.kind === "customer" && session.organizationSlugs.includes(orgSlug))) {
+      return "household_only";
+    }
+    return "exact_only";
+  }, [mode, orgSlug, session]);
+
+  const eligibleCustomerIds = useMemo(() => {
+    if (lookupScope === "staff_lookup") {
+      return customers
+        .filter((entry) => entry.organizationId === template.organizationId)
+        .map((entry) => entry.id);
+    }
+    if (lookupScope === "household_only") {
+      return visibleCustomerIds;
+    }
+    const exactMatch = customers.find(
+      (entry) => entry.id === defaultCustomerId && entry.organizationId === template.organizationId
+    );
+    return exactMatch ? [exactMatch.id] : [];
+  }, [customers, defaultCustomerId, lookupScope, template.organizationId, visibleCustomerIds]);
+
+  const customerPool = useMemo(
+    () => customers.filter((entry) => eligibleCustomerIds.includes(entry.id)),
+    [customers, eligibleCustomerIds]
+  );
+
+  useEffect(() => {
+    if (customerPool.length === 1) {
+      const onlyCustomerId = customerPool[0]?.id ?? "";
+      if (selectedCustomerId !== onlyCustomerId) {
+        setSelectedCustomerId(onlyCustomerId);
+      }
+      return;
+    }
+    if (selectedCustomerId && eligibleCustomerIds.includes(selectedCustomerId)) return;
+    if (defaultCustomerId && eligibleCustomerIds.includes(defaultCustomerId)) {
+      setSelectedCustomerId(defaultCustomerId);
+      return;
+    }
+    if (selectedCustomerId) {
+      setSelectedCustomerId("");
+    }
+  }, [customerPool, defaultCustomerId, eligibleCustomerIds, selectedCustomerId]);
+
+  useEffect(() => {
+    if (!defaultCustomerId) return;
+    if (eligibleCustomerIds.includes(defaultCustomerId)) return;
+    setError("You can only sign waivers for yourself or household members you manage.");
+  }, [defaultCustomerId, eligibleCustomerIds]);
 
   const filteredCustomers = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -72,6 +122,12 @@ export function WaiverSigningForm({
   const selectedCustomer = customerPool.find((entry) => entry.id === selectedCustomerId);
   const selectedStatus = selectedCustomer ? getWaiverStatusForCustomer(selectedCustomer.id, template.id) : "missing";
   const latestSigned = selectedCustomer ? getSignedWaiverRecordsForCustomer(selectedCustomer.id).find((entry) => entry.templateId === template.id) : undefined;
+  const selectedCustomerAuthorized = selectedCustomer ? eligibleCustomerIds.includes(selectedCustomer.id) : false;
+  const shouldShowSelector = customerPool.length > 1;
+  const resultCountLabel =
+    query.trim().length > 0
+      ? `Showing ${filteredCustomers.length} of ${customerPool.length} eligible household members`
+      : `${customerPool.length} eligible ${customerPool.length === 1 ? "person" : "people"}`;
 
   const signingForLabel = selectedCustomer ? `${selectedCustomer.firstName} ${selectedCustomer.lastName}` : "No customer selected";
 
@@ -91,7 +147,7 @@ export function WaiverSigningForm({
   }, [selectedCustomer, households, householdMembers, customerPool]);
 
   const allRequiredAccepted = requiredChecks.every((block) => checks[block.id]);
-  const canSubmit = Boolean(selectedCustomer && typedName.trim() && signerName.trim() && allRequiredAccepted);
+  const canSubmit = Boolean(selectedCustomerAuthorized && typedName.trim() && signerName.trim() && allRequiredAccepted);
 
   return (
     <section className={`space-y-4 rounded-xl border bg-card p-4 ${mode === "kiosk" ? "max-w-3xl mx-auto" : ""}`}>
@@ -101,28 +157,58 @@ export function WaiverSigningForm({
         <p className="text-sm text-muted-foreground">Effective version {version.version} • Expires: {template.expirationRuleType === "days_after_signing" ? `${template.expirationDays ?? 0} days after signing` : template.expirationRuleType.replaceAll("_", " ")}</p>
       </header>
 
-      <div className="space-y-2 rounded-md border bg-white p-3">
-        <p className="text-sm font-medium">Select customer</p>
-        <input
-          className="h-11 w-full rounded-md border border-input bg-white px-3 text-sm"
-          placeholder="Search by name, email, phone, or member ID"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-        <div className="space-y-1">
-          {filteredCustomers.map((entry) => (
-            <button
-              key={entry.id}
-              type="button"
-              onClick={() => setSelectedCustomerId(entry.id)}
-              className={`w-full rounded-md border px-3 py-2 text-left text-sm ${selectedCustomerId === entry.id ? "border-sky-400 bg-sky-50" : "border-border"}`}
-            >
-              <p className="font-medium">{entry.firstName} {entry.lastName}</p>
-              <p className="text-xs text-muted-foreground">{entry.memberId} • {entry.email}</p>
-            </button>
-          ))}
+      {shouldShowSelector ? (
+        <div className="space-y-2 rounded-md border bg-white p-3">
+          <p className="text-sm font-medium">Who is this waiver for?</p>
+          <p className="text-xs text-muted-foreground">
+            {lookupScope === "staff_lookup" ? "Search facility customers." : "Only household members you can manage are shown here."}
+          </p>
+          <input
+            className="h-11 w-full rounded-md border border-input bg-white px-3 text-sm"
+            placeholder="Search by name, email, phone, or member ID"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">{resultCountLabel}</p>
+          <div className="space-y-1">
+            {filteredCustomers.length === 0 ? (
+              <p className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
+                {lookupScope === "staff_lookup"
+                  ? "No customers found. Refine your search."
+                  : "No eligible household members found for this waiver."}
+              </p>
+            ) : null}
+            {filteredCustomers.map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                onClick={() => {
+                  setSelectedCustomerId(entry.id);
+                  setError("");
+                }}
+                className={`w-full rounded-md border px-3 py-2 text-left text-sm ${selectedCustomerId === entry.id ? "border-sky-400 bg-sky-50" : "border-border"}`}
+              >
+                <p className="font-medium">{entry.firstName} {entry.lastName}</p>
+                <p className="text-xs text-muted-foreground">{entry.memberId} • {entry.email}</p>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : customerPool.length === 1 ? (
+        <div className="rounded-md border bg-white p-3 text-sm">
+          <p className="font-medium">Who is this waiver for?</p>
+          <p className="mt-1 text-muted-foreground">This waiver will be signed for the eligible person on this account.</p>
+        </div>
+      ) : (
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          <p className="font-medium">Who is this waiver for?</p>
+          <p className="mt-1">
+            {mode === "kiosk"
+              ? "Staff authorization is required before searching facility customers from kiosk mode."
+              : "You can only sign waivers for yourself or household members you manage."}
+          </p>
+        </div>
+      )}
 
       {selectedCustomer ? (
         <div className="rounded-md border bg-secondary/20 p-3 text-sm">
@@ -179,7 +265,11 @@ export function WaiverSigningForm({
             type="button"
             disabled={!canSubmit}
             onClick={() => {
-              if (!selectedCustomer) return;
+              if (!selectedCustomer || !selectedCustomerAuthorized) {
+                setFeedback("");
+                setError("You can only sign waivers for yourself or household members you manage.");
+                return;
+              }
               const result = signWaiverForCustomer({
                 customerId: selectedCustomer.id,
                 templateId: template.id,
@@ -190,6 +280,7 @@ export function WaiverSigningForm({
                 source: mode === "kiosk" ? "kiosk" : mode === "public" ? "online" : "online",
                 ipAddressPlaceholder: "0.0.0.0"
               });
+              setError("");
               setFeedback(result.message);
               if (result.ok) onSigned?.();
             }}
@@ -205,6 +296,7 @@ export function WaiverSigningForm({
         </div>
       </article>
 
+      {error ? <p role="alert" className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">{error}</p> : null}
       {feedback ? <p role="status" className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{feedback}</p> : null}
     </section>
   );

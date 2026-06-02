@@ -27,6 +27,10 @@ export function decodeSession(value: string | undefined | null): MockSession | n
 }
 
 export async function getServerSession() {
-  const store = await cookies();
-  return decodeSession(store.get(AUTH_COOKIE)?.value);
+  try {
+    const store = await cookies();
+    return decodeSession(store.get(AUTH_COOKIE)?.value);
+  } catch {
+    return null;
+  }
 }

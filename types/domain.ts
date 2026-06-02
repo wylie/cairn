@@ -129,6 +129,66 @@ export interface AuditLogEntry {
   createdAt: string;
 }
 
+export type OperationsAlertType =
+  | "customer"
+  | "membership"
+  | "waiver"
+  | "program"
+  | "inventory"
+  | "financial"
+  | "staff";
+
+export type OperationsAlertSeverity = "critical" | "warning" | "info";
+export type OperationsAlertStatus = "open" | "resolved" | "archived";
+
+export interface OperationsAlertRecord {
+  id: string;
+  organizationId: string;
+  locationId?: string;
+  source: "system" | "staff";
+  type: OperationsAlertType;
+  severity: OperationsAlertSeverity;
+  status: OperationsAlertStatus;
+  title: string;
+  description?: string;
+  customerId?: string;
+  membershipId?: string;
+  waiverTemplateId?: string;
+  sessionId?: string;
+  programId?: string;
+  productId?: string;
+  transactionId?: string;
+  staffUserId?: string;
+  createdAt: string;
+  createdByStaffId?: string;
+  createdByStaffName?: string;
+  resolvedAt?: string;
+  archivedAt?: string;
+}
+
+export type OperationsTaskStatus = "open" | "in_progress" | "completed" | "archived";
+
+export interface OperationsTaskRecord {
+  id: string;
+  organizationId: string;
+  locationId?: string;
+  title: string;
+  description?: string;
+  dueDate?: string;
+  assignedStaffId?: string;
+  assignedStaffName?: string;
+  status: OperationsTaskStatus;
+  customerId?: string;
+  membershipId?: string;
+  waiverTemplateId?: string;
+  sessionId?: string;
+  productId?: string;
+  createdAt: string;
+  createdByStaffId?: string;
+  createdByStaffName?: string;
+  completedAt?: string;
+}
+
 export type MembershipState =
   | "active"
   | "pending"

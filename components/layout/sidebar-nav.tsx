@@ -1,6 +1,6 @@
 import { memo } from "react";
 import Link from "next/link";
-import { LayoutDashboard, Users, ScanLine, Calendar, Boxes, CreditCard, BarChart3, Settings, Tags, UserCog, ClipboardList, FileCheck2, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Bell, Users, ScanLine, Calendar, Boxes, CreditCard, BarChart3, Settings, Tags, UserCog, ClipboardList, FileCheck2, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StaffPermission } from "@/types/domain";
 
@@ -21,6 +21,7 @@ const operationalPermissions: StaffPermission[] = ["checkInCustomer", "checkOutC
 
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, section: "operations", permissions: operationalPermissions },
+  { href: "/alerts", label: "Alerts", icon: Bell, section: "operations", permissions: operationalPermissions },
   { href: "/customers", label: "Customers", icon: Users, section: "operations", permissions: ["viewCustomers"] },
   { href: "/memberships", label: "Memberships", icon: ShieldCheck, section: "operations", permissions: ["viewCustomers", "viewMembershipReports"] },
   { href: "/check-in", label: "Check-in", icon: ScanLine, section: "operations", permissions: ["checkInCustomer", "checkOutCustomer"] },

@@ -54,17 +54,6 @@ type CustomerCommunicationRecord = {
   body: string;
 };
 
-type CustomerAlertSeverity = "info" | "warning" | "critical";
-type CustomerAlertRecord = {
-  id: string;
-  customerId: string;
-  label: string;
-  severity: CustomerAlertSeverity;
-  status: "open" | "resolved" | "archived";
-  createdBy: string;
-  createdAt: string;
-};
-
 export function CustomerDetailView({ customerId }: { customerId: string }) {
   const {
     customers,
@@ -84,6 +73,10 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     signWaiverForCustomer,
     getWaiverStatusForCustomer,
     getSignedWaiverRecordsForCustomer,
+    operationsAlerts,
+    createOperationsAlert,
+    resolveOperationsAlert,
+    archiveOperationsAlert,
     households,
     householdMembers,
     createHousehold,
@@ -187,17 +180,6 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
       status: "sent",
       sentBy: "Maya Lopez",
       body: "Your membership expires soon."
-    }
-  ]);
-  const [customerAlerts, setCustomerAlerts] = useState<CustomerAlertRecord[]>([
-    {
-      id: `alert-waiver-${customer.id}`,
-      customerId: customer.id,
-      label: "Missing Waiver",
-      severity: "critical",
-      status: generalWaiverStatus === "valid" ? "resolved" : "open",
-      createdBy: "System",
-      createdAt: "2026-05-01T09:00:00Z"
     }
   ]);
   const recentCheckIns = checkInRecords
@@ -389,6 +371,8 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     .sort((a, b) => b.completedAt.localeCompare(a.completedAt))
     .slice(0, 6);
   const alerts: Array<{ id: string; tone: "warning" | "danger" | "success"; message: string }> = [];
+  const customerOperationsAlerts = operationsAlerts.filter((entry) => entry.customerId === customer.id);
+  const openCustomerOperationsAlerts = customerOperationsAlerts.filter((entry) => entry.status === "open");
   if (!waiver || waiver.status !== "valid") alerts.push({ id: "waiver", tone: "danger", message: waiver?.status === "expired" ? "Waiver expired" : "Waiver missing" });
   if (membership && membership.status === "inactive") alerts.push({ id: "membership", tone: "danger", message: "Membership expired" });
   if (decision.chosenAccess?.type === "punch-pass" && (decision.chosenAccess.remainingPunches ?? 0) <= 2) {
@@ -468,6 +452,14 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
           }
         ]
       : []),
+    ...customerOperationsAlerts.map((entry) => ({
+      id: `operations-alert-${entry.id}`,
+      occurredAt: entry.createdAt,
+      title: entry.title,
+      detail: `${titleCase(entry.type)} alert • ${entry.description ?? titleCase(entry.status)}`,
+      staff: entry.createdByStaffName ?? "System",
+      category: "staff_actions" as const
+    })),
     ...customerSessionHistory.slice(0, 4).map((entry) => ({
       id: `registration-${entry.registration.id}`,
       occurredAt: entry.session?.startsAt ?? "2026-05-20",
@@ -523,12 +515,12 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
       staff: entry.sentBy,
       category: "communications" as const
     })),
-    ...customerAlerts.map((entry) => ({
+    ...customerOperationsAlerts.map((entry) => ({
       id: `alert-${entry.id}`,
       occurredAt: entry.createdAt,
       title: "Alert Updated",
-      detail: `${entry.label} • ${titleCase(entry.status)}`,
-      staff: entry.createdBy,
+      detail: `${entry.title} • ${titleCase(entry.status)}`,
+      staff: entry.createdByStaffName ?? "System",
       category: "staff_actions" as const
     }))
   ].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
@@ -538,7 +530,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
   const filteredCommunications = communicationFilter === "all"
     ? communications
     : communications.filter((entry) => entry.type === communicationFilter);
-  const openAlerts = customerAlerts.filter((entry) => entry.status === "open");
+  const openAlerts = openCustomerOperationsAlerts;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -724,7 +716,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                   key={alert.id}
                   tone={alert.severity === "critical" ? "danger" : alert.severity === "warning" ? "warning" : "muted"}
                 >
-                  {alert.label}
+                  {alert.title}
                 </Badge>
               ))}
             </div>
@@ -782,57 +774,47 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                 className="h-9"
                 variant="secondary"
                 onClick={() => {
-                  const now = new Date().toISOString();
-                  setCustomerAlerts((prev) => [
-                    {
-                      id: `alert_${Math.random().toString(36).slice(2, 9)}`,
-                      customerId: customer.id,
-                      label: "Staff Attention Required",
-                      severity: "warning",
-                      status: "open",
-                      createdBy: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : "Staff",
-                      createdAt: now
-                    },
-                    ...prev
-                  ]);
+                  const result = createOperationsAlert({
+                    title: "Staff Attention Required",
+                    description: `Created from ${customer.firstName} ${customer.lastName}'s profile.`,
+                    severity: "warning",
+                    type: "customer",
+                    customerId: customer.id,
+                    createdByStaffId: activeStaff?.id,
+                    createdByStaffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : "Staff"
+                  });
+                  setProfileFeedback(result.message);
                 }}
               >
                 Create Alert
               </Button>
             </div>
-            {customerAlerts.map((entry) => (
+            {customerOperationsAlerts.map((entry) => (
               <div key={entry.id} className="rounded-md border p-3">
-                <p className="font-medium">{entry.label}</p>
+                <p className="font-medium">{entry.title}</p>
                 <p className="text-muted-foreground">
-                  {titleCase(entry.severity)} • {titleCase(entry.status)} • {entry.createdBy} • {formatDateTime(entry.createdAt)}
+                  {titleCase(entry.severity)} • {titleCase(entry.status)} • {(entry.createdByStaffName ?? "System")} • {formatDateTime(entry.createdAt)}
                 </p>
+                {entry.description ? <p className="mt-1 text-muted-foreground">{entry.description}</p> : null}
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <Button className="h-8" variant="secondary" onClick={() => setProfileFeedback(`Edit alert placeholder: ${entry.label}`)}>Edit Alert</Button>
                   <Button
                     className="h-8"
                     variant="secondary"
-                    onClick={() =>
-                      setCustomerAlerts((prev) =>
-                        prev.map((alert) => (alert.id === entry.id ? { ...alert, status: alert.status === "resolved" ? "open" : "resolved" } : alert))
-                      )
-                    }
+                    onClick={() => setProfileFeedback(resolveOperationsAlert(entry.id).message)}
                   >
-                    {entry.status === "resolved" ? "Reopen Alert" : "Resolve Alert"}
+                    Resolve Alert
                   </Button>
                   <Button
                     className="h-8"
                     variant="secondary"
-                    onClick={() =>
-                      setCustomerAlerts((prev) =>
-                        prev.map((alert) => (alert.id === entry.id ? { ...alert, status: "archived" } : alert))
-                      )
-                    }
+                    onClick={() => setProfileFeedback(archiveOperationsAlert(entry.id).message)}
                   >
                     Archive Alert
                   </Button>
                 </div>
               </div>
             ))}
+            {customerOperationsAlerts.length === 0 ? <p className="text-muted-foreground">No alerts on this customer record yet.</p> : null}
           </CardContent>
         </Card>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="detail-summary-cards">

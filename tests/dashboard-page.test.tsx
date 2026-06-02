@@ -27,6 +27,9 @@ describe("Dashboard command center", () => {
       </TestProviders>
     );
 
+    expect(screen.getByRole("link", { name: /open alerts/i })).toHaveAttribute("href", "/alerts?status=open");
+    expect(screen.getByRole("link", { name: /critical alerts/i })).toHaveAttribute("href", "/alerts?status=open&severity=critical");
+    expect(screen.getByRole("link", { name: /tasks due today/i })).toHaveAttribute("href", "/alerts?taskStatus=open&due=today");
     expect(screen.getByRole("link", { name: /currently checked in/i })).toHaveAttribute("href", "/check-in#current-roster");
     expect(screen.getByRole("link", { name: /today's check-ins/i })).toHaveAttribute("href", "/check-in#recent-checkins");
     expect(screen.getByRole("link", { name: /today's registrations/i })).toHaveAttribute("href", "/registrations?created=today");
@@ -34,6 +37,7 @@ describe("Dashboard command center", () => {
     expect(screen.getByRole("link", { name: /today's revenue/i })).toHaveAttribute("href", "/reports?category=sales&range=today");
 
     expect(screen.getByText("View Check-In →")).toBeInTheDocument();
+    expect(screen.getByText("Open Alerts →")).toBeInTheDocument();
     expect(screen.getByText("Open Revenue Report →")).toBeInTheDocument();
     expect(screen.getByText("View affected customers →")).toBeInTheDocument();
   });

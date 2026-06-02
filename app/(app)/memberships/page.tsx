@@ -56,7 +56,7 @@ export default function MembershipsWorkspacePage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentSearch = searchParams?.toString?.() ?? "";
-  const { customers, customerAccessRecords, accessProducts, updateCustomerAccessRecord, households, householdMembers } = useCustomerState();
+  const { customers, customerAccessRecords, accessProducts, updateCustomerAccessRecord, households, householdMembers, operationsAlerts } = useCustomerState();
   const { settings } = useSettingsState();
   const { activeStaff, hasPermission } = useWorkstationState();
 
@@ -165,6 +165,18 @@ export default function MembershipsWorkspacePage() {
         (entry) => entry.record.status === "pending" || (entry.record.notes ?? "").toLowerCase().includes("failed renewal")
       ),
     [membershipRows]
+  );
+  const selectedAlerts = useMemo(
+    () =>
+      selected
+        ? operationsAlerts.filter(
+            (entry) =>
+              entry.membershipId === selected.record.id ||
+              (entry.customerId === selected.record.customerId &&
+                (entry.type === "membership" || entry.type === "financial"))
+          )
+        : [],
+    [operationsAlerts, selected]
   );
 
   const onStaffAction = (action: StaffAction, recordId: string) => {
@@ -483,6 +495,27 @@ export default function MembershipsWorkspacePage() {
                           <CustomerAvatar customer={member} sizeClassName="h-8 w-8" />
                           <span>{member.firstName} {member.lastName}</span>
                         </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-lg border p-3" aria-label="membership-related-alerts">
+                  <p className="mb-2 font-medium">Related Alerts</p>
+                  {selectedAlerts.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No active membership alerts for this record.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedAlerts.slice(0, 6).map((alert) => (
+                        <div key={alert.id} className="rounded-md border bg-secondary/20 px-3 py-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-medium">{alert.title}</p>
+                            <Badge tone={alert.severity === "critical" ? "danger" : alert.severity === "warning" ? "warning" : "muted"}>
+                              {alert.severity}
+                            </Badge>
+                          </div>
+                          {alert.description ? <p className="text-xs text-muted-foreground">{alert.description}</p> : null}
+                        </div>
                       ))}
                     </div>
                   )}

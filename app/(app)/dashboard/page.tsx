@@ -25,6 +25,8 @@ export default function DashboardPage() {
     productCategories,
     households,
     householdMembers,
+    operationsAlerts,
+    operationsTasks,
     getWaiverStatusForCustomer
   } = useCustomerState();
   const { activeStaff, staffUsers } = useWorkstationState();
@@ -85,8 +87,14 @@ export default function DashboardPage() {
   const unassignedSessions = sessions.filter((entry) => entry.startsAt.slice(0, 10) === todayKey && !entry.instructorName).length;
   const openStaffingGaps = unassignedSessions;
   const topSellingProduct = report.products.topProducts[0]?.name ?? "No sales yet";
+  const openAlerts = operationsAlerts.filter((entry) => entry.status === "open");
+  const criticalAlerts = openAlerts.filter((entry) => entry.severity === "critical");
+  const tasksDueToday = operationsTasks.filter((entry) => entry.status !== "completed" && entry.status !== "archived" && entry.dueDate === todayKey);
 
   const primaryMetricCards = [
+    { title: "Open Alerts", value: openAlerts.length, href: "/alerts?status=open", hint: "Open Alerts →" },
+    { title: "Critical Alerts", value: criticalAlerts.length, href: "/alerts?status=open&severity=critical", hint: "Review critical issues →" },
+    { title: "Tasks Due Today", value: tasksDueToday.length, href: "/alerts?taskStatus=open&due=today", hint: "Open Task Center →" },
     { title: "Currently Checked In", value: report.totals.currentlyIn, href: "/check-in#current-roster", hint: "View Check-In →" },
     { title: "Today's Check-Ins", value: report.totals.todayCheckIns, href: "/check-in#recent-checkins", hint: "Open today’s check-in activity →" },
     { title: "Today's Revenue", value: formatCurrency(report.totals.revenueTodayCents), href: "/reports?category=sales&range=today", hint: "Open Revenue Report →" },

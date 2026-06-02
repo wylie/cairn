@@ -86,6 +86,7 @@ export default function WaiversPage() {
     waiverTemplateVersions,
     waivers,
     customers,
+    operationsAlerts,
     createWaiverTemplate,
     createWaiverTemplateVersion,
     updateWaiverTemplate,
@@ -135,6 +136,17 @@ export default function WaiversPage() {
     if (!selectedTemplate) return undefined;
     return waiverTemplateVersions.find((entry) => entry.id === selectedTemplate.currentVersionId);
   }, [selectedTemplate, waiverTemplateVersions]);
+  const selectedTemplateAlerts = useMemo(
+    () =>
+      selectedTemplate
+        ? operationsAlerts.filter(
+            (entry) =>
+              entry.waiverTemplateId === selectedTemplate.id ||
+              (selectedTemplate.id === "wtpl_general" && entry.type === "waiver" && customers.some((customer) => customer.id === entry.customerId))
+          )
+        : [],
+    [customers, operationsAlerts, selectedTemplate]
+  );
 
   const compareSummary = useMemo(() => {
     const versionA = waiverTemplateVersions.find((entry) => entry.id === compareVersionAId);
@@ -322,6 +334,26 @@ export default function WaiversPage() {
                       <div>
                         <p className="mb-2 text-sm font-medium">Current waiver content</p>
                         {renderBlocks(currentVersion?.blocks ?? [])}
+                      </div>
+                      <div className="rounded-md border p-3">
+                        <p className="mb-2 text-sm font-medium">Related Alerts</p>
+                        {selectedTemplateAlerts.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">No waiver alerts are currently tied to this template.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {selectedTemplateAlerts.slice(0, 6).map((alert) => (
+                              <div key={alert.id} className="rounded-md border bg-secondary/20 px-3 py-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="font-medium">{alert.title}</p>
+                                  <Badge tone={alert.severity === "critical" ? "danger" : alert.severity === "warning" ? "warning" : "muted"}>
+                                    {titleCase(alert.severity)}
+                                  </Badge>
+                                </div>
+                                {alert.description ? <p className="text-xs text-muted-foreground">{alert.description}</p> : null}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <Button variant="secondary" onClick={() => setIsEditingTemplate(true)}>Edit Template</Button>

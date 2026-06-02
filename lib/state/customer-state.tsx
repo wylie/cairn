@@ -51,6 +51,9 @@ import type {
   ClassCampSession,
   Registration,
   RegistrationActivityEvent,
+  OperationsAlertRecord,
+  OperationsAlertStatus,
+  OperationsTaskRecord,
   StaffPermission,
   StaffRole,
   Waiver,
@@ -79,6 +82,19 @@ function addDays(key: string, days: number) {
   const date = dateFromKey(key);
   date.setUTCDate(date.getUTCDate() + days);
   return toDateKey(date);
+}
+
+function diffDays(fromKey: string, toKey?: string) {
+  if (!toKey) return null;
+  const from = dateFromKey(fromKey);
+  const to = dateFromKey(toKey);
+  return Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function isMinor(dateOfBirth?: string) {
+  if (!dateOfBirth) return false;
+  const birthYear = Number(dateOfBirth.slice(0, 4));
+  return Number.isFinite(birthYear) ? 2026 - birthYear < 18 : false;
 }
 
 function normalizeProductForState(product: PosProduct): PosProduct {
@@ -229,6 +245,8 @@ interface CustomerStateContextValue {
   waiverTemplateVersions: WaiverTemplateVersion[];
   households: Household[];
   householdMembers: HouseholdMember[];
+  operationsAlerts: OperationsAlertRecord[];
+  operationsTasks: OperationsTaskRecord[];
   checkInRecords: CheckInLogRecord[];
   activeLocationId: string;
   activeDateKey: string;
@@ -572,6 +590,43 @@ interface CustomerStateContextValue {
   }) => { ok: boolean; message: string; waiverId?: string };
   getWaiverStatusForCustomer: (customerId: string, templateId?: string) => "valid" | "missing" | "expired" | "expiring_soon" | "outdated_version";
   getSignedWaiverRecordsForCustomer: (customerId: string) => SignedWaiverRecord[];
+  createOperationsAlert: (input: {
+    title: string;
+    description?: string;
+    severity: OperationsAlertRecord["severity"];
+    type: OperationsAlertRecord["type"];
+    customerId?: string;
+    membershipId?: string;
+    waiverTemplateId?: string;
+    sessionId?: string;
+    programId?: string;
+    productId?: string;
+    transactionId?: string;
+    staffUserId?: string;
+    createdByStaffId?: string;
+    createdByStaffName?: string;
+  }) => { ok: boolean; message: string; alertId?: string };
+  resolveOperationsAlert: (alertId: string) => { ok: boolean; message: string };
+  archiveOperationsAlert: (alertId: string) => { ok: boolean; message: string };
+  createOperationsTask: (input: {
+    title: string;
+    description?: string;
+    dueDate?: string;
+    assignedStaffId?: string;
+    assignedStaffName?: string;
+    status?: OperationsTaskRecord["status"];
+    customerId?: string;
+    membershipId?: string;
+    waiverTemplateId?: string;
+    sessionId?: string;
+    productId?: string;
+    createdByStaffId?: string;
+    createdByStaffName?: string;
+  }) => { ok: boolean; message: string; taskId?: string };
+  updateOperationsTask: (
+    taskId: string,
+    updates: Partial<Pick<OperationsTaskRecord, "title" | "description" | "dueDate" | "assignedStaffId" | "assignedStaffName" | "status" | "completedAt">>
+  ) => { ok: boolean; message: string };
   createHousehold: (input: {
     householdName: string;
     primaryContactCustomerId: string;
@@ -691,6 +746,56 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     () => seedHouseholdMembers.filter((entry) => seededHouseholdsForOrg.some((household) => household.id === entry.householdId)),
     [seededHouseholdsForOrg]
   );
+  const seededOperationsTasksForOrg = useMemo<OperationsTaskRecord[]>(
+    () => [
+      {
+        id: `task_${activeOrgId}_renewal`,
+        organizationId: activeOrgId,
+        locationId: activeLocationId,
+        title: "Call customer about renewal",
+        description: "Follow up with expiring memberships before the end of the week.",
+        dueDate: BASE_DATE,
+        assignedStaffId: "staff_002",
+        assignedStaffName: "Maya Lopez",
+        status: "open",
+        customerId: seededCustomersForOrg[0]?.id,
+        createdAt: `${BASE_DATE}T08:00:00Z`,
+        createdByStaffId: "staff_001",
+        createdByStaffName: "Taylor Nguyen"
+      },
+      {
+        id: `task_${activeOrgId}_restock`,
+        organizationId: activeOrgId,
+        locationId: activeLocationId,
+        title: "Restock retail shelf",
+        description: "Move replacement stock to the front-desk retail display.",
+        dueDate: BASE_DATE,
+        assignedStaffId: "staff_003",
+        assignedStaffName: "Sam Carter",
+        status: "in_progress",
+        productId: seededProductsForOrg.find((product) => product.trackInventory)?.id,
+        createdAt: `${BASE_DATE}T09:00:00Z`,
+        createdByStaffId: "staff_002",
+        createdByStaffName: "Maya Lopez"
+      },
+      {
+        id: `task_${activeOrgId}_instructor`,
+        organizationId: activeOrgId,
+        locationId: activeLocationId,
+        title: "Assign instructor",
+        description: "Review upcoming sessions missing staff coverage.",
+        dueDate: addDays(BASE_DATE, 1),
+        assignedStaffId: "staff_002",
+        assignedStaffName: "Maya Lopez",
+        status: "open",
+        sessionId: seededSessionsForOrg.find((session) => !session.instructorName)?.id,
+        createdAt: `${BASE_DATE}T10:30:00Z`,
+        createdByStaffId: "staff_001",
+        createdByStaffName: "Taylor Nguyen"
+      }
+    ],
+    [activeLocationId, activeOrgId, seededCustomersForOrg, seededProductsForOrg, seededSessionsForOrg]
+  );
 
   const storageKeys = useMemo(() => ({
     customers: buildScopedMockKey(activeOrgId, activeLocationId, "customers"),
@@ -711,7 +816,10 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     waiverTemplates: buildScopedMockKey(activeOrgId, activeLocationId, "waiverTemplates"),
     waiverTemplateVersions: buildScopedMockKey(activeOrgId, activeLocationId, "waiverTemplateVersions"),
     households: buildScopedMockKey(activeOrgId, activeLocationId, "households"),
-    householdMembers: buildScopedMockKey(activeOrgId, activeLocationId, "householdMembers")
+    householdMembers: buildScopedMockKey(activeOrgId, activeLocationId, "householdMembers"),
+    operationsAlertOverrides: buildScopedMockKey(activeOrgId, activeLocationId, "operationsAlertOverrides"),
+    operationsManualAlerts: buildScopedMockKey(activeOrgId, activeLocationId, "operationsManualAlerts"),
+    operationsTasks: buildScopedMockKey(activeOrgId, activeLocationId, "operationsTasks")
   }), [activeOrgId, activeLocationId]);
 
   const seededCheckIns = useMemo(
@@ -750,6 +858,11 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
   const [householdMembers, setHouseholdMembers] = useState<HouseholdMember[]>(
     seededHouseholdMembersForOrg.map(normalizeHouseholdMemberForState)
   );
+  const [operationsAlertOverrides, setOperationsAlertOverrides] = useState<
+    Array<{ id: string; status: OperationsAlertStatus; resolvedAt?: string; archivedAt?: string }>
+  >([]);
+  const [operationsManualAlerts, setOperationsManualAlerts] = useState<OperationsAlertRecord[]>([]);
+  const [operationsTasks, setOperationsTasks] = useState<OperationsTaskRecord[]>(seededOperationsTasksForOrg);
   const [checkInLogRecords, setCheckInLogRecords] = useState<CheckInLogRecord[]>(seededCheckIns);
   const [hydrated, setHydrated] = useState(false);
   const [activeDateKey, setActiveDateKey] = useState<string>(BASE_DATE);
@@ -847,12 +960,24 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         normalizeHouseholdMemberForState
       )
     );
+    setOperationsAlertOverrides(
+      loadMockState(storageKeys.operationsAlertOverrides, []) as Array<{
+        id: string;
+        status: OperationsAlertStatus;
+        resolvedAt?: string;
+        archivedAt?: string;
+      }>
+    );
+    setOperationsManualAlerts(
+      loadMockState(storageKeys.operationsManualAlerts, []) as OperationsAlertRecord[]
+    );
+    setOperationsTasks(loadMockState(storageKeys.operationsTasks, seededOperationsTasksForOrg) as OperationsTaskRecord[]);
     setTransactions(
       normalizeTransactions(loadMockState(storageKeys.transactions, seededTransactionsForOrg) as Partial<PosTransaction>[], products)
     );
     setCheckInLogRecords(storedCheckIns);
     setHydrated(true);
-  }, [activeOrgId, activeLocationId]);
+  }, [activeOrgId, activeLocationId, seededOperationsTasksForOrg]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -927,6 +1052,18 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     if (!hydrated) return;
     saveMockState(storageKeys.householdMembers, householdMembers);
   }, [householdMembers, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
+    saveMockState(storageKeys.operationsAlertOverrides, operationsAlertOverrides);
+  }, [operationsAlertOverrides, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
+    saveMockState(storageKeys.operationsManualAlerts, operationsManualAlerts);
+  }, [operationsManualAlerts, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
+    saveMockState(storageKeys.operationsTasks, operationsTasks);
+  }, [operationsTasks, hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -975,6 +1112,654 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     settings.operations.defaultCloseoutTime,
     settings.operations.open24x7
   ]);
+
+  const operationsAlerts = useMemo<OperationsAlertRecord[]>(() => {
+    const alerts: OperationsAlertRecord[] = [];
+    const registrationCounts = new Map<
+      string,
+      { registered: number; waitlisted: number }
+    >();
+    const householdsByCustomerId = new Map(householdMembers.map((entry) => [entry.customerId, entry]));
+    const todayMonthDay = activeDateKey.slice(5);
+
+    registrations.forEach((registration) => {
+      const existing = registrationCounts.get(registration.sessionId) ?? { registered: 0, waitlisted: 0 };
+      if (registration.status === "confirmed" || registration.status === "checked_in" || registration.status === "attended") {
+        existing.registered += 1;
+      }
+      if (registration.status === "waitlisted") existing.waitlisted += 1;
+      registrationCounts.set(registration.sessionId, existing);
+    });
+
+    customers.forEach((customer) => {
+      const membershipRow = householdsByCustomerId.get(customer.id);
+      const generalWaiverStatus = getWaiverStatusForCustomer(customer.id, "wtpl_general");
+      const customerLabel = `${customer.firstName} ${customer.lastName}`;
+
+      if (customer.dateOfBirth?.slice(5) === todayMonthDay) {
+        alerts.push({
+          id: `alert_customer_birthday_${customer.id}`,
+          organizationId: activeOrgId,
+          locationId: customer.locationId,
+          source: "system",
+          type: "customer",
+          severity: "info",
+          status: "open",
+          title: "Birthday today",
+          description: `${customerLabel} has a birthday today.`,
+          customerId: customer.id,
+          createdAt: `${activeDateKey}T06:00:00Z`
+        });
+      }
+
+      if (!customer.emergencyContactName || !customer.emergencyContactPhone) {
+        alerts.push({
+          id: `alert_customer_emergency_${customer.id}`,
+          organizationId: activeOrgId,
+          locationId: customer.locationId,
+          source: "system",
+          type: "customer",
+          severity: "warning",
+          status: "open",
+          title: "Missing emergency contact",
+          description: `${customerLabel} does not have a complete emergency contact on file.`,
+          customerId: customer.id,
+          createdAt: `${activeDateKey}T06:30:00Z`
+        });
+      }
+
+      if (!customer.phone || !customer.email || !customer.dateOfBirth) {
+        alerts.push({
+          id: `alert_customer_profile_${customer.id}`,
+          organizationId: activeOrgId,
+          locationId: customer.locationId,
+          source: "system",
+          type: "customer",
+          severity: "info",
+          status: "open",
+          title: "Incomplete profile",
+          description: `${customerLabel} is missing key profile fields.`,
+          customerId: customer.id,
+          createdAt: `${activeDateKey}T06:45:00Z`
+        });
+      }
+
+      if (isMinor(customer.dateOfBirth) && (!membershipRow || !membershipRow.canCheckInOthers)) {
+        alerts.push({
+          id: `alert_customer_guardian_${customer.id}`,
+          organizationId: activeOrgId,
+          locationId: customer.locationId,
+          source: "system",
+          type: "customer",
+          severity: "warning",
+          status: "open",
+          title: "Minor without guardian",
+          description: `${customerLabel} does not have a guardian relationship configured for check-in.`,
+          customerId: customer.id,
+          createdAt: `${activeDateKey}T07:00:00Z`
+        });
+      }
+
+      if (generalWaiverStatus === "missing") {
+        alerts.push({
+          id: `alert_waiver_missing_${customer.id}`,
+          organizationId: activeOrgId,
+          locationId: customer.locationId,
+          source: "system",
+          type: "waiver",
+          severity: "critical",
+          status: "open",
+          title: "Missing waiver",
+          description: `${customerLabel} needs a valid facility waiver before participation.`,
+          customerId: customer.id,
+          waiverTemplateId: "wtpl_general",
+          createdAt: `${activeDateKey}T07:15:00Z`
+        });
+      }
+      if (generalWaiverStatus === "expired") {
+        alerts.push({
+          id: `alert_waiver_expired_${customer.id}`,
+          organizationId: activeOrgId,
+          locationId: customer.locationId,
+          source: "system",
+          type: "waiver",
+          severity: "critical",
+          status: "open",
+          title: "Expired waiver",
+          description: `${customerLabel}'s waiver has expired.`,
+          customerId: customer.id,
+          waiverTemplateId: "wtpl_general",
+          createdAt: `${activeDateKey}T07:20:00Z`
+        });
+      }
+      if (generalWaiverStatus === "expiring_soon") {
+        alerts.push({
+          id: `alert_waiver_expiring_${customer.id}`,
+          organizationId: activeOrgId,
+          locationId: customer.locationId,
+          source: "system",
+          type: "waiver",
+          severity: "warning",
+          status: "open",
+          title: "Expiring waiver",
+          description: `${customerLabel}'s waiver expires soon.`,
+          customerId: customer.id,
+          waiverTemplateId: "wtpl_general",
+          createdAt: `${activeDateKey}T07:25:00Z`
+        });
+      }
+      if (isMinor(customer.dateOfBirth) && (generalWaiverStatus === "missing" || generalWaiverStatus === "expired")) {
+        alerts.push({
+          id: `alert_waiver_guardian_${customer.id}`,
+          organizationId: activeOrgId,
+          locationId: customer.locationId,
+          source: "system",
+          type: "waiver",
+          severity: "critical",
+          status: "open",
+          title: "Guardian signature required",
+          description: `${customerLabel} requires a guardian-signed waiver.`,
+          customerId: customer.id,
+          waiverTemplateId: "wtpl_general",
+          createdAt: `${activeDateKey}T07:30:00Z`
+        });
+      }
+    });
+
+    customerAccessRecords.forEach((record) => {
+      const customer = customers.find((entry) => entry.id === record.customerId);
+      if (!customer) return;
+      const customerLabel = `${customer.firstName} ${customer.lastName}`;
+      const membershipName =
+        accessProducts.find((product) => product.id === record.productId)?.name ??
+        record.notes ??
+        "Membership";
+      const daysToExpiration = diffDays(activeDateKey, record.expirationDate);
+
+      if (record.type === "membership" || record.type === "household-membership" || record.type === "staff-access") {
+        if (record.status === "expired") {
+          alerts.push({
+            id: `alert_membership_expired_${record.id}`,
+            organizationId: activeOrgId,
+            locationId: customer.locationId,
+            source: "system",
+            type: "membership",
+            severity: "critical",
+            status: "open",
+            title: "Expired membership",
+            description: `${customerLabel}'s ${membershipName} has expired.`,
+            customerId: customer.id,
+            membershipId: record.id,
+            createdAt: `${activeDateKey}T07:40:00Z`
+          });
+        } else if (typeof daysToExpiration === "number" && daysToExpiration >= 0 && daysToExpiration <= 30) {
+          alerts.push({
+            id: `alert_membership_expiring_${record.id}`,
+            organizationId: activeOrgId,
+            locationId: customer.locationId,
+            source: "system",
+            type: "membership",
+            severity: daysToExpiration <= 7 ? "critical" : "warning",
+            status: "open",
+            title: "Expiring within 30 days",
+            description: `${customerLabel}'s ${membershipName} expires in ${daysToExpiration} day${daysToExpiration === 1 ? "" : "s"}.`,
+            customerId: customer.id,
+            membershipId: record.id,
+            createdAt: `${activeDateKey}T07:45:00Z`
+          });
+        }
+      }
+
+      if (record.status === "pending" || (record.notes ?? "").toLowerCase().includes("failed renewal")) {
+        alerts.push({
+          id: `alert_membership_failed_${record.id}`,
+          organizationId: activeOrgId,
+          locationId: customer.locationId,
+          source: "system",
+          type: "membership",
+          severity: "critical",
+          status: "open",
+          title: "Failed renewal",
+          description: `${customerLabel}'s ${membershipName} renewal needs review.`,
+          customerId: customer.id,
+          membershipId: record.id,
+          createdAt: `${activeDateKey}T07:50:00Z`
+        });
+      }
+
+      if (record.status === "frozen" && typeof diffDays(activeDateKey, record.freezeEndDate) === "number" && (diffDays(activeDateKey, record.freezeEndDate) ?? 99) <= 7) {
+        const daysRemaining = diffDays(activeDateKey, record.freezeEndDate) ?? 0;
+        alerts.push({
+          id: `alert_membership_frozen_${record.id}`,
+          organizationId: activeOrgId,
+          locationId: customer.locationId,
+          source: "system",
+          type: "membership",
+          severity: "warning",
+          status: "open",
+          title: "Frozen membership ending soon",
+          description: `${customerLabel}'s freeze ends in ${daysRemaining} day${daysRemaining === 1 ? "" : "s"}.`,
+          customerId: customer.id,
+          membershipId: record.id,
+          createdAt: `${activeDateKey}T07:55:00Z`
+        });
+      }
+
+      if ((record.notes ?? "").toLowerCase().includes("balance due") || (record.notes ?? "").toLowerCase().includes("outstanding")) {
+        alerts.push({
+          id: `alert_membership_balance_${record.id}`,
+          organizationId: activeOrgId,
+          locationId: customer.locationId,
+          source: "system",
+          type: "financial",
+          severity: "warning",
+          status: "open",
+          title: "Outstanding balance",
+          description: `${customerLabel} has an outstanding balance tied to access.`,
+          customerId: customer.id,
+          membershipId: record.id,
+          createdAt: `${activeDateKey}T08:00:00Z`
+        });
+      }
+    });
+
+    sessions.forEach((session) => {
+      const counts = registrationCounts.get(session.id) ?? { registered: 0, waitlisted: 0 };
+      const program = programs.find((entry) => entry.id === session.programId);
+      const sessionLabel = session.title?.trim() || program?.title || "Session";
+
+      if (counts.waitlisted > 0) {
+        alerts.push({
+          id: `alert_program_waitlist_${session.id}`,
+          organizationId: activeOrgId,
+          locationId: session.locationId,
+          source: "system",
+          type: "program",
+          severity: "warning",
+          status: "open",
+          title: "Waitlist exists",
+          description: `${sessionLabel} has ${counts.waitlisted} participant${counts.waitlisted === 1 ? "" : "s"} waiting.`,
+          sessionId: session.id,
+          programId: session.programId,
+          createdAt: session.startsAt
+        });
+      }
+      if (counts.registered >= session.capacity) {
+        alerts.push({
+          id: `alert_program_capacity_${session.id}`,
+          organizationId: activeOrgId,
+          locationId: session.locationId,
+          source: "system",
+          type: "program",
+          severity: "warning",
+          status: "open",
+          title: "Program at capacity",
+          description: `${sessionLabel} is full at ${counts.registered}/${session.capacity}.`,
+          sessionId: session.id,
+          programId: session.programId,
+          createdAt: session.startsAt
+        });
+      }
+      if (!session.instructorName) {
+        alerts.push({
+          id: `alert_program_unassigned_${session.id}`,
+          organizationId: activeOrgId,
+          locationId: session.locationId,
+          source: "system",
+          type: "program",
+          severity: "critical",
+          status: "open",
+          title: "Instructor unassigned",
+          description: `${sessionLabel} does not have an assigned instructor.`,
+          sessionId: session.id,
+          programId: session.programId,
+          createdAt: session.startsAt
+        });
+      }
+      if (session.status === "cancelled") {
+        alerts.push({
+          id: `alert_program_cancelled_${session.id}`,
+          organizationId: activeOrgId,
+          locationId: session.locationId,
+          source: "system",
+          type: "program",
+          severity: "info",
+          status: "open",
+          title: "Cancelled session",
+          description: `${sessionLabel} was cancelled.`,
+          sessionId: session.id,
+          programId: session.programId,
+          createdAt: session.startsAt
+        });
+      }
+      if ((counts.registered <= Math.max(2, Math.ceil(session.capacity * 0.25))) && session.status !== "cancelled" && session.startsAt >= `${activeDateKey}T00:00:00Z`) {
+        alerts.push({
+          id: `alert_program_low_${session.id}`,
+          organizationId: activeOrgId,
+          locationId: session.locationId,
+          source: "system",
+          type: "program",
+          severity: "info",
+          status: "open",
+          title: "Low enrollment",
+          description: `${sessionLabel} has ${counts.registered}/${session.capacity} registrations.`,
+          sessionId: session.id,
+          programId: session.programId,
+          createdAt: session.startsAt
+        });
+      }
+    });
+
+    accessProducts.forEach((product) => {
+      const productLabel = product.name;
+      const locationStock = product.inventoryByLocation?.[activeLocationId];
+      if (product.trackInventory) {
+        if (typeof locationStock === "number" && locationStock <= 0) {
+          alerts.push({
+            id: `alert_inventory_out_${product.id}`,
+            organizationId: activeOrgId,
+            locationId: activeLocationId,
+            source: "system",
+            type: "inventory",
+            severity: "critical",
+            status: "open",
+            title: "Out of stock",
+            description: `${productLabel} is out of stock at this location.`,
+            productId: product.id,
+            createdAt: `${activeDateKey}T08:10:00Z`
+          });
+        } else if (typeof locationStock === "number" && typeof product.lowStockThreshold === "number" && locationStock <= product.lowStockThreshold) {
+          alerts.push({
+            id: `alert_inventory_low_${product.id}`,
+            organizationId: activeOrgId,
+            locationId: activeLocationId,
+            source: "system",
+            type: "inventory",
+            severity: "warning",
+            status: "open",
+            title: "Low stock",
+            description: `${productLabel} is down to ${locationStock} unit${locationStock === 1 ? "" : "s"}.`,
+            productId: product.id,
+            createdAt: `${activeDateKey}T08:15:00Z`
+          });
+        }
+      }
+      if (!product.imageUrls?.length) {
+        alerts.push({
+          id: `alert_inventory_image_${product.id}`,
+          organizationId: activeOrgId,
+          locationId: activeLocationId,
+          source: "system",
+          type: "inventory",
+          severity: "info",
+          status: "open",
+          title: "Product missing image",
+          description: `${productLabel} does not have a product image yet.`,
+          productId: product.id,
+          createdAt: `${activeDateKey}T08:20:00Z`
+        });
+      }
+      if (!product.category && !product.productCategory) {
+        alerts.push({
+          id: `alert_inventory_category_${product.id}`,
+          organizationId: activeOrgId,
+          locationId: activeLocationId,
+          source: "system",
+          type: "inventory",
+          severity: "warning",
+          status: "open",
+          title: "Product missing category",
+          description: `${productLabel} needs a reporting category.`,
+          productId: product.id,
+          createdAt: `${activeDateKey}T08:25:00Z`
+        });
+      }
+    });
+
+    transactions.forEach((transaction) => {
+      if (transaction.receiptStatus === "refunded" || transaction.receiptStatus === "partially_refunded" || transaction.refundedTotal) {
+        alerts.push({
+          id: `alert_financial_refund_${transaction.id}`,
+          organizationId: activeOrgId,
+          locationId: transaction.locationId,
+          source: "system",
+          type: "financial",
+          severity: "info",
+          status: "open",
+          title: "Refund issued",
+          description: `Receipt ${transaction.receiptNumber} includes a refund.`,
+          transactionId: transaction.id,
+          customerId: transaction.customerId,
+          createdAt: transaction.completedAt
+        });
+      }
+      if (transaction.receiptStatus === "pending") {
+        alerts.push({
+          id: `alert_financial_pending_${transaction.id}`,
+          organizationId: activeOrgId,
+          locationId: transaction.locationId,
+          source: "system",
+          type: "financial",
+          severity: "warning",
+          status: "open",
+          title: "Outstanding balance",
+          description: `Receipt ${transaction.receiptNumber} is still pending.`,
+          transactionId: transaction.id,
+          customerId: transaction.customerId,
+          createdAt: transaction.completedAt
+        });
+      }
+    });
+
+    customers.forEach((customer) => {
+      const staffProfile = customer.staffProfile;
+      if (!staffProfile?.isStaff) return;
+      const staffLabel = `${customer.firstName} ${customer.lastName}`;
+
+      if (!staffProfile.startDate || staffProfile.locations.length === 0) {
+        alerts.push({
+          id: `alert_staff_profile_${customer.id}`,
+          organizationId: activeOrgId,
+          locationId: customer.locationId,
+          source: "system",
+          type: "staff",
+          severity: "warning",
+          status: "open",
+          title: "Incomplete profile",
+          description: `${staffLabel}'s staff profile is missing setup details.`,
+          customerId: customer.id,
+          staffUserId: staffProfile.staffId,
+          createdAt: `${activeDateKey}T08:30:00Z`
+        });
+      }
+      if (!staffProfile.certifications?.length) {
+        alerts.push({
+          id: `alert_staff_cert_${customer.id}`,
+          organizationId: activeOrgId,
+          locationId: customer.locationId,
+          source: "system",
+          type: "staff",
+          severity: "info",
+          status: "open",
+          title: "Missing certification",
+          description: `${staffLabel} does not have certifications recorded.`,
+          customerId: customer.id,
+          staffUserId: staffProfile.staffId,
+          createdAt: `${activeDateKey}T08:35:00Z`
+        });
+      }
+    });
+
+    const overridesById = new Map(operationsAlertOverrides.map((entry) => [entry.id, entry]));
+    return [...alerts, ...operationsManualAlerts]
+      .map((alert) => {
+        const override = overridesById.get(alert.id);
+        return override ? { ...alert, status: override.status, resolvedAt: override.resolvedAt, archivedAt: override.archivedAt } : alert;
+      })
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }, [
+    accessProducts,
+    activeDateKey,
+    activeLocationId,
+    activeOrgId,
+    customerAccessRecords,
+    customers,
+    getWaiverStatusForCustomer,
+    householdMembers,
+    operationsAlertOverrides,
+    operationsManualAlerts,
+    programs,
+    registrations,
+    sessions,
+    transactions
+  ]);
+
+  const createOperationsAlert = (input: {
+    title: string;
+    description?: string;
+    severity: OperationsAlertRecord["severity"];
+    type: OperationsAlertRecord["type"];
+    customerId?: string;
+    membershipId?: string;
+    waiverTemplateId?: string;
+    sessionId?: string;
+    programId?: string;
+    productId?: string;
+    transactionId?: string;
+    staffUserId?: string;
+    createdByStaffId?: string;
+    createdByStaffName?: string;
+  }) => {
+    const alertId = `alert_manual_${Math.random().toString(36).slice(2, 9)}`;
+    setOperationsManualAlerts((prev) => [
+      {
+        id: alertId,
+        organizationId: activeOrgId,
+        locationId: activeLocationId,
+        source: "staff",
+        type: input.type,
+        severity: input.severity,
+        status: "open",
+        title: input.title,
+        description: input.description,
+        customerId: input.customerId,
+        membershipId: input.membershipId,
+        waiverTemplateId: input.waiverTemplateId,
+        sessionId: input.sessionId,
+        programId: input.programId,
+        productId: input.productId,
+        transactionId: input.transactionId,
+        staffUserId: input.staffUserId,
+        createdAt: new Date().toISOString(),
+        createdByStaffId: input.createdByStaffId,
+        createdByStaffName: input.createdByStaffName
+      },
+      ...prev
+    ]);
+    return { ok: true as const, message: `Alert created: ${input.title}.`, alertId };
+  };
+
+  const updateDerivedAlertStatus = (alertId: string, status: OperationsAlertStatus) => {
+    const timestamp = new Date().toISOString();
+    setOperationsAlertOverrides((prev) => {
+      const existing = prev.find((entry) => entry.id === alertId);
+      const nextEntry = {
+        id: alertId,
+        status,
+        resolvedAt: status === "resolved" ? timestamp : undefined,
+        archivedAt: status === "archived" ? timestamp : undefined
+      };
+      if (existing) {
+        return prev.map((entry) => (entry.id === alertId ? nextEntry : entry));
+      }
+      return [nextEntry, ...prev];
+    });
+  };
+
+  const resolveOperationsAlert = (alertId: string) => {
+    if (operationsManualAlerts.some((entry) => entry.id === alertId)) {
+      setOperationsManualAlerts((prev) =>
+        prev.map((entry) =>
+          entry.id === alertId ? { ...entry, status: "resolved", resolvedAt: new Date().toISOString() } : entry
+        )
+      );
+      return { ok: true as const, message: "Alert resolved." };
+    }
+    updateDerivedAlertStatus(alertId, "resolved");
+    return { ok: true as const, message: "Alert resolved." };
+  };
+
+  const archiveOperationsAlert = (alertId: string) => {
+    if (operationsManualAlerts.some((entry) => entry.id === alertId)) {
+      setOperationsManualAlerts((prev) =>
+        prev.map((entry) =>
+          entry.id === alertId ? { ...entry, status: "archived", archivedAt: new Date().toISOString() } : entry
+        )
+      );
+      return { ok: true as const, message: "Alert archived." };
+    }
+    updateDerivedAlertStatus(alertId, "archived");
+    return { ok: true as const, message: "Alert archived." };
+  };
+
+  const createOperationsTask = (input: {
+    title: string;
+    description?: string;
+    dueDate?: string;
+    assignedStaffId?: string;
+    assignedStaffName?: string;
+    status?: OperationsTaskRecord["status"];
+    customerId?: string;
+    membershipId?: string;
+    waiverTemplateId?: string;
+    sessionId?: string;
+    productId?: string;
+    createdByStaffId?: string;
+    createdByStaffName?: string;
+  }) => {
+    const taskId = `task_${Math.random().toString(36).slice(2, 9)}`;
+    setOperationsTasks((prev) => [
+      {
+        id: taskId,
+        organizationId: activeOrgId,
+        locationId: activeLocationId,
+        title: input.title,
+        description: input.description,
+        dueDate: input.dueDate,
+        assignedStaffId: input.assignedStaffId,
+        assignedStaffName: input.assignedStaffName,
+        status: input.status ?? "open",
+        customerId: input.customerId,
+        membershipId: input.membershipId,
+        waiverTemplateId: input.waiverTemplateId,
+        sessionId: input.sessionId,
+        productId: input.productId,
+        createdAt: new Date().toISOString(),
+        createdByStaffId: input.createdByStaffId,
+        createdByStaffName: input.createdByStaffName
+      },
+      ...prev
+    ]);
+    return { ok: true as const, message: `Task created: ${input.title}.`, taskId };
+  };
+
+  const updateOperationsTask = (
+    taskId: string,
+    updates: Partial<Pick<OperationsTaskRecord, "title" | "description" | "dueDate" | "assignedStaffId" | "assignedStaffName" | "status" | "completedAt">>
+  ) => {
+    setOperationsTasks((prev) =>
+      prev.map((task) =>
+        task.id === taskId
+          ? {
+              ...task,
+              ...updates,
+              completedAt: updates.status === "completed" ? updates.completedAt ?? new Date().toISOString() : task.completedAt
+            }
+          : task
+      )
+    );
+    return { ok: true as const, message: "Task updated." };
+  };
 
   const checkOutRecord = (recordId: string, staffUserId: string, staffName?: string) => {
     if (!isActiveDateToday) return { ok: false, message: "Historical check-in logs are read-only." };
@@ -3128,11 +3913,11 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     return { ok: true as const, message: "Waiver updated." };
   };
 
-  const getCurrentWaiverVersion = (templateId: string) => {
+  function getCurrentWaiverVersion(templateId: string) {
     const template = waiverTemplates.find((entry) => entry.id === templateId);
     if (!template) return undefined;
     return waiverTemplateVersions.find((entry) => entry.id === template.currentVersionId);
-  };
+  }
 
   const computeWaiverExpiry = (
     signedAt: string,
@@ -3298,7 +4083,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     return { ok: true as const, message: `${existing.name} archived.` };
   };
 
-  const getWaiverStatusForCustomer = (customerId: string, templateId?: string) => {
+  function getWaiverStatusForCustomer(customerId: string, templateId?: string) {
     const record = waivers.find((entry) => entry.customerId === customerId && (!templateId || entry.templateId === templateId));
     if (!record) return "missing" as const;
     if (record.status !== "valid") return "expired" as const;
@@ -3311,7 +4096,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       }
     }
     return "valid" as const;
-  };
+  }
 
   const signWaiverForCustomer = (input: {
     customerId: string;
@@ -3591,6 +4376,8 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       waiverTemplateVersions,
       households,
       householdMembers,
+      operationsAlerts,
+      operationsTasks,
       checkInRecords: checkInLogRecords,
       activeLocationId,
       activeDateKey,
@@ -3669,6 +4456,11 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       signWaiverForCustomer,
       getWaiverStatusForCustomer,
       getSignedWaiverRecordsForCustomer,
+      createOperationsAlert,
+      resolveOperationsAlert,
+      archiveOperationsAlert,
+      createOperationsTask,
+      updateOperationsTask,
       createHousehold,
       addHouseholdMember,
       removeHouseholdMember,
@@ -3695,10 +4487,13 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         setWaiverTemplateVersions(seededWaiverTemplateVersionsForOrg);
         setHouseholds(seededHouseholdsForOrg);
         setHouseholdMembers(seededHouseholdMembersForOrg.map(normalizeHouseholdMemberForState));
+        setOperationsAlertOverrides([]);
+        setOperationsManualAlerts([]);
+        setOperationsTasks(seededOperationsTasksForOrg);
         clearScopedMockState(
           activeOrgId,
           activeLocationId,
-          ["customers", "punchPasses", "checkIns", "memberships", "transactions", "products", "inventoryAudit", "productCategories", "programs", "sessions", "registrations", "registrationActivity", "accessRecords", "waivers", "signedWaiverRecords", "waiverTemplates", "waiverTemplateVersions", "households", "householdMembers"]
+          ["customers", "punchPasses", "checkIns", "memberships", "transactions", "products", "inventoryAudit", "productCategories", "programs", "sessions", "registrations", "registrationActivity", "accessRecords", "waivers", "signedWaiverRecords", "waiverTemplates", "waiverTemplateVersions", "households", "householdMembers", "operationsAlertOverrides", "operationsManualAlerts", "operationsTasks"]
         );
       }
     }),
@@ -3716,12 +4511,15 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       waiverTemplateVersions,
       households,
       householdMembers,
+      operationsAlerts,
+      operationsTasks,
       transactions,
       programs,
       sessions,
       registrations,
       registrationActivity,
       checkInLogRecords,
+      seededOperationsTasksForOrg,
       activeDateKey,
       isActiveDateToday,
       todayLogRecords,

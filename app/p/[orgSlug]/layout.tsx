@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { CustomerStateProvider } from "@/lib/state/customer-state";
 import { SettingsStateProvider } from "@/lib/state/settings-state";
+import { PublicCartProvider } from "@/lib/public-cart";
 
 export const metadata: Metadata = {
   robots: {
@@ -17,7 +18,9 @@ export default function PublicPortalRootLayout({
   return (
     <SettingsStateProvider>
       <CustomerStateProvider>
-        <div className="min-h-screen bg-slate-50">{children}</div>
+        <PublicCartProvider>
+          <div className="min-h-screen bg-slate-50">{children}</div>
+        </PublicCartProvider>
       </CustomerStateProvider>
     </SettingsStateProvider>
   );

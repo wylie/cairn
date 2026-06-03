@@ -1,11 +1,33 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import PublicProgramsPage, { generateMetadata as generateProgramsMetadata } from "@/app/p/[orgSlug]/programs/page";
 import PublicProgramDetailPage, { generateMetadata as generateProgramDetailMetadata } from "@/app/p/[orgSlug]/programs/[programId]/page";
 import PublicSessionDetailPage, { generateMetadata as generateSessionDetailMetadata } from "@/app/p/[orgSlug]/sessions/[sessionId]/page";
 import { PublicRegistrationPanel } from "@/components/public/public-registration-panel";
+import { PublicCartProvider } from "@/lib/public-cart";
+import { SettingsStateProvider } from "@/lib/state/settings-state";
+import { CustomerStateProvider } from "@/lib/state/customer-state";
+import { WorkstationStateProvider } from "@/lib/state/workstation-state";
 import { programs, classCampSessions } from "@/lib/mocks/programs";
+
+const push = vi.fn();
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/p/summit/programs/prog_101",
+  useRouter: () => ({ push, refresh: vi.fn() })
+}));
+
+function PublicTestProviders({ children }: { children: React.ReactNode }) {
+  return (
+    <WorkstationStateProvider>
+      <SettingsStateProvider>
+        <CustomerStateProvider>
+          <PublicCartProvider>{children}</PublicCartProvider>
+        </CustomerStateProvider>
+      </SettingsStateProvider>
+    </WorkstationStateProvider>
+  );
+}
 
 describe("public program discovery", () => {
   it("renders public programs page without auth", async () => {
@@ -15,31 +37,21 @@ describe("public program discovery", () => {
     expect(screen.getByText(/Browse classes, camps/i)).toBeInTheDocument();
   });
 
-  it("supports registration flow and waitlist mode", async () => {
+  it("routes session registration into checkout", async () => {
     const program = programs.find((entry) => entry.id === "prog_606");
     const session = classCampSessions.find((entry) => entry.id === "sess_005");
     if (!program || !session) throw new Error("missing mock data");
 
     const user = userEvent.setup();
-    render(<PublicRegistrationPanel orgSlug="summit" program={program} session={session} />);
+    render(
+      <PublicTestProviders>
+        <PublicRegistrationPanel orgSlug="summit" program={program} session={session} />
+      </PublicTestProviders>
+    );
 
-    await user.type(screen.getByPlaceholderText("Email login"), "newperson@example.com");
-    await user.type(screen.getByPlaceholderText("Full name"), "New Person");
-    await user.click(screen.getByRole("button", { name: "Continue" }));
-    await user.click(screen.getByRole("button", { name: /Continue Anyway/i }));
     expect(screen.getByRole("button", { name: "Join Waitlist" })).toBeInTheDocument();
-  });
-
-  it("blocks duplicate registrations in the flow", async () => {
-    const program = programs.find((entry) => entry.id === "prog_101");
-    const session = classCampSessions.find((entry) => entry.id === "sess_001");
-    if (!program || !session) throw new Error("missing mock data");
-
-    const user = userEvent.setup();
-    render(<PublicRegistrationPanel orgSlug="summit" program={program} session={session} />);
-    await user.type(screen.getByPlaceholderText("Email login"), "jordan.kim@example.com");
-    expect(await screen.findByText(/Duplicate registrations are blocked/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Join Waitlist" }));
+    expect(push).toHaveBeenCalledWith("/p/summit/checkout");
   });
 
   it("generates indexable SEO metadata for public program and session pages", async () => {
@@ -56,10 +68,10 @@ describe("public program discovery", () => {
     const ProgramPage = await PublicProgramDetailPage({ params: Promise.resolve({ orgSlug: "summit", programId: "prog_101" }) });
     const SessionPage = await PublicSessionDetailPage({ params: Promise.resolve({ orgSlug: "summit", sessionId: "sess_001" }) });
 
-    render(ProgramPage);
+    render(<PublicTestProviders>{ProgramPage}</PublicTestProviders>);
     expect(screen.getByText("Upcoming Sessions")).toBeInTheDocument();
 
-    render(SessionPage);
+    render(<PublicTestProviders>{SessionPage}</PublicTestProviders>);
     expect(screen.getByText("Session Information")).toBeInTheDocument();
   });
 });

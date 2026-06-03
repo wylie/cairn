@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   const email = body?.email?.trim() ?? "";
   const password = body?.password ?? "";
 
-  const user = findMockCustomerUser(email, password);
+  const user = await findMockCustomerUser(email, password);
   if (!user) {
     return NextResponse.json({ ok: false, message: "Invalid email or password." }, { status: 401 });
   }

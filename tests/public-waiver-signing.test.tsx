@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TestProviders } from "@/tests/test-providers";
+import { PublicCartProvider } from "@/lib/public-cart";
 import { WaiverSigningForm } from "@/components/public/waiver-signing-form";
 import { waiverTemplates, waiverTemplateVersions } from "@/lib/mocks/waiver-templates";
 import { useCustomerState } from "@/lib/state/customer-state";
@@ -10,8 +11,10 @@ import { programs, classCampSessions } from "@/lib/mocks/programs";
 import { PublicRegistrationPanel } from "@/components/public/public-registration-panel";
 import KioskWaiversPage from "@/app/p/[orgSlug]/kiosk/waivers/page";
 
+const push = vi.fn();
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/p/summit/account/waivers"
+  usePathname: () => "/p/summit/account/waivers",
+  useRouter: () => ({ push, refresh: vi.fn() })
 }));
 
 function clearSessionCookie() {
@@ -192,13 +195,12 @@ describe("online waiver signing", () => {
 
     render(
       <TestProviders>
-        <PublicRegistrationPanel orgSlug="summit" program={program} session={session} />
+        <PublicCartProvider>
+          <PublicRegistrationPanel orgSlug="summit" program={program} session={session} />
+        </PublicCartProvider>
       </TestProviders>
     );
 
-    await user.type(screen.getByPlaceholderText("Email login"), "newsignup@example.com");
-    await user.type(screen.getByPlaceholderText("Full name"), "New Signup");
-    await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(screen.getByRole("link", { name: "Sign Waiver" })).toHaveAttribute("href", expect.stringContaining("/p/summit/waivers/"));
   });
 

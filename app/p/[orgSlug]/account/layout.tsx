@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "dashboard", label: "Dashboard" },
   { href: "memberships", label: "Memberships" },
   { href: "registrations", label: "Programs" },
+  { href: "../store", label: "Shop" },
   { href: "waivers", label: "Waivers" },
   { href: "household", label: "Household" },
   { href: "visits", label: "Visits" },
@@ -41,7 +42,7 @@ export default async function CustomerAccountLayout({
         </div>
         <nav className="mx-auto flex max-w-7xl flex-wrap gap-2 px-4 pb-3">
           {NAV_ITEMS.map((item) => (
-            <Link key={item.href} href={`/p/${orgSlug}/account/${item.href}`} className="inline-flex min-h-10 items-center rounded-md border bg-white px-3 text-sm hover:bg-secondary">
+            <Link key={item.href} href={item.href.startsWith("../") ? `/p/${orgSlug}/${item.href.slice(3)}` : `/p/${orgSlug}/account/${item.href}`} className="inline-flex min-h-10 items-center rounded-md border bg-white px-3 text-sm hover:bg-secondary">
               {item.label}
             </Link>
           ))}

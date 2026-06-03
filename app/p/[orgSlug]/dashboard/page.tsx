@@ -147,6 +147,7 @@ export default function CustomerPortalDashboardPage() {
           <Link className="inline-flex min-h-11 items-center rounded-md bg-primary px-3 text-sm text-primary-foreground" href="./registrations">Register for Program</Link>
           <Link className="inline-flex min-h-11 items-center rounded-md border px-3 text-sm" href="./waivers">Sign Waiver</Link>
           <Link className="inline-flex min-h-11 items-center rounded-md border px-3 text-sm" href="./memberships">View Membership</Link>
+          <Link className="inline-flex min-h-11 items-center rounded-md border px-3 text-sm" href={`../${"store"}`}>Buy Memberships / Retail</Link>
           <Link className="inline-flex min-h-11 items-center rounded-md border px-3 text-sm" href="./household">Manage Household</Link>
           <Link className="inline-flex min-h-11 items-center rounded-md border px-3 text-sm" href="./purchases">View Purchases / Receipts</Link>
         </CardContent>

@@ -25,7 +25,7 @@ import {
   normalizeCartItem,
   normalizeProductPriceCents
 } from "@/lib/pos-transactions";
-import type { PaymentMethod } from "@/lib/payments/provider";
+import { mockPaymentProvider, type PaymentMethod } from "@/lib/payments/provider";
 import { normalizeTransactions } from "@/lib/transactions";
 import { evaluateCustomerAccess, getEligibleAccess, type AccessDecision } from "@/lib/access-rules";
 import type {
@@ -588,6 +588,25 @@ interface CustomerStateContextValue {
     signingTokenId?: string;
     ipAddressPlaceholder?: string;
   }) => { ok: boolean; message: string; waiverId?: string };
+  completePublicCheckout: (input: {
+    purchaserCustomerId: string;
+    billingCustomerId?: string;
+    items: Array<
+      | { kind: "session"; sessionId: string; participantCustomerId: string }
+      | { kind: "product"; productId: string; participantCustomerId: string; quantity?: number }
+    >;
+    paymentType: PaymentMethod;
+    splitBreakdown?: Array<{ method: Exclude<PaymentMethod, "split">; amountCents: number }>;
+    promoCode?: string;
+    emailReceipt?: boolean;
+  }) => {
+    ok: boolean;
+    message: string;
+    transactionId?: string;
+    receiptNumber?: string;
+    registrationIds?: string[];
+    waitlistedIds?: string[];
+  };
   getWaiverStatusForCustomer: (customerId: string, templateId?: string) => "valid" | "missing" | "expired" | "expiring_soon" | "outdated_version";
   getSignedWaiverRecordsForCustomer: (customerId: string) => SignedWaiverRecord[];
   createOperationsAlert: (input: {
@@ -4219,6 +4238,436 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     return { ok: true as const, message: `${template.name} signed.`, waiverId };
   };
 
+  const completePublicCheckout: CustomerStateContextValue["completePublicCheckout"] = (input) => {
+    const purchaser = customers.find((entry) => entry.id === input.purchaserCustomerId);
+    if (!purchaser) return { ok: false, message: "Purchaser not found." };
+    if (input.items.length === 0) return { ok: false, message: "Cart is empty." };
+
+    const pendingLineItems: PosTransactionItem[] = [];
+    const pendingRegistrations: Registration[] = [];
+    const pendingAccessRecords: CustomerAccessRecord[] = [];
+    const pendingMemberships: Membership[] = [];
+    const pendingPunchPasses: PunchPass[] = [];
+    const pendingInventoryEntries: InventoryAuditEntry[] = [];
+    const registrationEvents: Array<Omit<RegistrationActivityEvent, "id" | "createdAt">> = [];
+    const updatedSessions = new Map<string, ClassCampSession>();
+    const updatedProducts = new Map<string, PosProduct>();
+    const registrationIds: string[] = [];
+    const waitlistedIds: string[] = [];
+
+    const getSessionSnapshot = (sessionId: string) => updatedSessions.get(sessionId) ?? sessions.find((entry) => entry.id === sessionId);
+    const getProductSnapshot = (productId: string) => updatedProducts.get(productId) ?? accessProducts.find((entry) => entry.id === productId);
+
+    const customerHasActiveMembership = (customerId: string) => {
+      const current = customerAccessRecords.some(
+        (entry) =>
+          entry.customerId === customerId &&
+          entry.type === "membership" &&
+          entry.status === "active" &&
+          (!entry.expirationDate || entry.expirationDate >= activeDateKey)
+      );
+      if (current) return true;
+      return input.items.some((item) => {
+        if (item.kind !== "product" || item.participantCustomerId !== customerId) return false;
+        const product = accessProducts.find((entry) => entry.id === item.productId);
+        return Boolean(product && (product.category === "memberships" || product.type === "membership"));
+      });
+    };
+
+    const promoCode = input.promoCode?.trim().toUpperCase() ?? "";
+    const promoDiscountForSubtotal = (subtotalCents: number) => {
+      if (!promoCode) return 0;
+      if (promoCode === "WELCOME10") return Math.round(subtotalCents * 0.1);
+      if (promoCode === "FAMILY5") {
+        const participants = new Set(input.items.map((item) => item.participantCustomerId));
+        return participants.size >= 2 ? 500 : 0;
+      }
+      return 0;
+    };
+
+    for (const item of input.items) {
+      const participant = customers.find((entry) => entry.id === item.participantCustomerId);
+      if (!participant) return { ok: false, message: "A participant in this cart could not be found." };
+
+      if (item.kind === "session") {
+        const sessionSnapshot = getSessionSnapshot(item.sessionId);
+        if (!sessionSnapshot) return { ok: false, message: "Session not found." };
+        const session = sessionSnapshot;
+        const program = programs.find((entry) => entry.id === session.programId);
+        if (!program) return { ok: false, message: "Program not found." };
+
+        const existing = registrations.find((entry) => entry.customerId === participant.id && entry.sessionId === session.id && entry.status !== "cancelled");
+        if (existing) return { ok: false, message: `${participant.firstName} ${participant.lastName} is already registered for this session.` };
+
+        const requiredTemplateIds = program.requiredWaiverTemplateIds ?? (program.requiresWaiver ? ["wtpl_general"] : []);
+        const hasRequiredWaivers = requiredTemplateIds.every((templateId) => {
+          const status = getWaiverStatusForCustomer(participant.id, templateId);
+          return status === "valid" || status === "expiring_soon";
+        });
+        if (program.requiresWaiver && !hasRequiredWaivers) {
+          return { ok: false, message: `${participant.firstName} ${participant.lastName} needs a valid waiver before checkout can continue.` };
+        }
+
+        const dob = participant.dateOfBirth ? new Date(`${participant.dateOfBirth}T00:00:00Z`) : null;
+        const age =
+          dob && !Number.isNaN(dob.getTime())
+            ? Math.max(0, Math.floor((new Date(session.startsAt).getTime() - dob.getTime()) / (1000 * 60 * 60 * 24 * 365.2425)))
+            : undefined;
+        if (typeof program.minimumAge === "number" && typeof age === "number" && age < program.minimumAge) {
+          return { ok: false, message: `${participant.firstName} ${participant.lastName} does not meet the minimum age for ${program.title}.` };
+        }
+        if (typeof program.maximumAge === "number" && typeof age === "number" && age > program.maximumAge) {
+          return { ok: false, message: `${participant.firstName} ${participant.lastName} exceeds the maximum age for ${program.title}.` };
+        }
+        if (program.memberRequired && !customerHasActiveMembership(participant.id)) {
+          return { ok: false, message: `${participant.firstName} ${participant.lastName} needs an active membership for ${program.title}.` };
+        }
+        if (program.guardianRequired) {
+          const membership = householdMembers.find((entry) => entry.customerId === participant.id);
+          const hasGuardian = Boolean(
+            membership &&
+              householdMembers.some(
+                (entry) =>
+                  entry.householdId === membership.householdId &&
+                  entry.customerId !== participant.id &&
+                  entry.memberType === "adult" &&
+                  (entry.relationship === "parent_guardian" || entry.role === "guardian" || entry.role === "primary-adult" || entry.role === "secondary-adult")
+              )
+          );
+          if (!hasGuardian) {
+            return { ok: false, message: `${participant.firstName} ${participant.lastName} needs a guardian on file for this registration.` };
+          }
+        }
+
+        const registeredCount = session.enrolled;
+        const queuedWaitlist = session.waitlistCount ?? 0;
+        const sessionIsFull = registeredCount >= session.capacity;
+        if (sessionIsFull && !session.waitlistEnabled) {
+          return { ok: false, message: `${program.title} is full and does not accept a waitlist.` };
+        }
+
+        const registrationId = `reg_${Math.random().toString(36).slice(2, 9)}`;
+        const status = sessionIsFull ? "waitlisted" : "confirmed";
+        const waitlistPosition = sessionIsFull ? queuedWaitlist + 1 : undefined;
+        const registration: Registration = {
+          id: registrationId,
+          customerId: participant.id,
+          sessionId: session.id,
+          status,
+          waitlistPosition,
+          registeredAt: new Date().toISOString(),
+          registrationSource: "online",
+          paymentStatus: sessionIsFull ? "unpaid" : "paid"
+        };
+        pendingRegistrations.push(registration);
+        registrationIds.push(registrationId);
+        if (status === "waitlisted") waitlistedIds.push(registrationId);
+        registrationEvents.push({
+          registrationId,
+          sessionId: session.id,
+          customerId: participant.id,
+          action: status === "waitlisted" ? "waitlisted" : "registered",
+          statusAfter: status,
+          source: "online"
+        });
+        updatedSessions.set(session.id, {
+          ...session,
+          enrolled: sessionIsFull ? session.enrolled : session.enrolled + 1,
+          waitlistCount: sessionIsFull ? (session.waitlistCount ?? 0) + 1 : session.waitlistCount ?? 0
+        });
+
+        const pricingProduct = accessProducts.find((entry) => {
+          if (entry.organizationId !== program.organizationId) return false;
+          if (program.category === "camp" && (entry.category === "camps" || entry.type === "camp")) return true;
+          if (
+            (program.category === "class" || program.category === "clinic" || program.category === "course") &&
+            (entry.category === "classes" || entry.type === "class" || entry.type === "registration")
+          ) {
+            return true;
+          }
+          return false;
+        });
+        const sessionUnitPrice =
+          status === "waitlisted"
+            ? 0
+            : customerHasActiveMembership(participant.id)
+              ? pricingProduct?.memberPriceCents ?? pricingProduct?.priceCents ?? program.basePriceCents ?? 0
+              : pricingProduct?.nonMemberPriceCents ?? pricingProduct?.priceCents ?? program.basePriceCents ?? 0;
+        pendingLineItems.push({
+          productId: program.id,
+          productName: session.title?.trim() ? `${program.title} · ${session.title}` : program.title,
+          category: program.category,
+          type: "program-registration",
+          quantity: 1,
+          unitPrice: sessionUnitPrice,
+          lineTotal: sessionUnitPrice
+        });
+        continue;
+      }
+
+      const product = getProductSnapshot(item.productId);
+      if (!product) return { ok: false, message: "Product not found." };
+      if (product.waiverRequired) {
+        const status = getWaiverStatusForCustomer(participant.id, "wtpl_general");
+        if (!(status === "valid" || status === "expiring_soon")) {
+          return { ok: false, message: `${participant.firstName} ${participant.lastName} needs a valid waiver before purchasing ${product.name}.` };
+        }
+      }
+      if (typeof product.minimumAge === "number" && participant.dateOfBirth) {
+        const age = Math.max(
+          0,
+          Math.floor((new Date(`${activeDateKey}T00:00:00Z`).getTime() - new Date(`${participant.dateOfBirth}T00:00:00Z`).getTime()) / (1000 * 60 * 60 * 24 * 365.2425))
+        );
+        if (age < product.minimumAge) {
+          return { ok: false, message: `${participant.firstName} ${participant.lastName} does not meet the age requirement for ${product.name}.` };
+        }
+      }
+
+      const quantity = Math.max(1, item.quantity ?? 1);
+      const unitPrice = customerHasActiveMembership(participant.id)
+        ? product.memberPriceCents ?? product.priceCents
+        : product.nonMemberPriceCents ?? product.priceCents;
+
+      pendingLineItems.push({
+        productId: product.id,
+        productName: product.name,
+        category: product.category,
+        type: product.type ?? "service",
+        quantity,
+        unitPrice,
+        lineTotal: unitPrice * quantity
+      });
+
+      if (product.trackInventory) {
+        const variantInventoryTotal = product.variants?.reduce(
+          (sum, variant) => sum + (variant.inventoryByLocation?.[activeLocationId] ?? 0),
+          0
+        ) ?? 0;
+        const currentInventory = product.inventoryByLocation?.[activeLocationId] ?? variantInventoryTotal;
+        if (currentInventory < quantity) {
+          return { ok: false, message: `${product.name} does not have enough stock to complete this order.` };
+        }
+        if (product.inventoryByLocation?.[activeLocationId] !== undefined) {
+          updatedProducts.set(product.id, {
+            ...product,
+            inventoryByLocation: {
+              ...(product.inventoryByLocation ?? {}),
+              [activeLocationId]: currentInventory - quantity
+            }
+          });
+        } else if (product.variants?.length) {
+          let remaining = quantity;
+          const nextVariants = product.variants.map((variant) => {
+            if (remaining <= 0) return variant;
+            const variantStock = variant.inventoryByLocation?.[activeLocationId] ?? 0;
+            if (variantStock <= 0) return variant;
+            const decrement = Math.min(variantStock, remaining);
+            remaining -= decrement;
+            return {
+              ...variant,
+              inventoryByLocation: {
+                ...(variant.inventoryByLocation ?? {}),
+                [activeLocationId]: variantStock - decrement
+              }
+            };
+          });
+          updatedProducts.set(product.id, {
+            ...product,
+            variants: nextVariants
+          });
+        }
+        pendingInventoryEntries.push({
+          id: `inv_${Math.random().toString(36).slice(2, 9)}`,
+          organizationId: activeOrgId,
+          locationId: activeLocationId,
+          productId: product.id,
+          action: "adjust",
+          quantityDelta: -quantity,
+          note: "Online checkout sale",
+          createdAt: new Date().toISOString(),
+          createdByStaffId: "customer_portal",
+          createdByStaffName: "Customer Portal"
+        });
+      }
+
+      for (let index = 0; index < quantity; index += 1) {
+        if (product.category === "memberships" || product.type === "membership") {
+          const householdMembership = product.name.toLowerCase().includes("family");
+          const coveredMembers = householdMembership
+            ? householdMembers
+                .filter((entry) => {
+                  const participantMembership = householdMembers.find((member) => member.customerId === participant.id);
+                  return participantMembership && entry.householdId === participantMembership.householdId;
+                })
+                .map((entry) => entry.customerId)
+            : [participant.id];
+
+          coveredMembers.forEach((customerId) => {
+            const membershipId = `mem_${Math.random().toString(36).slice(2, 8)}`;
+            pendingMemberships.push({
+              id: membershipId,
+              customerId,
+              planName: product.name,
+              status: "active",
+              purchaseDate: activeDateKey,
+              startDate: activeDateKey,
+              expirationDate: addDays(activeDateKey, 30),
+              renewalDate: addDays(activeDateKey, 30)
+            });
+            pendingAccessRecords.push({
+              id: `acc_${Math.random().toString(36).slice(2, 9)}`,
+              customerId,
+              productId: product.id,
+              type: householdMembership ? "household-membership" : "membership",
+              status: "active",
+              purchaseDate: activeDateKey,
+              startDate: activeDateKey,
+              expirationDate: addDays(activeDateKey, 30),
+              unlimitedAccess: true,
+              locationsAllowed: [activeLocationId],
+              notes: product.name,
+              grantedByStaffId: "customer_portal",
+              grantedByStaffName: "Customer Portal"
+            });
+          });
+        } else if (product.category === "punch_passes" || product.accessBehavior === "punch_decrement") {
+          const passId = `pass_${Math.random().toString(36).slice(2, 8)}`;
+          pendingPunchPasses.push({
+            id: passId,
+            customerId: participant.id,
+            title: product.name,
+            originalUses: product.punchQuantity ?? 10,
+            remainingUses: product.punchQuantity ?? 10,
+            expiresAt: addDays(activeDateKey, 90),
+            type: "multi_visit",
+            usageHistory: []
+          });
+          pendingAccessRecords.push({
+            id: `acc_${Math.random().toString(36).slice(2, 9)}`,
+            customerId: participant.id,
+            productId: product.id,
+            type: "punch-pass",
+            status: "active",
+            startDate: activeDateKey,
+            expirationDate: addDays(activeDateKey, 90),
+            remainingPunches: product.punchQuantity ?? 10,
+            locationsAllowed: [activeLocationId],
+            notes: product.name,
+            grantedByStaffId: "customer_portal",
+            grantedByStaffName: "Customer Portal"
+          });
+        } else if (product.category === "day_passes" || product.type === "day-pass" || product.category === "classes" || product.category === "camps" || product.category === "comps") {
+          pendingAccessRecords.push({
+            id: `acc_${Math.random().toString(36).slice(2, 9)}`,
+            customerId: participant.id,
+            productId: product.id,
+            type: product.category === "comps" ? "comp" : "day-pass",
+            status: "active",
+            startDate: activeDateKey,
+            expirationDate: activeDateKey,
+            locationsAllowed: [activeLocationId],
+            notes: product.name,
+            grantedByStaffId: "customer_portal",
+            grantedByStaffName: "Customer Portal"
+          });
+        }
+      }
+    }
+
+    const subtotal = pendingLineItems.reduce((sum, item) => sum + item.lineTotal, 0);
+    const discountCents = promoDiscountForSubtotal(subtotal);
+    const taxableSubtotal = pendingLineItems.reduce((sum, item) => {
+      const product = accessProducts.find((entry) => entry.id === item.productId);
+      return sum + (product?.taxable ? item.lineTotal : 0);
+    }, 0);
+    const taxCents = Math.round(taxableSubtotal * 0.07);
+    const total = Math.max(subtotal - discountCents + taxCents, 0);
+
+    const paymentResult =
+      total === 0 && input.paymentType !== "split"
+        ? {
+            ok: true,
+            processorName: "Mock Payments",
+            method: input.paymentType,
+            message: "No payment required."
+          }
+        : mockPaymentProvider.charge({
+            amountCents: total,
+            method: input.paymentType,
+            splitBreakdown: input.splitBreakdown,
+            customerId: input.billingCustomerId ?? input.purchaserCustomerId,
+            locationId: activeLocationId,
+            organizationId: activeOrgId
+          });
+
+    if (!paymentResult.ok) {
+      return { ok: false, message: paymentResult.message };
+    }
+
+    setRegistrations((prev) => [...pendingRegistrations, ...prev]);
+    if (pendingRegistrations.length > 0) {
+      setSessions((prev) =>
+        prev.map((entry) => updatedSessions.get(entry.id) ?? entry)
+      );
+      registrationEvents.forEach((event) => appendRegistrationEvent(event));
+    }
+    if (pendingAccessRecords.length > 0) setCustomerAccessRecords((prev) => [...pendingAccessRecords, ...prev]);
+    if (pendingMemberships.length > 0) setMemberships((prev) => [...pendingMemberships, ...prev]);
+    if (pendingPunchPasses.length > 0) setPunchPasses((prev) => [...pendingPunchPasses, ...prev]);
+    if (pendingInventoryEntries.length > 0) setInventoryAuditEntries((prev) => [...pendingInventoryEntries, ...prev]);
+    if (updatedProducts.size > 0) {
+      setAccessProducts((prev) => prev.map((entry) => updatedProducts.get(entry.id) ?? entry));
+    }
+
+    const purchaserHouseholdMembership = householdMembers.find((entry) => entry.customerId === input.purchaserCustomerId);
+    const receiptNumber = `R-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const transactionId = `txn_${Math.random().toString(36).slice(2, 9)}`;
+    const transaction: PosTransaction = {
+      id: transactionId,
+      organizationId: activeOrgId,
+      locationId: activeLocationId,
+      customerId: input.billingCustomerId ?? input.purchaserCustomerId,
+      customerName: `${purchaser.firstName} ${purchaser.lastName}`,
+      customerEmail: purchaser.email,
+      customerMemberId: purchaser.memberId,
+      purchaserCustomerId: input.purchaserCustomerId,
+      purchaserCustomerName: `${purchaser.firstName} ${purchaser.lastName}`,
+      purchasedForCustomerIds: Array.from(new Set(input.items.map((item) => item.participantCustomerId))),
+      householdId: purchaserHouseholdMembership?.householdId,
+      transactionType: "sale",
+      returnStatus: "none",
+      soldByStaffId: "customer_portal",
+      soldByStaffName: "Customer Portal",
+      items: pendingLineItems,
+      subtotal,
+      total,
+      completedAt: new Date().toISOString(),
+      paymentType: input.paymentType,
+      receiptStatus: total === 0 || input.paymentType === "comp" ? "comped" : "paid",
+      paymentBreakdown: input.splitBreakdown,
+      discountCents,
+      taxCents,
+      paymentProcessor: paymentResult.processorName,
+      paymentApprovalCode: paymentResult.approvalCode,
+      paymentCardLast4: paymentResult.last4,
+      checkInTriggered: false,
+      receiptNumber
+    };
+    setTransactions((prev) => [transaction, ...prev]);
+
+    return {
+      ok: true,
+      message:
+        waitlistedIds.length > 0
+          ? `Checkout complete. ${waitlistedIds.length} registration${waitlistedIds.length === 1 ? " was" : "s were"} added to the waitlist.`
+          : "Checkout complete.",
+      transactionId,
+      receiptNumber,
+      registrationIds,
+      waitlistedIds
+    };
+  };
+
   const getSignedWaiverRecordsForCustomer = (customerId: string) => {
     return signedWaiverRecords
       .filter((entry) => entry.customerId === customerId)
@@ -4557,6 +5006,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       updateWaiverTemplate,
       archiveWaiverTemplate,
       signWaiverForCustomer,
+      completePublicCheckout,
       getWaiverStatusForCustomer,
       getSignedWaiverRecordsForCustomer,
       createOperationsAlert,

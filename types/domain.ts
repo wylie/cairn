@@ -141,6 +141,78 @@ export type OperationsAlertType =
 export type OperationsAlertSeverity = "critical" | "warning" | "info";
 export type OperationsAlertStatus = "open" | "resolved" | "archived";
 
+export type CommunicationChannel =
+  | "email"
+  | "sms"
+  | "system_notification"
+  | "internal_staff_note";
+
+export type CommunicationStatus = "draft" | "scheduled" | "sent" | "failed";
+
+export type CommunicationRecipientType =
+  | "customer"
+  | "household"
+  | "program_participants"
+  | "membership_holders"
+  | "waitlist"
+  | "staff"
+  | "saved_segment";
+
+export type CommunicationTemplateType =
+  | "membership_renewal"
+  | "waiver_reminder"
+  | "registration_confirmation"
+  | "waitlist_promotion"
+  | "birthday_greeting"
+  | "general_announcement"
+  | "custom";
+
+export type AutomatedCommunicationTrigger =
+  | "membership_expiring"
+  | "waiver_expiring"
+  | "program_registration"
+  | "waitlist_promotion"
+  | "birthday"
+  | "payment_failure"
+  | "program_cancellation";
+
+export interface CommunicationPreferenceSettings {
+  email: boolean;
+  sms: boolean;
+  marketing: boolean;
+  transactional: boolean;
+}
+
+export interface CommunicationRecord {
+  id: string;
+  organizationId: string;
+  locationId?: string;
+  channel: CommunicationChannel;
+  status: CommunicationStatus;
+  recipientType: CommunicationRecipientType;
+  recipientLabel: string;
+  subject: string;
+  message: string;
+  customerId?: string;
+  householdId?: string;
+  sessionId?: string;
+  programId?: string;
+  membershipId?: string;
+  waiverTemplateId?: string;
+  staffUserId?: string;
+  segmentKey?: string;
+  templateType?: CommunicationTemplateType;
+  automatedTrigger?: AutomatedCommunicationTrigger;
+  scheduledFor?: string;
+  sentAt?: string;
+  createdAt: string;
+  createdByStaffId?: string;
+  createdByStaffName?: string;
+  deliveryStatus?: "queued" | "delivered" | "unread" | "read" | "failed";
+  readAt?: string;
+  attachmentsPlaceholder?: string[];
+}
+
 export interface OperationsAlertRecord {
   id: string;
   organizationId: string;
@@ -418,6 +490,7 @@ export interface Customer {
   notes?: string;
   relatedCustomers?: CustomerRelationship[];
   paymentMethods?: CustomerPaymentMethod[];
+  communicationPreferences?: CommunicationPreferenceSettings;
   staffProfile?: StaffProfile;
 }
 

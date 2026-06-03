@@ -59,6 +59,7 @@ export function HouseholdsWorkspace({
     programs,
     checkInRecords,
     transactions,
+    communications,
     operationsAlerts,
     operationsTasks,
     familyCheckIn,
@@ -160,6 +161,13 @@ export function HouseholdsWorkspace({
           activeMemberships.some((membership) => membership.id === entry.membershipId) ||
           recentPurchases.some((purchase) => purchase.id === entry.productId)
       );
+      const communicationHistory = communications.filter(
+        (entry) =>
+          entry.householdId === household.id ||
+          memberIds.includes(entry.customerId ?? "") ||
+          activeMemberships.some((membership) => membership.id === entry.membershipId) ||
+          upcomingRegistrations.some((registration) => registration.session?.id === entry.sessionId)
+      );
       const topVisitor = members
         .map((member) => ({
           customer: member.customer,
@@ -194,6 +202,11 @@ export function HouseholdsWorkspace({
           id: `alert-${alert.id}`,
           title: alert.title,
           occurredAt: alert.createdAt ?? todayKey
+        })),
+        ...communicationHistory.slice(0, 3).map((entry) => ({
+          id: `communication-${entry.id}`,
+          title: entry.subject,
+          occurredAt: entry.sentAt ?? entry.scheduledFor ?? entry.createdAt
         }))
       ].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
 
@@ -219,6 +232,7 @@ export function HouseholdsWorkspace({
         currentlyIn,
         recentCheckedOut,
         recentPurchases,
+        communicationHistory,
         outstandingBalance,
         paymentMethods,
         alerts,
@@ -759,30 +773,18 @@ export function HouseholdsWorkspace({
                   <div className="space-y-3">
                     <p>Emails, SMS reminders, alerts, tasks, and internal notes are tracked in one household timeline.</p>
                     <div className="space-y-2">
-                      {selected.recentPurchases.slice(0, 2).map((purchase) => (
-                        <div key={`comm-receipt-${purchase.id}`} className="rounded-lg border p-3 text-sm">
-                          <p className="font-medium">Receipt delivered</p>
-                          <p className="text-muted-foreground">{formatDateTime(purchase.completedAt)} · Sent to household billing contact</p>
-                        </div>
-                      ))}
-                      {selected.alerts.slice(0, 4).map((alert) => (
-                        <div key={alert.id} className="rounded-lg border p-3 text-sm">
-                          <p className="font-medium">{alert.title}</p>
-                          <p className="text-muted-foreground">{alert.description ?? "No alert detail"} · {formatDateTime(alert.createdAt)}</p>
+                      {selected.communicationHistory.slice(0, 6).map((entry) => (
+                        <div key={entry.id} className="rounded-lg border p-3 text-sm">
+                          <p className="font-medium">{entry.subject}</p>
+                          <p className="text-muted-foreground">
+                            {formatDateTime(entry.sentAt ?? entry.scheduledFor ?? entry.createdAt)} · {titleCase(entry.channel)} · {titleCase(entry.status)}
+                          </p>
                         </div>
                       ))}
                       {selected.tasks.slice(0, 4).map((task) => (
                         <div key={task.id} className="rounded-lg border p-3 text-sm">
                           <p className="font-medium">{task.title}</p>
                           <p className="text-muted-foreground">{titleCase(task.status)} · Due {task.dueDate ? formatDate(task.dueDate) : "not set"}</p>
-                        </div>
-                      ))}
-                      {selected.upcomingRegistrations.slice(0, 2).map((entry) => (
-                        <div key={`comm-registration-${entry.registration.id}`} className="rounded-lg border p-3 text-sm">
-                          <p className="font-medium">Registration confirmation</p>
-                          <p className="text-muted-foreground">
-                            {(programs.find((program) => program.id === entry.session!.programId)?.title ?? entry.session?.title ?? "Session")} · {formatDateTime(entry.session!.startsAt)}
-                          </p>
                         </div>
                       ))}
                       {selected.household.notes ? (

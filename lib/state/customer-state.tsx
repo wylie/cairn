@@ -31,6 +31,8 @@ import { evaluateCustomerAccess, getEligibleAccess, type AccessDecision } from "
 import type {
   CheckInLogRecord,
   CheckInSource,
+  CommunicationPreferenceSettings,
+  CommunicationRecord,
   Customer,
   CustomerRelationshipType,
   Household,
@@ -96,6 +98,17 @@ function isMinor(dateOfBirth?: string) {
   const birthYear = Number(dateOfBirth.slice(0, 4));
   return Number.isFinite(birthYear) ? 2026 - birthYear < 18 : false;
 }
+
+function titleCase(value: string) {
+  return value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+const DEFAULT_COMMUNICATION_PREFERENCES: CommunicationPreferenceSettings = {
+  email: true,
+  sms: true,
+  marketing: false,
+  transactional: true
+};
 
 function normalizeProductForState(product: PosProduct): PosProduct {
   const normalizedPriceCents = normalizeProductPriceCents(product);
@@ -173,7 +186,12 @@ function normalizeCustomersForState(customers: Customer[], seededCustomers: Cust
         : seeded.emergencyContactName,
       emergencyContactPhone: customer.emergencyContactPhone?.trim()
         ? customer.emergencyContactPhone
-        : seeded.emergencyContactPhone
+        : seeded.emergencyContactPhone,
+      communicationPreferences: {
+        ...DEFAULT_COMMUNICATION_PREFERENCES,
+        ...(seeded.communicationPreferences ?? {}),
+        ...(customer.communicationPreferences ?? {})
+      }
     };
   });
 }
@@ -245,6 +263,7 @@ interface CustomerStateContextValue {
   waiverTemplateVersions: WaiverTemplateVersion[];
   households: Household[];
   householdMembers: HouseholdMember[];
+  communications: CommunicationRecord[];
   operationsAlerts: OperationsAlertRecord[];
   operationsTasks: OperationsTaskRecord[];
   checkInRecords: CheckInLogRecord[];
@@ -389,6 +408,10 @@ interface CustomerStateContextValue {
     updatedByStaffId: string;
     updatedByStaffName?: string;
   }) => { ok: boolean; message: string };
+  updateCustomerCommunicationPreferences: (
+    customerId: string,
+    updates: Partial<CommunicationPreferenceSettings>
+  ) => { ok: boolean; message: string };
   addCustomerRelationship: (
     customerId: string,
     input: { relatedCustomerId: string; relationshipType: CustomerRelationshipType; notes?: string }
@@ -607,6 +630,34 @@ interface CustomerStateContextValue {
     registrationIds?: string[];
     waitlistedIds?: string[];
   };
+  createCommunication: (input: {
+    channel: CommunicationRecord["channel"];
+    status: CommunicationRecord["status"];
+    recipientType: CommunicationRecord["recipientType"];
+    recipientLabel: string;
+    subject: string;
+    message: string;
+    customerId?: string;
+    householdId?: string;
+    sessionId?: string;
+    programId?: string;
+    membershipId?: string;
+    waiverTemplateId?: string;
+    staffUserId?: string;
+    segmentKey?: string;
+    templateType?: CommunicationRecord["templateType"];
+    automatedTrigger?: CommunicationRecord["automatedTrigger"];
+    scheduledFor?: string;
+    deliveryStatus?: CommunicationRecord["deliveryStatus"];
+    attachmentsPlaceholder?: string[];
+    createdByStaffId?: string;
+    createdByStaffName?: string;
+  }) => { ok: boolean; message: string; communicationId?: string };
+  updateCommunication: (
+    communicationId: string,
+    updates: Partial<Pick<CommunicationRecord, "status" | "scheduledFor" | "sentAt" | "deliveryStatus" | "readAt" | "subject" | "message">>
+  ) => { ok: boolean; message: string };
+  markCommunicationRead: (communicationId: string) => { ok: boolean; message: string };
   getWaiverStatusForCustomer: (customerId: string, templateId?: string) => "valid" | "missing" | "expired" | "expiring_soon" | "outdated_version";
   getSignedWaiverRecordsForCustomer: (customerId: string) => SignedWaiverRecord[];
   createOperationsAlert: (input: {
@@ -852,6 +903,83 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     [activeLocationId, activeOrgId, seededCustomersForOrg, seededProductsForOrg, seededSessionsForOrg]
   );
 
+  const seededManualCommunicationsForOrg = useMemo<CommunicationRecord[]>(
+    () => [
+      {
+        id: `comm_${activeOrgId}_registration`,
+        organizationId: activeOrgId,
+        locationId: activeLocationId,
+        channel: "system_notification",
+        status: "sent",
+        recipientType: "customer",
+        recipientLabel: seededCustomersForOrg[0] ? `${seededCustomersForOrg[0].firstName} ${seededCustomersForOrg[0].lastName}` : "Maya Patel",
+        customerId: seededCustomersForOrg[0]?.id,
+        subject: "Registration confirmation",
+        message: "Your registration has been confirmed.",
+        templateType: "registration_confirmation",
+        automatedTrigger: "program_registration",
+        sentAt: "2026-05-21T10:00:00Z",
+        createdAt: "2026-05-21T10:00:00Z",
+        createdByStaffName: "System",
+        deliveryStatus: "unread"
+      },
+      {
+        id: `comm_${activeOrgId}_draft`,
+        organizationId: activeOrgId,
+        locationId: activeLocationId,
+        channel: "email",
+        status: "draft",
+        recipientType: "saved_segment",
+        recipientLabel: "New Members This Month",
+        subject: "Welcome to Cairn",
+        message: "Draft onboarding message for newly activated members.",
+        segmentKey: "new_members_this_month",
+        templateType: "general_announcement",
+        createdAt: `${BASE_DATE}T07:30:00Z`,
+        createdByStaffId: "staff_001",
+        createdByStaffName: "Taylor Nguyen"
+      },
+      {
+        id: `comm_${activeOrgId}_scheduled`,
+        organizationId: activeOrgId,
+        locationId: activeLocationId,
+        channel: "sms",
+        status: "scheduled",
+        recipientType: "household",
+        recipientLabel: seededHouseholdsForOrg[0]?.householdName ?? "Rivera Household",
+        householdId: seededHouseholdsForOrg[0]?.id,
+        subject: "Waiver reminder",
+        message: "Please review and sign the updated waiver before your next visit.",
+        templateType: "waiver_reminder",
+        automatedTrigger: "waiver_expiring",
+        scheduledFor: `${addDays(BASE_DATE, 1)}T14:00:00Z`,
+        createdAt: `${BASE_DATE}T09:15:00Z`,
+        createdByStaffId: "staff_002",
+        createdByStaffName: "Maya Lopez"
+      },
+      {
+        id: `comm_${activeOrgId}_failed`,
+        organizationId: activeOrgId,
+        locationId: activeLocationId,
+        channel: "email",
+        status: "failed",
+        recipientType: "customer",
+        recipientLabel: seededCustomersForOrg[0] ? `${seededCustomersForOrg[0].firstName} ${seededCustomersForOrg[0].lastName}` : "Maya Patel",
+        customerId: seededCustomersForOrg[0]?.id,
+        subject: "Payment failure follow-up",
+        message: "We could not process your renewal. Please update your payment method.",
+        templateType: "membership_renewal",
+        automatedTrigger: "payment_failure",
+        sentAt: `${BASE_DATE}T08:45:00Z`,
+        createdAt: `${BASE_DATE}T08:40:00Z`,
+        createdByStaffId: "staff_001",
+        createdByStaffName: "Taylor Nguyen",
+        deliveryStatus: "failed"
+      }
+    ],
+    [activeLocationId, activeOrgId, seededCustomersForOrg, seededHouseholdsForOrg]
+  );
+
   const storageKeys = useMemo(() => ({
     customers: buildScopedMockKey(activeOrgId, activeLocationId, "customers"),
     passes: buildScopedMockKey(activeOrgId, activeLocationId, "punchPasses"),
@@ -872,6 +1000,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     waiverTemplateVersions: buildScopedMockKey(activeOrgId, activeLocationId, "waiverTemplateVersions"),
     households: buildScopedMockKey(activeOrgId, activeLocationId, "households"),
     householdMembers: buildScopedMockKey(activeOrgId, activeLocationId, "householdMembers"),
+    communications: buildScopedMockKey(activeOrgId, activeLocationId, "communications"),
     operationsAlertOverrides: buildScopedMockKey(activeOrgId, activeLocationId, "operationsAlertOverrides"),
     operationsManualAlerts: buildScopedMockKey(activeOrgId, activeLocationId, "operationsManualAlerts"),
     operationsTasks: buildScopedMockKey(activeOrgId, activeLocationId, "operationsTasks")
@@ -913,6 +1042,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
   const [householdMembers, setHouseholdMembers] = useState<HouseholdMember[]>(
     seededHouseholdMembersForOrg.map(normalizeHouseholdMemberForState)
   );
+  const [manualCommunications, setManualCommunications] = useState<CommunicationRecord[]>(seededManualCommunicationsForOrg);
   const [operationsAlertOverrides, setOperationsAlertOverrides] = useState<
     Array<{ id: string; status: OperationsAlertStatus; resolvedAt?: string; archivedAt?: string }>
   >([]);
@@ -1015,6 +1145,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         normalizeHouseholdMemberForState
       )
     );
+    setManualCommunications(loadMockState(storageKeys.communications, seededManualCommunicationsForOrg) as CommunicationRecord[]);
     setOperationsAlertOverrides(
       loadMockState(storageKeys.operationsAlertOverrides, []) as Array<{
         id: string;
@@ -1032,7 +1163,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     );
     setCheckInLogRecords(storedCheckIns);
     setHydrated(true);
-  }, [activeOrgId, activeLocationId, seededOperationsTasksForOrg]);
+  }, [activeOrgId, activeLocationId, seededManualCommunicationsForOrg, seededOperationsTasksForOrg]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -1109,6 +1240,10 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
   }, [householdMembers, hydrated]);
   useEffect(() => {
     if (!hydrated) return;
+    saveMockState(storageKeys.communications, manualCommunications);
+  }, [manualCommunications, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
     saveMockState(storageKeys.operationsAlertOverrides, operationsAlertOverrides);
   }, [operationsAlertOverrides, hydrated]);
   useEffect(() => {
@@ -1167,6 +1302,154 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     settings.operations.defaultCloseoutTime,
     settings.operations.open24x7
   ]);
+
+  const communications = useMemo<CommunicationRecord[]>(() => {
+    const generated: CommunicationRecord[] = [];
+    const todayMonthDay = activeDateKey.slice(5);
+
+    memberships.forEach((membership) => {
+      const customer = customers.find((entry) => entry.id === membership.customerId);
+      if (!customer || !membership.expirationDate) return;
+      const daysUntil = diffDays(activeDateKey, membership.expirationDate);
+      if (daysUntil !== null && daysUntil >= 0 && daysUntil <= 30) {
+        generated.push({
+          id: `comm_membership_expiring_${membership.id}`,
+          organizationId: activeOrgId,
+          locationId: customer.locationId,
+          channel: "email",
+          status: "scheduled",
+          recipientType: "customer",
+          recipientLabel: `${customer.firstName} ${customer.lastName}`,
+          subject: "Membership renewal reminder",
+          message: `${membership.planName} renews on ${membership.expirationDate}.`,
+          customerId: customer.id,
+          membershipId: membership.id,
+          templateType: "membership_renewal",
+          automatedTrigger: "membership_expiring",
+          scheduledFor: `${activeDateKey}T12:00:00Z`,
+          createdAt: `${activeDateKey}T07:00:00Z`,
+          createdByStaffName: "System"
+        });
+      }
+    });
+
+    waivers.forEach((waiver) => {
+      const customer = customers.find((entry) => entry.id === waiver.customerId);
+      if (!customer) return;
+      const daysUntil = diffDays(activeDateKey, waiver.expiresAt?.slice(0, 10));
+      if (daysUntil !== null && daysUntil >= 0 && daysUntil <= 14) {
+        const templateName =
+          waiverTemplates.find((entry) => entry.id === waiver.templateId)?.name ??
+          "Your waiver";
+        generated.push({
+          id: `comm_waiver_expiring_${waiver.id}`,
+          organizationId: activeOrgId,
+          locationId: customer.locationId,
+          channel: "sms",
+          status: "scheduled",
+          recipientType: "customer",
+          recipientLabel: `${customer.firstName} ${customer.lastName}`,
+          subject: "Waiver expiring soon",
+          message: `${templateName} expires soon. Please review and sign the latest version.`,
+          customerId: customer.id,
+          waiverTemplateId: waiver.templateId,
+          templateType: "waiver_reminder",
+          automatedTrigger: "waiver_expiring",
+          scheduledFor: `${activeDateKey}T15:00:00Z`,
+          createdAt: `${activeDateKey}T07:05:00Z`,
+          createdByStaffName: "System"
+        });
+      }
+    });
+
+    registrations.forEach((registration) => {
+      const customer = customers.find((entry) => entry.id === registration.customerId);
+      const session = sessions.find((entry) => entry.id === registration.sessionId);
+      const program = programs.find((entry) => entry.id === session?.programId);
+      if (!customer || !session || !program) return;
+      generated.push({
+        id: `comm_registration_${registration.id}`,
+        organizationId: activeOrgId,
+        locationId: session.locationId,
+        channel: "email",
+        status: "sent",
+        recipientType: "customer",
+        recipientLabel: `${customer.firstName} ${customer.lastName}`,
+        subject: registration.status === "waitlisted" ? "Waitlist update" : "Registration confirmation",
+        message:
+          registration.status === "waitlisted"
+            ? `You joined the waitlist for ${program.title}.`
+            : `Your registration for ${program.title} is confirmed.`,
+        customerId: customer.id,
+        sessionId: session.id,
+        programId: program.id,
+        templateType: registration.status === "waitlisted" ? "waitlist_promotion" : "registration_confirmation",
+        automatedTrigger: "program_registration",
+        sentAt: registration.registeredAt ?? `${BASE_DATE}T09:00:00Z`,
+        createdAt: registration.registeredAt ?? `${BASE_DATE}T09:00:00Z`,
+        createdByStaffName: registration.registeredByStaffName ?? "System",
+        deliveryStatus: "delivered"
+      });
+    });
+
+    customers.forEach((customer) => {
+      if (customer.dateOfBirth?.slice(5) !== todayMonthDay) return;
+      generated.push({
+        id: `comm_birthday_${customer.id}`,
+        organizationId: activeOrgId,
+        locationId: customer.locationId,
+        channel: "email",
+        status: "scheduled",
+        recipientType: "customer",
+        recipientLabel: `${customer.firstName} ${customer.lastName}`,
+        subject: "Happy Birthday from Cairn",
+        message: "Birthday greeting scheduled for this morning.",
+        customerId: customer.id,
+        templateType: "birthday_greeting",
+        automatedTrigger: "birthday",
+        scheduledFor: `${activeDateKey}T11:00:00Z`,
+        createdAt: `${activeDateKey}T06:30:00Z`,
+        createdByStaffName: "System"
+      });
+    });
+
+    sessions
+      .filter((session) => session.status === "cancelled")
+      .forEach((session) => {
+        const sessionRegistrations = registrations.filter((entry) => entry.sessionId === session.id);
+        const program = programs.find((entry) => entry.id === session.programId);
+        sessionRegistrations.forEach((registration) => {
+          const customer = customers.find((entry) => entry.id === registration.customerId);
+          if (!customer) return;
+          generated.push({
+            id: `comm_cancelled_${registration.id}`,
+            organizationId: activeOrgId,
+            locationId: session.locationId,
+            channel: "system_notification",
+            status: "sent",
+            recipientType: "customer",
+            recipientLabel: `${customer.firstName} ${customer.lastName}`,
+            subject: "Program cancelled",
+            message: `${program?.title ?? session.title ?? "Session"} has been cancelled.`,
+            customerId: customer.id,
+            sessionId: session.id,
+            programId: program?.id,
+            templateType: "general_announcement",
+            automatedTrigger: "program_cancellation",
+            sentAt: session.cancelledAt ?? `${activeDateKey}T10:00:00Z`,
+            createdAt: session.cancelledAt ?? `${activeDateKey}T10:00:00Z`,
+            createdByStaffName: "System",
+            deliveryStatus: "unread"
+          });
+        });
+      });
+
+    return [...generated, ...manualCommunications].sort((a, b) => {
+      const aDate = a.sentAt ?? a.scheduledFor ?? a.createdAt;
+      const bDate = b.sentAt ?? b.scheduledFor ?? b.createdAt;
+      return bDate.localeCompare(aDate);
+    });
+  }, [activeDateKey, activeOrgId, customers, manualCommunications, memberships, programs, registrations, sessions, waivers]);
 
   const operationsAlerts = useMemo<OperationsAlertRecord[]>(() => {
     const alerts: OperationsAlertRecord[] = [];
@@ -2596,6 +2879,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       profilePhotoUrl: input.profilePhotoUrl?.trim() || undefined,
       tags: [],
       checkInStatus: "out",
+      communicationPreferences: DEFAULT_COMMUNICATION_PREFERENCES,
       notes: input.notes?.trim() || "",
       updatedByStaffId: input.createdByStaffId,
       updatedByStaffName: input.createdByStaffName,
@@ -2880,6 +3164,29 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       )
     );
     return { ok: true, message: nextPhoto ? "Profile photo updated." : "Profile photo removed." };
+  };
+
+  const updateCustomerCommunicationPreferences: CustomerStateContextValue["updateCustomerCommunicationPreferences"] = (
+    customerId,
+    updates
+  ) => {
+    const customer = customers.find((entry) => entry.id === customerId);
+    if (!customer) return { ok: false, message: "Customer not found." };
+    setCustomers((prev) =>
+      prev.map((entry) =>
+        entry.id !== customerId
+          ? entry
+          : {
+              ...entry,
+              communicationPreferences: {
+                ...DEFAULT_COMMUNICATION_PREFERENCES,
+                ...(entry.communicationPreferences ?? {}),
+                ...updates
+              }
+            }
+      )
+    );
+    return { ok: true, message: "Communication preferences updated." };
   };
 
   const addCustomerRelationship = (
@@ -4654,6 +4961,51 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       receiptNumber
     };
     setTransactions((prev) => [transaction, ...prev]);
+    const createdAt = new Date().toISOString();
+    const checkoutCommunications: CommunicationRecord[] = [
+      {
+        id: `comm_receipt_${transactionId}`,
+        organizationId: activeOrgId,
+        locationId: activeLocationId,
+        channel: "email",
+        status: input.emailReceipt === false ? "draft" : "sent",
+        recipientType: "customer",
+        recipientLabel: `${purchaser.firstName} ${purchaser.lastName}`,
+        subject: `Receipt ${receiptNumber}`,
+        message: `Your receipt total was recorded at ${total}.`,
+        customerId: purchaser.id,
+        householdId: purchaserHouseholdMembership?.householdId,
+        templateType: "general_announcement",
+        sentAt: input.emailReceipt === false ? undefined : createdAt,
+        createdAt,
+        createdByStaffName: "Customer Portal",
+        deliveryStatus: input.emailReceipt === false ? "queued" : "delivered"
+      }
+    ];
+    if (registrationIds.length > 0 || waitlistedIds.length > 0) {
+      checkoutCommunications.push({
+        id: `comm_checkout_registration_${transactionId}`,
+        organizationId: activeOrgId,
+        locationId: activeLocationId,
+        channel: "system_notification",
+        status: "sent",
+        recipientType: "customer",
+        recipientLabel: `${purchaser.firstName} ${purchaser.lastName}`,
+        subject: "Registration update",
+        message:
+          waitlistedIds.length > 0
+            ? `Checkout complete. ${waitlistedIds.length} registration${waitlistedIds.length === 1 ? " was" : "s were"} waitlisted.`
+            : "Checkout complete and registrations were confirmed.",
+        customerId: purchaser.id,
+        householdId: purchaserHouseholdMembership?.householdId,
+        templateType: "registration_confirmation",
+        sentAt: createdAt,
+        createdAt,
+        createdByStaffName: "Customer Portal",
+        deliveryStatus: "unread"
+      });
+    }
+    setManualCommunications((prev) => [...checkoutCommunications, ...prev]);
 
     return {
       ok: true,
@@ -4667,6 +5019,78 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       waitlistedIds
     };
   };
+
+  const createCommunication: CustomerStateContextValue["createCommunication"] = (input) => {
+    const subject = input.subject.trim();
+    const message = input.message.trim();
+    if (!subject) return { ok: false, message: "Subject is required." };
+    if (!message) return { ok: false, message: "Message is required." };
+    const createdAt = new Date().toISOString();
+    const communication: CommunicationRecord = {
+      id: `comm_${Math.random().toString(36).slice(2, 9)}`,
+      organizationId: activeOrgId,
+      locationId: activeLocationId,
+      channel: input.channel,
+      status: input.status,
+      recipientType: input.recipientType,
+      recipientLabel: input.recipientLabel.trim(),
+      subject,
+      message,
+      customerId: input.customerId,
+      householdId: input.householdId,
+      sessionId: input.sessionId,
+      programId: input.programId,
+      membershipId: input.membershipId,
+      waiverTemplateId: input.waiverTemplateId,
+      staffUserId: input.staffUserId,
+      segmentKey: input.segmentKey,
+      templateType: input.templateType,
+      automatedTrigger: input.automatedTrigger,
+      scheduledFor: input.status === "scheduled" ? (input.scheduledFor ?? addDays(activeDateKey, 1)) : undefined,
+      sentAt: input.status === "sent" ? createdAt : undefined,
+      createdAt,
+      createdByStaffId: input.createdByStaffId,
+      createdByStaffName: input.createdByStaffName,
+      deliveryStatus:
+        input.channel === "system_notification"
+          ? input.deliveryStatus ?? "unread"
+          : input.status === "failed"
+            ? "failed"
+            : input.status === "sent"
+              ? "delivered"
+              : "queued",
+      attachmentsPlaceholder: input.attachmentsPlaceholder
+    };
+    setManualCommunications((prev) => [communication, ...prev]);
+    return {
+      ok: true,
+      message:
+        communication.status === "draft"
+          ? "Draft saved."
+          : communication.status === "scheduled"
+            ? "Message scheduled."
+            : "Message sent.",
+      communicationId: communication.id
+    };
+  };
+
+  const updateCommunication: CustomerStateContextValue["updateCommunication"] = (communicationId, updates) => {
+    let found = false;
+    setManualCommunications((prev) =>
+      prev.map((entry) => {
+        if (entry.id !== communicationId) return entry;
+        found = true;
+        return { ...entry, ...updates };
+      })
+    );
+    return { ok: found, message: found ? "Communication updated." : "Communication not found." };
+  };
+
+  const markCommunicationRead: CustomerStateContextValue["markCommunicationRead"] = (communicationId) =>
+    updateCommunication(communicationId, {
+      deliveryStatus: "read",
+      readAt: new Date().toISOString()
+    });
 
   const getSignedWaiverRecordsForCustomer = (customerId: string) => {
     return signedWaiverRecords
@@ -4928,6 +5352,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       waiverTemplateVersions,
       households,
       householdMembers,
+      communications,
       operationsAlerts,
       operationsTasks,
       checkInRecords: checkInLogRecords,
@@ -4972,6 +5397,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       clearStaffProfileForCustomer,
       updateCustomerProfile,
       updateCustomerPhoto,
+      updateCustomerCommunicationPreferences,
       addCustomerRelationship,
       removeCustomerRelationship,
       createSession,
@@ -5007,6 +5433,9 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       archiveWaiverTemplate,
       signWaiverForCustomer,
       completePublicCheckout,
+      createCommunication,
+      updateCommunication,
+      markCommunicationRead,
       getWaiverStatusForCustomer,
       getSignedWaiverRecordsForCustomer,
       createOperationsAlert,
@@ -5042,13 +5471,14 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         setWaiverTemplateVersions(seededWaiverTemplateVersionsForOrg);
         setHouseholds(seededHouseholdsForOrg);
         setHouseholdMembers(seededHouseholdMembersForOrg.map(normalizeHouseholdMemberForState));
+        setManualCommunications(seededManualCommunicationsForOrg);
         setOperationsAlertOverrides([]);
         setOperationsManualAlerts([]);
         setOperationsTasks(seededOperationsTasksForOrg);
         clearScopedMockState(
           activeOrgId,
           activeLocationId,
-          ["customers", "punchPasses", "checkIns", "memberships", "transactions", "products", "inventoryAudit", "productCategories", "programs", "sessions", "registrations", "registrationActivity", "accessRecords", "waivers", "signedWaiverRecords", "waiverTemplates", "waiverTemplateVersions", "households", "householdMembers", "operationsAlertOverrides", "operationsManualAlerts", "operationsTasks"]
+          ["customers", "punchPasses", "checkIns", "memberships", "transactions", "products", "inventoryAudit", "productCategories", "programs", "sessions", "registrations", "registrationActivity", "accessRecords", "waivers", "signedWaiverRecords", "waiverTemplates", "waiverTemplateVersions", "households", "householdMembers", "communications", "operationsAlertOverrides", "operationsManualAlerts", "operationsTasks"]
         );
       }
     }),
@@ -5066,6 +5496,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       waiverTemplateVersions,
       households,
       householdMembers,
+      communications,
       operationsAlerts,
       operationsTasks,
       transactions,
@@ -5074,6 +5505,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       registrations,
       registrationActivity,
       checkInLogRecords,
+      seededManualCommunicationsForOrg,
       seededOperationsTasksForOrg,
       activeDateKey,
       isActiveDateToday,

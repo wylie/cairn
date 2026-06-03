@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { memo, useEffect, useMemo, useState } from "react";
+import { Bell } from "lucide-react";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useSettingsState } from "@/lib/state/settings-state";
 import { ActiveStaffIndicator } from "@/components/staff/active-staff-indicator";
@@ -36,11 +37,48 @@ function TopBarInner() {
     settings.locations.find((entry) => entry.id === activeLocationId) ??
     settings.locations.find((entry) => entry.isDefault) ??
     settings.locations[0];
-  const { occupancyCount } = useCustomerState();
+  const { occupancyCount, communications, operationsAlerts, operationsTasks, markCommunicationRead } = useCustomerState();
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const suffixPath = useMemo(
     () => (pathname.startsWith(`/o/${currentSlug}`) ? pathname.replace(`/o/${currentSlug}`, "") || "/dashboard" : "/dashboard"),
     [pathname, currentSlug]
   );
+  const notificationItems = useMemo(() => {
+    const unreadMessages = communications
+      .filter((entry) => entry.channel === "system_notification" && entry.deliveryStatus !== "read")
+      .slice(0, 4)
+      .map((entry) => ({
+        id: entry.id,
+        title: entry.subject,
+        detail: entry.message,
+        kind: "notification" as const,
+        occurredAt: entry.sentAt ?? entry.createdAt
+      }));
+    const openAlerts = operationsAlerts
+      .filter((entry) => entry.status === "open")
+      .slice(0, 3)
+      .map((entry) => ({
+        id: `alert-${entry.id}`,
+        title: entry.title,
+        detail: entry.description ?? "Operational alert",
+        kind: "alert" as const,
+        occurredAt: entry.createdAt
+      }));
+    const openTasks = operationsTasks
+      .filter((entry) => entry.status === "open" || entry.status === "in_progress")
+      .slice(0, 3)
+      .map((entry) => ({
+        id: `task-${entry.id}`,
+        title: entry.title,
+        detail: entry.description ?? "Staff task",
+        kind: "task" as const,
+        occurredAt: entry.createdAt
+      }));
+    return [...unreadMessages, ...openAlerts, ...openTasks].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+  }, [communications, operationsAlerts, operationsTasks]);
+  const unreadNotificationCount = communications.filter(
+    (entry) => entry.channel === "system_notification" && entry.deliveryStatus !== "read"
+  ).length;
 
   const handleSignOut = async () => {
     await fetch("/api/auth/mock-logout", { method: "POST" });
@@ -77,6 +115,47 @@ function TopBarInner() {
             ))}
           </select>
         ) : null}
+        <div className="relative">
+          <Button
+            type="button"
+            variant="outline"
+            aria-label="Open notifications"
+            onClick={() => {
+              setNotificationsOpen((prev) => !prev);
+              communications
+                .filter((entry) => entry.channel === "system_notification" && entry.deliveryStatus !== "read")
+                .slice(0, 4)
+                .forEach((entry) => {
+                  markCommunicationRead(entry.id);
+                });
+            }}
+            className="relative"
+          >
+            <Bell className="h-4 w-4" aria-hidden="true" />
+            {unreadNotificationCount > 0 ? (
+              <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
+                {unreadNotificationCount}
+              </span>
+            ) : null}
+          </Button>
+          {notificationsOpen ? (
+            <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border bg-card p-3 shadow-lg">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold">Notifications</p>
+                <span className="text-xs text-muted-foreground">{notificationItems.length} items</span>
+              </div>
+              <div className="space-y-2">
+                {notificationItems.length === 0 ? <p className="text-sm text-muted-foreground">No new notifications.</p> : null}
+                {notificationItems.map((item) => (
+                  <div key={item.id} className="rounded-lg border p-2 text-sm">
+                    <p className="font-medium">{item.title}</p>
+                    <p className="text-muted-foreground">{item.detail}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
         <Button type="button" variant="outline" onClick={handleSignOut}>Sign out</Button>
         <ActiveStaffIndicator />
       </div>

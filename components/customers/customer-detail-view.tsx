@@ -22,7 +22,7 @@ import { formatCurrency } from "@/lib/transactions";
 import { buildDetailHref } from "@/lib/navigation/detail-navigation";
 import { ROLE_LABELS } from "@/lib/staff/capabilities";
 import { PERMISSION_LABELS } from "@/lib/staff/permissions";
-import type { StaffRole } from "@/types/domain";
+import type { CommunicationRecord, StaffRole } from "@/types/domain";
 
 type CustomerDocumentType =
   | "waiver"
@@ -41,18 +41,6 @@ type CustomerDocumentRecord = {
   uploadedBy: string;
   uploadedAt: string;
   status: "active" | "archived";
-};
-
-type CustomerCommunicationType = "email" | "sms" | "system" | "staff_note";
-type CustomerCommunicationRecord = {
-  id: string;
-  customerId: string;
-  sentAt: string;
-  type: CustomerCommunicationType;
-  subject: string;
-  status: "sent" | "queued" | "failed";
-  sentBy: string;
-  body: string;
 };
 
 export function CustomerDetailView({ customerId }: { customerId: string }) {
@@ -80,6 +68,9 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     archiveOperationsAlert,
     households,
     householdMembers,
+    communications,
+    createCommunication,
+    updateCustomerCommunicationPreferences,
     createHousehold,
     addHouseholdMember,
     removeHouseholdMember,
@@ -125,7 +116,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
   const [timelineFilter, setTimelineFilter] = useState<
     "all" | "profile" | "access" | "waivers" | "registrations" | "visits" | "purchases" | "communications" | "staff_actions"
   >("all");
-  const [communicationFilter, setCommunicationFilter] = useState<"all" | "email" | "sms" | "system" | "staff_note">("all");
+  const [communicationFilter, setCommunicationFilter] = useState<"all" | CommunicationRecord["channel"]>("all");
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const customer = customers.find((entry) => entry.id === customerId);
 
@@ -161,28 +152,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
       status: "active"
     }
   ]);
-  const [communications, setCommunications] = useState<CustomerCommunicationRecord[]>([
-    {
-      id: `comm-reg-${customer.id}`,
-      customerId: customer.id,
-      sentAt: "2026-05-21T10:00:00Z",
-      type: "system",
-      subject: "Registration confirmation",
-      status: "sent",
-      sentBy: "System",
-      body: "Your registration has been confirmed."
-    },
-    {
-      id: `comm-reminder-${customer.id}`,
-      customerId: customer.id,
-      sentAt: "2026-05-20T08:30:00Z",
-      type: "email",
-      subject: "Membership renewal reminder",
-      status: "sent",
-      sentBy: "Maya Lopez",
-      body: "Your membership expires soon."
-    }
-  ]);
+  const customerCommunications = communications.filter((entry) => entry.customerId === customer.id);
   const recentCheckIns = checkInRecords
     .filter((entry) => entry.customerId === customer.id)
     .sort((a, b) => b.checkInTime.localeCompare(a.checkInTime))
@@ -508,12 +478,12 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
       staff: entry.uploadedBy,
       category: "profile" as const
     })),
-    ...communications.map((entry) => ({
+    ...customerCommunications.map((entry) => ({
       id: `communication-${entry.id}`,
-      occurredAt: entry.sentAt,
+      occurredAt: entry.sentAt ?? entry.scheduledFor ?? entry.createdAt,
       title: "Communication Logged",
-      detail: `${entry.subject} • ${titleCase(entry.type)}`,
-      staff: entry.sentBy,
+      detail: `${entry.subject} • ${titleCase(entry.channel)}`,
+      staff: entry.createdByStaffName ?? "System",
       category: "communications" as const
     })),
     ...customerOperationsAlerts.map((entry) => ({
@@ -529,8 +499,8 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     ? timelineEvents
     : timelineEvents.filter((entry) => entry.category === timelineFilter);
   const filteredCommunications = communicationFilter === "all"
-    ? communications
-    : communications.filter((entry) => entry.type === communicationFilter);
+    ? customerCommunications
+    : customerCommunications.filter((entry) => entry.channel === communicationFilter);
   const openAlerts = openCustomerOperationsAlerts;
 
   useEffect(() => {
@@ -1883,41 +1853,75 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                 <option value="all">All</option>
                 <option value="email">Email</option>
                 <option value="sms">SMS</option>
-                <option value="system">System</option>
-                <option value="staff_note">Staff Notes</option>
+                <option value="system_notification">System</option>
+                <option value="internal_staff_note">Staff Notes</option>
               </select>
               <Button
                 className="h-9"
                 variant="secondary"
                 onClick={() => {
-                  const now = new Date().toISOString();
-                  setCommunications((prev) => [
-                    {
-                      id: `comm_${Math.random().toString(36).slice(2, 9)}`,
-                      customerId: customer.id,
-                      sentAt: now,
-                      type: "staff_note",
-                      subject: "Manual communication log",
-                      status: "sent",
-                      sentBy: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : "Staff",
-                      body: "Communication logged manually."
-                    },
-                    ...prev
-                  ]);
+                  createCommunication({
+                    channel: "internal_staff_note",
+                    status: "sent",
+                    recipientType: "customer",
+                    recipientLabel: `${customer.firstName} ${customer.lastName}`,
+                    customerId: customer.id,
+                    subject: "Manual communication log",
+                    message: "Communication logged manually.",
+                    createdByStaffId: activeStaff?.id,
+                    createdByStaffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : "Staff"
+                  });
                 }}
               >
                 Log Communication
               </Button>
+            </div>
+            <div className="grid gap-3 rounded-md border p-3 md:grid-cols-4">
+              <label className="flex items-center justify-between gap-3 text-sm">
+                <span>Email Opt-In</span>
+                <input
+                  aria-label="Email communications"
+                  type="checkbox"
+                  checked={customer.communicationPreferences?.email ?? true}
+                  onChange={(event) => updateCustomerCommunicationPreferences(customer.id, { email: event.target.checked })}
+                />
+              </label>
+              <label className="flex items-center justify-between gap-3 text-sm">
+                <span>SMS Opt-In</span>
+                <input
+                  aria-label="SMS communications"
+                  type="checkbox"
+                  checked={customer.communicationPreferences?.sms ?? true}
+                  onChange={(event) => updateCustomerCommunicationPreferences(customer.id, { sms: event.target.checked })}
+                />
+              </label>
+              <label className="flex items-center justify-between gap-3 text-sm">
+                <span>Marketing</span>
+                <input
+                  type="checkbox"
+                  checked={customer.communicationPreferences?.marketing ?? false}
+                  onChange={(event) => updateCustomerCommunicationPreferences(customer.id, { marketing: event.target.checked })}
+                />
+              </label>
+              <label className="flex items-center justify-between gap-3 text-sm">
+                <span>Transactional</span>
+                <input
+                  aria-label="Transactional communications"
+                  type="checkbox"
+                  checked={customer.communicationPreferences?.transactional ?? true}
+                  onChange={(event) => updateCustomerCommunicationPreferences(customer.id, { transactional: event.target.checked })}
+                />
+              </label>
             </div>
             <div className="space-y-2">
               {filteredCommunications.map((entry) => (
                 <div key={entry.id} className="rounded-md border p-3">
                   <p className="font-medium">{entry.subject}</p>
                   <p className="text-muted-foreground">
-                    {formatDateTime(entry.sentAt)} • {titleCase(entry.type)} • {titleCase(entry.status)} • {entry.sentBy}
+                    {formatDateTime(entry.sentAt ?? entry.scheduledFor ?? entry.createdAt)} • {titleCase(entry.channel)} • {titleCase(entry.status)} • {entry.createdByStaffName ?? "System"}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <Button className="h-8" variant="secondary" onClick={() => setProfileFeedback(entry.body)}>View Message</Button>
+                    <Button className="h-8" variant="secondary" onClick={() => setProfileFeedback(entry.message)}>View Message</Button>
                     <Button className="h-8" variant="secondary" onClick={() => setProfileFeedback("Resend placeholder.")}>Resend</Button>
                   </div>
                 </div>

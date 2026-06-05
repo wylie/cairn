@@ -60,7 +60,7 @@ export function PublicRegistrationPanel({
           {stats.full ? "Join Waitlist" : "Continue to Checkout"}
         </Button>
         <div className="flex flex-wrap gap-2 text-sm">
-          <Link href={`/p/${orgSlug}/waivers/${program.requiredWaiverTemplateIds?.[0] ?? "wtpl_general"}`} className="inline-flex min-h-10 items-center rounded-md border border-input px-3 hover:bg-secondary">Sign Waiver</Link>
+          <Link href={`/p/${orgSlug}/waivers/${program.requiredWaiverTemplateIds?.[0] ?? "wtpl_general"}?returnTo=${encodeURIComponent(`/p/${orgSlug}/checkout?step=3`)}`} className="inline-flex min-h-10 items-center rounded-md border border-input px-3 hover:bg-secondary">Sign Waiver</Link>
           <Link href={`/p/${orgSlug}/login?next=/p/${orgSlug}/checkout`} className="inline-flex min-h-10 items-center rounded-md border border-input px-3 hover:bg-secondary">Customer Login</Link>
         </div>
       </div>

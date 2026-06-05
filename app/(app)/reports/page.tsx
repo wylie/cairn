@@ -192,6 +192,27 @@ export default function ReportsPage() {
     ? Math.round((householdReportRows.filter((row) => row.visits > 0).length / householdReportRows.length) * 100)
     : 0;
   const householdWaiverIssues = householdReportRows.reduce((sum, row) => sum + row.waiverIssues, 0);
+  const registrationRevenueCents = useMemo(
+    () =>
+      report.sales.transactions.reduce(
+        (sum, transaction) =>
+          sum +
+          transaction.items
+            .filter((item) => item.productType === "program-registration")
+            .reduce((itemSum, item) => itemSum + item.lineTotalCents, 0),
+        0
+      ),
+    [report.sales.transactions]
+  );
+  const waitlistConversions = useMemo(
+    () => registrations.filter((entry) => entry.status === "confirmed" && entry.registrationSource === "online" && entry.waitlistPosition != null).length,
+    [registrations]
+  );
+  const cancellationRate = useMemo(() => {
+    const total = registrations.length;
+    if (total === 0) return 0;
+    return Math.round((registrations.filter((entry) => entry.status === "cancelled").length / total) * 100);
+  }, [registrations]);
 
   return (
     <PermissionGate permission="viewReports">
@@ -522,6 +543,13 @@ export default function ReportsPage() {
 
         {activeCategory === "programs" ? (
           <div className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+              <MetricCard title="Registration Revenue" value={formatCurrency(registrationRevenueCents)} />
+              <StatusCard title="Registrations Created" value={`${registrations.length}`} />
+              <StatusCard title="Waitlist Conversions" value={`${waitlistConversions}`} />
+              <StatusCard title="Program Fill Rate" value={`${report.attendance.fillRate}%`} />
+              <StatusCard title="Cancellation Rate" value={`${cancellationRate}%`} />
+            </div>
             <ListCard
               title="Program Performance"
               emptyText="No program data available."

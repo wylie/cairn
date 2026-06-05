@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { formatDateTime } from "@/lib/format/date";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useCustomerPortalData } from "@/lib/portal/use-customer-portal-data";
@@ -23,6 +24,7 @@ export function WaiverSigningForm({
   version,
   mode,
   defaultCustomerId,
+  returnTo,
   onSigned
 }: {
   orgSlug: string;
@@ -30,8 +32,10 @@ export function WaiverSigningForm({
   version: WaiverTemplateVersion;
   mode: SigningMode;
   defaultCustomerId?: string;
+  returnTo?: string;
   onSigned?: () => void;
 }) {
+  const router = useRouter();
   const {
     customers,
     households,
@@ -283,7 +287,14 @@ export function WaiverSigningForm({
               });
               setError("");
               setFeedback(result.message);
-              if (result.ok) onSigned?.();
+              if (result.ok) {
+                onSigned?.();
+                const safeReturnTo = getSafeReturnTo(returnTo, orgSlug);
+                if (safeReturnTo) {
+                  router.push(safeReturnTo);
+                  router.refresh();
+                }
+              }
             }}
             className="inline-flex h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
           >
@@ -301,4 +312,11 @@ export function WaiverSigningForm({
       {feedback ? <p role="status" className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{feedback}</p> : null}
     </section>
   );
+}
+
+function getSafeReturnTo(returnTo: string | undefined, orgSlug: string) {
+  if (!returnTo || !returnTo.startsWith("/")) return null;
+  if (returnTo.startsWith("//")) return null;
+  const allowedPrefixes = [`/p/${orgSlug}/`, `/f/${orgSlug}`];
+  return allowedPrefixes.some((prefix) => returnTo.startsWith(prefix)) ? returnTo : null;
 }

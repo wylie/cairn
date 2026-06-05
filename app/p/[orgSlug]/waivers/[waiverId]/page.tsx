@@ -20,10 +20,10 @@ export default async function PublicWaiverPage({
   searchParams
 }: {
   params: Promise<{ orgSlug: string; waiverId: string }>;
-  searchParams: Promise<{ customerId?: string }>;
+  searchParams: Promise<{ customerId?: string; returnTo?: string }>;
 }) {
   const { orgSlug, waiverId } = await params;
-  const { customerId } = await searchParams;
+  const { customerId, returnTo } = await searchParams;
   const org = getOrganizationForPublic(orgSlug);
   const template = getPublicWaiverTemplate(orgSlug, waiverId);
   const session = await getServerSession();
@@ -51,6 +51,7 @@ export default async function PublicWaiverPage({
         version={version}
         mode={signingMode}
         defaultCustomerId={defaultCustomerId}
+        returnTo={returnTo}
       />
     </main>
   );

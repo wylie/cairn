@@ -614,6 +614,7 @@ interface CustomerStateContextValue {
   completePublicCheckout: (input: {
     purchaserCustomerId: string;
     billingCustomerId?: string;
+    authorizedParticipantIds?: string[];
     items: Array<
       | { kind: "session"; sessionId: string; participantCustomerId: string }
       | { kind: "product"; productId: string; participantCustomerId: string; quantity?: number }
@@ -627,6 +628,7 @@ interface CustomerStateContextValue {
     message: string;
     transactionId?: string;
     receiptNumber?: string;
+    confirmationNumber?: string;
     registrationIds?: string[];
     waitlistedIds?: string[];
   };
@@ -4549,6 +4551,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     const purchaser = customers.find((entry) => entry.id === input.purchaserCustomerId);
     if (!purchaser) return { ok: false, message: "Purchaser not found." };
     if (input.items.length === 0) return { ok: false, message: "Cart is empty." };
+    const authorizedParticipantIds = new Set(input.authorizedParticipantIds ?? []);
 
     const pendingLineItems: PosTransactionItem[] = [];
     const pendingRegistrations: Registration[] = [];
@@ -4595,6 +4598,9 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     for (const item of input.items) {
       const participant = customers.find((entry) => entry.id === item.participantCustomerId);
       if (!participant) return { ok: false, message: "A participant in this cart could not be found." };
+      if (authorizedParticipantIds.size > 0 && !authorizedParticipantIds.has(participant.id)) {
+        return { ok: false, message: `${participant.firstName} ${participant.lastName} is not available for this account.` };
+      }
 
       if (item.kind === "session") {
         const sessionSnapshot = getSessionSnapshot(item.sessionId);
@@ -4928,6 +4934,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
 
     const purchaserHouseholdMembership = householdMembers.find((entry) => entry.customerId === input.purchaserCustomerId);
     const receiptNumber = `R-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const confirmationNumber = `C-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
     const transactionId = `txn_${Math.random().toString(36).slice(2, 9)}`;
     const transaction: PosTransaction = {
       id: transactionId,
@@ -5015,6 +5022,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
           : "Checkout complete.",
       transactionId,
       receiptNumber,
+      confirmationNumber,
       registrationIds,
       waitlistedIds
     };

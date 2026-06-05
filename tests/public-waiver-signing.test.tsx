@@ -104,8 +104,8 @@ describe("online waiver signing", () => {
       </TestProviders>
     );
 
-    expect(screen.queryByPlaceholderText("Search by name, email, phone, or member ID")).not.toBeInTheDocument();
-    expect(screen.getByText(/This waiver will be signed for the eligible person on this account/i)).toBeInTheDocument();
+    expect(screen.getByText("Who is this waiver for?")).toBeInTheDocument();
+    expect(screen.getByText(/Only household members you can manage are shown here/i)).toBeInTheDocument();
     await user.type(screen.getByLabelText("Signer name"), "Maya Patel");
     await user.type(screen.getByPlaceholderText("Type full legal name"), "Maya Patel");
     const checkboxes = screen.getAllByRole("checkbox");
@@ -202,6 +202,38 @@ describe("online waiver signing", () => {
     );
 
     expect(screen.getByRole("link", { name: "Sign Waiver" })).toHaveAttribute("href", expect.stringContaining("/p/summit/waivers/"));
+    expect(screen.getByRole("link", { name: "Sign Waiver" })).toHaveAttribute("href", expect.stringContaining("returnTo="));
+  });
+
+  it("returns to checkout after successful waiver signing when returnTo is provided", async () => {
+    const user = userEvent.setup();
+    const template = waiverTemplates.find((entry) => entry.id === "wtpl_general");
+    const version = waiverTemplateVersions.find((entry) => entry.id === "wver_general_v2");
+    if (!template || !version) throw new Error("Missing waiver fixtures");
+    setCustomerSessionCookie("cust_001", "maya.patel@example.com");
+
+    render(
+      <TestProviders>
+        <WaiverSigningForm
+          orgSlug="summit"
+          template={template}
+          version={version}
+          mode="account"
+          defaultCustomerId="cust_001"
+          returnTo="/p/summit/checkout?step=3"
+        />
+      </TestProviders>
+    );
+
+    await user.type(screen.getByLabelText("Signer name"), "Maya Patel");
+    await user.type(screen.getByPlaceholderText("Type full legal name"), "Maya Patel");
+    const checkboxes = screen.getAllByRole("checkbox");
+    for (const checkbox of checkboxes) {
+      await user.click(checkbox);
+    }
+    await user.click(screen.getByRole("button", { name: "Submit Waiver" }));
+
+    expect(push).toHaveBeenCalledWith("/p/summit/checkout?step=3");
   });
 
   it("preserves immutable signed waiver snapshots across versions", async () => {

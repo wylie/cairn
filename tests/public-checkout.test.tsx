@@ -44,6 +44,27 @@ describe("online checkout", () => {
     );
     expect(screen.getByTestId("online-checkout-page")).toBeInTheDocument();
     expect(screen.getByText("Online Registration & Checkout")).toBeInTheDocument();
+    expect(screen.getAllByText("Select Program").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Select Participant").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Eligibility Check").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Waiver Validation").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Review Cart").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Checkout").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Confirmation").length).toBeGreaterThan(0);
+  });
+
+  it("keeps public checkout payment methods customer-safe", () => {
+    render(
+      <PublicTestProviders>
+        <OnlineCheckout orgSlug="summit" initialStep={5} />
+      </PublicTestProviders>
+    );
+
+    expect(screen.getByText("Card")).toBeInTheDocument();
+    expect(screen.getByText("Gift Card")).toBeInTheDocument();
+    expect(screen.getByText("Account Credit")).toBeInTheDocument();
+    expect(screen.queryByText("Cash")).not.toBeInTheDocument();
+    expect(screen.queryByText("Comp")).not.toBeInTheDocument();
   });
 
   it("supports mixed carts with membership purchase and adult registration", async () => {
@@ -84,6 +105,7 @@ describe("online checkout", () => {
     });
 
     expect(result?.ok).toBe(true);
+    expect(result?.confirmationNumber).toBeTruthy();
     expect(result?.receiptNumber).toBeTruthy();
     expect(state.transactions[0]?.receiptNumber).toBe(result?.receiptNumber);
     expect(state.transactions[0]?.items.some((item) => item.type === "program-registration")).toBe(true);
@@ -138,6 +160,44 @@ describe("online checkout", () => {
     expect(result?.ok).toBe(true);
     expect(state.registrations.some((entry) => entry.customerId === "cust_003" && entry.sessionId === "sess_001")).toBe(true);
     expect(state.registrations.some((entry) => entry.customerId === "cust_004" && entry.sessionId === "sess_001")).toBe(true);
+  });
+
+  it("rejects unauthorized household participants in public checkout", async () => {
+    let state: ReturnType<typeof useCustomerState> | null = null;
+    function Probe() {
+      state = useCustomerState();
+      return null;
+    }
+    render(
+      <PublicTestProviders>
+        <Probe />
+      </PublicTestProviders>
+    );
+    if (!state) throw new Error("Missing state");
+
+    await act(async () => {
+      state!.signWaiverForCustomer({
+        customerId: "cust_005",
+        templateId: "wtpl_general",
+        typedName: "Dana Daypass",
+        signedByName: "Dana Daypass",
+        source: "online"
+      });
+    });
+
+    let result: ReturnType<typeof state.completePublicCheckout> | undefined;
+    await act(async () => {
+      result = state!.completePublicCheckout({
+        purchaserCustomerId: "cust_001",
+        authorizedParticipantIds: ["cust_001"],
+        paymentType: "card",
+        items: [{ kind: "session", sessionId: "sess_001", participantCustomerId: "cust_005" }],
+        emailReceipt: true
+      });
+    });
+
+    expect(result?.ok).toBe(false);
+    expect(result?.message).toMatch(/not available for this account/i);
   });
 
   it("routes full sessions to waitlist", async () => {

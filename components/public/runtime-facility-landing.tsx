@@ -1,49 +1,26 @@
-import type { Metadata } from "next";
+"use client";
+
 import Link from "next/link";
-import { getOrganizationForPublic, getPublicPrograms } from "@/lib/public-programs";
-import { RuntimeFacilityLanding } from "@/components/public/runtime-facility-landing";
 import { data } from "@/lib/data";
+import { resolveRuntimeOrganizationBySlugClient } from "@/lib/platform-admin/registry";
 
-export async function generateMetadata({
-  params
-}: {
-  params: Promise<{ orgSlug: string }>;
-}): Promise<Metadata> {
-  const { orgSlug } = await params;
-  const org = getOrganizationForPublic(orgSlug);
-  const orgName = org?.name ?? "Cairn Facility";
-  const title = `${orgName} | Facility Portal`;
-  const description = `Explore ${orgName} programs, memberships, and customer portal access.`;
-
-  return {
-    title,
-    description,
-    alternates: { canonical: `https://cairn.example.com/f/${orgSlug}` },
-    openGraph: { title, description },
-    twitter: { card: "summary_large_image", title, description },
-    robots: { index: true, follow: true }
-  };
-}
-
-export default async function FacilityLandingPage({
-  params
-}: {
-  params: Promise<{ orgSlug: string }>;
-}) {
-  const { orgSlug } = await params;
-  const org = getOrganizationForPublic(orgSlug);
+export function RuntimeFacilityLanding({ orgSlug }: { orgSlug: string }) {
+  const org = resolveRuntimeOrganizationBySlugClient(orgSlug);
 
   if (!org) {
-    return <RuntimeFacilityLanding orgSlug={orgSlug} />;
+    return (
+      <main className="mx-auto max-w-5xl p-6">
+        <h1 className="text-2xl font-semibold">Facility not found</h1>
+      </main>
+    );
   }
 
   const orgLocations = (data.locations ?? []).filter((entry) => entry.organizationId === org.id && entry.active !== false);
-  const featuredPrograms = getPublicPrograms(orgSlug).slice(0, 3);
   const primaryLocation = orgLocations[0];
-  const contactEmail = org.slug === "summit" ? "ops@summitrec.co" : "hello@riverbendrec.co";
+  const contactEmail = org.seoDescription?.includes("@") ? org.seoDescription : org.ownerEmail ?? "hello@cairn.example.com";
   const contactPhone = primaryLocation?.phone ?? "(212) 555-1000";
-  const brandPrimary = org.slug === "summit" ? "#0E9AC8" : "#2563EB";
-  const brandSecondary = org.slug === "summit" ? "#1F2937" : "#1E3A8A";
+  const brandPrimary = org.primaryColor ?? "#0E9AC8";
+  const brandSecondary = org.secondaryColor ?? "#1F2937";
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-white text-slate-900">
@@ -61,7 +38,7 @@ export default async function FacilityLandingPage({
             <h1 className="text-3xl font-semibold md:text-4xl">{org.name}</h1>
           </div>
           <p className="mt-3 max-w-3xl text-slate-600">
-            Public facility entry for programs, memberships, waivers, and customer access.
+            {org.description ?? "Public facility entry for programs, memberships, waivers, and customer access."}
           </p>
           <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
             <div className="rounded-md border border-slate-200 p-2">
@@ -78,7 +55,7 @@ export default async function FacilityLandingPage({
             </div>
             <div className="rounded-md border border-slate-200 p-2">
               <dt className="text-slate-500">Main location</dt>
-              <dd className="font-medium">{primaryLocation?.name ?? "Main location"}</dd>
+              <dd className="font-medium">{primaryLocation?.name ?? org.primaryLocationName ?? "Main location"}</dd>
             </div>
           </dl>
           <div className="mt-6 flex flex-wrap gap-3">
@@ -95,38 +72,6 @@ export default async function FacilityLandingPage({
               Sign Waiver
             </Link>
           </div>
-        </section>
-
-        <section className="grid gap-4 lg:grid-cols-2">
-          <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-semibold">Locations</h2>
-            <div className="mt-3 space-y-3">
-              {orgLocations.map((location) => (
-                <div key={location.id} className="rounded-lg border border-slate-200 p-3 text-sm">
-                  <p className="font-medium">{location.name}</p>
-                  <p className="text-slate-600">
-                    {location.addressLine1}, {location.city}, {location.state}
-                  </p>
-                  <p className="text-slate-600">{location.phone}</p>
-                </div>
-              ))}
-            </div>
-          </article>
-          <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-semibold">Upcoming Programs</h2>
-            <div className="mt-3 space-y-3">
-              {featuredPrograms.length === 0 ? (
-                <p className="text-sm text-slate-600">No published programs yet.</p>
-              ) : (
-                featuredPrograms.map((program) => (
-                  <div key={program.id} className="rounded-lg border border-slate-200 p-3 text-sm">
-                    <p className="font-medium">{program.title}</p>
-                    <p className="text-slate-600">{program.description}</p>
-                  </div>
-                ))
-              )}
-            </div>
-          </article>
         </section>
       </main>
     </div>

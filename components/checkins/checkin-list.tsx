@@ -18,7 +18,7 @@ import { buildCustomerDetailHref } from "@/lib/navigation/detail-navigation";
 import { formatDateWithAge, formatShortDate, formatTime } from "@/lib/format/date";
 
 export function CheckInList() {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const searchParams = useSearchParams();
   const currentSearch = searchParams?.toString?.() ?? "";
   const {

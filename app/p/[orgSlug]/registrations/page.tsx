@@ -9,7 +9,8 @@ import { CustomerPortalContainer } from "@/components/portal/customer-portal-con
 import { formatDateTime } from "@/lib/format/date";
 
 export default function CustomerPortalRegistrationsPage() {
-  const { orgSlug } = useParams<{ orgSlug: string }>();
+  const params = useParams<{ orgSlug: string }>();
+  const orgSlug = params?.orgSlug ?? "summit";
   const { visibleCustomerIds, registrations, sessions, programs } = useCustomerPortalData();
   const rows = registrations
     .filter((entry) => visibleCustomerIds.includes(entry.customerId))

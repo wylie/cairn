@@ -314,7 +314,25 @@ export function SettingsStateProvider({ children }: { children: React.ReactNode 
       organizationId: activeOrgId,
       facilityName: tenant?.organizationName ?? defaultSettings.facilityProfile.facilityName
     },
-    locations: defaultSettings.locations.filter((entry) => entry.organizationId === activeOrgId)
+    locations: (() => {
+      const seededLocations = defaultSettings.locations.filter((entry) => entry.organizationId === activeOrgId);
+      if (seededLocations.length > 0) return seededLocations;
+      if (!tenant?.organizationId) return [];
+      return tenant.allowedLocations.map((entry, index) => ({
+        id: entry.id,
+        organizationId: tenant.organizationId,
+        name: entry.name,
+        addressLine1: "",
+        city: "",
+        state: "",
+        postalCode: "",
+        phone: defaultSettings.facilityProfile.phone,
+        timezone: defaultSettings.facilityProfile.timezone,
+        active: true,
+        isDefault: index === 0,
+        capacity: 180
+      }));
+    })()
   };
 
   const [settings, setSettings] = useState<SettingsStateSnapshot>(() => {

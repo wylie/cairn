@@ -25,6 +25,13 @@ export default function GlobalLoginPage() {
             </div>
           ))}
         </div>
+        <div className="mt-4 rounded-lg border border-dashed p-3 text-sm">
+          <p className="font-medium">Platform administration</p>
+          <p className="mt-1 text-muted-foreground">Use the control plane to provision organizations, templates, and demo facilities.</p>
+          <Link href="/admin/login" className="mt-3 inline-flex min-h-10 items-center rounded-md border px-3 text-sm font-medium hover:bg-secondary">
+            Platform Admin Login
+          </Link>
+        </div>
         <div className="mt-5">
           <Link href="/" className="text-sm text-primary underline underline-offset-4">
             Back to Cairn homepage

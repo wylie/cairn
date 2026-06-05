@@ -23,7 +23,9 @@ function daysBetween(start: Date, end: Date) {
 }
 
 export default function CustomerPortalMembershipDetailPage() {
-  const { orgSlug, membershipId } = useParams<{ orgSlug: string; membershipId: string }>();
+  const params = useParams<{ orgSlug: string; membershipId: string }>();
+  const orgSlug = params?.orgSlug ?? "summit";
+  const membershipId = params?.membershipId ?? "";
   const {
     memberships,
     customerAccessRecords,

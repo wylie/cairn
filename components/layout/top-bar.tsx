@@ -8,13 +8,17 @@ import { useCustomerState } from "@/lib/state/customer-state";
 import { useSettingsState } from "@/lib/state/settings-state";
 import { ActiveStaffIndicator } from "@/components/staff/active-staff-indicator";
 import { data } from "@/lib/data";
+import { getRuntimeOrganizationsClient } from "@/lib/platform-admin/registry";
 import { Button } from "@/components/ui/button";
 import { getAllowedOrgSlugsFromSessionCookie, getCurrentOrgSlugClient } from "@/lib/tenant/client";
 import { parseOrgSlugFromPathname } from "@/lib/tenant/path";
 
 function TopBarInner() {
   const pathname = usePathname() ?? "";
-  const organizations = data.organizations;
+  const organizations = useMemo(
+    () => (typeof document !== "undefined" ? getRuntimeOrganizationsClient() : data.organizations),
+    []
+  );
   const fallbackSlug = parseOrgSlugFromPathname(pathname) ?? organizations[0]?.slug ?? "summit";
   const [currentSlug, setCurrentSlug] = useState(fallbackSlug);
   const [allowedOrgSlugs, setAllowedOrgSlugs] = useState<string[]>(organizations.map((entry) => entry.slug));

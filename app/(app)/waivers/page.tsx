@@ -79,7 +79,7 @@ export default function WaiversPage() {
   const pathname = usePathname() ?? "";
   const searchParams = useSearchParams();
   const orgSlug = pathname.split("/").filter(Boolean)[1] ?? "summit";
-  const statusFilter = searchParams?.get("status");
+  const statusFilter = searchParams?.get?.("status");
   const { activeStaff } = useWorkstationState();
   const {
     waiverTemplates,

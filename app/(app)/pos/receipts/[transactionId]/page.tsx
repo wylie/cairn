@@ -13,7 +13,8 @@ import { getLocationName } from "@/lib/public-programs";
 import { formatCurrency } from "@/lib/transactions";
 
 export default function ReceiptDetailPage() {
-  const { transactionId } = useParams<{ transactionId: string }>();
+  const params = useParams<{ transactionId: string }>();
+  const transactionId = params?.transactionId ?? "";
   const { transactions, refundTransaction, customers } = useCustomerState();
   const { activeStaff, hasPermission } = useWorkstationState();
   const [confirmOpen, setConfirmOpen] = useState(false);

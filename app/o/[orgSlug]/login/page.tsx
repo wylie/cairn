@@ -1,12 +1,12 @@
 "use client";
 
-import { use, useMemo, useState } from "react";
+import { Suspense, use, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export default function StaffOrgLoginPage({
+function StaffOrgLoginContent({
   params
 }: {
   params: Promise<{ orgSlug: string }>;
@@ -14,7 +14,7 @@ export default function StaffOrgLoginPage({
   const { orgSlug } = use(params);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next");
+  const next = searchParams?.get?.("next");
   const isDevelopment = process.env.NODE_ENV !== "production";
   const [email, setEmail] = useState("taylor@summitrec.co");
   const [password, setPassword] = useState("dev1234");
@@ -95,5 +95,17 @@ export default function StaffOrgLoginPage({
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function StaffOrgLoginPage({
+  params
+}: {
+  params: Promise<{ orgSlug: string }>;
+}) {
+  return (
+    <Suspense fallback={<div className="mx-auto flex min-h-screen max-w-md items-center p-4 text-sm text-muted-foreground">Loading staff login…</div>}>
+      <StaffOrgLoginContent params={params} />
+    </Suspense>
   );
 }

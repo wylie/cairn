@@ -28,7 +28,7 @@ function formatLastActive(value?: string) {
 }
 
 export default function StaffPage() {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const searchParams = useSearchParams();
   const currentSearch = searchParams?.toString?.() ?? "";
   const { activeStaff, hasPermission, addStaffMember } = useWorkstationState();

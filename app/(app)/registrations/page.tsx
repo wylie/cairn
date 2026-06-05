@@ -80,7 +80,7 @@ function buildEligibility(
 }
 
 export default function RegistrationsPage() {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const searchParams = useSearchParams();
   const currentSearch = searchParams?.toString?.() ?? "";
   const todayKey = new Date().toISOString().slice(0, 10);
@@ -110,19 +110,19 @@ export default function RegistrationsPage() {
   const [programFilter, setProgramFilter] = useState("all");
   const [instructorFilter, setInstructorFilter] = useState("all");
   const [locationFilter, setLocationFilter] = useState("all");
-  const [dateFrom, setDateFrom] = useState(searchParams?.get("dateFrom") ?? "2026-05-01");
-  const [dateTo, setDateTo] = useState(searchParams?.get("dateTo") ?? "2026-06-30");
+  const [dateFrom, setDateFrom] = useState(searchParams?.get?.("dateFrom") ?? "2026-05-01");
+  const [dateTo, setDateTo] = useState(searchParams?.get?.("dateTo") ?? "2026-06-30");
   const [ageGroup, setAgeGroup] = useState<"all" | "youth" | "adult">("all");
   const [availableOnly, setAvailableOnly] = useState(false);
   const [waitlistOnly, setWaitlistOnly] = useState(false);
-  const [registrationFilter, setRegistrationFilter] = useState<RegistrationFilter>((searchParams?.get("status") as RegistrationFilter) || "all");
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(searchParams?.get("sessionId"));
+  const [registrationFilter, setRegistrationFilter] = useState<RegistrationFilter>((searchParams?.get?.("status") as RegistrationFilter) || "all");
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(searchParams?.get?.("sessionId") ?? null);
   const [selectedRegistrationId, setSelectedRegistrationId] = useState<string | null>(null);
   const [transferTargetByRegistration, setTransferTargetByRegistration] = useState<Record<string, string>>({});
   const [noteDraftByRegistration, setNoteDraftByRegistration] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState("");
 
-  const createdFilter = searchParams?.get("created");
+  const createdFilter = searchParams?.get?.("created");
 
   const activeMembershipCustomerIds = useMemo(() => {
     return new Set(

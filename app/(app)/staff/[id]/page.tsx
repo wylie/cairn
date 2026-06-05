@@ -7,10 +7,10 @@ import { buildCustomerDetailHref } from "@/lib/navigation/detail-navigation";
 
 export default function StaffDetailRedirectPage() {
   const params = useParams<{ id: string }>();
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const router = useRouter();
   const searchParams = useSearchParams();
-  const customerId = params.id;
+  const customerId = params?.id;
   const currentSearch = searchParams?.toString?.() ?? "";
   const destinationHref = customerId
     ? `${buildCustomerDetailHref({

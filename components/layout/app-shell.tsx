@@ -6,6 +6,7 @@ import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { TopBar } from "@/components/layout/top-bar";
 import { DevPerfMonitor } from "@/components/dev/dev-perf-monitor";
 import { data } from "@/lib/data";
+import { getRuntimeOrganizationsClient } from "@/lib/platform-admin/registry";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import type { StaffPermission } from "@/types/domain";
 import { getCurrentOrgSlugClient } from "@/lib/tenant/client";
@@ -13,7 +14,10 @@ import { parseOrgSlugFromPathname } from "@/lib/tenant/path";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
-  const organizations = data.organizations;
+  const organizations = useMemo(
+    () => (typeof document !== "undefined" ? getRuntimeOrganizationsClient() : data.organizations),
+    []
+  );
   const fallbackSlug = parseOrgSlugFromPathname(pathname) ?? organizations[0]?.slug ?? "summit";
   const [currentSlug, setCurrentSlug] = useState(fallbackSlug);
   useEffect(() => {

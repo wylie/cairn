@@ -19,7 +19,8 @@ const TABS = [
 ] as const;
 
 export default function PublicStorePage() {
-  const { orgSlug } = useParams<{ orgSlug: string }>();
+  const params = useParams<{ orgSlug: string }>();
+  const orgSlug = params?.orgSlug ?? "summit";
   const router = useRouter();
   const { accessProducts, primaryCustomerId } = useCustomerPortalData();
   const { addProductItem } = usePublicCart();

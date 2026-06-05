@@ -17,7 +17,8 @@ import { formatDate, formatDateTime } from "@/lib/format/date";
 import { formatHouseholdRelationship, formatHouseholdRole, getHouseholdHealthLabel, getHouseholdHealthStatus } from "@/lib/households/presentation";
 
 export default function CustomerPortalHouseholdPage() {
-  const { orgSlug } = useParams<{ orgSlug: string }>();
+  const params = useParams<{ orgSlug: string }>();
+  const orgSlug = params?.orgSlug ?? "summit";
   const {
     primaryCustomerId,
     households,

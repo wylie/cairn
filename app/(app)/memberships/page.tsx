@@ -53,7 +53,7 @@ function statusTone(label: ReturnType<typeof statusLabel>): "success" | "warning
 }
 
 export default function MembershipsWorkspacePage() {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const searchParams = useSearchParams();
   const currentSearch = searchParams?.toString?.() ?? "";
   const { customers, customerAccessRecords, accessProducts, updateCustomerAccessRecord, households, householdMembers, operationsAlerts } = useCustomerState();

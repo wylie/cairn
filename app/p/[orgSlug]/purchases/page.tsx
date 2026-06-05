@@ -13,7 +13,8 @@ import { useCustomerPortalData } from "@/lib/portal/use-customer-portal-data";
 import { CustomerPortalContainer } from "@/components/portal/customer-portal-container";
 
 export default function CustomerPortalPurchasesPage() {
-  const { orgSlug } = useParams<{ orgSlug: string }>();
+  const params = useParams<{ orgSlug: string }>();
+  const orgSlug = params?.orgSlug ?? "summit";
   const { visibleCustomerIds, transactions, customers } = useCustomerPortalData();
   const customerNameById = new Map(customers.map((entry) => [entry.id, `${entry.firstName} ${entry.lastName}`]));
   const purchases = transactions

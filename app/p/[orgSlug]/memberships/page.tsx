@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { CustomerPortalContainer } from "@/components/portal/customer-portal-container";
 
 export default function CustomerPortalMembershipsPage() {
-  const { orgSlug } = useParams<{ orgSlug: string }>();
+  const params = useParams<{ orgSlug: string }>();
+  const orgSlug = params?.orgSlug ?? "summit";
   const { visibleCustomerIds, customerAccessRecords, accessProducts, memberships } = useCustomerPortalData();
   const records = customerAccessRecords.filter((entry) => visibleCustomerIds.includes(entry.customerId) && entry.type === "membership");
 

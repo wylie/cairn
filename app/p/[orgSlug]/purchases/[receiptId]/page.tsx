@@ -12,7 +12,9 @@ import { getLocationName } from "@/lib/public-programs";
 import { formatCurrency } from "@/lib/transactions";
 
 export default function CustomerPortalReceiptDetailPage() {
-  const { receiptId, orgSlug } = useParams<{ receiptId: string; orgSlug: string }>();
+  const params = useParams<{ receiptId: string; orgSlug: string }>();
+  const receiptId = params?.receiptId ?? "";
+  const orgSlug = params?.orgSlug ?? "summit";
   const { transactions, visibleCustomerIds, customers } = useCustomerPortalData();
   const receipt = transactions.find((entry) => entry.id === receiptId);
 

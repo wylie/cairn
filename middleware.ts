@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { AUTH_COOKIE, decodeSession } from "@/lib/auth/session";
 import { resolveOrganizationBySlug } from "@/lib/tenant/resolve";
+import { ORG_REGISTRY_COOKIE, parseProvisionedOrganizationsFromRequestCookie } from "@/lib/platform-admin/registry";
 
 const PROTECTED_PREFIXES = [
   "/dashboard",
@@ -21,6 +22,12 @@ function isProtected(pathname: string) {
   return PROTECTED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
+function orgExistsForRequest(req: NextRequest, slug: string) {
+  if (resolveOrganizationBySlug(slug)) return true;
+  const provisioned = parseProvisionedOrganizationsFromRequestCookie(req.cookies.get(ORG_REGISTRY_COOKIE)?.value);
+  return provisioned.some((entry) => entry.slug === slug);
+}
+
 export function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
@@ -34,6 +41,9 @@ export function middleware(req: NextRequest) {
 
   if (pathname === "/login") {
     if (session) {
+      if (session.kind === "platform_admin") {
+        return NextResponse.redirect(new URL("/admin", req.url));
+      }
       if (session.kind === "customer") {
         const org = session.organizationSlugs[0] ?? "summit";
         return NextResponse.redirect(new URL(`/p/${org}/account/dashboard`, req.url));
@@ -49,9 +59,27 @@ export function middleware(req: NextRequest) {
 
   if (pathname === "/org-chooser") {
     if (!session) return NextResponse.redirect(new URL("/login", req.url));
+    if (session.kind === "platform_admin") {
+      return NextResponse.redirect(new URL("/admin", req.url));
+    }
     if (session.kind === "customer") {
       const org = session.organizationSlugs[0] ?? "summit";
       return NextResponse.redirect(new URL(`/p/${org}/account/dashboard`, req.url));
+    }
+    return NextResponse.next();
+  }
+
+  if (pathname.startsWith("/admin")) {
+    if (pathname === "/admin/login") {
+      if (session?.kind === "platform_admin") {
+        return NextResponse.redirect(new URL("/admin", req.url));
+      }
+      return NextResponse.next();
+    }
+    if (session?.kind !== "platform_admin") {
+      const loginUrl = new URL("/admin/login", req.url);
+      loginUrl.searchParams.set("next", pathname + search);
+      return NextResponse.redirect(loginUrl);
     }
     return NextResponse.next();
   }
@@ -65,7 +93,7 @@ export function middleware(req: NextRequest) {
     const slug = parts[1];
     const rest = `/${parts.slice(2).join("/")}` || "/dashboard";
 
-    if (!resolveOrganizationBySlug(slug)) {
+    if (!orgExistsForRequest(req, slug)) {
       return NextResponse.redirect(new URL("/no-access", req.url));
     }
 
@@ -80,7 +108,7 @@ export function middleware(req: NextRequest) {
       return NextResponse.next();
     }
 
-    if (!session || session.kind === "customer") {
+    if (!session || session.kind === "customer" || session.kind === "platform_admin") {
       const loginUrl = new URL(`/o/${slug}/login`, req.url);
       loginUrl.searchParams.set("next", pathname + search);
       return NextResponse.redirect(loginUrl);
@@ -101,7 +129,7 @@ export function middleware(req: NextRequest) {
     const parts = pathname.split("/").filter(Boolean);
     const slug = parts[1];
     const section = parts[2] ?? "";
-    if (!resolveOrganizationBySlug(slug)) {
+    if (!orgExistsForRequest(req, slug)) {
       return NextResponse.redirect(new URL("/no-access", req.url));
     }
     const isPublicProgramsRoute =

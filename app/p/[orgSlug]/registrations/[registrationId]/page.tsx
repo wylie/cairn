@@ -13,7 +13,9 @@ import { getLocationName } from "@/lib/public-programs";
 import { formatCurrency } from "@/lib/transactions";
 
 export default function CustomerPortalRegistrationDetailPage() {
-  const { orgSlug, registrationId } = useParams<{ orgSlug: string; registrationId: string }>();
+  const params = useParams<{ orgSlug: string; registrationId: string }>();
+  const orgSlug = params?.orgSlug ?? "summit";
+  const registrationId = params?.registrationId ?? "";
   const {
     registrations,
     sessions,

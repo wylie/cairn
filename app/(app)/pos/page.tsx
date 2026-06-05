@@ -25,7 +25,7 @@ import { mockPaymentProvider, type PaymentMethod } from "@/lib/payments/provider
 import { buildCustomerDetailHref } from "@/lib/navigation/detail-navigation";
 
 export default function PosPage() {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const searchParams = useSearchParams();
   const currentSearch = searchParams?.toString?.() ?? "";
   const {

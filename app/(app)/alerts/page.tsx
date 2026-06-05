@@ -49,10 +49,10 @@ export default function AlertsPage() {
   const { activeStaff } = useWorkstationState();
 
   const [feedback, setFeedback] = useState("");
-  const [severityFilter, setSeverityFilter] = useState(searchParams?.get("severity") ?? "all");
-  const [typeFilter, setTypeFilter] = useState(searchParams?.get("type") ?? "all");
-  const [statusFilter, setStatusFilter] = useState(searchParams?.get("status") ?? "open");
-  const [taskStatusFilter, setTaskStatusFilter] = useState(searchParams?.get("taskStatus") ?? "all");
+  const [severityFilter, setSeverityFilter] = useState(searchParams?.get?.("severity") ?? "all");
+  const [typeFilter, setTypeFilter] = useState(searchParams?.get?.("type") ?? "all");
+  const [statusFilter, setStatusFilter] = useState(searchParams?.get?.("status") ?? "open");
+  const [taskStatusFilter, setTaskStatusFilter] = useState(searchParams?.get?.("taskStatus") ?? "all");
 
   const filteredAlerts = useMemo(
     () =>
@@ -69,7 +69,7 @@ export default function AlertsPage() {
     () =>
       operationsTasks.filter((task) => {
         if (taskStatusFilter !== "all" && task.status !== taskStatusFilter) return false;
-        if (searchParams?.get("due") === "today") {
+        if (searchParams?.get?.("due") === "today") {
           const todayKey = new Date().toISOString().slice(0, 10);
           return task.dueDate === todayKey;
         }

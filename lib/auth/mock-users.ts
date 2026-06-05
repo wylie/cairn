@@ -10,9 +10,21 @@ export interface MockAuthUser {
   role: StaffRole;
   organizationSlugs: string[];
   locationIds: string[];
+  kind?: "staff" | "platform_admin";
 }
 
 export const mockAuthUsers: MockAuthUser[] = [
+  {
+    id: "auth_platform_admin",
+    email: "platform@cairn.app",
+    password: "dev1234",
+    firstName: "Cairn",
+    lastName: "Platform",
+    role: "owner",
+    organizationSlugs: [],
+    locationIds: [],
+    kind: "platform_admin"
+  },
   {
     id: "auth_owner_summit",
     staffId: "staff_001",

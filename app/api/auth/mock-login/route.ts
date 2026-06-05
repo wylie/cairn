@@ -12,8 +12,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, message: "Invalid email or password." }, { status: 401 });
   }
 
-  const response = NextResponse.json({ ok: true, user: { id: user.id, email: user.email, organizations: user.organizationSlugs } });
-  response.cookies.set(AUTH_COOKIE, encodeSession({ kind: "staff", userId: user.id, email: user.email, organizationSlugs: user.organizationSlugs }), {
+  const kind = user.kind ?? "staff";
+  const response = NextResponse.json({ ok: true, user: { id: user.id, email: user.email, organizations: user.organizationSlugs, kind } });
+  response.cookies.set(AUTH_COOKIE, encodeSession({ kind, userId: user.id, email: user.email, organizationSlugs: user.organizationSlugs }), {
     path: "/",
     sameSite: "lax",
     secure: false,

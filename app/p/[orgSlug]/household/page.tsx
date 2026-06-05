@@ -141,6 +141,14 @@ export default function CustomerPortalHouseholdPage() {
       occurredAt: entry.completedAt
     }))
   ].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+  const activeMembershipRows = memberRows.filter((row) => row.access);
+  const waiverIssues = memberRows.filter((row) => row.waiver?.status !== "valid");
+  const healthReasons = [
+    waiverIssues.length > 0 ? `${waiverIssues.length} member${waiverIssues.length === 1 ? "" : "s"} need waiver attention` : null,
+    expiredMemberships.length > 0 ? `${expiredMemberships.length} expired membership${expiredMemberships.length === 1 ? "" : "s"}` : null,
+    outstandingBalance > 0 ? `${formatCurrency(outstandingBalance)} outstanding balance` : null,
+    missingEmergencyContacts.length > 0 ? `${missingEmergencyContacts.length} missing emergency contact${missingEmergencyContacts.length === 1 ? "" : "s"}` : null
+  ].filter((entry): entry is string => Boolean(entry));
 
   return (
     <CustomerPortalContainer>
@@ -185,6 +193,12 @@ export default function CustomerPortalHouseholdPage() {
             <MetricCard label="Household spending this year" value={formatCurrency(householdMetrics.spendingThisYear)} />
           </div>
           <div className="rounded-md border bg-secondary/20 p-3">
+            <p className="font-medium">Household health</p>
+            <p className="text-sm text-muted-foreground">
+              {getHouseholdHealthLabel(householdHealth)}{healthReasons.length > 0 ? ` · ${healthReasons.join(" · ")}` : ""}
+            </p>
+          </div>
+          <div className="rounded-md border bg-secondary/20 p-3">
             <p><span className="text-muted-foreground">Primary account holder:</span> {primaryAccountHolder ? `${primaryAccountHolder.customer.firstName} ${primaryAccountHolder.customer.lastName}` : "Not set"}</p>
             <p><span className="text-muted-foreground">Household members:</span> {memberRows.length}</p>
           </div>
@@ -227,6 +241,50 @@ export default function CustomerPortalHouseholdPage() {
             <Button variant="secondary" className="h-9">Remove household member (Soon)</Button>
             <Button variant="secondary" className="h-9">Invite guardian (Soon)</Button>
           </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card>
+              <CardHeader><CardTitle>Membership Coverage</CardTitle></CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                {activeMembershipRows.length === 0 ? <p className="text-muted-foreground">No memberships attached to this household.</p> : null}
+                {activeMembershipRows.map((row) => (
+                  <div key={row.customer.id} className="rounded-md border p-3">
+                    <p className="font-medium">{row.customer.firstName} {row.customer.lastName}</p>
+                    <p className="text-muted-foreground">
+                      {row.access?.type === "household-membership" ? "Household membership" : "Individual membership"} · {row.access?.status ?? "No status"}
+                    </p>
+                    <p className="text-muted-foreground">
+                      Renewal {row.access?.expirationDate ? formatDate(row.access.expirationDate) : "Not set"}
+                    </p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle>Waiver Dashboard</CardTitle></CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                {memberRows.map((row) => (
+                  <div key={row.customer.id} className="rounded-md border p-3">
+                    <p className="font-medium">{row.customer.firstName} {row.customer.lastName}</p>
+                    <p className="text-muted-foreground">
+                      {row.waiver?.status ? row.waiver.status.replaceAll("_", " ") : "missing"}{row.waiver?.expiresAt ? ` · Expires ${formatDate(row.waiver.expiresAt)}` : ""}
+                    </p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+          <Card>
+            <CardHeader><CardTitle>Upcoming Programs</CardTitle></CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              {memberRows.every((row) => row.upcomingProgramTitles.length === 0) ? <p className="text-muted-foreground">No upcoming programs for this household.</p> : null}
+              {memberRows.map((row) => (
+                <div key={row.customer.id} className="rounded-md border p-3">
+                  <p className="font-medium">{row.customer.firstName} {row.customer.lastName}</p>
+                  <p className="text-muted-foreground">{row.upcomingProgramTitles.length ? row.upcomingProgramTitles.join(", ") : "No upcoming programs"}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader><CardTitle>Recent Purchases</CardTitle></CardHeader>
             <CardContent className="space-y-2 text-sm">

@@ -37,10 +37,13 @@ describe("customer portal household", () => {
     expect(screen.getByText("Total visits this month")).toBeInTheDocument();
     expect(screen.getByText("Total programs attended")).toBeInTheDocument();
     expect(screen.getByText("Household spending this year")).toBeInTheDocument();
+    expect(screen.getByText("Membership Coverage")).toBeInTheDocument();
+    expect(screen.getByText("Waiver Dashboard")).toBeInTheDocument();
+    expect(screen.getByText("Upcoming Programs")).toBeInTheDocument();
     expect(screen.getByText("Preferred communication:")).toBeInTheDocument();
     expect(screen.getByText("Recent Purchases")).toBeInTheDocument();
     expect(screen.getByText("Household Activity")).toBeInTheDocument();
-    expect(screen.getByText("Sam Noaccess")).toBeInTheDocument();
+    expect(screen.getAllByText("Sam Noaccess").length).toBeGreaterThan(0);
     expect(screen.getAllByLabelText(/(initials avatar|profile photo)/i).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: "Sign waiver" }).length).toBeGreaterThan(0);
   });
@@ -59,7 +62,7 @@ describe("customer portal household", () => {
   });
 
   it("customer without household membership sees safe empty state", () => {
-    setCustomerSession("cust_005");
+    setCustomerSession("cust_staff_001");
     render(
       <TestProviders>
         <CustomerPortalHouseholdPage />

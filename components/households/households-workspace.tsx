@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { PageHeader } from "@/components/shared/page-header";
+import { ContextBackLink } from "@/components/shared/context-back-link";
 import { CustomerAvatar } from "@/components/customers/customer-avatar";
 import { HouseholdAvatar } from "@/components/households/household-avatar";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,17 @@ function buildHouseholdHref(householdId: string, pathname: string, currentSearch
   });
 }
 
+type HouseholdFocusFilter =
+  | "missing-waivers"
+  | "outstanding-balance"
+  | "upcoming-renewals"
+  | "top-visiting"
+  | "recent-activity";
+
+function buildHouseholdWorkspaceHref(focus?: HouseholdFocusFilter) {
+  return focus ? `/households?focus=${focus}` : "/households";
+}
+
 export function HouseholdsWorkspace({
   initialHouseholdId,
   pathname = "/households",
@@ -68,6 +80,9 @@ export function HouseholdsWorkspace({
   } = useCustomerState();
   const { settings } = useSettingsState();
   const { activeStaff } = useWorkstationState();
+  const isDetailPage = pathname.includes("/households/");
+  const queryParams = useMemo(() => new URLSearchParams(currentSearch), [currentSearch]);
+  const focusFilter = (queryParams.get("focus") as HouseholdFocusFilter | null) ?? null;
   const [query, setQuery] = useState("");
   const [feedback, setFeedback] = useState("");
   const [selectedHouseholdId, setSelectedHouseholdId] = useState(initialHouseholdId ?? households[0]?.id ?? "");
@@ -258,8 +273,22 @@ export function HouseholdsWorkspace({
 
   const filteredHouseholds = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return householdRows;
-    return householdRows.filter((row) => {
+    const focusFiltered = householdRows.filter((row) => {
+      if (focusFilter === "missing-waivers") return row.missingWaivers.length > 0;
+      if (focusFilter === "outstanding-balance") return row.outstandingBalance > 0;
+      if (focusFilter === "upcoming-renewals") {
+        return row.activeMemberships.some(
+          (membership) =>
+            Boolean(membership.expirationDate) &&
+            membership.expirationDate! <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+        );
+      }
+      if (focusFilter === "top-visiting") return row.recentVisits.length > 0;
+      if (focusFilter === "recent-activity") return row.recentActivity.length > 0;
+      return true;
+    });
+    if (!normalized) return focusFiltered;
+    return focusFiltered.filter((row) => {
       const haystack = [
         row.household.householdName,
         row.primaryContact ? `${row.primaryContact.firstName} ${row.primaryContact.lastName}` : "",
@@ -267,6 +296,7 @@ export function HouseholdsWorkspace({
         row.household.email ?? "",
         row.household.phone ?? "",
         row.household.defaultAddress ?? "",
+        ...row.activeMemberships.flatMap((entry) => [entry.id, entry.productId, entry.type, entry.status]),
         ...row.members.flatMap((entry) => [
           `${entry.customer.firstName} ${entry.customer.lastName}`,
           entry.customer.memberId,
@@ -278,7 +308,7 @@ export function HouseholdsWorkspace({
         .toLowerCase();
       return haystack.includes(normalized);
     });
-  }, [householdRows, query]);
+  }, [focusFilter, householdRows, query]);
 
   const selected = filteredHouseholds.find((row) => row.household.id === selectedHouseholdId) ?? filteredHouseholds[0];
   const householdHealthCards = selected
@@ -301,22 +331,79 @@ export function HouseholdsWorkspace({
     row.activeMemberships.some((membership) => membership.expirationDate && membership.expirationDate <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10))
   );
   const locationName = selected ? settings.locations.find((entry) => entry.id === selected.household.locationId)?.name ?? selected.household.locationId : "";
+  const healthReasons = selected
+    ? [
+        selected.missingWaivers.length > 0 ? `${selected.missingWaivers.length} member${selected.missingWaivers.length === 1 ? "" : "s"} missing waivers` : null,
+        selected.expiredMemberships.length > 0 ? `${selected.expiredMemberships.length} expired membership${selected.expiredMemberships.length === 1 ? "" : "s"}` : null,
+        selected.outstandingBalance > 0 ? `Outstanding balance ${formatCurrency(selected.outstandingBalance)}` : null,
+        selected.incompleteProfiles.length > 0 ? `${selected.incompleteProfiles.length} incomplete profile${selected.incompleteProfiles.length === 1 ? "" : "s"}` : null,
+        selected.missingEmergencyContacts.length > 0
+          ? `${selected.missingEmergencyContacts.length} member${selected.missingEmergencyContacts.length === 1 ? "" : "s"} missing emergency contacts`
+          : null
+      ].filter((entry): entry is string => Boolean(entry))
+    : [];
+  const jumpLinks = [
+    { id: "household-members-section", label: "Members" },
+    { id: "household-relationships-section", label: "Relationships" },
+    { id: "household-memberships-section", label: "Memberships" },
+    { id: "household-waivers-section", label: "Waivers" },
+    { id: "household-registrations-section", label: "Programs" },
+    { id: "household-checkin-section", label: "Check-In" },
+    { id: "household-billing-section", label: "Billing" },
+    { id: "household-purchases-section", label: "Purchases" },
+    { id: "household-communications-section", label: "Communications" },
+    { id: "household-timeline-section", label: "Timeline" }
+  ];
 
   return (
     <section className="space-y-4" data-testid="households-workspace">
+      {isDetailPage ? (
+        currentSearch ? (
+          <ContextBackLink
+            fallbackHref="/households"
+            fallbackLabel="Households"
+            className="inline-flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          />
+        ) : (
+          <Link
+            href="/households"
+            className="inline-flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            ← Back to Households
+          </Link>
+        )
+      ) : null}
       <PageHeader
-        title="Households"
-        description="Manage family units, shared memberships, waivers, billing, registrations, check-ins, and communication from one operational workspace."
+        title={isDetailPage && selected ? selected.household.householdName : "Households"}
+        description={
+          isDetailPage && selected
+            ? "Household detail dashboard for memberships, waivers, registrations, billing, communications, check-ins, and shared activity."
+            : "Manage family units, shared memberships, waivers, billing, registrations, check-ins, and communication from one operational workspace."
+        }
       />
+
+      {isDetailPage ? (
+        <div className="flex flex-wrap gap-2" aria-label="household-jump-links">
+          {jumpLinks.map((link) => (
+            <a
+              key={link.id}
+              href={`#${link.id}`}
+              className="rounded-full border px-3 py-1 text-xs font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground"
+            >
+              {link.label}
+            </a>
+          ))}
+        </div>
+      ) : null}
 
       {feedback ? <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{feedback}</p> : null}
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5" aria-label="household-dashboard-widgets">
-        <SummaryCard label="Households Missing Waivers" value={`${householdRows.filter((row) => row.missingWaivers.length > 0).length}`} />
-        <SummaryCard label="Households With Outstanding Balance" value={`${householdRows.filter((row) => row.outstandingBalance > 0).length}`} />
-        <SummaryCard label="Households With Upcoming Renewals" value={`${upcomingRenewals.length}`} />
-        <SummaryCard label="Top Visiting Households" value={topVisitingHouseholds[0]?.household.householdName ?? "No visit data"} />
-        <SummaryCard label="Recent Household Activity" value={householdRows.reduce((sum, row) => sum + row.recentActivity.length, 0).toString()} />
+        <Link href={buildHouseholdWorkspaceHref("missing-waivers")}><SummaryCard label="Households Missing Waivers" value={`${householdRows.filter((row) => row.missingWaivers.length > 0).length}`} interactive /></Link>
+        <Link href={buildHouseholdWorkspaceHref("outstanding-balance")}><SummaryCard label="Households With Outstanding Balance" value={`${householdRows.filter((row) => row.outstandingBalance > 0).length}`} interactive /></Link>
+        <Link href={buildHouseholdWorkspaceHref("upcoming-renewals")}><SummaryCard label="Households With Upcoming Renewals" value={`${upcomingRenewals.length}`} interactive /></Link>
+        <Link href={buildHouseholdWorkspaceHref("top-visiting")}><SummaryCard label="Top Visiting Households" value={topVisitingHouseholds[0]?.household.householdName ?? "No visit data"} interactive /></Link>
+        <Link href={buildHouseholdWorkspaceHref("recent-activity")}><SummaryCard label="Recent Household Activity" value={householdRows.reduce((sum, row) => sum + row.recentActivity.length, 0).toString()} interactive /></Link>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[320px_1fr]">
@@ -331,6 +418,11 @@ export function HouseholdsWorkspace({
               value={query}
               onChange={setQuery}
             />
+            {focusFilter ? (
+              <p className="text-xs text-muted-foreground">
+                Filter applied: {titleCase(focusFilter)}.
+              </p>
+            ) : null}
             <div className="space-y-2">
               {filteredHouseholds.map((row) => (
                 <button
@@ -352,6 +444,9 @@ export function HouseholdsWorkspace({
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {row.household.phone ?? row.household.email ?? "No contact info"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {row.activeMemberships.length > 0 ? `${row.activeMemberships.length} active membership${row.activeMemberships.length === 1 ? "" : "s"}` : "No active memberships"}
                         </p>
                       </div>
                     </div>
@@ -514,13 +609,14 @@ export function HouseholdsWorkspace({
                       <InfoLine label="Expired Memberships" value={String(selected.expiredMemberships.length)} />
                       <InfoLine label="Incomplete Profiles" value={String(selected.incompleteProfiles.length)} />
                       <InfoLine label="Missing Emergency Contacts" value={String(selected.missingEmergencyContacts.length)} />
+                      <InfoLine label="Reasons" value={healthReasons.length > 0 ? healthReasons.join(" · ") : "No household issues detected"} />
                     </InfoCard>
                   </div>
                 </CardContent>
               </Card>
 
               <div className="grid gap-4 xl:grid-cols-2">
-                <SectionCard title="Household Members" ariaLabel="household-members-section">
+                <SectionCard title="Household Members" ariaLabel="household-members-section" id="household-members-section">
                   <div className="space-y-3">
                     {selected.members.map((entry) => {
                       const waiver = selected.missingWaivers.find((row) => row.customer.id === entry.customer.id)?.waiver ?? waivers.find((row) => row.customerId === entry.customer.id);
@@ -581,7 +677,7 @@ export function HouseholdsWorkspace({
                   </div>
                 </SectionCard>
 
-                <SectionCard title="Household Relationships" ariaLabel="household-relationships-section">
+                <SectionCard title="Household Relationships" ariaLabel="household-relationships-section" id="household-relationships-section">
                   <div className="space-y-3">
                     <div className="rounded-lg border p-3">
                       <p className="font-medium">{selected.primaryContact ? `${selected.primaryContact.firstName} ${selected.primaryContact.lastName}` : selected.household.householdName}</p>
@@ -600,7 +696,7 @@ export function HouseholdsWorkspace({
                   </div>
                 </SectionCard>
 
-                <SectionCard title="Household Access" ariaLabel="household-access-section">
+                <SectionCard title="Household Access" ariaLabel="household-access-section" id="household-access-section">
                   <div className="space-y-3">
                     <p>Who can currently enter: {selected.activeMemberships.map((entry) => customers.find((customer) => customer.id === entry.customerId)?.firstName).filter(Boolean).join(", ") || "None"}</p>
                     <p>Who is blocked: {selected.members.filter((entry) => !selected.activeMemberships.some((row) => row.customerId === entry.customer.id || row.coveredCustomerIds?.includes(entry.customer.id))).map((entry) => `${entry.customer.firstName} ${entry.customer.lastName}`).join(", ") || "None"}</p>
@@ -613,7 +709,7 @@ export function HouseholdsWorkspace({
                   </div>
                 </SectionCard>
 
-                <SectionCard title="Household Memberships" ariaLabel="household-memberships-section">
+                <SectionCard title="Household Memberships" ariaLabel="household-memberships-section" id="household-memberships-section">
                   <div className="space-y-3">
                     {selected.activeMemberships.length === 0 ? <p className="text-sm text-muted-foreground">No household memberships found.</p> : null}
                     {selected.activeMemberships.map((membership) => (
@@ -643,7 +739,7 @@ export function HouseholdsWorkspace({
                   </div>
                 </SectionCard>
 
-                <SectionCard title="Household Waivers" ariaLabel="household-waivers-section">
+                <SectionCard title="Household Waivers" ariaLabel="household-waivers-section" id="household-waivers-section">
                   <div className="space-y-3">
                     <div className="grid gap-2 md:grid-cols-2">
                       <SummaryCard label="Current waivers" value={`${selected.members.length - selected.missingWaivers.length}`} compact />
@@ -672,7 +768,7 @@ export function HouseholdsWorkspace({
                   </div>
                 </SectionCard>
 
-                <SectionCard title="Household Check-In" ariaLabel="household-checkin-section">
+                <SectionCard title="Household Check-In" ariaLabel="household-checkin-section" id="household-checkin-section">
                   <div className="space-y-3">
                     <p>Currently in facility: {selected.currentlyIn.length}</p>
                     <p>Already checked in: {selected.currentlyIn.map((entry) => entry.customerName).join(", ") || "No one currently in"}</p>
@@ -698,7 +794,7 @@ export function HouseholdsWorkspace({
                   </div>
                 </SectionCard>
 
-                <SectionCard title="Household Registrations" ariaLabel="household-registrations-section">
+                <SectionCard title="Household Registrations" ariaLabel="household-registrations-section" id="household-registrations-section">
                   <div className="space-y-3">
                     {selected.members.map((entry) => {
                       const rows = selected.upcomingRegistrations.filter((registration) => registration.registration.customerId === entry.customer.id);
@@ -724,11 +820,11 @@ export function HouseholdsWorkspace({
                   </div>
                 </SectionCard>
 
-                <SectionCard title="Household Billing" ariaLabel="household-billing-section">
+                <SectionCard title="Household Billing" ariaLabel="household-billing-section" id="household-billing-section">
                   <div className="space-y-3">
                     <p>Outstanding balances: {formatCurrency(selected.outstandingBalance)}</p>
                     <p>Upcoming renewals: {selected.activeMemberships.filter((entry) => entry.expirationDate).map((entry) => formatDate(entry.expirationDate)).join(", ") || "None"}</p>
-                    <p>Auto-renew settings: Placeholder</p>
+                    <p>Auto-renew settings: Follow household membership renewal policy.</p>
                     <div className="space-y-2">
                       {selected.paymentMethods.length === 0 ? <p className="text-sm text-muted-foreground">No stored payment methods.</p> : null}
                       {selected.paymentMethods.map((method) => (
@@ -749,7 +845,7 @@ export function HouseholdsWorkspace({
                   </div>
                 </SectionCard>
 
-                <SectionCard title="Household Purchase History" ariaLabel="household-purchases-section">
+                <SectionCard title="Household Purchase History" ariaLabel="household-purchases-section" id="household-purchases-section">
                   <div className="space-y-2">
                     {selected.recentPurchases.length === 0 ? <p className="text-sm text-muted-foreground">No household purchases yet.</p> : null}
                     {selected.recentPurchases.slice(0, 8).map((purchase) => (
@@ -765,11 +861,14 @@ export function HouseholdsWorkspace({
                         </p>
                       </div>
                     ))}
-                    <Button variant="secondary" className="h-9">Export Purchase History</Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="secondary" className="h-9">Export Purchase History</Button>
+                      <Button variant="secondary" className="h-9">View Receipts</Button>
+                    </div>
                   </div>
                 </SectionCard>
 
-                <SectionCard title="Household Communications" ariaLabel="household-communications-section">
+                <SectionCard title="Household Communications" ariaLabel="household-communications-section" id="household-communications-section">
                   <div className="space-y-3">
                     <p>Emails, SMS reminders, alerts, tasks, and internal notes are tracked in one household timeline.</p>
                     <div className="space-y-2">
@@ -797,7 +896,7 @@ export function HouseholdsWorkspace({
                   </div>
                 </SectionCard>
 
-                <SectionCard title="Household Timeline" ariaLabel="household-timeline-section">
+                <SectionCard title="Household Timeline" ariaLabel="household-timeline-section" id="household-timeline-section">
                   <div className="space-y-2">
                     {selected.recentActivity.slice(0, 10).map((entry) => (
                       <div key={entry.id} className="rounded-lg border p-3 text-sm">
@@ -816,9 +915,19 @@ export function HouseholdsWorkspace({
   );
 }
 
-function SummaryCard({ label, value, compact = false }: { label: string; value: string; compact?: boolean }) {
+function SummaryCard({
+  label,
+  value,
+  compact = false,
+  interactive = false
+}: {
+  label: string;
+  value: string;
+  compact?: boolean;
+  interactive?: boolean;
+}) {
   return (
-    <div className={`rounded-md border bg-card ${compact ? "p-3" : "p-4"}`}>
+    <div className={`rounded-md border bg-card ${compact ? "p-3" : "p-4"} ${interactive ? "transition hover:bg-secondary/30 cursor-pointer" : ""}`}>
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className={`${compact ? "mt-1 text-base" : "mt-2 text-2xl"} font-semibold`}>{value}</p>
     </div>
@@ -828,14 +937,16 @@ function SummaryCard({ label, value, compact = false }: { label: string; value: 
 function SectionCard({
   title,
   children,
-  ariaLabel
+  ariaLabel,
+  id
 }: {
   title: string;
   children: React.ReactNode;
   ariaLabel: string;
+  id?: string;
 }) {
   return (
-    <Card aria-label={ariaLabel}>
+    <Card aria-label={ariaLabel} id={id} className="scroll-mt-36">
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>

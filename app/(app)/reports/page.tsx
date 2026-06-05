@@ -183,6 +183,15 @@ export default function ReportsPage() {
       }),
     [households, householdMembers, checkInRecords, transactions, customers]
   );
+  const householdGrowthCount = householdReportRows.filter((row) => {
+    const household = households.find((entry) => entry.id === row.id);
+    if (!household?.createdAt) return false;
+    return household.createdAt.slice(0, 10) >= new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  }).length;
+  const householdRetentionRate = householdReportRows.length
+    ? Math.round((householdReportRows.filter((row) => row.visits > 0).length / householdReportRows.length) * 100)
+    : 0;
+  const householdWaiverIssues = householdReportRows.reduce((sum, row) => sum + row.waiverIssues, 0);
 
   return (
     <PermissionGate permission="viewReports">
@@ -541,6 +550,11 @@ export default function ReportsPage() {
               <StatusCard title="Average Household Size" value={`${report.households.averageSize}`} />
               <StatusCard title="Youth Members" value={`${report.households.youthMembers}`} />
               <StatusCard title="Adult Members" value={`${report.households.adultMembers}`} />
+            </div>
+            <div className="grid gap-3 md:grid-cols-3">
+              <StatusCard title="Household Growth" value={`${householdGrowthCount}`} />
+              <StatusCard title="Household Retention" value={`${householdRetentionRate}%`} />
+              <StatusCard title="Household Waiver Report" value={`${householdWaiverIssues} issues`} />
             </div>
             <div className="grid gap-3 lg:grid-cols-2">
               <ListCard

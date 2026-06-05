@@ -17,6 +17,39 @@ export const households: Household[] = [
     defaultEmergencyContactPhone: "(828) 555-9199",
     notes: "Primary youth household",
     createdAt: "2026-05-01T09:00:00Z"
+  },
+  {
+    id: "hh_002",
+    householdName: "Daypass Household",
+    primaryContactCustomerId: "cust_005",
+    billingCustomerId: "cust_005",
+    locationId: "loc_001",
+    householdStatus: "inactive",
+    preferredCommunicationMethod: "sms",
+    email: "dana.daypass@example.com",
+    phone: "(212) 555-0177",
+    defaultAddress: "240 Main St, Cambridge, MA 02139",
+    defaultEmergencyContactName: "Bobby Wallace",
+    defaultEmergencyContactPhone: "123-456-7890",
+    notes: "Single-person household used for day pass and receipt history.",
+    createdAt: "2026-04-18T10:30:00Z"
+  },
+  {
+    id: "hh_003",
+    householdName: "Patel-James Household",
+    primaryContactCustomerId: "cust_001",
+    secondaryContactCustomerId: "cust_006",
+    billingCustomerId: "cust_001",
+    locationId: "loc_001",
+    householdStatus: "active",
+    preferredCommunicationMethod: "email",
+    email: "patel.james@example.com",
+    phone: "(212) 555-0112",
+    defaultAddress: "120 Spring St, New York, NY 10012",
+    defaultEmergencyContactName: "Priya Patel",
+    defaultEmergencyContactPhone: "(212) 555-9001",
+    notes: "Blended household for memberships, youth waivers, and billing coverage scenarios.",
+    createdAt: "2026-03-10T13:15:00Z"
   }
 ];
 
@@ -53,5 +86,38 @@ export const householdMembers: HouseholdMember[] = [
     canPurchaseForOthers: true,
     canSignWaivers: true,
     emergencyContactPriority: 3
+  },
+  {
+    householdId: "hh_002",
+    customerId: "cust_005",
+    memberType: "adult",
+    role: "primary-adult",
+    relationship: "other",
+    canCheckInOthers: true,
+    canPurchaseForOthers: true,
+    canSignWaivers: true,
+    emergencyContactPriority: 1
+  },
+  {
+    householdId: "hh_003",
+    customerId: "cust_001",
+    memberType: "adult",
+    role: "primary-adult",
+    relationship: "spouse_partner",
+    canCheckInOthers: true,
+    canPurchaseForOthers: true,
+    canSignWaivers: true,
+    emergencyContactPriority: 1
+  },
+  {
+    householdId: "hh_003",
+    customerId: "cust_006",
+    memberType: "adult",
+    role: "secondary-adult",
+    relationship: "spouse_partner",
+    canCheckInOthers: true,
+    canPurchaseForOthers: true,
+    canSignWaivers: true,
+    emergencyContactPriority: 2
   }
 ];

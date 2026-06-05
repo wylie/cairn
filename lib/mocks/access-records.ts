@@ -62,5 +62,35 @@ export const accessRecords: CustomerAccessRecord[] = [
     locationsAllowed: ["loc_001"],
     grantedByStaffId: "staff_001",
     grantedByStaffName: "Taylor Nguyen"
+  },
+  {
+    id: "acc_006",
+    customerId: "cust_003",
+    householdId: "hh_001",
+    productId: "prd_005",
+    type: "household-membership",
+    status: "active",
+    startDate: "2026-05-10",
+    expirationDate: "2026-06-14",
+    unlimitedAccess: true,
+    coveredCustomerIds: ["cust_003", "cust_004", "cust_002"],
+    locationsAllowed: ["loc_001", "loc_002"],
+    grantedByStaffId: "staff_001",
+    grantedByStaffName: "Taylor Nguyen"
+  },
+  {
+    id: "acc_007",
+    customerId: "cust_001",
+    householdId: "hh_003",
+    productId: "prd_003",
+    type: "household-membership",
+    status: "active",
+    startDate: "2026-05-20",
+    expirationDate: "2026-06-18",
+    unlimitedAccess: true,
+    coveredCustomerIds: ["cust_001", "cust_006"],
+    locationsAllowed: ["loc_001"],
+    grantedByStaffId: "staff_001",
+    grantedByStaffName: "Taylor Nguyen"
   }
 ];

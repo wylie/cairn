@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import HouseholdsPage from "@/app/(app)/households/page";
+import { HouseholdsWorkspace } from "@/components/households/households-workspace";
 import { TopBar } from "@/components/layout/top-bar";
 import { TestProviders } from "@/tests/test-providers";
 
@@ -78,5 +79,43 @@ describe("Households workspace", () => {
     await user.click(screen.getByRole("button", { name: "Check In Household" }));
     expect(screen.getByRole("status")).toHaveTextContent(/Checked in|could not be checked in|guardian-enabled/i);
     expect(screen.getByLabelText("household-billing-section")).toHaveTextContent(/Outstanding balances|Upcoming renewals|stored payment methods/i);
+  });
+
+  it("supports single-person and blended household search scenarios", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <HouseholdsPage />
+      </TestProviders>
+    );
+
+    await activateStaff(user);
+
+    await user.type(screen.getByLabelText("Search households"), "Daypass Household");
+    expect(screen.getAllByText("Daypass Household").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/1 members/).length).toBeGreaterThan(0);
+
+    await user.clear(screen.getByLabelText("Search households"));
+    await user.type(screen.getByLabelText("Search households"), "M-1006");
+    expect(screen.getAllByText("Patel-James Household").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/2 members/).length).toBeGreaterThan(0);
+  });
+
+  it("renders first-class detail navigation and jump links on the household detail route", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <HouseholdsWorkspace initialHouseholdId="hh_001" pathname="/households/hh_001" currentSearch="" />
+      </TestProviders>
+    );
+
+    await activateStaff(user);
+
+    expect(screen.getByRole("link", { name: "← Back to Households" })).toHaveAttribute("href", "/households");
+    expect(screen.getByLabelText("household-jump-links")).toHaveTextContent("Members");
+    expect(screen.getByLabelText("household-jump-links")).toHaveTextContent("Billing");
+    expect(screen.getByLabelText("household-jump-links")).toHaveTextContent("Timeline");
   });
 });

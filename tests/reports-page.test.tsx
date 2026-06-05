@@ -110,6 +110,9 @@ describe("Reports dashboards", () => {
     expect(screen.getByText("Total Households")).toBeInTheDocument();
     expect(screen.getByText("Top Visiting Households")).toBeInTheDocument();
     expect(screen.getByText("Household Revenue")).toBeInTheDocument();
+    expect(screen.getByText("Household Growth")).toBeInTheDocument();
+    expect(screen.getByText("Household Retention")).toBeInTheDocument();
+    expect(screen.getByText("Household Waiver Report")).toBeInTheDocument();
   });
 
   it("instructor is blocked from Reports", async () => {

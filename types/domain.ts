@@ -93,6 +93,128 @@ export type StaffPermission =
   | "sendTransactionalMessages"
   | "messageAssignedParticipants";
 
+export type IntegrationCategory =
+  | "calendar"
+  | "communication"
+  | "payment"
+  | "accounting"
+  | "identity"
+  | "scheduling"
+  | "marketing"
+  | "crm";
+
+export type IntegrationStatus = "enabled" | "disabled";
+export type IntegrationHealthStatus = "healthy" | "warning" | "offline" | "unknown";
+
+export type IntegrationProviderKey =
+  | "google_calendar"
+  | "microsoft_calendar"
+  | "sendgrid"
+  | "twilio"
+  | "stripe"
+  | "square"
+  | "quickbooks"
+  | "okta"
+  | "auth0"
+  | "homebase"
+  | "deputy"
+  | "when_i_work"
+  | "mailchimp"
+  | "hubspot";
+
+export interface IntegrationConnectionRecord {
+  id: string;
+  organizationId: string;
+  providerKey: IntegrationProviderKey;
+  category: IntegrationCategory;
+  name: string;
+  description: string;
+  status: IntegrationStatus;
+  health: IntegrationHealthStatus;
+  configurationSummary?: string;
+  enabledAt?: string;
+  disabledAt?: string;
+  lastActivityAt?: string;
+  updatedAt: string;
+  updatedByStaffId?: string;
+  updatedByStaffName?: string;
+}
+
+export type IntegrationAuditAction =
+  | "integration_enabled"
+  | "integration_disabled"
+  | "configuration_changed"
+  | "webhook_failed"
+  | "webhook_test_sent";
+
+export interface IntegrationAuditEvent {
+  id: string;
+  organizationId: string;
+  integrationId?: string;
+  providerKey?: IntegrationProviderKey;
+  action: IntegrationAuditAction;
+  summary: string;
+  createdAt: string;
+  createdByStaffId?: string;
+  createdByStaffName?: string;
+  metadata?: Record<string, string | number | boolean | null>;
+}
+
+export type WebhookEventType =
+  | "customer.created"
+  | "membership.renewed"
+  | "waiver.signed"
+  | "registration.created"
+  | "checkin.occurred"
+  | "reservation.created"
+  | "invoice.paid";
+
+export interface WebhookEndpoint {
+  id: string;
+  organizationId: string;
+  label: string;
+  url: string;
+  secretHint: string;
+  enabled: boolean;
+  subscribedEvents: WebhookEventType[];
+  health: IntegrationHealthStatus;
+  lastActivityAt?: string;
+  updatedAt: string;
+}
+
+export type WebhookDeliveryStatus = "queued" | "delivered" | "failed";
+
+export interface WebhookDeliveryRecord {
+  id: string;
+  organizationId: string;
+  endpointId: string;
+  eventType: WebhookEventType;
+  payload: Record<string, unknown>;
+  status: WebhookDeliveryStatus;
+  createdAt: string;
+  deliveredAt?: string;
+  httpStatus?: number;
+  errorMessage?: string;
+}
+
+export interface ApiFoundationSpec {
+  version: string;
+  basePath: string;
+  authentication: string;
+  pagination: string;
+  filtering: string;
+  errorHandling: string;
+  rateLimiting: string;
+}
+
+export interface IntegrationProviderResult {
+  ok: boolean;
+  provider: string;
+  message: string;
+  syncedAt?: string;
+  externalId?: string;
+}
+
 export interface StaffUser {
   id: string;
   organizationId: string;

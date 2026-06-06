@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, LayoutDashboard, Layers3, FlaskConical, CreditCard, Settings } from "lucide-react";
+import { Building2, LayoutDashboard, Layers3, FlaskConical, CreditCard, Settings, PlugZap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +11,7 @@ const navItems = [
   { href: "/admin/organizations", label: "Organizations", icon: Building2 },
   { href: "/admin/templates", label: "Templates", icon: Layers3 },
   { href: "/admin/demo-facilities", label: "Demo Facilities", icon: FlaskConical },
+  { href: "/admin/integrations", label: "Integrations", icon: PlugZap },
   { href: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard },
   { href: "/admin/platform-settings", label: "Platform Settings", icon: Settings }
 ];

@@ -6,6 +6,7 @@ import CustomersPage from "@/app/(app)/customers/page";
 import HouseholdsPage from "@/app/(app)/households/page";
 import CommunicationsPage from "@/app/(app)/communications/page";
 import BillingPage from "@/app/(app)/billing/page";
+import IntegrationsPage from "@/app/(app)/integrations/page";
 import CheckInPage from "@/app/(app)/check-in/page";
 import CalendarPage from "@/app/(app)/calendar/page";
 import RentalsPage from "@/app/(app)/rentals/page";
@@ -32,6 +33,7 @@ describe("Primary routes smoke", () => {
     HouseholdsPage,
     CommunicationsPage,
     BillingPage,
+    IntegrationsPage,
     CheckInPage,
     CalendarPage,
     RentalsPage,

@@ -18,6 +18,13 @@ describe("middleware auth routing", () => {
     expect(res.headers.get("location")).toContain("/o/summit/login?next=%2Fo%2Fsummit%2Fdashboard");
   });
 
+  it("protects integrations routes under the staff portal", () => {
+    const req = new NextRequest("http://localhost:3000/o/summit/integrations");
+    const res = middleware(req);
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/o/summit/login?next=%2Fo%2Fsummit%2Fintegrations");
+  });
+
   it("redirects customer portal routes to customer login when unauthenticated", () => {
     const req = new NextRequest("http://localhost:3000/p/summit/dashboard");
     const res = middleware(req);

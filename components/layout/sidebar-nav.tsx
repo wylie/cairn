@@ -24,7 +24,21 @@ const navItems: NavItem[] = [
   { href: "/alerts", label: "Alerts", icon: Bell, section: "operations", permissions: operationalPermissions },
   { href: "/customers", label: "Customers", icon: Users, section: "operations", permissions: ["viewCustomers"] },
   { href: "/households", label: "Households", icon: Home, section: "operations", permissions: ["viewCustomers"] },
-  { href: "/communications", label: "Communications", icon: MessagesSquare, section: "operations", permissions: operationalPermissions },
+  {
+    href: "/communications",
+    label: "Communications",
+    icon: MessagesSquare,
+    section: "operations",
+    permissions: ["manageCommunications", "sendTransactionalMessages", "messageAssignedParticipants"],
+    isVisible: ({ hasPermission, canAccessPermissions }) =>
+      (!hasPermission && !canAccessPermissions) ||
+      Boolean(
+        hasPermission?.("manageCommunications") ||
+          hasPermission?.("sendTransactionalMessages") ||
+          hasPermission?.("messageAssignedParticipants") ||
+          canAccessPermissions?.(["manageCommunications", "sendTransactionalMessages", "messageAssignedParticipants"])
+      )
+  },
   { href: "/memberships", label: "Memberships", icon: ShieldCheck, section: "operations", permissions: ["viewCustomers", "viewMembershipReports"] },
   { href: "/check-in", label: "Check-in", icon: ScanLine, section: "operations", permissions: ["checkInCustomer", "checkOutCustomer"] },
   { href: "/calendar", label: "Calendar", icon: Calendar, section: "operations", permissions: ["rosterAccess", "editPrograms", "checkInCustomer"] },

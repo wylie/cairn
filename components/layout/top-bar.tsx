@@ -49,7 +49,7 @@ function TopBarInner() {
   );
   const notificationItems = useMemo(() => {
     const unreadMessages = communications
-      .filter((entry) => entry.channel === "system_notification" && entry.deliveryStatus !== "read")
+      .filter((entry) => ["system_notification", "in_app_notification"].includes(entry.channel) && entry.deliveryStatus !== "read")
       .slice(0, 4)
       .map((entry) => ({
         id: entry.id,
@@ -81,7 +81,7 @@ function TopBarInner() {
     return [...unreadMessages, ...openAlerts, ...openTasks].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
   }, [communications, operationsAlerts, operationsTasks]);
   const unreadNotificationCount = communications.filter(
-    (entry) => entry.channel === "system_notification" && entry.deliveryStatus !== "read"
+    (entry) => ["system_notification", "in_app_notification"].includes(entry.channel) && entry.deliveryStatus !== "read"
   ).length;
 
   const handleSignOut = async () => {
@@ -127,7 +127,7 @@ function TopBarInner() {
             onClick={() => {
               setNotificationsOpen((prev) => !prev);
               communications
-                .filter((entry) => entry.channel === "system_notification" && entry.deliveryStatus !== "read")
+                .filter((entry) => ["system_notification", "in_app_notification"].includes(entry.channel) && entry.deliveryStatus !== "read")
                 .slice(0, 4)
                 .forEach((entry) => {
                   markCommunicationRead(entry.id);

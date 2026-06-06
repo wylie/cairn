@@ -87,7 +87,10 @@ export type StaffPermission =
   | "manageStaff"
   | "manageRoles"
   | "inviteStaff"
-  | "grantCompAccess";
+  | "grantCompAccess"
+  | "manageCommunications"
+  | "sendTransactionalMessages"
+  | "messageAssignedParticipants";
 
 export interface StaffUser {
   id: string;
@@ -145,42 +148,127 @@ export type CommunicationChannel =
   | "email"
   | "sms"
   | "system_notification"
-  | "internal_staff_note";
+  | "internal_staff_note"
+  | "in_app_notification"
+  | "system_generated";
 
-export type CommunicationStatus = "draft" | "scheduled" | "sent" | "failed";
+export type CommunicationStatus = "draft" | "scheduled" | "sent" | "failed" | "cancelled";
 
 export type CommunicationRecipientType =
   | "customer"
   | "household"
   | "program_participants"
+  | "session_roster"
   | "membership_holders"
   | "waitlist"
+  | "guardians"
+  | "selected_household_members"
   | "staff"
   | "saved_segment";
+
+export type CommunicationSource =
+  | "manual"
+  | "membership_reminder"
+  | "waiver_reminder"
+  | "registration_confirmation"
+  | "waitlist_confirmation"
+  | "waitlist_promotion"
+  | "program_cancellation"
+  | "birthday"
+  | "payment_reminder"
+  | "system_alert";
 
 export type CommunicationTemplateType =
   | "membership_renewal"
   | "waiver_reminder"
+  | "waiver_missing"
   | "registration_confirmation"
+  | "waitlist_confirmation"
   | "waitlist_promotion"
+  | "program_cancellation"
   | "birthday_greeting"
+  | "payment_reminder"
   | "general_announcement"
   | "custom";
 
 export type AutomatedCommunicationTrigger =
-  | "membership_expiring"
+  | "membership_expiring_30"
+  | "membership_expiring_7"
   | "waiver_expiring"
+  | "waiver_missing"
   | "program_registration"
   | "waitlist_promotion"
   | "birthday"
   | "payment_failure"
   | "program_cancellation";
 
+export type CommunicationContactMethod = "email" | "sms" | "in_app_notification";
+
+export interface CommunicationRecipient {
+  id: string;
+  type: "customer" | "household" | "staff" | "group";
+  label: string;
+  customerId?: string;
+  householdId?: string;
+  staffUserId?: string;
+  email?: string;
+  phone?: string;
+}
+
+export interface CommunicationSender {
+  id?: string;
+  name: string;
+  kind: "staff" | "system";
+  staffUserId?: string;
+}
+
+export interface CommunicationRelatedRecord {
+  kind:
+    | "customer"
+    | "household"
+    | "program"
+    | "session"
+    | "registration"
+    | "membership"
+    | "waiver"
+    | "receipt"
+    | "alert";
+  id: string;
+  label: string;
+}
+
+export interface CommunicationTemplate {
+  id: string;
+  organizationId: string;
+  name: string;
+  type: CommunicationTemplateType;
+  subject: string;
+  body: string;
+  active: boolean;
+  availableVariables: string[];
+}
+
+export interface CommunicationProviderResult {
+  ok: boolean;
+  providerMessageId?: string;
+  error?: string;
+  deliveredAt?: string;
+}
+
+export interface CommunicationSendRequest {
+  type: CommunicationChannel;
+  subject: string;
+  body: string;
+  recipients: CommunicationRecipient[];
+  sender: CommunicationSender;
+}
+
 export interface CommunicationPreferenceSettings {
   email: boolean;
   sms: boolean;
   marketing: boolean;
   transactional: boolean;
+  preferredContactMethod?: CommunicationContactMethod;
 }
 
 export interface CommunicationRecord {
@@ -193,18 +281,30 @@ export interface CommunicationRecord {
   recipientLabel: string;
   subject: string;
   message: string;
+  body?: string;
+  recipients?: CommunicationRecipient[];
+  sender?: CommunicationSender;
   customerId?: string;
   householdId?: string;
   sessionId?: string;
   programId?: string;
   membershipId?: string;
   waiverTemplateId?: string;
+  registrationId?: string;
+  transactionId?: string;
+  alertId?: string;
   staffUserId?: string;
   segmentKey?: string;
   templateType?: CommunicationTemplateType;
   automatedTrigger?: AutomatedCommunicationTrigger;
+  source?: CommunicationSource;
+  isTransactional?: boolean;
+  relatedRecords?: CommunicationRelatedRecord[];
   scheduledFor?: string;
   sentAt?: string;
+  failedAt?: string;
+  cancelledAt?: string;
+  archivedAt?: string;
   createdAt: string;
   createdByStaffId?: string;
   createdByStaffName?: string;

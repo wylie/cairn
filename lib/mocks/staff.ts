@@ -49,7 +49,10 @@ export const staffUsers: StaffUser[] = [
       "manageStaff",
       "manageRoles",
       "inviteStaff",
-      "grantCompAccess"
+      "grantCompAccess",
+      "manageCommunications",
+      "sendTransactionalMessages",
+      "messageAssignedParticipants"
     ]
   },
   {
@@ -74,7 +77,7 @@ export const staffUsers: StaffUser[] = [
     canTeach: true,
     activeInstructor: true,
     instructorBio: "Leads operations and introductory coaching.",
-    permissions: ["checkInCustomer", "checkOutCustomer", "overrideAccess", "editCustomer", "createCustomer", "manageProducts", "manageWaivers", "viewReports", "usePOS", "editPrograms", "manageStaff", "grantCompAccess", "viewCustomers", "rosterAccess", "discountTransaction"]
+    permissions: ["checkInCustomer", "checkOutCustomer", "overrideAccess", "editCustomer", "createCustomer", "manageProducts", "manageWaivers", "viewReports", "usePOS", "editPrograms", "manageStaff", "grantCompAccess", "viewCustomers", "rosterAccess", "discountTransaction", "manageCommunications", "sendTransactionalMessages", "messageAssignedParticipants"]
   },
   {
     id: "staff_003",
@@ -95,7 +98,7 @@ export const staffUsers: StaffUser[] = [
     assignedProgramIds: [],
     certifications: ["CPR"],
     notes: "Front desk primary evening shift.",
-    permissions: ["checkInCustomer", "checkOutCustomer", "usePOS", "createCustomer", "viewCustomers", "rosterAccess", "editCustomer"]
+    permissions: ["checkInCustomer", "checkOutCustomer", "usePOS", "createCustomer", "viewCustomers", "rosterAccess", "editCustomer", "sendTransactionalMessages"]
   },
   {
     id: "staff_004",
@@ -119,7 +122,7 @@ export const staffUsers: StaffUser[] = [
     canTeach: true,
     activeInstructor: true,
     instructorBio: "Specializes in youth programming and clinics.",
-    permissions: ["editPrograms", "rosterAccess"]
+    permissions: ["editPrograms", "rosterAccess", "messageAssignedParticipants"]
   },
   {
     id: "staff_008",
@@ -143,7 +146,7 @@ export const staffUsers: StaffUser[] = [
     canTeach: true,
     activeInstructor: true,
     instructorBio: "Focuses on movement prep and mobility.",
-    permissions: ["editPrograms", "rosterAccess"]
+    permissions: ["editPrograms", "rosterAccess", "messageAssignedParticipants"]
   },
   {
     id: "staff_005",
@@ -164,7 +167,7 @@ export const staffUsers: StaffUser[] = [
     canTeach: true,
     activeInstructor: false,
     instructorBio: "Seasonal substitute instructor.",
-    permissions: ["editPrograms", "rosterAccess"]
+    permissions: ["editPrograms", "rosterAccess", "messageAssignedParticipants"]
   },
   {
     id: "staff_006",
@@ -220,6 +223,6 @@ export const staffUsers: StaffUser[] = [
     lastActiveAt: "2026-05-24T10:00:00Z",
     certifications: ["Wilderness First Aid"],
     notes: "Riverbend owner.",
-    permissions: ["viewCustomers", "editCustomer", "createCustomer", "checkInCustomer", "checkOutCustomer", "overrideAccess", "compAccess", "manageProducts", "manageWaivers", "deactivateProduct", "viewReports", "viewAttendanceReports", "viewFinancialReports", "viewMembershipReports", "usePOS", "refundTransaction", "discountTransaction", "editPrograms", "cancelPrograms", "rosterAccess", "manageSettings", "manageBillingSettings", "managePlatformSettings", "manageStaff", "manageRoles", "inviteStaff", "grantCompAccess"]
+    permissions: ["viewCustomers", "editCustomer", "createCustomer", "checkInCustomer", "checkOutCustomer", "overrideAccess", "compAccess", "manageProducts", "manageWaivers", "deactivateProduct", "viewReports", "viewAttendanceReports", "viewFinancialReports", "viewMembershipReports", "usePOS", "refundTransaction", "discountTransaction", "editPrograms", "cancelPrograms", "rosterAccess", "manageSettings", "manageBillingSettings", "managePlatformSettings", "manageStaff", "manageRoles", "inviteStaff", "grantCompAccess", "manageCommunications", "sendTransactionalMessages", "messageAssignedParticipants"]
   }
 ];

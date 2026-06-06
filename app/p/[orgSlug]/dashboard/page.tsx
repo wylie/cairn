@@ -22,6 +22,7 @@ export default function CustomerPortalDashboardPage() {
     waivers,
     checkInRecords,
     transactions,
+    communications,
     sessions,
     programs,
     accessProducts
@@ -45,6 +46,9 @@ export default function CustomerPortalDashboardPage() {
   const visibleWaivers = waivers.filter((entry) => visibleCustomerIds.includes(entry.customerId));
   const visits = checkInRecords.filter((entry) => visibleCustomerIds.includes(entry.customerId));
   const purchases = transactions.filter((entry) => canCustomerViewReceipt(entry, visibleCustomerIds));
+  const notifications = communications
+    .filter((entry) => visibleCustomerIds.includes(entry.customerId ?? "") && ["system_notification", "in_app_notification"].includes(entry.channel))
+    .slice(0, 4);
 
   const householdVisitCounts = visibleCustomers
     .map((customer) => ({
@@ -163,9 +167,25 @@ export default function CustomerPortalDashboardPage() {
         <SummaryCard title="Purchases Last 90 Days" period="Rolling 90 days" unit="transactions" value={purchasesLast90Days} href="./purchases" />
         <SummaryCard title="Outstanding Balance" period="Current balance" unit="USD" value="$0.00" href="./purchases" />
         <SummaryCard title="Waiver Alerts" period="Current status" unit="alerts" value={waiverStatusSummary.expired + waiverStatusSummary.expiringSoon} href="./waivers" />
+        <SummaryCard title="Notifications" period="Unread and recent" unit="messages" value={notifications.length} href="./waivers" />
       </div>
 
       <div className="grid gap-3 xl:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Notifications</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {notifications.length === 0 ? <p className="text-sm text-muted-foreground">No new notifications.</p> : null}
+            {notifications.map((entry) => (
+              <div key={entry.id} className="rounded-md border p-3">
+                <p className="font-medium">{entry.subject}</p>
+                <p className="text-sm text-muted-foreground">{entry.message}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{formatDateSafe(entry.sentAt ?? entry.createdAt)}</p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader>
             <CardTitle>Membership Summary</CardTitle>

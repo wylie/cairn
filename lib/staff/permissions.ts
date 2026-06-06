@@ -30,7 +30,10 @@ export const ROLE_PERMISSION_PRESETS: Record<StaffRole, StaffPermission[]> = {
     "manageStaff",
     "manageRoles",
     "inviteStaff",
-    "grantCompAccess"
+    "grantCompAccess",
+    "manageCommunications",
+    "sendTransactionalMessages",
+    "messageAssignedParticipants"
   ],
   manager: [
     "viewCustomers",
@@ -55,7 +58,10 @@ export const ROLE_PERMISSION_PRESETS: Record<StaffRole, StaffPermission[]> = {
     "manageSettings",
     "manageStaff",
     "inviteStaff",
-    "grantCompAccess"
+    "grantCompAccess",
+    "manageCommunications",
+    "sendTransactionalMessages",
+    "messageAssignedParticipants"
   ],
   front_desk: [
     "viewCustomers",
@@ -68,9 +74,10 @@ export const ROLE_PERMISSION_PRESETS: Record<StaffRole, StaffPermission[]> = {
     "usePOS",
     "discountTransaction",
     "editPrograms",
-    "rosterAccess"
+    "rosterAccess",
+    "sendTransactionalMessages"
   ],
-  instructor: ["editPrograms", "rosterAccess"],
+  instructor: ["editPrograms", "rosterAccess", "messageAssignedParticipants"],
   volunteer_limited: ["rosterAccess"]
 };
 
@@ -119,7 +126,10 @@ export const PERMISSION_LABELS: Record<StaffPermission, string> = {
   manageSettings: "Manage settings",
   manageBillingSettings: "Manage billing settings",
   managePlatformSettings: "Manage platform settings",
-  grantCompAccess: "Grant comp access (customer actions)"
+  grantCompAccess: "Grant comp access (customer actions)",
+  manageCommunications: "Manage communications",
+  sendTransactionalMessages: "Send transactional messages",
+  messageAssignedParticipants: "Message assigned participants"
 };
 
 export const PERMISSION_DESCRIPTIONS: Record<StaffPermission, string> = {
@@ -151,5 +161,8 @@ export const PERMISSION_DESCRIPTIONS: Record<StaffPermission, string> = {
   manageSettings: "Manage facility settings.",
   manageBillingSettings: "Manage payment and billing-related settings.",
   managePlatformSettings: "Manage advanced platform/system configuration.",
-  grantCompAccess: "Use grant-comp actions in customer workflows."
+  grantCompAccess: "Use grant-comp actions in customer workflows.",
+  manageCommunications: "Access the communications hub, templates, and message history.",
+  sendTransactionalMessages: "Send customer-facing transactional messages and reminders.",
+  messageAssignedParticipants: "Message participants, waitlists, and assigned program rosters."
 };

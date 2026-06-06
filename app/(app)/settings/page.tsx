@@ -90,6 +90,7 @@ const permissionGroups: Array<{ label: string; permissions: StaffPermission[] }>
   { label: "POS", permissions: ["usePOS", "refundTransaction", "discountTransaction"] },
   { label: "Products", permissions: ["manageProducts", "deactivateProduct"] },
   { label: "Programs", permissions: ["editPrograms", "cancelPrograms", "rosterAccess"] },
+  { label: "Communications", permissions: ["manageCommunications", "sendTransactionalMessages", "messageAssignedParticipants"] },
   { label: "Reports", permissions: ["viewReports", "viewAttendanceReports", "viewFinancialReports", "viewMembershipReports"] },
   { label: "Staff", permissions: ["manageStaff", "inviteStaff", "manageRoles"] },
   { label: "Settings", permissions: ["manageSettings", "managePlatformSettings", "manageBillingSettings", "manageWaivers"] }

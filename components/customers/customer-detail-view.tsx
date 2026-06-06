@@ -1853,6 +1853,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                 <option value="all">All</option>
                 <option value="email">Email</option>
                 <option value="sms">SMS</option>
+                <option value="in_app_notification">In-app</option>
                 <option value="system_notification">System</option>
                 <option value="internal_staff_note">Staff Notes</option>
               </select>
@@ -1876,7 +1877,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                 Log Communication
               </Button>
             </div>
-            <div className="grid gap-3 rounded-md border p-3 md:grid-cols-4">
+            <div className="grid gap-3 rounded-md border p-3 md:grid-cols-5">
               <label className="flex items-center justify-between gap-3 text-sm">
                 <span>Email Opt-In</span>
                 <input
@@ -1911,6 +1912,23 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                   checked={customer.communicationPreferences?.transactional ?? true}
                   onChange={(event) => updateCustomerCommunicationPreferences(customer.id, { transactional: event.target.checked })}
                 />
+              </label>
+              <label className="space-y-1 text-sm">
+                <span>Preferred Method</span>
+                <select
+                  aria-label="Preferred contact method"
+                  className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
+                  value={customer.communicationPreferences?.preferredContactMethod ?? "email"}
+                  onChange={(event) =>
+                    updateCustomerCommunicationPreferences(customer.id, {
+                      preferredContactMethod: event.target.value as "email" | "sms" | "in_app_notification"
+                    })
+                  }
+                >
+                  <option value="email">Email</option>
+                  <option value="sms">SMS</option>
+                  <option value="in_app_notification">In-app</option>
+                </select>
               </label>
             </div>
             <div className="space-y-2">

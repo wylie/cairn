@@ -86,6 +86,9 @@ const DEFAULT_TEMPLATE_PERMISSIONS: StaffPermission[] = [
   "viewFinancialReports",
   "usePOS",
   "editPrograms",
+  "manageCommunications",
+  "sendTransactionalMessages",
+  "messageAssignedParticipants",
   "manageSettings",
   "manageStaff",
   "manageRoles"

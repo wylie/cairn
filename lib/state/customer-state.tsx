@@ -28,11 +28,17 @@ import {
 import { mockPaymentProvider, type PaymentMethod } from "@/lib/payments/provider";
 import { normalizeTransactions } from "@/lib/transactions";
 import { evaluateCustomerAccess, getEligibleAccess, type AccessDecision } from "@/lib/access-rules";
+import { getDefaultCommunicationTemplates, renderTemplateVariables } from "@/lib/communications/templates";
 import type {
+  AutomatedCommunicationTrigger,
   CheckInLogRecord,
   CheckInSource,
+  CommunicationContactMethod,
   CommunicationPreferenceSettings,
   CommunicationRecord,
+  CommunicationRecipient,
+  CommunicationSource,
+  CommunicationTemplate,
   Customer,
   CustomerRelationshipType,
   Household,
@@ -107,8 +113,68 @@ const DEFAULT_COMMUNICATION_PREFERENCES: CommunicationPreferenceSettings = {
   email: true,
   sms: true,
   marketing: false,
-  transactional: true
+  transactional: true,
+  preferredContactMethod: "email"
 };
+
+function isCommunicationTransactional(
+  source?: CommunicationSource,
+  automatedTrigger?: AutomatedCommunicationTrigger
+) {
+  if (source === "manual") return false;
+  if (source === "system_alert") return true;
+  if (!source && automatedTrigger === "birthday") return false;
+  return true;
+}
+
+function inferCommunicationSource(
+  source?: CommunicationSource,
+  automatedTrigger?: AutomatedCommunicationTrigger,
+  templateType?: CommunicationRecord["templateType"]
+): CommunicationSource {
+  if (source) return source;
+  switch (automatedTrigger) {
+    case "membership_expiring_30":
+    case "membership_expiring_7":
+      return "membership_reminder";
+    case "waiver_expiring":
+    case "waiver_missing":
+      return "waiver_reminder";
+    case "program_registration":
+      return "registration_confirmation";
+    case "waitlist_promotion":
+      return "waitlist_promotion";
+    case "program_cancellation":
+      return "program_cancellation";
+    case "payment_failure":
+      return "payment_reminder";
+    case "birthday":
+      return "birthday";
+    default:
+      break;
+  }
+  switch (templateType) {
+    case "membership_renewal":
+      return "membership_reminder";
+    case "waiver_reminder":
+    case "waiver_missing":
+      return "waiver_reminder";
+    case "registration_confirmation":
+      return "registration_confirmation";
+    case "waitlist_confirmation":
+      return "waitlist_confirmation";
+    case "waitlist_promotion":
+      return "waitlist_promotion";
+    case "program_cancellation":
+      return "program_cancellation";
+    case "birthday_greeting":
+      return "birthday";
+    case "payment_reminder":
+      return "payment_reminder";
+    default:
+      return "manual";
+  }
+}
 
 function normalizeProductForState(product: PosProduct): PosProduct {
   const normalizedPriceCents = normalizeProductPriceCents(product);
@@ -263,6 +329,7 @@ interface CustomerStateContextValue {
   waiverTemplateVersions: WaiverTemplateVersion[];
   households: Household[];
   householdMembers: HouseholdMember[];
+  communicationTemplates: CommunicationTemplate[];
   communications: CommunicationRecord[];
   operationsAlerts: OperationsAlertRecord[];
   operationsTasks: OperationsTaskRecord[];
@@ -649,6 +716,13 @@ interface CustomerStateContextValue {
     segmentKey?: string;
     templateType?: CommunicationRecord["templateType"];
     automatedTrigger?: CommunicationRecord["automatedTrigger"];
+    source?: CommunicationSource;
+    isTransactional?: boolean;
+    recipients?: CommunicationRecipient[];
+    relatedRecords?: CommunicationRecord["relatedRecords"];
+    registrationId?: string;
+    transactionId?: string;
+    alertId?: string;
     scheduledFor?: string;
     deliveryStatus?: CommunicationRecord["deliveryStatus"];
     attachmentsPlaceholder?: string[];
@@ -657,7 +731,7 @@ interface CustomerStateContextValue {
   }) => { ok: boolean; message: string; communicationId?: string };
   updateCommunication: (
     communicationId: string,
-    updates: Partial<Pick<CommunicationRecord, "status" | "scheduledFor" | "sentAt" | "deliveryStatus" | "readAt" | "subject" | "message">>
+    updates: Partial<Pick<CommunicationRecord, "status" | "scheduledFor" | "sentAt" | "failedAt" | "cancelledAt" | "archivedAt" | "deliveryStatus" | "readAt" | "subject" | "message" | "body">>
   ) => { ok: boolean; message: string };
   markCommunicationRead: (communicationId: string) => { ok: boolean; message: string };
   getWaiverStatusForCustomer: (customerId: string, templateId?: string) => "valid" | "missing" | "expired" | "expiring_soon" | "outdated_version";
@@ -853,6 +927,10 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
   const seededHouseholdMembersForOrg = useMemo(
     () => seedHouseholdMembers.filter((entry) => seededHouseholdsForOrg.some((household) => household.id === entry.householdId)),
     [seededHouseholdsForOrg]
+  );
+  const communicationTemplates = useMemo(
+    () => getDefaultCommunicationTemplates(activeOrgId),
+    [activeOrgId]
   );
   const seededOperationsTasksForOrg = useMemo<OperationsTaskRecord[]>(
     () => [
@@ -1313,21 +1391,37 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       const customer = customers.find((entry) => entry.id === membership.customerId);
       if (!customer || !membership.expirationDate) return;
       const daysUntil = diffDays(activeDateKey, membership.expirationDate);
-      if (daysUntil !== null && daysUntil >= 0 && daysUntil <= 30) {
+      if (daysUntil === 30 || daysUntil === 7) {
         generated.push({
-          id: `comm_membership_expiring_${membership.id}`,
+          id: `comm_membership_expiring_${daysUntil}_${membership.id}`,
           organizationId: activeOrgId,
           locationId: customer.locationId,
           channel: "email",
           status: "scheduled",
           recipientType: "customer",
           recipientLabel: `${customer.firstName} ${customer.lastName}`,
-          subject: "Membership renewal reminder",
+          subject: daysUntil === 7 ? "Membership renewal due soon" : "Membership renewal reminder",
           message: `${membership.planName} renews on ${membership.expirationDate}.`,
+          body: `${membership.planName} renews on ${membership.expirationDate}.`,
           customerId: customer.id,
           membershipId: membership.id,
           templateType: "membership_renewal",
-          automatedTrigger: "membership_expiring",
+          automatedTrigger: daysUntil === 7 ? "membership_expiring_7" : "membership_expiring_30",
+          source: "membership_reminder",
+          isTransactional: true,
+          recipients: [{
+            id: customer.id,
+            type: "customer",
+            label: `${customer.firstName} ${customer.lastName}`,
+            customerId: customer.id,
+            email: customer.email,
+            phone: customer.phone
+          }],
+          sender: { kind: "system", name: "System" },
+          relatedRecords: [
+            { kind: "customer", id: customer.id, label: `${customer.firstName} ${customer.lastName}` },
+            { kind: "membership", id: membership.id, label: membership.planName }
+          ],
           scheduledFor: `${activeDateKey}T12:00:00Z`,
           createdAt: `${activeDateKey}T07:00:00Z`,
           createdByStaffName: "System"
@@ -1353,15 +1447,66 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
           recipientLabel: `${customer.firstName} ${customer.lastName}`,
           subject: "Waiver expiring soon",
           message: `${templateName} expires soon. Please review and sign the latest version.`,
+          body: `${templateName} expires soon. Please review and sign the latest version.`,
           customerId: customer.id,
           waiverTemplateId: waiver.templateId,
           templateType: "waiver_reminder",
           automatedTrigger: "waiver_expiring",
+          source: "waiver_reminder",
+          isTransactional: true,
+          recipients: [{
+            id: customer.id,
+            type: "customer",
+            label: `${customer.firstName} ${customer.lastName}`,
+            customerId: customer.id,
+            email: customer.email,
+            phone: customer.phone
+          }],
+          sender: { kind: "system", name: "System" },
+          relatedRecords: [
+            { kind: "customer", id: customer.id, label: `${customer.firstName} ${customer.lastName}` },
+            { kind: "waiver", id: waiver.templateId ?? waiver.id, label: templateName }
+          ],
           scheduledFor: `${activeDateKey}T15:00:00Z`,
           createdAt: `${activeDateKey}T07:05:00Z`,
           createdByStaffName: "System"
         });
       }
+    });
+
+    customers.forEach((customer) => {
+      const waiverStatus = getWaiverStatusForCustomer(customer.id);
+      if (waiverStatus !== "missing" && waiverStatus !== "outdated_version") return;
+      generated.push({
+        id: `comm_waiver_missing_${customer.id}`,
+        organizationId: activeOrgId,
+        locationId: customer.locationId,
+        channel: "email",
+        status: "scheduled",
+        recipientType: "customer",
+        recipientLabel: `${customer.firstName} ${customer.lastName}`,
+        subject: "Required waiver needed",
+        message: "A required waiver is still missing before your next visit.",
+        body: "A required waiver is still missing before your next visit.",
+        customerId: customer.id,
+        templateType: "waiver_missing",
+        automatedTrigger: "waiver_missing",
+        source: "waiver_reminder",
+        isTransactional: true,
+        recipients: [{
+          id: customer.id,
+          type: "customer",
+          label: `${customer.firstName} ${customer.lastName}`,
+          customerId: customer.id,
+          email: customer.email,
+          phone: customer.phone
+        }],
+        sender: { kind: "system", name: "System" },
+        relatedRecords: [{ kind: "customer", id: customer.id, label: `${customer.firstName} ${customer.lastName}` }],
+        scheduledFor: `${activeDateKey}T16:00:00Z`,
+        createdAt: `${activeDateKey}T07:10:00Z`,
+        createdByStaffName: "System"
+      });
     });
 
     registrations.forEach((registration) => {
@@ -1377,16 +1522,42 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         status: "sent",
         recipientType: "customer",
         recipientLabel: `${customer.firstName} ${customer.lastName}`,
-        subject: registration.status === "waitlisted" ? "Waitlist update" : "Registration confirmation",
+        subject: registration.status === "waitlisted" ? "Waitlist confirmation" : "Registration confirmation",
         message:
+          registration.status === "waitlisted"
+            ? `You joined the waitlist for ${program.title}.`
+            : `Your registration for ${program.title} is confirmed.`,
+        body:
           registration.status === "waitlisted"
             ? `You joined the waitlist for ${program.title}.`
             : `Your registration for ${program.title} is confirmed.`,
         customerId: customer.id,
         sessionId: session.id,
         programId: program.id,
-        templateType: registration.status === "waitlisted" ? "waitlist_promotion" : "registration_confirmation",
+        registrationId: registration.id,
+        templateType: registration.status === "waitlisted" ? "waitlist_confirmation" : "registration_confirmation",
         automatedTrigger: "program_registration",
+        source: registration.status === "waitlisted" ? "waitlist_confirmation" : "registration_confirmation",
+        isTransactional: true,
+        recipients: [{
+          id: customer.id,
+          type: "customer",
+          label: `${customer.firstName} ${customer.lastName}`,
+          customerId: customer.id,
+          email: customer.email,
+          phone: customer.phone
+        }],
+        sender: {
+          kind: registration.registeredByStaffName ? "staff" : "system",
+          name: registration.registeredByStaffName ?? "System",
+          staffUserId: registration.registeredByStaffId
+        },
+        relatedRecords: [
+          { kind: "customer", id: customer.id, label: `${customer.firstName} ${customer.lastName}` },
+          { kind: "program", id: program.id, label: program.title },
+          { kind: "session", id: session.id, label: session.title?.trim() || program.title },
+          { kind: "registration", id: registration.id, label: registration.status }
+        ],
         sentAt: registration.registeredAt ?? `${BASE_DATE}T09:00:00Z`,
         createdAt: registration.registeredAt ?? `${BASE_DATE}T09:00:00Z`,
         createdByStaffName: registration.registeredByStaffName ?? "System",
@@ -1406,9 +1577,22 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         recipientLabel: `${customer.firstName} ${customer.lastName}`,
         subject: "Happy Birthday from Cairn",
         message: "Birthday greeting scheduled for this morning.",
+        body: "Birthday greeting scheduled for this morning.",
         customerId: customer.id,
         templateType: "birthday_greeting",
         automatedTrigger: "birthday",
+        source: "birthday",
+        isTransactional: false,
+        recipients: [{
+          id: customer.id,
+          type: "customer",
+          label: `${customer.firstName} ${customer.lastName}`,
+          customerId: customer.id,
+          email: customer.email,
+          phone: customer.phone
+        }],
+        sender: { kind: "system", name: "System" },
+        relatedRecords: [{ kind: "customer", id: customer.id, label: `${customer.firstName} ${customer.lastName}` }],
         scheduledFor: `${activeDateKey}T11:00:00Z`,
         createdAt: `${activeDateKey}T06:30:00Z`,
         createdByStaffName: "System"
@@ -1433,11 +1617,29 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
             recipientLabel: `${customer.firstName} ${customer.lastName}`,
             subject: "Program cancelled",
             message: `${program?.title ?? session.title ?? "Session"} has been cancelled.`,
+            body: `${program?.title ?? session.title ?? "Session"} has been cancelled.`,
             customerId: customer.id,
             sessionId: session.id,
             programId: program?.id,
-            templateType: "general_announcement",
+            registrationId: registration.id,
+            templateType: "program_cancellation",
             automatedTrigger: "program_cancellation",
+            source: "program_cancellation",
+            isTransactional: true,
+            recipients: [{
+              id: customer.id,
+              type: "customer",
+              label: `${customer.firstName} ${customer.lastName}`,
+              customerId: customer.id,
+              email: customer.email,
+              phone: customer.phone
+            }],
+            sender: { kind: "system", name: "System" },
+            relatedRecords: [
+              { kind: "customer", id: customer.id, label: `${customer.firstName} ${customer.lastName}` },
+              { kind: "program", id: program?.id ?? session.id, label: program?.title ?? session.title ?? "Session" },
+              { kind: "session", id: session.id, label: session.title?.trim() || program?.title || "Session" }
+            ],
             sentAt: session.cancelledAt ?? `${activeDateKey}T10:00:00Z`,
             createdAt: session.cancelledAt ?? `${activeDateKey}T10:00:00Z`,
             createdByStaffName: "System",
@@ -1446,12 +1648,53 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         });
       });
 
+    transactions
+      .filter((transaction) => transaction.receiptStatus === "pending")
+      .forEach((transaction) => {
+        const customer = customers.find((entry) => entry.id === transaction.customerId);
+        if (!customer) return;
+        generated.push({
+          id: `comm_payment_reminder_${transaction.id}`,
+          organizationId: activeOrgId,
+          locationId: transaction.locationId,
+          channel: "email",
+          status: "scheduled",
+          recipientType: "customer",
+          recipientLabel: `${customer.firstName} ${customer.lastName}`,
+          subject: "Payment reminder",
+          message: `A balance remains due for receipt ${transaction.receiptNumber}.`,
+          body: `A balance remains due for receipt ${transaction.receiptNumber}.`,
+          customerId: customer.id,
+          transactionId: transaction.id,
+          templateType: "payment_reminder",
+          automatedTrigger: "payment_failure",
+          source: "payment_reminder",
+          isTransactional: true,
+          recipients: [{
+            id: customer.id,
+            type: "customer",
+            label: `${customer.firstName} ${customer.lastName}`,
+            customerId: customer.id,
+            email: customer.email,
+            phone: customer.phone
+          }],
+          sender: { kind: "system", name: "System" },
+          relatedRecords: [
+            { kind: "customer", id: customer.id, label: `${customer.firstName} ${customer.lastName}` },
+            { kind: "receipt", id: transaction.id, label: transaction.receiptNumber }
+          ],
+          scheduledFor: `${activeDateKey}T17:00:00Z`,
+          createdAt: `${activeDateKey}T08:00:00Z`,
+          createdByStaffName: "System"
+        });
+      });
+
     return [...generated, ...manualCommunications].sort((a, b) => {
       const aDate = a.sentAt ?? a.scheduledFor ?? a.createdAt;
       const bDate = b.sentAt ?? b.scheduledFor ?? b.createdAt;
       return bDate.localeCompare(aDate);
     });
-  }, [activeDateKey, activeOrgId, customers, manualCommunications, memberships, programs, registrations, sessions, waivers]);
+  }, [activeDateKey, activeOrgId, customers, manualCommunications, memberships, programs, registrations, sessions, transactions, waiverTemplates, waivers]);
 
   const operationsAlerts = useMemo<OperationsAlertRecord[]>(() => {
     const alerts: OperationsAlertRecord[] = [];
@@ -5033,6 +5276,65 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     const message = input.message.trim();
     if (!subject) return { ok: false, message: "Subject is required." };
     if (!message) return { ok: false, message: "Message is required." };
+    const source = inferCommunicationSource(input.source, input.automatedTrigger, input.templateType);
+    const isTransactional = input.isTransactional ?? isCommunicationTransactional(source, input.automatedTrigger);
+    const primaryCustomer = input.customerId ? customers.find((entry) => entry.id === input.customerId) : undefined;
+    const primaryHousehold = input.householdId ? households.find((entry) => entry.id === input.householdId) : undefined;
+    const householdCustomerIds = primaryHousehold
+      ? householdMembers.filter((entry) => entry.householdId === primaryHousehold.id).map((entry) => entry.customerId)
+      : [];
+    const householdCustomers = customers.filter((entry) => householdCustomerIds.includes(entry.id));
+    const derivedRecipients: CommunicationRecipient[] =
+      input.recipients && input.recipients.length > 0
+        ? input.recipients
+        : primaryCustomer
+          ? [{
+              id: primaryCustomer.id,
+              type: "customer",
+              label: `${primaryCustomer.firstName} ${primaryCustomer.lastName}`,
+              customerId: primaryCustomer.id,
+              email: primaryCustomer.email,
+              phone: primaryCustomer.phone
+            }]
+          : primaryHousehold
+            ? householdCustomers.map((entry) => ({
+                id: entry.id,
+                type: "customer" as const,
+                label: `${entry.firstName} ${entry.lastName}`,
+                customerId: entry.id,
+                householdId: primaryHousehold.id,
+                email: entry.email,
+                phone: entry.phone
+              }))
+            : [];
+    const shouldEnforcePreferences = input.status !== "draft";
+    const blockedRecipients = shouldEnforcePreferences ? derivedRecipients.filter((recipient) => {
+      const customer = recipient.customerId ? customers.find((entry) => entry.id === recipient.customerId) : undefined;
+      const preferences = customer?.communicationPreferences ?? DEFAULT_COMMUNICATION_PREFERENCES;
+      if (input.channel === "email" && !preferences.email) return true;
+      if (input.channel === "sms" && !preferences.sms) return true;
+      if (!isTransactional && !preferences.marketing) return true;
+      if (isTransactional && !preferences.transactional) return true;
+      return false;
+    }) : [];
+    if (blockedRecipients.length === derivedRecipients.length && derivedRecipients.length > 0) {
+      return { ok: false, message: "Recipient preferences block this message." };
+    }
+    const allowedRecipients = derivedRecipients.filter((recipient) => !blockedRecipients.some((blocked) => blocked.id === recipient.id));
+    const template = input.templateType ? communicationTemplates.find((entry) => entry.type === input.templateType) : undefined;
+    const renderedBody = template
+      ? renderTemplateVariables(message || template.body, {
+          customerName: primaryCustomer ? `${primaryCustomer.firstName} ${primaryCustomer.lastName}` : undefined,
+          householdName: primaryHousehold?.householdName,
+          programName: input.programId ? programs.find((entry) => entry.id === input.programId)?.title : undefined,
+          sessionDate: input.sessionId ? sessions.find((entry) => entry.id === input.sessionId)?.startsAt?.slice(0, 10) : undefined,
+          facilityName: settings.facilityProfile.facilityName,
+          membershipName: input.membershipId ? memberships.find((entry) => entry.id === input.membershipId)?.planName : undefined,
+          expirationDate: input.membershipId ? memberships.find((entry) => entry.id === input.membershipId)?.expirationDate : undefined,
+          balanceDue: input.transactionId ? transactions.find((entry) => entry.id === input.transactionId)?.total.toFixed(2) : undefined,
+          waiverName: input.waiverTemplateId ? waiverTemplates.find((entry) => entry.id === input.waiverTemplateId)?.name : undefined
+        })
+      : message;
     const createdAt = new Date().toISOString();
     const communication: CommunicationRecord = {
       id: `comm_${Math.random().toString(36).slice(2, 9)}`,
@@ -5043,24 +5345,38 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       recipientType: input.recipientType,
       recipientLabel: input.recipientLabel.trim(),
       subject,
-      message,
+      message: renderedBody,
+      body: renderedBody,
+      recipients: allowedRecipients,
+      sender: {
+        id: input.createdByStaffId,
+        name: input.createdByStaffName ?? "System",
+        kind: input.createdByStaffId ? "staff" : "system",
+        staffUserId: input.createdByStaffId
+      },
       customerId: input.customerId,
       householdId: input.householdId,
       sessionId: input.sessionId,
       programId: input.programId,
       membershipId: input.membershipId,
       waiverTemplateId: input.waiverTemplateId,
+      registrationId: input.registrationId,
+      transactionId: input.transactionId,
+      alertId: input.alertId,
       staffUserId: input.staffUserId,
       segmentKey: input.segmentKey,
       templateType: input.templateType,
       automatedTrigger: input.automatedTrigger,
+      source,
+      isTransactional,
+      relatedRecords: input.relatedRecords,
       scheduledFor: input.status === "scheduled" ? (input.scheduledFor ?? addDays(activeDateKey, 1)) : undefined,
       sentAt: input.status === "sent" ? createdAt : undefined,
       createdAt,
       createdByStaffId: input.createdByStaffId,
       createdByStaffName: input.createdByStaffName,
       deliveryStatus:
-        input.channel === "system_notification"
+        input.channel === "system_notification" || input.channel === "in_app_notification"
           ? input.deliveryStatus ?? "unread"
           : input.status === "failed"
             ? "failed"
@@ -5360,6 +5676,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       waiverTemplateVersions,
       households,
       householdMembers,
+      communicationTemplates,
       communications,
       operationsAlerts,
       operationsTasks,
@@ -5504,6 +5821,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       waiverTemplateVersions,
       households,
       householdMembers,
+      communicationTemplates,
       communications,
       operationsAlerts,
       operationsTasks,

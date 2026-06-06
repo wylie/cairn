@@ -40,7 +40,8 @@ describe("SidebarNav", () => {
       "checkInCustomer",
       "checkOutCustomer",
       "usePOS",
-      "rosterAccess"
+      "rosterAccess",
+      "sendTransactionalMessages"
     ]);
     render(
       <SidebarNav
@@ -60,7 +61,7 @@ describe("SidebarNav", () => {
   });
 
   it("shows instructor calendar/registration/program pages and hides POS/admin pages", () => {
-    const { canAccessPermissions, hasPermission } = buildPermissionHelpers(["editPrograms", "rosterAccess"]);
+    const { canAccessPermissions, hasPermission } = buildPermissionHelpers(["editPrograms", "rosterAccess", "messageAssignedParticipants"]);
     render(
       <SidebarNav
         pathname="/o/summit/calendar"
@@ -92,7 +93,8 @@ describe("SidebarNav", () => {
       "viewReports",
       "manageStaff",
       "manageRoles",
-      "manageSettings"
+      "manageSettings",
+      "manageCommunications"
     ]);
     render(
       <SidebarNav

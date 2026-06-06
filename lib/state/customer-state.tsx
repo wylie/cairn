@@ -24,6 +24,11 @@ import { waivers as seedWaivers } from "@/lib/mocks/waivers";
 import { waiverTemplates as seedWaiverTemplates, waiverTemplateVersions as seedWaiverTemplateVersions } from "@/lib/mocks/waiver-templates";
 import { signedWaiverRecords as seedSignedWaiverRecords } from "@/lib/mocks/waiver-signed-records";
 import { households as seedHouseholds, householdMembers as seedHouseholdMembers } from "@/lib/mocks/households";
+import {
+  maintenanceBlocks as seedMaintenanceBlocks,
+  rentableResources as seedRentableResources,
+  reservations as seedReservations
+} from "@/lib/mocks/rentals";
 import { buildScopedMockKey, clearScopedMockState, loadMockState, saveMockState } from "@/lib/mock-storage";
 import { buildSystemProductCategories, normalizeCategoryKey } from "@/lib/products/categories";
 import { isValidUsState, normalizeCity, normalizeStateInput, normalizeStreetAddress } from "@/lib/customer-input-format";
@@ -65,6 +70,7 @@ import type {
   InventoryAuditEntry,
   Membership,
   MembershipRenewalRecord,
+  MaintenanceBlock,
   PosProduct,
   PosTransaction,
   PosTransactionItem,
@@ -73,8 +79,10 @@ import type {
   ProductCategoryRecord,
   PunchPass,
   ClassCampSession,
+  RentableResource,
   Registration,
   RegistrationActivityEvent,
+  ReservationRecord,
   OperationsAlertRecord,
   OperationsAlertStatus,
   OperationsTaskRecord,
@@ -106,6 +114,10 @@ function addDays(key: string, days: number) {
   const date = dateFromKey(key);
   date.setUTCDate(date.getUTCDate() + days);
   return toDateKey(date);
+}
+
+function overlaps(startA: string, endA: string, startB: string, endB: string) {
+  return new Date(startA).getTime() < new Date(endB).getTime() && new Date(endA).getTime() > new Date(startB).getTime();
 }
 
 function diffDays(fromKey: string, toKey?: string) {
@@ -380,6 +392,9 @@ interface CustomerStateContextValue {
   waiverTemplateVersions: WaiverTemplateVersion[];
   households: Household[];
   householdMembers: HouseholdMember[];
+  rentableResources: RentableResource[];
+  reservations: ReservationRecord[];
+  maintenanceBlocks: MaintenanceBlock[];
   communicationTemplates: CommunicationTemplate[];
   communications: CommunicationRecord[];
   operationsAlerts: OperationsAlertRecord[];
@@ -856,6 +871,14 @@ interface CustomerStateContextValue {
     taskId: string,
     updates: Partial<Pick<OperationsTaskRecord, "title" | "description" | "dueDate" | "assignedStaffId" | "assignedStaffName" | "status" | "completedAt">>
   ) => { ok: boolean; message: string };
+  createRentableResource: (input: Omit<RentableResource, "id" | "createdAt" | "updatedAt">) => { ok: boolean; message: string; resourceId?: string };
+  updateRentableResource: (resourceId: string, updates: Partial<Omit<RentableResource, "id" | "organizationId" | "createdAt">>) => { ok: boolean; message: string };
+  createReservation: (input: Omit<ReservationRecord, "id" | "organizationId" | "createdAt" | "updatedAt" | "unavailableStartsAt" | "unavailableEndsAt">) => { ok: boolean; message: string; reservationId?: string };
+  updateReservation: (reservationId: string, updates: Partial<Omit<ReservationRecord, "id" | "organizationId" | "createdAt">>) => { ok: boolean; message: string };
+  checkInReservation: (reservationId: string, staffUserId: string, staffName?: string) => { ok: boolean; message: string };
+  checkOutReservation: (reservationId: string, staffUserId: string, staffName?: string) => { ok: boolean; message: string };
+  cancelReservation: (reservationId: string, staffUserId?: string, staffName?: string) => { ok: boolean; message: string };
+  createMaintenanceBlock: (input: Omit<MaintenanceBlock, "id" | "organizationId" | "createdAt">) => { ok: boolean; message: string; blockId?: string };
   createHousehold: (input: {
     householdName: string;
     primaryContactCustomerId: string;
@@ -1035,6 +1058,18 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     () => seedHouseholdMembers.filter((entry) => seededHouseholdsForOrg.some((household) => household.id === entry.householdId)),
     [seededHouseholdsForOrg]
   );
+  const seededRentableResourcesForOrg = useMemo(
+    () => seedRentableResources.filter((entry) => entry.organizationId === activeOrgId),
+    [activeOrgId]
+  );
+  const seededReservationsForOrg = useMemo(
+    () => seedReservations.filter((entry) => entry.organizationId === activeOrgId),
+    [activeOrgId]
+  );
+  const seededMaintenanceBlocksForOrg = useMemo(
+    () => seedMaintenanceBlocks.filter((entry) => entry.organizationId === activeOrgId),
+    [activeOrgId]
+  );
   const communicationTemplates = useMemo(
     () => getDefaultCommunicationTemplates(activeOrgId),
     [activeOrgId]
@@ -1193,6 +1228,9 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     waiverTemplateVersions: buildScopedMockKey(activeOrgId, activeLocationId, "waiverTemplateVersions"),
     households: buildScopedMockKey(activeOrgId, activeLocationId, "households"),
     householdMembers: buildScopedMockKey(activeOrgId, activeLocationId, "householdMembers"),
+    rentableResources: buildScopedMockKey(activeOrgId, activeLocationId, "rentableResources"),
+    reservations: buildScopedMockKey(activeOrgId, activeLocationId, "reservations"),
+    maintenanceBlocks: buildScopedMockKey(activeOrgId, activeLocationId, "maintenanceBlocks"),
     communications: buildScopedMockKey(activeOrgId, activeLocationId, "communications"),
     operationsAlertOverrides: buildScopedMockKey(activeOrgId, activeLocationId, "operationsAlertOverrides"),
     operationsManualAlerts: buildScopedMockKey(activeOrgId, activeLocationId, "operationsManualAlerts"),
@@ -1241,6 +1279,9 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
   const [householdMembers, setHouseholdMembers] = useState<HouseholdMember[]>(
     seededHouseholdMembersForOrg.map(normalizeHouseholdMemberForState)
   );
+  const [rentableResources, setRentableResources] = useState<RentableResource[]>(seededRentableResourcesForOrg);
+  const [reservations, setReservations] = useState<ReservationRecord[]>(seededReservationsForOrg);
+  const [maintenanceBlocks, setMaintenanceBlocks] = useState<MaintenanceBlock[]>(seededMaintenanceBlocksForOrg);
   const [manualCommunications, setManualCommunications] = useState<CommunicationRecord[]>(seededManualCommunicationsForOrg);
   const [operationsAlertOverrides, setOperationsAlertOverrides] = useState<
     Array<{ id: string; status: OperationsAlertStatus; resolvedAt?: string; archivedAt?: string }>
@@ -1350,6 +1391,9 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         normalizeHouseholdMemberForState
       )
     );
+    setRentableResources(loadMockState(storageKeys.rentableResources, seededRentableResourcesForOrg) as RentableResource[]);
+    setReservations(loadMockState(storageKeys.reservations, seededReservationsForOrg) as ReservationRecord[]);
+    setMaintenanceBlocks(loadMockState(storageKeys.maintenanceBlocks, seededMaintenanceBlocksForOrg) as MaintenanceBlock[]);
     setManualCommunications(loadMockState(storageKeys.communications, seededManualCommunicationsForOrg) as CommunicationRecord[]);
     setOperationsAlertOverrides(
       loadMockState(storageKeys.operationsAlertOverrides, []) as Array<{
@@ -1377,8 +1421,12 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     seededBillingRefundsForOrg,
     seededBillingStatementsForOrg,
     seededManualCommunicationsForOrg,
+    seededMaintenanceBlocksForOrg,
     seededMembershipRenewalsForOrg,
     seededOperationsTasksForOrg
+    ,
+    seededRentableResourcesForOrg,
+    seededReservationsForOrg
   ]);
 
   useEffect(() => {
@@ -1478,6 +1526,18 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     if (!hydrated) return;
     saveMockState(storageKeys.householdMembers, householdMembers);
   }, [householdMembers, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
+    saveMockState(storageKeys.rentableResources, rentableResources);
+  }, [rentableResources, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
+    saveMockState(storageKeys.reservations, reservations);
+  }, [reservations, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
+    saveMockState(storageKeys.maintenanceBlocks, maintenanceBlocks);
+  }, [maintenanceBlocks, hydrated]);
   useEffect(() => {
     if (!hydrated) return;
     saveMockState(storageKeys.communications, manualCommunications);
@@ -1808,6 +1868,147 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         });
       });
 
+    reservations.forEach((reservation) => {
+      const resource = rentableResources.find((entry) => entry.id === reservation.resourceId);
+      const primaryParticipant = reservation.participants[0];
+      const customer = reservation.customerId
+        ? customers.find((entry) => entry.id === reservation.customerId)
+        : primaryParticipant
+          ? customers.find((entry) => entry.id === primaryParticipant.customerId)
+          : undefined;
+      if (!resource || !customer) return;
+      const label = `${customer.firstName} ${customer.lastName}`;
+      const reservationTitle = reservation.title || resource.name;
+      generated.push({
+        id: `comm_reservation_confirmation_${reservation.id}`,
+        organizationId: activeOrgId,
+        locationId: reservation.locationId,
+        channel: "email",
+        status: "sent",
+        recipientType: reservation.householdId ? "household" : "customer",
+        recipientLabel: label,
+        subject: "Reservation confirmation",
+        message: `${reservationTitle} is confirmed for ${reservation.startsAt}.`,
+        body: `${reservationTitle} is confirmed for ${reservation.startsAt}.`,
+        customerId: customer.id,
+        householdId: reservation.householdId,
+        templateType: "registration_confirmation",
+        source: "registration_confirmation",
+        isTransactional: true,
+        recipients: [{ id: customer.id, type: "customer", label, customerId: customer.id, householdId: reservation.householdId, email: customer.email, phone: customer.phone }],
+        sender: { kind: "system", name: "System" },
+        relatedRecords: [
+          { kind: "customer", id: customer.id, label },
+          { kind: "alert", id: reservation.id, label: reservationTitle }
+        ],
+        sentAt: reservation.createdAt,
+        createdAt: reservation.createdAt,
+        createdByStaffName: reservation.createdByStaffName ?? "System",
+        deliveryStatus: "delivered"
+      });
+
+      const startsAt = new Date(reservation.startsAt).getTime();
+      const activeTs = new Date(`${activeDateKey}T00:00:00Z`).getTime();
+      const hoursUntil = Math.round((startsAt - activeTs) / (1000 * 60 * 60));
+      if (hoursUntil >= 0 && hoursUntil <= 24) {
+        generated.push({
+          id: `comm_reservation_reminder_24_${reservation.id}`,
+          organizationId: activeOrgId,
+          locationId: reservation.locationId,
+          channel: "sms",
+          status: "scheduled",
+          recipientType: reservation.householdId ? "household" : "customer",
+          recipientLabel: label,
+          subject: "Reservation reminder",
+          message: `${reservationTitle} starts within 24 hours.`,
+          body: `${reservationTitle} starts within 24 hours.`,
+          customerId: customer.id,
+          householdId: reservation.householdId,
+          source: "system_alert",
+          isTransactional: true,
+          recipients: [{ id: customer.id, type: "customer", label, customerId: customer.id, householdId: reservation.householdId, email: customer.email, phone: customer.phone }],
+          sender: { kind: "system", name: "System" },
+          relatedRecords: [{ kind: "customer", id: customer.id, label }],
+          scheduledFor: reservation.startsAt,
+          createdAt: `${activeDateKey}T09:00:00Z`,
+          createdByStaffName: "System"
+        });
+      }
+      if (hoursUntil >= 0 && hoursUntil <= 1) {
+        generated.push({
+          id: `comm_reservation_reminder_1_${reservation.id}`,
+          organizationId: activeOrgId,
+          locationId: reservation.locationId,
+          channel: "system_notification",
+          status: "scheduled",
+          recipientType: reservation.householdId ? "household" : "customer",
+          recipientLabel: label,
+          subject: "Reservation starts soon",
+          message: `${reservationTitle} starts within the hour.`,
+          body: `${reservationTitle} starts within the hour.`,
+          customerId: customer.id,
+          householdId: reservation.householdId,
+          source: "system_alert",
+          isTransactional: true,
+          recipients: [{ id: customer.id, type: "customer", label, customerId: customer.id, householdId: reservation.householdId, email: customer.email, phone: customer.phone }],
+          sender: { kind: "system", name: "System" },
+          relatedRecords: [{ kind: "customer", id: customer.id, label }],
+          scheduledFor: reservation.startsAt,
+          createdAt: `${activeDateKey}T09:30:00Z`,
+          createdByStaffName: "System"
+        });
+      }
+      if (reservation.status === "cancelled") {
+        generated.push({
+          id: `comm_reservation_cancelled_${reservation.id}`,
+          organizationId: activeOrgId,
+          locationId: reservation.locationId,
+          channel: "email",
+          status: "sent",
+          recipientType: reservation.householdId ? "household" : "customer",
+          recipientLabel: label,
+          subject: "Reservation cancelled",
+          message: `${reservationTitle} has been cancelled.`,
+          body: `${reservationTitle} has been cancelled.`,
+          customerId: customer.id,
+          householdId: reservation.householdId,
+          source: "system_alert",
+          isTransactional: true,
+          recipients: [{ id: customer.id, type: "customer", label, customerId: customer.id, householdId: reservation.householdId, email: customer.email, phone: customer.phone }],
+          sender: { kind: "system", name: "System" },
+          relatedRecords: [{ kind: "customer", id: customer.id, label }],
+          sentAt: reservation.updatedAt ?? reservation.createdAt,
+          createdAt: reservation.updatedAt ?? reservation.createdAt,
+          createdByStaffName: "System",
+          deliveryStatus: "delivered"
+        });
+      }
+      if (reservation.status === "checked_in" && reservation.reservationType === "equipment_checkout") {
+        generated.push({
+          id: `comm_equipment_return_${reservation.id}`,
+          organizationId: activeOrgId,
+          locationId: reservation.locationId,
+          channel: "sms",
+          status: "scheduled",
+          recipientType: reservation.householdId ? "household" : "customer",
+          recipientLabel: label,
+          subject: "Equipment return reminder",
+          message: `${reservationTitle} should be returned by ${reservation.endsAt}.`,
+          body: `${reservationTitle} should be returned by ${reservation.endsAt}.`,
+          customerId: customer.id,
+          householdId: reservation.householdId,
+          source: "system_alert",
+          isTransactional: true,
+          recipients: [{ id: customer.id, type: "customer", label, customerId: customer.id, householdId: reservation.householdId, email: customer.email, phone: customer.phone }],
+          sender: { kind: "system", name: "System" },
+          relatedRecords: [{ kind: "customer", id: customer.id, label }],
+          scheduledFor: reservation.endsAt,
+          createdAt: `${activeDateKey}T10:00:00Z`,
+          createdByStaffName: "System"
+        });
+      }
+    });
+
     transactions
       .filter((transaction) => transaction.receiptStatus === "pending")
       .forEach((transaction) => {
@@ -2068,6 +2269,8 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     programs,
     registrations,
     sessions,
+    rentableResources,
+    reservations,
     transactions,
     waiverTemplates,
     waivers
@@ -2642,6 +2845,113 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       }
     });
 
+    reservations.forEach((reservation) => {
+      const resource = rentableResources.find((entry) => entry.id === reservation.resourceId);
+      const customer = reservation.customerId ? customers.find((entry) => entry.id === reservation.customerId) : undefined;
+      const label = customer ? `${customer.firstName} ${customer.lastName}` : reservation.title;
+      const overlapsMaintenance = maintenanceBlocks.find(
+        (entry) => entry.resourceId === reservation.resourceId && overlaps(
+          reservation.unavailableStartsAt ?? reservation.startsAt,
+          reservation.unavailableEndsAt ?? reservation.endsAt,
+          entry.startsAt,
+          entry.endsAt
+        )
+      );
+      if (overlapsMaintenance && reservation.status !== "cancelled") {
+        alerts.push({
+          id: `alert_reservation_maintenance_${reservation.id}`,
+          organizationId: activeOrgId,
+          locationId: reservation.locationId,
+          source: "system",
+          type: "program",
+          severity: "warning",
+          status: "open",
+          title: "Maintenance blocking reservation",
+          description: `${resource?.name ?? "Resource"} is blocked during ${label}'s reservation window.`,
+          customerId: customer?.id,
+          createdAt: `${activeDateKey}T08:45:00Z`
+        });
+      }
+      const conflictingReservation = reservations.find(
+        (entry) =>
+          entry.id !== reservation.id &&
+          entry.resourceId === reservation.resourceId &&
+          entry.status !== "cancelled" &&
+          reservation.status !== "cancelled" &&
+          overlaps(
+            reservation.unavailableStartsAt ?? reservation.startsAt,
+            reservation.unavailableEndsAt ?? reservation.endsAt,
+            entry.unavailableStartsAt ?? entry.startsAt,
+            entry.unavailableEndsAt ?? entry.endsAt
+          )
+      );
+      if (conflictingReservation) {
+        alerts.push({
+          id: `alert_reservation_conflict_${reservation.id}`,
+          organizationId: activeOrgId,
+          locationId: reservation.locationId,
+          source: "system",
+          type: "program",
+          severity: "critical",
+          status: "open",
+          title: "Reservation conflict",
+          description: `${resource?.name ?? "Resource"} has overlapping reservations.`,
+          customerId: customer?.id,
+          createdAt: `${activeDateKey}T08:50:00Z`
+        });
+      }
+      if (
+        reservation.reservationType === "equipment_checkout" &&
+        reservation.status === "checked_in" &&
+        new Date(reservation.endsAt).getTime() < new Date(`${activeDateKey}T23:59:59Z`).getTime()
+      ) {
+        alerts.push({
+          id: `alert_equipment_overdue_${reservation.id}`,
+          organizationId: activeOrgId,
+          locationId: reservation.locationId,
+          source: "system",
+          type: "inventory",
+          severity: "warning",
+          status: "open",
+          title: "Overdue equipment",
+          description: `${resource?.name ?? "Equipment"} has not been returned by ${label}.`,
+          customerId: customer?.id,
+          createdAt: `${activeDateKey}T09:00:00Z`
+        });
+      }
+      const hoursUntil = (new Date(reservation.startsAt).getTime() - new Date(`${activeDateKey}T00:00:00Z`).getTime()) / (1000 * 60 * 60);
+      if (hoursUntil >= 0 && hoursUntil <= 24 && reservation.status === "confirmed") {
+        alerts.push({
+          id: `alert_upcoming_reservation_${reservation.id}`,
+          organizationId: activeOrgId,
+          locationId: reservation.locationId,
+          source: "system",
+          type: "program",
+          severity: "info",
+          status: "open",
+          title: "Upcoming reservation",
+          description: `${label} has an upcoming reservation for ${resource?.name ?? "resource"}.`,
+          customerId: customer?.id,
+          createdAt: `${activeDateKey}T09:05:00Z`
+        });
+      }
+      if (resource?.status === "maintenance" || resource?.status === "inactive") {
+        alerts.push({
+          id: `alert_resource_unavailable_${reservation.id}`,
+          organizationId: activeOrgId,
+          locationId: reservation.locationId,
+          source: "system",
+          type: "inventory",
+          severity: "warning",
+          status: "open",
+          title: "Resource unavailable",
+          description: `${resource.name} is not currently bookable.`,
+          customerId: customer?.id,
+          createdAt: `${activeDateKey}T09:10:00Z`
+        });
+      }
+    });
+
     const overridesById = new Map(operationsAlertOverrides.map((entry) => [entry.id, entry]));
     return [...alerts, ...operationsManualAlerts]
       .map((alert) => {
@@ -2666,8 +2976,11 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     membershipRenewals,
     operationsAlertOverrides,
     operationsManualAlerts,
+    maintenanceBlocks,
     programs,
+    rentableResources,
     registrations,
+    reservations,
     sessions,
     transactions
   ]);
@@ -2817,6 +3130,198 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       )
     );
     return { ok: true as const, message: "Task updated." };
+  };
+
+  const createRentableResource: CustomerStateContextValue["createRentableResource"] = (input) => {
+    const id = `resource_${Math.random().toString(36).slice(2, 9)}`;
+    setRentableResources((prev) => [
+      {
+        ...input,
+        id,
+        organizationId: activeOrgId,
+        createdAt: new Date().toISOString()
+      },
+      ...prev
+    ]);
+    return { ok: true as const, message: `Resource created: ${input.name}.`, resourceId: id };
+  };
+
+  const updateRentableResource: CustomerStateContextValue["updateRentableResource"] = (resourceId, updates) => {
+    const existing = rentableResources.find((entry) => entry.id === resourceId);
+    if (!existing) return { ok: false as const, message: "Resource not found." };
+    setRentableResources((prev) =>
+      prev.map((entry) =>
+        entry.id === resourceId ? { ...entry, ...updates, updatedAt: new Date().toISOString() } : entry
+      )
+    );
+    return { ok: true as const, message: "Resource updated." };
+  };
+
+  const createMaintenanceBlock: CustomerStateContextValue["createMaintenanceBlock"] = (input) => {
+    const resource = rentableResources.find((entry) => entry.id === input.resourceId);
+    if (!resource) return { ok: false as const, message: "Resource not found." };
+    const blockId = `maint_${Math.random().toString(36).slice(2, 9)}`;
+    setMaintenanceBlocks((prev) => [
+      {
+        ...input,
+        id: blockId,
+        organizationId: activeOrgId,
+        createdAt: new Date().toISOString()
+      },
+      ...prev
+    ]);
+    return { ok: true as const, message: `Maintenance block created for ${resource.name}.`, blockId };
+  };
+
+  const createReservation: CustomerStateContextValue["createReservation"] = (input) => {
+    const resource = rentableResources.find((entry) => entry.id === input.resourceId);
+    if (!resource) return { ok: false as const, message: "Resource not found." };
+    const startsAt = input.startsAt;
+    const endsAt = input.endsAt;
+    if (new Date(endsAt).getTime() <= new Date(startsAt).getTime()) {
+      return { ok: false as const, message: "Reservation end must be after start." };
+    }
+    const setupBufferMinutes = input.setupBufferMinutes ?? resource.setupBufferMinutes ?? 0;
+    const cleanupBufferMinutes = input.cleanupBufferMinutes ?? resource.cleanupBufferMinutes ?? 0;
+    const unavailableStartsAt = new Date(new Date(startsAt).getTime() - setupBufferMinutes * 60000).toISOString();
+    const unavailableEndsAt = new Date(new Date(endsAt).getTime() + cleanupBufferMinutes * 60000).toISOString();
+
+    const conflictingReservation = reservations.find(
+      (entry) =>
+        entry.resourceId === input.resourceId &&
+        !["cancelled", "completed", "checked_out"].includes(entry.status) &&
+        overlaps(
+          unavailableStartsAt,
+          unavailableEndsAt,
+          entry.unavailableStartsAt ?? entry.startsAt,
+          entry.unavailableEndsAt ?? entry.endsAt
+        )
+    );
+    if (conflictingReservation) {
+      return { ok: false as const, message: `Conflict: ${resource.name} is already reserved for that time.` };
+    }
+    const blockingMaintenance = maintenanceBlocks.find(
+      (entry) => entry.resourceId === input.resourceId && overlaps(unavailableStartsAt, unavailableEndsAt, entry.startsAt, entry.endsAt)
+    );
+    if (blockingMaintenance) {
+      return { ok: false as const, message: `Unavailable: ${resource.name} is blocked for maintenance.` };
+    }
+
+    const reservationId = `rsv_${Math.random().toString(36).slice(2, 9)}`;
+    setReservations((prev) => [
+      {
+        ...input,
+        id: reservationId,
+        organizationId: activeOrgId,
+        setupBufferMinutes,
+        cleanupBufferMinutes,
+        unavailableStartsAt,
+        unavailableEndsAt,
+        createdAt: new Date().toISOString()
+      },
+      ...prev
+    ]);
+    return { ok: true as const, message: `Reservation created for ${resource.name}.`, reservationId };
+  };
+
+  const updateReservation: CustomerStateContextValue["updateReservation"] = (reservationId, updates) => {
+    const existing = reservations.find((entry) => entry.id === reservationId);
+    if (!existing) return { ok: false as const, message: "Reservation not found." };
+    const resource = rentableResources.find((entry) => entry.id === (updates.resourceId ?? existing.resourceId));
+    if (!resource) return { ok: false as const, message: "Resource not found." };
+    const startsAt = updates.startsAt ?? existing.startsAt;
+    const endsAt = updates.endsAt ?? existing.endsAt;
+    if (new Date(endsAt).getTime() <= new Date(startsAt).getTime()) {
+      return { ok: false as const, message: "Reservation end must be after start." };
+    }
+    const setupBufferMinutes = updates.setupBufferMinutes ?? existing.setupBufferMinutes ?? resource.setupBufferMinutes ?? 0;
+    const cleanupBufferMinutes = updates.cleanupBufferMinutes ?? existing.cleanupBufferMinutes ?? resource.cleanupBufferMinutes ?? 0;
+    const unavailableStartsAt = new Date(new Date(startsAt).getTime() - setupBufferMinutes * 60000).toISOString();
+    const unavailableEndsAt = new Date(new Date(endsAt).getTime() + cleanupBufferMinutes * 60000).toISOString();
+
+    const conflictingReservation = reservations.find(
+      (entry) =>
+        entry.id !== reservationId &&
+        entry.resourceId === (updates.resourceId ?? existing.resourceId) &&
+        !["cancelled", "completed", "checked_out"].includes(entry.status) &&
+        overlaps(
+          unavailableStartsAt,
+          unavailableEndsAt,
+          entry.unavailableStartsAt ?? entry.startsAt,
+          entry.unavailableEndsAt ?? entry.endsAt
+        )
+    );
+    if (conflictingReservation) {
+      return { ok: false as const, message: `Conflict: ${resource.name} is already reserved for that time.` };
+    }
+
+    setReservations((prev) =>
+      prev.map((entry) =>
+        entry.id === reservationId
+          ? {
+              ...entry,
+              ...updates,
+              setupBufferMinutes,
+              cleanupBufferMinutes,
+              unavailableStartsAt,
+              unavailableEndsAt,
+              updatedAt: new Date().toISOString()
+            }
+          : entry
+      )
+    );
+    return { ok: true as const, message: "Reservation updated." };
+  };
+
+  const checkInReservation: CustomerStateContextValue["checkInReservation"] = (reservationId, staffUserId, staffName) => {
+    const existing = reservations.find((entry) => entry.id === reservationId);
+    if (!existing) return { ok: false as const, message: "Reservation not found." };
+    setReservations((prev) =>
+      prev.map((entry) =>
+        entry.id === reservationId
+          ? {
+              ...entry,
+              status: "checked_in",
+              checkedInAt: new Date().toISOString(),
+              checkedInByStaffId: staffUserId,
+              checkedInByStaffName: staffName,
+              updatedAt: new Date().toISOString()
+            }
+          : entry
+      )
+    );
+    return { ok: true as const, message: "Reservation checked in." };
+  };
+
+  const checkOutReservation: CustomerStateContextValue["checkOutReservation"] = (reservationId, staffUserId, staffName) => {
+    const existing = reservations.find((entry) => entry.id === reservationId);
+    if (!existing) return { ok: false as const, message: "Reservation not found." };
+    setReservations((prev) =>
+      prev.map((entry) =>
+        entry.id === reservationId
+          ? {
+              ...entry,
+              status: entry.reservationType === "equipment_checkout" ? "checked_out" : "completed",
+              checkedOutAt: new Date().toISOString(),
+              checkedOutByStaffId: staffUserId,
+              checkedOutByStaffName: staffName,
+              updatedAt: new Date().toISOString()
+            }
+          : entry
+      )
+    );
+    return { ok: true as const, message: "Reservation checked out." };
+  };
+
+  const cancelReservation: CustomerStateContextValue["cancelReservation"] = (reservationId) => {
+    const existing = reservations.find((entry) => entry.id === reservationId);
+    if (!existing) return { ok: false as const, message: "Reservation not found." };
+    setReservations((prev) =>
+      prev.map((entry) =>
+        entry.id === reservationId ? { ...entry, status: "cancelled", updatedAt: new Date().toISOString() } : entry
+      )
+    );
+    return { ok: true as const, message: "Reservation cancelled." };
   };
 
   const checkOutRecord = (recordId: string, staffUserId: string, staffName?: string) => {
@@ -6499,6 +7004,9 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       waiverTemplateVersions,
       households,
       householdMembers,
+      rentableResources,
+      reservations,
+      maintenanceBlocks,
       communicationTemplates,
       communications,
       operationsAlerts,
@@ -6597,6 +7105,14 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       archiveOperationsAlert,
       createOperationsTask,
       updateOperationsTask,
+      createRentableResource,
+      updateRentableResource,
+      createReservation,
+      updateReservation,
+      checkInReservation,
+      checkOutReservation,
+      cancelReservation,
+      createMaintenanceBlock,
       createHousehold,
       updateHousehold,
       updateHouseholdPhoto,
@@ -6631,6 +7147,9 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         setWaiverTemplateVersions(seededWaiverTemplateVersionsForOrg);
         setHouseholds(seededHouseholdsForOrg);
         setHouseholdMembers(seededHouseholdMembersForOrg.map(normalizeHouseholdMemberForState));
+        setRentableResources(seededRentableResourcesForOrg);
+        setReservations(seededReservationsForOrg);
+        setMaintenanceBlocks(seededMaintenanceBlocksForOrg);
         setManualCommunications(seededManualCommunicationsForOrg);
         setOperationsAlertOverrides([]);
         setOperationsManualAlerts([]);
@@ -6638,7 +7157,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         clearScopedMockState(
           activeOrgId,
           activeLocationId,
-          ["customers", "billingAccounts", "billingCredits", "billingInvoices", "billingStatements", "membershipRenewals", "billingRefunds", "punchPasses", "checkIns", "memberships", "transactions", "products", "inventoryAudit", "productCategories", "programs", "sessions", "registrations", "registrationActivity", "accessRecords", "waivers", "signedWaiverRecords", "waiverTemplates", "waiverTemplateVersions", "households", "householdMembers", "communications", "operationsAlertOverrides", "operationsManualAlerts", "operationsTasks"]
+          ["customers", "billingAccounts", "billingCredits", "billingInvoices", "billingStatements", "membershipRenewals", "billingRefunds", "punchPasses", "checkIns", "memberships", "transactions", "products", "inventoryAudit", "productCategories", "programs", "sessions", "registrations", "registrationActivity", "accessRecords", "waivers", "signedWaiverRecords", "waiverTemplates", "waiverTemplateVersions", "households", "householdMembers", "rentableResources", "reservations", "maintenanceBlocks", "communications", "operationsAlertOverrides", "operationsManualAlerts", "operationsTasks"]
         );
       }
     }),
@@ -6662,6 +7181,9 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       waiverTemplateVersions,
       households,
       householdMembers,
+      rentableResources,
+      reservations,
+      maintenanceBlocks,
       communicationTemplates,
       communications,
       operationsAlerts,
@@ -6672,8 +7194,11 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       registrations,
       registrationActivity,
       checkInLogRecords,
+      seededMaintenanceBlocksForOrg,
       seededManualCommunicationsForOrg,
       seededOperationsTasksForOrg,
+      seededRentableResourcesForOrg,
+      seededReservationsForOrg,
       activeDateKey,
       isActiveDateToday,
       todayLogRecords,

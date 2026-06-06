@@ -19,6 +19,7 @@ type ReportCategory =
   | "attendance"
   | "customers"
   | "programs"
+  | "rentals"
   | "households"
   | "staff"
   | "waivers"
@@ -58,6 +59,7 @@ const CATEGORY_LABELS: Record<ReportCategory, string> = {
   attendance: "Attendance",
   customers: "Customers",
   programs: "Programs",
+  rentals: "Rentals",
   households: "Households",
   staff: "Staff Activity",
   waivers: "Waivers",
@@ -78,6 +80,9 @@ export default function ReportsPage() {
     productCategories,
     households,
     householdMembers,
+    rentableResources,
+    reservations,
+    maintenanceBlocks,
     billingAccounts,
     billingInvoices,
     membershipRenewals,
@@ -233,6 +238,23 @@ export default function ReportsPage() {
     () => billingRefunds.reduce((sum, entry) => sum + entry.amountCents, 0),
     [billingRefunds]
   );
+  const rentalRevenueCents = useMemo(
+    () => reservations.reduce((sum, entry) => sum + entry.totalPriceCents, 0),
+    [reservations]
+  );
+  const rentalCancellationRate = useMemo(() => {
+    if (reservations.length === 0) return 0;
+    return Math.round((reservations.filter((entry) => entry.status === "cancelled").length / reservations.length) * 100);
+  }, [reservations]);
+  const mostPopularResources = useMemo(() => {
+    const counts = new Map<string, number>();
+    reservations.forEach((entry) => counts.set(entry.resourceId, (counts.get(entry.resourceId) ?? 0) + 1));
+    return rentableResources
+      .map((resource) => ({ id: resource.id, name: resource.name, count: counts.get(resource.id) ?? 0 }))
+      .sort((a, b) => b.count - a.count);
+  }, [reservations, rentableResources]);
+  const capacityUtilization = rentableResources.length === 0 ? 0 : Math.round((reservations.length / rentableResources.length) * 100);
+  const equipmentUsageCount = reservations.filter((entry) => entry.reservationType === "equipment_checkout").length;
 
   return (
     <PermissionGate permission="viewReports">
@@ -588,6 +610,42 @@ export default function ReportsPage() {
                 secondary: `${formatDateTime(row.startsAt)} · ${row.registered}/${row.capacity} registered`
               }))}
             />
+          </div>
+        ) : null}
+
+        {activeCategory === "rentals" ? (
+          <div className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+              <MetricCard title="Reservation Revenue" value={formatCurrency(rentalRevenueCents / 100)} />
+              <StatusCard title="Resource Utilization" value={`${capacityUtilization}%`} />
+              <StatusCard title="Most Popular Resources" value={`${mostPopularResources.filter((entry) => entry.count > 0).length}`} />
+              <StatusCard title="Cancellation Rate" value={`${rentalCancellationRate}%`} />
+              <StatusCard title="Equipment Usage" value={`${equipmentUsageCount}`} />
+            </div>
+            <div className="grid gap-3 lg:grid-cols-2">
+              <ListCard
+                title="Rental Trends"
+                emptyText="No reservations available."
+                items={reservations.map((entry) => ({
+                  id: entry.id,
+                  primary: rentableResources.find((resource) => resource.id === entry.resourceId)?.name ?? entry.title,
+                  secondary: `${formatDateTime(entry.startsAt)} · ${formatCurrency(entry.totalPriceCents / 100)}`
+                }))}
+              />
+              <ListCard
+                title="Most Popular Resources"
+                emptyText="No resource activity yet."
+                items={mostPopularResources.map((entry) => ({
+                  id: entry.id,
+                  primary: entry.name,
+                  secondary: `${entry.count} reservations`
+                }))}
+              />
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <StatusCard title="Active Maintenance Blocks" value={`${maintenanceBlocks.length}`} />
+              <StatusCard title="Resources Available" value={`${rentableResources.filter((entry) => entry.status === "active").length}`} />
+            </div>
           </div>
         ) : null}
 

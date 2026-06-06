@@ -8,6 +8,7 @@ import CommunicationsPage from "@/app/(app)/communications/page";
 import BillingPage from "@/app/(app)/billing/page";
 import CheckInPage from "@/app/(app)/check-in/page";
 import CalendarPage from "@/app/(app)/calendar/page";
+import RentalsPage from "@/app/(app)/rentals/page";
 import ProgramsPage from "@/app/(app)/programs/page";
 import RegistrationsPage from "@/app/(app)/registrations/page";
 import ProductsPage from "@/app/(app)/products/page";
@@ -33,6 +34,7 @@ describe("Primary routes smoke", () => {
     BillingPage,
     CheckInPage,
     CalendarPage,
+    RentalsPage,
     RegistrationsPage,
     ProgramsPage,
     ProductsPage,

@@ -88,6 +88,7 @@ export type StaffPermission =
   | "manageRoles"
   | "inviteStaff"
   | "grantCompAccess"
+  | "manageRentals"
   | "manageCommunications"
   | "sendTransactionalMessages"
   | "messageAssignedParticipants";
@@ -399,6 +400,128 @@ export interface Membership {
   freezeEndDate?: string;
   freezeReason?: string;
   freezeStaffNotes?: string;
+}
+
+export type RentalResourceType = "space" | "equipment" | "experience";
+export type RentalResourceStatus = "active" | "inactive" | "maintenance" | "seasonal";
+export type ReservationType =
+  | "single"
+  | "recurring"
+  | "multi_day"
+  | "private_event"
+  | "equipment_checkout";
+export type ReservationStatus =
+  | "draft"
+  | "confirmed"
+  | "checked_in"
+  | "checked_out"
+  | "cancelled"
+  | "completed";
+export type PricingRuleType =
+  | "flat_rate"
+  | "hourly_rate"
+  | "daily_rate"
+  | "member_rate"
+  | "non_member_rate"
+  | "household_rate"
+  | "seasonal_rate"
+  | "custom";
+
+export interface RentalPricingRule {
+  id: string;
+  type: PricingRuleType;
+  label: string;
+  priceCents: number;
+  memberPriceCents?: number;
+  seasonalStart?: string;
+  seasonalEnd?: string;
+  notes?: string;
+}
+
+export interface RentalAvailabilityRule {
+  id: string;
+  dayOfWeek: number;
+  opensAt: string;
+  closesAt: string;
+  locationId?: string;
+}
+
+export interface MaintenanceBlock {
+  id: string;
+  organizationId: string;
+  locationId: string;
+  resourceId: string;
+  title: string;
+  description?: string;
+  startsAt: string;
+  endsAt: string;
+  createdAt: string;
+  createdByStaffId?: string;
+  createdByStaffName?: string;
+}
+
+export interface RentableResource {
+  id: string;
+  organizationId: string;
+  locationId: string;
+  name: string;
+  description?: string;
+  type: RentalResourceType;
+  category: string;
+  capacity?: number;
+  availabilityRules: RentalAvailabilityRule[];
+  pricingRules: RentalPricingRule[];
+  waiverTemplateIds?: string[];
+  requiredMembershipProductIds?: string[];
+  photos?: string[];
+  setupBufferMinutes?: number;
+  cleanupBufferMinutes?: number;
+  status: RentalResourceStatus;
+  color?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ReservationParticipant {
+  customerId: string;
+  householdId?: string;
+  displayName: string;
+}
+
+export interface ReservationRecord {
+  id: string;
+  organizationId: string;
+  locationId: string;
+  resourceId: string;
+  reservationType: ReservationType;
+  status: ReservationStatus;
+  title: string;
+  customerId?: string;
+  householdId?: string;
+  participants: ReservationParticipant[];
+  startsAt: string;
+  endsAt: string;
+  setupBufferMinutes?: number;
+  cleanupBufferMinutes?: number;
+  unavailableStartsAt?: string;
+  unavailableEndsAt?: string;
+  notes?: string;
+  waiverTemplateIds?: string[];
+  requiresWaiver?: boolean;
+  invoiceId?: string;
+  transactionId?: string;
+  totalPriceCents: number;
+  checkedInAt?: string;
+  checkedOutAt?: string;
+  checkedInByStaffId?: string;
+  checkedInByStaffName?: string;
+  checkedOutByStaffId?: string;
+  checkedOutByStaffName?: string;
+  recurringSeriesId?: string;
+  createdAt: string;
+  createdByStaffId?: string;
+  createdByStaffName?: string;
+  updatedAt?: string;
 }
 
 export interface PunchPass {

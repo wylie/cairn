@@ -1,6 +1,6 @@
 import { memo } from "react";
 import Link from "next/link";
-import { LayoutDashboard, Bell, Home, Users, ScanLine, Calendar, Boxes, CreditCard, BarChart3, Settings, Tags, UserCog, ClipboardList, FileCheck2, ShieldCheck, MessagesSquare } from "lucide-react";
+import { LayoutDashboard, Bell, Home, Users, ScanLine, Calendar, Boxes, CreditCard, BarChart3, Settings, Tags, UserCog, ClipboardList, FileCheck2, ShieldCheck, MessagesSquare, TentTree } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StaffPermission } from "@/types/domain";
 
@@ -43,6 +43,7 @@ const navItems: NavItem[] = [
   { href: "/billing", label: "Billing", icon: CreditCard, section: "management", permissions: ["manageBillingSettings", "viewFinancialReports"] },
   { href: "/check-in", label: "Check-in", icon: ScanLine, section: "operations", permissions: ["checkInCustomer", "checkOutCustomer"] },
   { href: "/calendar", label: "Calendar", icon: Calendar, section: "operations", permissions: ["rosterAccess", "editPrograms", "checkInCustomer"] },
+  { href: "/rentals", label: "Rentals", icon: TentTree, section: "operations", permissions: ["manageRentals"] },
   { href: "/registrations", label: "Registrations", icon: ClipboardList, section: "operations", permissions: ["rosterAccess", "editPrograms"] },
   { href: "/pos", label: "POS", icon: CreditCard, section: "operations", permissions: ["usePOS"] },
   {

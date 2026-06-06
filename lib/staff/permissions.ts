@@ -31,6 +31,7 @@ export const ROLE_PERMISSION_PRESETS: Record<StaffRole, StaffPermission[]> = {
     "manageRoles",
     "inviteStaff",
     "grantCompAccess",
+    "manageRentals",
     "manageCommunications",
     "sendTransactionalMessages",
     "messageAssignedParticipants"
@@ -61,6 +62,7 @@ export const ROLE_PERMISSION_PRESETS: Record<StaffRole, StaffPermission[]> = {
     "manageStaff",
     "inviteStaff",
     "grantCompAccess",
+    "manageRentals",
     "manageCommunications",
     "sendTransactionalMessages",
     "messageAssignedParticipants"
@@ -77,6 +79,7 @@ export const ROLE_PERMISSION_PRESETS: Record<StaffRole, StaffPermission[]> = {
     "discountTransaction",
     "editPrograms",
     "rosterAccess",
+    "manageRentals",
     "sendTransactionalMessages"
   ],
   instructor: ["editPrograms", "rosterAccess", "messageAssignedParticipants"],
@@ -129,6 +132,7 @@ export const PERMISSION_LABELS: Record<StaffPermission, string> = {
   manageBillingSettings: "Manage billing settings",
   managePlatformSettings: "Manage platform settings",
   grantCompAccess: "Grant comp access (customer actions)",
+  manageRentals: "Manage rentals and reservations",
   manageCommunications: "Manage communications",
   sendTransactionalMessages: "Send transactional messages",
   messageAssignedParticipants: "Message assigned participants"
@@ -164,6 +168,7 @@ export const PERMISSION_DESCRIPTIONS: Record<StaffPermission, string> = {
   manageBillingSettings: "Manage payment and billing-related settings.",
   managePlatformSettings: "Manage advanced platform/system configuration.",
   grantCompAccess: "Use grant-comp actions in customer workflows.",
+  manageRentals: "Create and manage rentable resources, reservations, and maintenance blocks.",
   manageCommunications: "Access the communications hub, templates, and message history.",
   sendTransactionalMessages: "Send customer-facing transactional messages and reminders.",
   messageAssignedParticipants: "Message participants, waitlists, and assigned program rosters."

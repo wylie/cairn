@@ -112,7 +112,10 @@ export default function CalendarPage() {
     sellAccessProducts,
     updateCustomerWaiver,
     waivers,
-    householdMembers
+    householdMembers,
+    rentableResources,
+    reservations,
+    maintenanceBlocks
   } = useCustomerState();
   const { settings } = useSettingsState();
   const { activeStaff, assertPermission, staffUsers, requestStaffSwitch } = useWorkstationState();
@@ -201,6 +204,27 @@ export default function CalendarPage() {
     if (!dayAgendaDateKey) return [];
     return sortSessionsByStart(scopedEntries.filter((entry) => entry.session.startsAt.slice(0, 10) === dayAgendaDateKey));
   }, [dayAgendaDateKey, scopedEntries]);
+  const visibleReservations = useMemo(() => {
+    const selectedDate = new Date(`${dateKey}T00:00:00Z`);
+    const start = new Date(selectedDate);
+    const end = new Date(selectedDate);
+    if (view === "day" || view === "agenda") {
+      end.setUTCDate(end.getUTCDate() + 1);
+    } else if (view === "week") {
+      end.setUTCDate(end.getUTCDate() + 7);
+    } else {
+      start.setUTCDate(1);
+      end.setUTCMonth(end.getUTCMonth() + 1, 1);
+    }
+    return reservations
+      .filter((entry) => {
+        if (locationId !== "all" && entry.locationId !== locationId) return false;
+        const startsAt = new Date(entry.startsAt).getTime();
+        return startsAt >= start.getTime() && startsAt < end.getTime();
+      })
+      .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  }, [dateKey, locationId, reservations, view]);
+  const resourceById = useMemo(() => new Map(rentableResources.map((entry) => [entry.id, entry])), [rentableResources]);
 
   const openCreatePanel = (prefill: { date: string; startTime: string; endTime: string } | null) => {
     setCreatePrefill(prefill);
@@ -1065,6 +1089,47 @@ export default function CalendarPage() {
           ) : null}
         </div>
       </div>
+      <section className="rounded-xl border bg-card p-4" data-testid="calendar-rentals-panel">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-base font-semibold">Facility Reservations</h3>
+            <p className="text-sm text-muted-foreground">Resource reservations and maintenance blocks for the current calendar range.</p>
+          </div>
+          <p className="text-sm text-muted-foreground">{visibleReservations.length} reservations</p>
+        </div>
+        <div className="mt-3 grid gap-3 lg:grid-cols-2">
+          <div className="space-y-2">
+            {visibleReservations.length === 0 ? (
+              <p className="rounded-lg border px-3 py-2 text-sm text-muted-foreground">No reservations in this range.</p>
+            ) : null}
+            {visibleReservations.map((reservation) => (
+              <article key={reservation.id} className="rounded-lg border p-3 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-medium">{resourceById.get(reservation.resourceId)?.name ?? reservation.title}</p>
+                  <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">{reservation.status.replaceAll("_", " ")}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">{reservation.participants.map((entry) => entry.displayName).join(", ")}</p>
+                <p className="text-xs text-muted-foreground">{formatDateTime(reservation.startsAt)} - {formatTime(reservation.endsAt)}</p>
+              </article>
+            ))}
+          </div>
+          <div className="space-y-2">
+            <h4 className="text-sm font-semibold">Maintenance Blocks</h4>
+            {maintenanceBlocks.filter((entry) => locationId === "all" || entry.locationId === locationId).length === 0 ? (
+              <p className="rounded-lg border px-3 py-2 text-sm text-muted-foreground">No maintenance blocks for the current location filter.</p>
+            ) : null}
+            {maintenanceBlocks
+              .filter((entry) => locationId === "all" || entry.locationId === locationId)
+              .map((block) => (
+                <article key={block.id} className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm">
+                  <p className="font-medium">{block.title}</p>
+                  <p className="text-xs text-amber-800">{resourceById.get(block.resourceId)?.name ?? block.resourceId}</p>
+                  <p className="text-xs text-amber-800">{formatDateTime(block.startsAt)} - {formatDateTime(block.endsAt)}</p>
+                </article>
+              ))}
+          </div>
+        </div>
+      </section>
       {sellCustomer ? (
         <SellAccessModal
           open

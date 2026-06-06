@@ -80,6 +80,7 @@ describe("customer portal membership details", () => {
     );
 
     expect(screen.getByText("Membership Overview")).toBeInTheDocument();
+    expect(screen.getByLabelText("digital-membership-card")).toBeInTheDocument();
     expect(screen.getByText(/Auto-renew:/i)).toBeInTheDocument();
     expect(screen.getByText(/Billing frequency:/i)).toBeInTheDocument();
     expect(screen.getByText(/Next renewal date:/i)).toBeInTheDocument();
@@ -111,5 +112,6 @@ describe("customer portal membership details", () => {
     );
 
     expect(screen.getByRole("link", { name: "View membership details" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View membership card" })).toBeInTheDocument();
   });
 });

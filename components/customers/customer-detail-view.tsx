@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRef } from "react";
+import { usePathname } from "next/navigation";
 import { ContextBackLink } from "@/components/shared/context-back-link";
 import { CustomerBadges } from "@/components/customers/customer-badges";
 import { ActivityTimeline } from "@/components/customers/activity-timeline";
@@ -14,12 +15,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { CustomerAvatar } from "@/components/customers/customer-avatar";
+import { DigitalMembershipCard } from "@/components/memberships/digital-membership-card";
 import { useCustomerState } from "@/lib/state/customer-state";
+import { useSettingsState } from "@/lib/state/settings-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import { filterCustomers } from "@/lib/data/customer-search";
 import { formatDate, formatDateTime, formatDateWithAge, formatShortDate, formatTime } from "@/lib/format/date";
 import { formatCurrency } from "@/lib/transactions";
 import { buildDetailHref } from "@/lib/navigation/detail-navigation";
+import { buildMembershipCardRecord } from "@/lib/memberships/cards";
 import { ROLE_LABELS } from "@/lib/staff/capabilities";
 import { PERMISSION_LABELS } from "@/lib/staff/permissions";
 import type { CommunicationRecord, StaffRole } from "@/types/domain";
@@ -44,6 +48,7 @@ type CustomerDocumentRecord = {
 };
 
 export function CustomerDetailView({ customerId }: { customerId: string }) {
+  const pathname = usePathname() ?? "";
   const {
     customers,
     memberships,
@@ -79,6 +84,8 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     updateStaffProfileForCustomer,
     updateCustomerPhoto
   } = useCustomerState();
+  const { settings } = useSettingsState();
+  const currentOrgSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? "summit";
   const {
     activeStaff,
     hasPermission,
@@ -879,6 +886,21 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
               <p className="text-muted-foreground">
                 Eligibility preview: {decision.allowed ? "✓ Can use now" : `✕ ${decision.reasons[0] ?? "Blocked"}`}
               </p>
+              {entry.type === "membership" || entry.type === "household-membership" ? (
+                <div className="mt-3">
+                  <DigitalMembershipCard
+                    variant="compact"
+                    customer={customer}
+                    accessRecord={entry}
+                    membershipName={accessProducts.find((product) => product.id === entry.productId)?.name ?? entry.notes ?? "Membership"}
+                    organizationName={settings.facilityProfile.facilityName}
+                    organizationLogoUrl={settings.branding.logoUrl || undefined}
+                    primaryColor={settings.branding.primaryColor}
+                    secondaryColor={settings.branding.secondaryColor}
+                    {...buildMembershipCardRecord(customer, entry, currentOrgSlug)}
+                  />
+                </div>
+              ) : null}
               <p className="text-xs text-muted-foreground">
                 Updated: {entry.updatedAt ? formatDateTime(entry.updatedAt) : "—"}{entry.updatedByStaffName ? ` • ${entry.updatedByStaffName}` : ""}
               </p>

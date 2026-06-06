@@ -43,6 +43,13 @@ import { normalizeTransactions } from "@/lib/transactions";
 import { evaluateCustomerAccess, getEligibleAccess, type AccessDecision } from "@/lib/access-rules";
 import { getDefaultCommunicationTemplates, renderTemplateVariables } from "@/lib/communications/templates";
 import { billingProvider, invoiceProvider, refundProvider } from "@/lib/billing/providers";
+import {
+  buildMembershipCardSearchTerms,
+  getMembershipBarcodeValue,
+  getMembershipNumber,
+  getMembershipQrToken,
+  selectPrimaryMembershipCardRecord
+} from "@/lib/memberships/cards";
 import type {
   AutomatedCommunicationTrigger,
   BillingAccount,
@@ -71,6 +78,7 @@ import type {
   Membership,
   MembershipRenewalRecord,
   MaintenanceBlock,
+  MembershipCardEvent,
   PosProduct,
   PosTransaction,
   PosTransactionItem,
@@ -397,6 +405,7 @@ interface CustomerStateContextValue {
   maintenanceBlocks: MaintenanceBlock[];
   communicationTemplates: CommunicationTemplate[];
   communications: CommunicationRecord[];
+  membershipCardEvents: MembershipCardEvent[];
   operationsAlerts: OperationsAlertRecord[];
   operationsTasks: OperationsTaskRecord[];
   checkInRecords: CheckInLogRecord[];
@@ -832,6 +841,12 @@ interface CustomerStateContextValue {
     updates: Partial<Pick<CommunicationRecord, "status" | "scheduledFor" | "sentAt" | "failedAt" | "cancelledAt" | "archivedAt" | "deliveryStatus" | "readAt" | "subject" | "message" | "body">>
   ) => { ok: boolean; message: string };
   markCommunicationRead: (communicationId: string) => { ok: boolean; message: string };
+  recordMembershipCardEvent: (input: {
+    customerId: string;
+    accessRecordId: string;
+    action: MembershipCardEvent["action"];
+    source: MembershipCardEvent["source"];
+  }) => void;
   getWaiverStatusForCustomer: (customerId: string, templateId?: string) => "valid" | "missing" | "expired" | "expiring_soon" | "outdated_version";
   getSignedWaiverRecordsForCustomer: (customerId: string) => SignedWaiverRecord[];
   createOperationsAlert: (input: {
@@ -1232,6 +1247,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     reservations: buildScopedMockKey(activeOrgId, activeLocationId, "reservations"),
     maintenanceBlocks: buildScopedMockKey(activeOrgId, activeLocationId, "maintenanceBlocks"),
     communications: buildScopedMockKey(activeOrgId, activeLocationId, "communications"),
+    membershipCardEvents: buildScopedMockKey(activeOrgId, activeLocationId, "membershipCardEvents"),
     operationsAlertOverrides: buildScopedMockKey(activeOrgId, activeLocationId, "operationsAlertOverrides"),
     operationsManualAlerts: buildScopedMockKey(activeOrgId, activeLocationId, "operationsManualAlerts"),
     operationsTasks: buildScopedMockKey(activeOrgId, activeLocationId, "operationsTasks")
@@ -1283,6 +1299,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
   const [reservations, setReservations] = useState<ReservationRecord[]>(seededReservationsForOrg);
   const [maintenanceBlocks, setMaintenanceBlocks] = useState<MaintenanceBlock[]>(seededMaintenanceBlocksForOrg);
   const [manualCommunications, setManualCommunications] = useState<CommunicationRecord[]>(seededManualCommunicationsForOrg);
+  const [membershipCardEvents, setMembershipCardEvents] = useState<MembershipCardEvent[]>([]);
   const [operationsAlertOverrides, setOperationsAlertOverrides] = useState<
     Array<{ id: string; status: OperationsAlertStatus; resolvedAt?: string; archivedAt?: string }>
   >([]);
@@ -1395,6 +1412,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     setReservations(loadMockState(storageKeys.reservations, seededReservationsForOrg) as ReservationRecord[]);
     setMaintenanceBlocks(loadMockState(storageKeys.maintenanceBlocks, seededMaintenanceBlocksForOrg) as MaintenanceBlock[]);
     setManualCommunications(loadMockState(storageKeys.communications, seededManualCommunicationsForOrg) as CommunicationRecord[]);
+    setMembershipCardEvents(loadMockState(storageKeys.membershipCardEvents, []) as MembershipCardEvent[]);
     setOperationsAlertOverrides(
       loadMockState(storageKeys.operationsAlertOverrides, []) as Array<{
         id: string;
@@ -1542,6 +1560,10 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     if (!hydrated) return;
     saveMockState(storageKeys.communications, manualCommunications);
   }, [manualCommunications, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
+    saveMockState(storageKeys.membershipCardEvents, membershipCardEvents);
+  }, [membershipCardEvents, hydrated]);
   useEffect(() => {
     if (!hydrated) return;
     saveMockState(storageKeys.operationsAlertOverrides, operationsAlertOverrides);
@@ -5797,6 +5819,31 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     return { ok: true as const, message: "Access added.", accessId };
   };
 
+  const recordMembershipCardEvent: CustomerStateContextValue["recordMembershipCardEvent"] = (input) => {
+    const customer = customers.find((entry) => entry.id === input.customerId);
+    const accessRecord = customerAccessRecords.find((entry) => entry.id === input.accessRecordId);
+    if (!customer || !accessRecord) return;
+    const membershipNumber = getMembershipNumber({ customer, accessRecord, orgSlug });
+    const qrToken = getMembershipQrToken({ customer, accessRecord, orgSlug });
+    const barcodeValue = getMembershipBarcodeValue({ customer, accessRecord, orgSlug });
+    setMembershipCardEvents((prev) => [
+      {
+        id: `mcard_${Math.random().toString(36).slice(2, 9)}`,
+        organizationId: activeOrgId,
+        locationId: activeLocationId,
+        customerId: input.customerId,
+        accessRecordId: input.accessRecordId,
+        membershipNumber,
+        qrToken,
+        barcodeValue,
+        action: input.action,
+        source: input.source,
+        createdAt: new Date().toISOString()
+      },
+      ...prev
+    ]);
+  };
+
   const updateCustomerWaiver = (
     customerId: string,
     updates: {
@@ -7009,6 +7056,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       maintenanceBlocks,
       communicationTemplates,
       communications,
+      membershipCardEvents,
       operationsAlerts,
       operationsTasks,
       checkInRecords: checkInLogRecords,
@@ -7027,13 +7075,24 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         const q = query.trim().toLowerCase();
         if (!q || !isActiveDateToday) return [];
         return customers.filter((customer) => {
+          const cardRecord = selectPrimaryMembershipCardRecord(
+            customerAccessRecords.filter((entry) => entry.customerId === customer.id)
+          );
+          const membershipTerms = cardRecord
+            ? buildMembershipCardSearchTerms({
+                customer,
+                accessRecord: cardRecord,
+                orgSlug
+              })
+            : [];
           const haystack = [
             customer.firstName,
             customer.lastName,
             `${customer.firstName} ${customer.lastName}`,
             customer.memberId,
             customer.email,
-            customer.phone
+            customer.phone,
+            ...membershipTerms
           ]
             .join(" ")
             .toLowerCase();
@@ -7098,6 +7157,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       createCommunication,
       updateCommunication,
       markCommunicationRead,
+      recordMembershipCardEvent,
       getWaiverStatusForCustomer,
       getSignedWaiverRecordsForCustomer,
       createOperationsAlert,
@@ -7151,13 +7211,14 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         setReservations(seededReservationsForOrg);
         setMaintenanceBlocks(seededMaintenanceBlocksForOrg);
         setManualCommunications(seededManualCommunicationsForOrg);
+        setMembershipCardEvents([]);
         setOperationsAlertOverrides([]);
         setOperationsManualAlerts([]);
         setOperationsTasks(seededOperationsTasksForOrg);
         clearScopedMockState(
           activeOrgId,
           activeLocationId,
-          ["customers", "billingAccounts", "billingCredits", "billingInvoices", "billingStatements", "membershipRenewals", "billingRefunds", "punchPasses", "checkIns", "memberships", "transactions", "products", "inventoryAudit", "productCategories", "programs", "sessions", "registrations", "registrationActivity", "accessRecords", "waivers", "signedWaiverRecords", "waiverTemplates", "waiverTemplateVersions", "households", "householdMembers", "rentableResources", "reservations", "maintenanceBlocks", "communications", "operationsAlertOverrides", "operationsManualAlerts", "operationsTasks"]
+          ["customers", "billingAccounts", "billingCredits", "billingInvoices", "billingStatements", "membershipRenewals", "billingRefunds", "punchPasses", "checkIns", "memberships", "transactions", "products", "inventoryAudit", "productCategories", "programs", "sessions", "registrations", "registrationActivity", "accessRecords", "waivers", "signedWaiverRecords", "waiverTemplates", "waiverTemplateVersions", "households", "householdMembers", "rentableResources", "reservations", "maintenanceBlocks", "communications", "membershipCardEvents", "operationsAlertOverrides", "operationsManualAlerts", "operationsTasks"]
         );
       }
     }),
@@ -7186,6 +7247,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       maintenanceBlocks,
       communicationTemplates,
       communications,
+      membershipCardEvents,
       operationsAlerts,
       operationsTasks,
       transactions,
@@ -7194,11 +7256,15 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       registrations,
       registrationActivity,
       checkInLogRecords,
+      membershipCardEvents,
       seededMaintenanceBlocksForOrg,
       seededManualCommunicationsForOrg,
       seededOperationsTasksForOrg,
       seededRentableResourcesForOrg,
       seededReservationsForOrg,
+      orgSlug,
+      activeOrgId,
+      activeLocationId,
       activeDateKey,
       isActiveDateToday,
       todayLogRecords,

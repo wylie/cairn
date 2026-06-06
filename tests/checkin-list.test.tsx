@@ -4,6 +4,7 @@ import { beforeEach } from "vitest";
 import { vi } from "vitest";
 import { CheckInList } from "@/components/checkins/checkin-list";
 import { TopBar } from "@/components/layout/top-bar";
+import { buildMembershipCardRecord } from "@/lib/memberships/cards";
 import { TestProviders } from "@/tests/test-providers";
 
 async function activateStaff(user: ReturnType<typeof userEvent.setup>, pin = "1111") {
@@ -133,6 +134,24 @@ describe("CheckInList date behavior", () => {
     const list = screen.getByRole("listbox", { name: "Customer search results" });
     expect(list.className).toContain("max-h-[50vh]");
     expect(list.className).toContain("md:max-h-[420px]");
+  });
+
+  it("finds customers by membership card number", async () => {
+    const user = userEvent.setup();
+    const card = buildMembershipCardRecord(
+      { id: "cust_001", memberId: "M-1001" },
+      { id: "acc_001" },
+      "summit"
+    );
+    render(
+      <TestProviders>
+        <TopBar />
+        <CheckInList />
+      </TestProviders>
+    );
+
+    await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), card.membershipNumber);
+    expect(screen.getByText("Maya Patel")).toBeInTheDocument();
   });
 
   it("currently checked-in roster shows customer avatars", () => {

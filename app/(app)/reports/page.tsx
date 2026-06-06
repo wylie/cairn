@@ -128,6 +128,7 @@ export default function ReportsPage() {
     sessions,
     registrations,
     memberships,
+    customerAccessRecords,
     accessProducts,
     productCategories,
     households,
@@ -140,6 +141,7 @@ export default function ReportsPage() {
     billingInvoices,
     membershipRenewals,
     billingRefunds,
+    membershipCardEvents,
     getWaiverStatusForCustomer
   } = useCustomerState();
   const { activeStaff, hasPermission, staffUsers } = useWorkstationState();
@@ -383,6 +385,24 @@ export default function ReportsPage() {
     [households, report.range.end, report.range.start]
   );
   const activeMemberships = memberships.filter((entry) => entry.status === "active").length;
+  const generatedMembershipCards = useMemo(
+    () =>
+      customerAccessRecords.filter((entry) =>
+        entry.type === "membership" || entry.type === "household-membership" || entry.type === "staff-access"
+      ).length,
+    [customerAccessRecords]
+  );
+  const filteredMembershipCardEvents = useMemo(
+    () =>
+      membershipCardEvents.filter((entry) => {
+        const createdAt = new Date(entry.createdAt);
+        return createdAt >= report.range.start && createdAt <= report.range.end;
+      }),
+    [membershipCardEvents, report.range.end, report.range.start]
+  );
+  const membershipCardViews = filteredMembershipCardEvents.filter((entry) => entry.action === "viewed").length;
+  const membershipCardQrCheckIns = filteredMembershipCardEvents.filter((entry) => entry.action === "qr_check_in").length;
+  const membershipCardUsage = membershipCardViews + membershipCardQrCheckIns;
   const programsAtCapacity = report.programs.rows.filter((entry) => entry.capacity > 0 && entry.enrolled >= entry.capacity).length;
   const topSellingProducts = report.sales.byProduct.slice(0, 5);
   const mostPopularPrograms = report.programs.rows.slice().sort((a, b) => b.enrolled - a.enrolled).slice(0, 5);
@@ -899,6 +919,12 @@ export default function ReportsPage() {
               <StatusCard title="Renewals" value={`${report.members.renewals}`} />
               <StatusCard title="Avg Membership Length" value={`${report.members.averageMembershipLengthDays} days`} />
               <StatusCard title="Members Not Seen Recently" value={`${report.members.inactiveMemberCount}`} />
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <StatusCard title="Cards Generated" value={`${generatedMembershipCards}`} />
+              <StatusCard title="Cards Viewed" value={`${membershipCardViews}`} />
+              <StatusCard title="QR Check-Ins" value={`${membershipCardQrCheckIns}`} />
+              <StatusCard title="Card Usage" value={`${membershipCardUsage}`} />
             </div>
           </div>
         ) : null}

@@ -44,6 +44,12 @@ export default function CustomerPortalMembershipsPage() {
                 >
                   View membership details
                 </Link>
+                <Link
+                  href={`/p/${orgSlug}/membership-card?customerId=${entry.customerId}`}
+                  className="inline-flex h-9 items-center rounded-md border px-3 text-sm"
+                >
+                  View membership card
+                </Link>
                 <Button variant="secondary" className="h-9">View billing history</Button>
                 <Button variant="secondary" className="h-9">Download agreement (Soon)</Button>
               </div>

@@ -690,6 +690,25 @@ export interface CustomerAccessRecord {
   archivedAt?: string;
 }
 
+export interface MembershipCardEvent {
+  id: string;
+  organizationId: string;
+  locationId: string;
+  customerId: string;
+  accessRecordId: string;
+  membershipNumber: string;
+  qrToken: string;
+  barcodeValue?: string;
+  action: "viewed" | "qr_check_in";
+  source:
+    | "customer_portal"
+    | "customer_profile"
+    | "household_profile"
+    | "membership_detail"
+    | "check_in";
+  createdAt: string;
+}
+
 export interface Customer {
   id: string;
   memberId: string;

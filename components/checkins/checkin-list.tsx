@@ -16,11 +16,13 @@ import { CustomerAvatar } from "@/components/customers/customer-avatar";
 import { InfoField } from "@/components/shared/info-field";
 import { buildCustomerDetailHref } from "@/lib/navigation/detail-navigation";
 import { formatDateWithAge, formatShortDate, formatTime } from "@/lib/format/date";
+import { isMembershipCardQueryMatch, selectPrimaryMembershipCardRecord } from "@/lib/memberships/cards";
 
 export function CheckInList() {
   const pathname = usePathname() ?? "";
   const searchParams = useSearchParams();
   const currentSearch = searchParams?.toString?.() ?? "";
+  const currentOrgSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? "summit";
   const {
     activeDateKey,
     isActiveDateToday,
@@ -42,6 +44,8 @@ export function CheckInList() {
     householdMembers,
     familyCheckIn,
     checkInRecords,
+    customerAccessRecords,
+    recordMembershipCardEvent,
     registrations,
     sessions,
     programs
@@ -237,10 +241,18 @@ export function CheckInList() {
     }
 
     const staffName = `${activeStaff!.firstName} ${activeStaff!.lastName}`;
+    const customer = customers.find((entry) => entry.id === customerId);
+    const matchedCardRecord = customer
+      ? selectPrimaryMembershipCardRecord(customerAccessRecords.filter((entry) => entry.customerId === customer.id))
+      : undefined;
+    const scannedMembershipCard =
+      customer && matchedCardRecord
+        ? isMembershipCardQueryMatch(query, customer, matchedCardRecord, currentOrgSlug)
+        : false;
     const result = checkInCustomer(customerId, {
       staffUserId: activeStaff!.id,
       staffName,
-      source: "manual_search",
+      source: scannedMembershipCard ? "barcode_scan" : "manual_search",
       overrideReason
     });
     if (!result.ok) {
@@ -260,6 +272,14 @@ export function CheckInList() {
         expiresAt: Date.now() + 15000,
         customerName: customerName ? `${customerName.firstName} ${customerName.lastName}` : "Customer"
       });
+      if (scannedMembershipCard && customer && matchedCardRecord) {
+        recordMembershipCardEvent({
+          customerId: customer.id,
+          accessRecordId: matchedCardRecord.id,
+          action: "qr_check_in",
+          source: "check_in"
+        });
+      }
     }
     setQuery("");
     setSelectedCustomerId("");

@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { ContextBackLink } from "@/components/shared/context-back-link";
 import { CustomerAvatar } from "@/components/customers/customer-avatar";
 import { HouseholdAvatar } from "@/components/households/household-avatar";
+import { DigitalMembershipCard } from "@/components/memberships/digital-membership-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +24,7 @@ import {
   getHouseholdHealthStatus,
   type HouseholdHealthStatus
 } from "@/lib/households/presentation";
+import { buildMembershipCardRecord } from "@/lib/memberships/cards";
 
 function titleCase(value: string) {
   return value
@@ -82,6 +84,7 @@ export function HouseholdsWorkspace({
   const { activeStaff } = useWorkstationState();
   const isDetailPage = pathname.includes("/households/");
   const queryParams = useMemo(() => new URLSearchParams(currentSearch), [currentSearch]);
+  const currentOrgSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? "summit";
   const focusFilter = (queryParams.get("focus") as HouseholdFocusFilter | null) ?? null;
   const [query, setQuery] = useState("");
   const [feedback, setFeedback] = useState("");
@@ -733,6 +736,29 @@ export function HouseholdsWorkspace({
                           <p>Start date: {formatDate(membership.startDate)}</p>
                           <p>Renewal date: {formatDate(membership.expirationDate)}</p>
                           <p>Membership health: {titleCase(membership.status)}</p>
+                        </div>
+                        <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                          {(membership.coveredCustomerIds?.length ? membership.coveredCustomerIds : [membership.customerId])
+                            .map((id) => customers.find((entry) => entry.id === id))
+                            .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
+                            .map((member) => (
+                              <DigitalMembershipCard
+                                key={`${membership.id}-${member.id}`}
+                                variant="compact"
+                                customer={member}
+                                accessRecord={membership}
+                                membershipName={
+                                  membership.type === "household-membership"
+                                    ? "Household Membership"
+                                    : "Membership"
+                                }
+                                organizationName={settings.facilityProfile.facilityName}
+                                organizationLogoUrl={settings.branding.logoUrl || undefined}
+                                primaryColor={settings.branding.primaryColor}
+                                secondaryColor={settings.branding.secondaryColor}
+                                {...buildMembershipCardRecord(member, membership, currentOrgSlug)}
+                              />
+                            ))}
                         </div>
                       </div>
                     ))}

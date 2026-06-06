@@ -6,11 +6,14 @@ import { useParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DigitalMembershipCard } from "@/components/memberships/digital-membership-card";
 import { useCustomerPortalData } from "@/lib/portal/use-customer-portal-data";
 import { canCustomerViewReceipt } from "@/lib/portal/receipts";
 import { formatDateTime } from "@/lib/format/date";
 import { getLocationName } from "@/lib/public-programs";
 import { formatCurrency } from "@/lib/transactions";
+import { buildMembershipCardRecord } from "@/lib/memberships/cards";
+import { useSettingsState } from "@/lib/state/settings-state";
 
 function toDate(value?: string) {
   if (!value) return null;
@@ -39,6 +42,7 @@ export default function CustomerPortalMembershipDetailPage() {
     programs,
     punchPasses
   } = useCustomerPortalData();
+  const { settings } = useSettingsState();
 
   const membership = memberships.find((entry) => entry.id === membershipId);
   const accessRecord = customerAccessRecords.find(
@@ -121,6 +125,7 @@ export default function CustomerPortalMembershipDetailPage() {
 
   const relatedPunchPass = customer.punchPassId ? punchPasses.find((entry) => entry.id === customer.punchPassId) : undefined;
   const status = membership?.status ?? accessRecord?.status ?? "inactive";
+  const card = accessRecord ? buildMembershipCardRecord(customer, accessRecord, orgSlug) : null;
 
   return (
     <section className="space-y-4">
@@ -128,6 +133,21 @@ export default function CustomerPortalMembershipDetailPage() {
         <h2 className="text-2xl font-semibold">{product?.name ?? membership?.planName ?? "Membership"}</h2>
         <p className="text-sm text-muted-foreground">Member: {customer.firstName} {customer.lastName}</p>
       </header>
+
+      {accessRecord && card ? (
+        <DigitalMembershipCard
+          customer={customer}
+          accessRecord={accessRecord}
+          membershipName={product?.name ?? membership?.planName ?? "Membership"}
+          organizationName={settings.facilityProfile.facilityName}
+          organizationLogoUrl={settings.branding.logoUrl || undefined}
+          primaryColor={settings.branding.primaryColor}
+          secondaryColor={settings.branding.secondaryColor}
+          membershipNumber={card.membershipNumber}
+          qrToken={card.qrToken}
+          barcodeValue={card.barcodeValue}
+        />
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -207,6 +227,9 @@ export default function CustomerPortalMembershipDetailPage() {
       </Card>
 
       <div className="flex flex-wrap gap-2">
+        <Link href={`/p/${orgSlug}/membership-card?customerId=${customer.id}`} className="inline-flex h-11 items-center rounded-md border px-4 text-sm">
+          View membership card
+        </Link>
         <Button variant="secondary">View billing history</Button>
         <Button variant="secondary">Download agreement (Soon)</Button>
         <Button variant="secondary">Freeze membership (Soon)</Button>

@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CustomerPortalDashboardPage from "@/app/p/[orgSlug]/dashboard/page";
 import CustomerPortalMembershipsPage from "@/app/p/[orgSlug]/memberships/page";
+import CustomerPortalMembershipCardPage from "@/app/p/[orgSlug]/membership-card/page";
 import CustomerPortalRegistrationsPage from "@/app/p/[orgSlug]/registrations/page";
 import CustomerPortalWaiversPage from "@/app/p/[orgSlug]/waivers/page";
 import CustomerPortalPurchasesPage from "@/app/p/[orgSlug]/purchases/page";
@@ -16,7 +17,8 @@ vi.mock("next/navigation", () => ({
     refresh: vi.fn()
   }),
   usePathname: () => "/p/summit/dashboard",
-  useParams: () => ({ orgSlug: "summit" })
+  useParams: () => ({ orgSlug: "summit" }),
+  useSearchParams: () => new URLSearchParams()
 }));
 
 function setCustomerSessionCookie() {
@@ -48,6 +50,7 @@ describe("customer portal", () => {
     expect(screen.getByText("Membership Summary")).toBeInTheDocument();
     expect(screen.getByText("Household Visits This Month")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Register for Program" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Membership Card" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View Purchases / Receipts" })).toBeInTheDocument();
     const heading = screen.getByRole("heading", { level: 2, name: /Welcome Back/i });
     const quickActions = screen.getByRole("heading", { level: 3, name: "Quick Actions" });
@@ -71,12 +74,14 @@ describe("customer portal", () => {
     render(
       <TestProviders>
         <CustomerPortalMembershipsPage />
+        <CustomerPortalMembershipCardPage />
         <CustomerPortalRegistrationsPage />
         <CustomerPortalWaiversPage />
         <CustomerPortalPurchasesPage />
       </TestProviders>
     );
     expect(screen.getByText("Memberships")).toBeInTheDocument();
+    expect(screen.getByText("Membership Card")).toBeInTheDocument();
     expect(screen.getByText("Program Registrations")).toBeInTheDocument();
     expect(screen.getByText("Waivers")).toBeInTheDocument();
     expect(screen.getByText("Purchase History")).toBeInTheDocument();

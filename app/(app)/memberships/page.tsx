@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { StaffSwitcher } from "@/components/staff/staff-switcher";
 import { CustomerAvatar } from "@/components/customers/customer-avatar";
+import { DigitalMembershipCard } from "@/components/memberships/digital-membership-card";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import { useWorkstationState } from "@/lib/state/workstation-state";
 import type { CustomerAccessRecord } from "@/types/domain";
 import { buildCustomerDetailHref } from "@/lib/navigation/detail-navigation";
 import { formatShortDate } from "@/lib/format/date";
+import { buildMembershipCardRecord } from "@/lib/memberships/cards";
 
 type MembershipFilter = "all" | "active" | "expiring_30" | "expiring_7" | "frozen" | "cancelled" | "expired" | "pending_renewal";
 
@@ -518,6 +520,19 @@ export default function MembershipsWorkspacePage() {
                 </div>
 
                 <div className="rounded-lg border p-3" aria-label="covered-members">
+                  <div className="mb-3">
+                    <DigitalMembershipCard
+                      variant="compact"
+                      customer={selected.customer!}
+                      accessRecord={selected.record}
+                      membershipName={selected.product?.name ?? "Membership"}
+                      organizationName={settings.facilityProfile.facilityName}
+                      organizationLogoUrl={settings.branding.logoUrl || undefined}
+                      primaryColor={settings.branding.primaryColor}
+                      secondaryColor={settings.branding.secondaryColor}
+                      {...buildMembershipCardRecord(selected.customer!, selected.record, currentOrgSlug)}
+                    />
+                  </div>
                   <p className="mb-2 font-medium">Covered Members</p>
                   {selected.coveredMembers.length === 0 ? (
                     <p className="text-xs text-muted-foreground">No covered household members.</p>

@@ -1,5 +1,5 @@
-import type { Customer } from "@/types/domain";
-import type { Household, HouseholdMember } from "@/types/domain";
+import { buildMembershipCardSearchTerms, selectPrimaryMembershipCardRecord } from "@/lib/memberships/cards";
+import type { Customer, CustomerAccessRecord, Household, HouseholdMember } from "@/types/domain";
 
 export function filterCustomers(
   customers: Customer[],
@@ -7,6 +7,8 @@ export function filterCustomers(
   options?: {
     households?: Household[];
     householdMembers?: HouseholdMember[];
+    accessRecords?: CustomerAccessRecord[];
+    orgSlug?: string;
   }
 ) {
   const q = query.trim().toLowerCase();
@@ -26,6 +28,16 @@ export function filterCustomers(
     const preferredName = customer.preferredName ?? "";
     const pronouns = customer.pronouns === "Custom" ? customer.customPronouns ?? "Custom" : customer.pronouns ?? "";
     const householdNames = customerHouseholds.get(customer.id) ?? [];
+    const membershipRecord = selectPrimaryMembershipCardRecord(
+      (options?.accessRecords ?? []).filter((entry) => entry.customerId === customer.id)
+    );
+    const membershipTerms = membershipRecord
+      ? buildMembershipCardSearchTerms({
+          customer,
+          accessRecord: membershipRecord,
+          orgSlug: options?.orgSlug ?? "summit"
+        })
+      : [];
     const haystack = [
       customer.firstName,
       customer.lastName,
@@ -37,7 +49,8 @@ export function filterCustomers(
       customer.email,
       customer.phone,
       ...customer.tags,
-      ...householdNames
+      ...householdNames,
+      ...membershipTerms
     ]
       .join(" ")
       .toLowerCase();

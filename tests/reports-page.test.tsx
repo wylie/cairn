@@ -117,6 +117,22 @@ describe("Reports dashboards", () => {
     expect(screen.getByText("Household Waiver Report")).toBeInTheDocument();
   });
 
+  it("shows membership card analytics in membership reports", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <ReportsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "2222");
+    await user.click(screen.getByRole("button", { name: "Memberships" }));
+    expect(screen.getByText("Cards Generated")).toBeInTheDocument();
+    expect(screen.getByText("Cards Viewed")).toBeInTheDocument();
+    expect(screen.getByText("QR Check-Ins")).toBeInTheDocument();
+    expect(screen.getByText("Card Usage")).toBeInTheDocument();
+  });
+
   it("instructor is blocked from Reports", async () => {
     const user = userEvent.setup();
     render(

@@ -1,13 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { PermissionGate } from "@/components/staff/permission-gate";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import { buildReportModel, getEmptyReportModel, type ReportFilters } from "@/lib/reports/metrics";
-import { formatDateTime } from "@/lib/format/date";
+import { formatDate, formatDateTime } from "@/lib/format/date";
 import { ReportFiltersBar } from "@/components/reports/report-filters";
 import { AlertCard, ListCard, MetricCard, StatusCard } from "@/components/reports/dashboard-cards";
 import { BarBreakdownCard, TrendLineCard } from "@/components/reports/charts";
@@ -23,7 +24,19 @@ type ReportCategory =
   | "households"
   | "staff"
   | "waivers"
-  | "financial";
+  | "financial"
+  | "communications";
+
+type SavedAnalyticsReport = {
+  id: string;
+  name: string;
+  category: ReportCategory;
+  filters: ReportFilters;
+  search: string;
+};
+
+const ANALYTICS_SESSION_KEY = "cairn.analytics.session";
+const ANALYTICS_SAVED_REPORTS_KEY = "cairn.analytics.saved-reports";
 
 function formatCurrency(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
@@ -52,9 +65,47 @@ function downloadCsv(filename: string, rows: Array<Record<string, string>>) {
   URL.revokeObjectURL(link.href);
 }
 
+function downloadFile(filename: string, content: string, mimeType: string) {
+  const blob = new Blob([content], { type: mimeType });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+function buildComparisonLabel(current: number, previous: number, formatter: (value: number) => string = (value) => `${value}`) {
+  if (previous === 0) return `${formatter(current)} this period`;
+  const delta = current - previous;
+  const percent = Math.round((Math.abs(delta) / previous) * 100);
+  const direction = delta === 0 ? "flat" : delta > 0 ? "up" : "down";
+  return `${direction === "flat" ? "Flat" : `${direction} ${percent}%`} vs previous period`;
+}
+
+function previousRangeFor(filters: ReportFilters): ReportFilters {
+  switch (filters.rangeKey) {
+    case "today":
+      return { ...filters, rangeKey: "yesterday" };
+    case "yesterday":
+      return { ...filters, rangeKey: "today" };
+    case "7d":
+      return { ...filters, rangeKey: "30d" };
+    case "30d":
+      return { ...filters, rangeKey: "last_month" };
+    case "this_month":
+      return { ...filters, rangeKey: "last_month" };
+    case "quarter_to_date":
+      return { ...filters, rangeKey: "last_month" };
+    case "year_to_date":
+      return { ...filters, rangeKey: "last_month" };
+    default:
+      return { ...filters, rangeKey: "last_month" };
+  }
+}
+
 const CATEGORY_LABELS: Record<ReportCategory, string> = {
-  sales: "Sales",
-  products: "Products",
+  sales: "Revenue",
+  products: "Retail",
   memberships: "Memberships",
   attendance: "Attendance",
   customers: "Customers",
@@ -63,7 +114,8 @@ const CATEGORY_LABELS: Record<ReportCategory, string> = {
   households: "Households",
   staff: "Staff Activity",
   waivers: "Waivers",
-  financial: "Financial Summary"
+  financial: "Financial Summary",
+  communications: "Communications"
 };
 
 export default function ReportsPage() {
@@ -83,25 +135,33 @@ export default function ReportsPage() {
     rentableResources,
     reservations,
     maintenanceBlocks,
+    communications,
     billingAccounts,
     billingInvoices,
     membershipRenewals,
-    billingRefunds
+    billingRefunds,
+    getWaiverStatusForCustomer
   } = useCustomerState();
   const { activeStaff, hasPermission, staffUsers } = useWorkstationState();
-
+  const initialCategory = ((searchParams?.get?.("category") as ReportCategory) || "sales");
+  const initialRange = (searchParams?.get?.("range") as ReportFilters["rangeKey"]) || "today";
   const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState<ReportCategory>((searchParams?.get?.("category") as ReportCategory) || "sales");
+  const [activeCategory, setActiveCategory] = useState<ReportCategory>(initialCategory);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedProduct, setSelectedProduct] = useState<string>("all");
+  const [savedReports, setSavedReports] = useState<SavedAnalyticsReport[]>([]);
+  const [savedReportName, setSavedReportName] = useState("");
   const [filters, setFilters] = useState<ReportFilters>({
-    rangeKey: (searchParams?.get?.("range") as ReportFilters["rangeKey"]) || "today",
+    rangeKey: initialRange,
     locationId: undefined,
     programType: "all",
     instructorId: "all",
     ageGroup: "all",
     membershipStatus: "all",
-    productType: "all"
+    productType: "all",
+    productCategory: "all",
+    householdId: "all",
+    customerSegment: "all"
   });
 
   const { report, reportError } = useMemo(() => {
@@ -133,6 +193,69 @@ export default function ReportsPage() {
       };
     }
   }, [activeStaff?.id, activeStaff?.role, filters, customers, checkInRecords, transactions, programs, sessions, registrations, memberships, accessProducts, productCategories, households, householdMembers]);
+  const previousReport = useMemo(
+    () =>
+      buildReportModel({
+        staffRole: activeStaff?.role ?? "front_desk",
+        staffId: activeStaff?.id,
+        now: new Date(),
+        filters: previousRangeFor(filters),
+        customers,
+        checkIns: checkInRecords,
+        transactions,
+        programs,
+        sessions,
+        registrations,
+        memberships,
+        products: accessProducts,
+        productCategories,
+        households,
+        householdMembers
+      }),
+    [activeStaff?.id, activeStaff?.role, filters, customers, checkInRecords, transactions, programs, sessions, registrations, memberships, accessProducts, productCategories, households, householdMembers]
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const rawSession = window.sessionStorage.getItem(ANALYTICS_SESSION_KEY);
+    if (rawSession) {
+      try {
+        const parsed = JSON.parse(rawSession) as { activeCategory?: ReportCategory; filters?: ReportFilters; search?: string };
+        if (!searchParams?.get?.("category") && parsed.activeCategory) setActiveCategory(parsed.activeCategory);
+        if (parsed.filters) {
+          setFilters((current) => ({
+            ...current,
+            ...parsed.filters,
+            rangeKey: searchParams?.get?.("range") ? current.rangeKey : (parsed.filters?.rangeKey ?? current.rangeKey)
+          }));
+        }
+        if (typeof parsed.search === "string") setSearch(parsed.search);
+      } catch {}
+    }
+    const rawSavedReports = window.localStorage.getItem(ANALYTICS_SAVED_REPORTS_KEY);
+    if (rawSavedReports) {
+      try {
+        setSavedReports(JSON.parse(rawSavedReports) as SavedAnalyticsReport[]);
+      } catch {}
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.sessionStorage.setItem(
+      ANALYTICS_SESSION_KEY,
+      JSON.stringify({
+        activeCategory,
+        filters,
+        search
+      })
+    );
+  }, [activeCategory, filters, search]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(ANALYTICS_SAVED_REPORTS_KEY, JSON.stringify(savedReports));
+  }, [savedReports]);
   const categoryLabelByKey = useMemo(
     () => new Map(productCategories.map((entry) => [entry.key, entry.label])),
     [productCategories]
@@ -255,34 +378,176 @@ export default function ReportsPage() {
   }, [reservations, rentableResources]);
   const capacityUtilization = rentableResources.length === 0 ? 0 : Math.round((reservations.length / rentableResources.length) * 100);
   const equipmentUsageCount = reservations.filter((entry) => entry.reservationType === "equipment_checkout").length;
+  const newHouseholds = useMemo(
+    () => households.filter((entry) => entry.createdAt && new Date(entry.createdAt) >= report.range.start && new Date(entry.createdAt) <= report.range.end).length,
+    [households, report.range.end, report.range.start]
+  );
+  const activeMemberships = memberships.filter((entry) => entry.status === "active").length;
+  const programsAtCapacity = report.programs.rows.filter((entry) => entry.capacity > 0 && entry.enrolled >= entry.capacity).length;
+  const topSellingProducts = report.sales.byProduct.slice(0, 5);
+  const mostPopularPrograms = report.programs.rows.slice().sort((a, b) => b.enrolled - a.enrolled).slice(0, 5);
+  const communicationTypeCounts = useMemo(() => {
+    return communications.reduce<Record<string, number>>((counts, entry) => {
+      counts[entry.channel] = (counts[entry.channel] ?? 0) + 1;
+      return counts;
+    }, {});
+  }, [communications]);
+  const waiverStatusCounts = useMemo(
+    () =>
+      customers.reduce(
+        (totals, customer) => {
+          const status = getWaiverStatusForCustomer(customer.id, "wtpl_general");
+          totals[status] += 1;
+          return totals;
+        },
+        { valid: 0, missing: 0, expired: 0, expiring_soon: 0, outdated_version: 0 } as Record<ReturnType<typeof getWaiverStatusForCustomer>, number>
+      ),
+    [customers, getWaiverStatusForCustomer]
+  );
+  const locationComparison = useMemo(() => {
+    const locations = [
+      { id: "loc_001", name: "Summit Downtown" },
+      { id: "loc_002", name: "Summit Uptown" }
+    ];
+    return locations.map((location) => {
+      const filtered = buildReportModel({
+        staffRole: activeStaff?.role ?? "front_desk",
+        staffId: activeStaff?.id,
+        now: new Date(),
+        filters: { ...filters, locationId: location.id },
+        customers,
+        checkIns: checkInRecords,
+        transactions,
+        programs,
+        sessions,
+        registrations,
+        memberships,
+        products: accessProducts,
+        productCategories,
+        households,
+        householdMembers
+      });
+      return {
+        id: location.id,
+        name: location.name,
+        revenueCents: filtered.sales.netCents,
+        checkIns: filtered.attendance.totalVisits,
+        registrations: filtered.programs.rows.reduce((sum, row) => sum + row.enrolled, 0)
+      };
+    });
+  }, [activeStaff?.id, activeStaff?.role, filters, customers, checkInRecords, transactions, programs, sessions, registrations, memberships, accessProducts, productCategories, households, householdMembers]);
+
+  const executiveCards = [
+    {
+      title: "Revenue This Month",
+      value: formatCurrency(report.sales.netCents),
+      changeLabel: buildComparisonLabel(report.sales.netCents, previousReport.sales.netCents, (value) => formatCurrency(value)),
+      category: "sales" as const,
+      hint: "Open Revenue Analytics →"
+    },
+    {
+      title: "Check-Ins This Period",
+      value: report.attendance.totalVisits,
+      changeLabel: buildComparisonLabel(report.attendance.totalVisits, previousReport.attendance.totalVisits),
+      category: "attendance" as const,
+      hint: "Open Attendance Analytics →"
+    },
+    {
+      title: "Active Memberships",
+      value: activeMemberships,
+      changeLabel: `${report.members.newMembers} gained · ${report.members.cancelledMembers} lost`,
+      category: "memberships" as const,
+      hint: "Open Membership Analytics →"
+    },
+    {
+      title: "Programs At Capacity",
+      value: programsAtCapacity,
+      changeLabel: `${report.programs.rows.reduce((sum, row) => sum + row.waitlisted, 0)} waitlisted`,
+      category: "programs" as const,
+      hint: "Open Program Analytics →"
+    },
+    {
+      title: "New Customers",
+      value: report.members.newMembers,
+      changeLabel: `${newHouseholds} new households`,
+      category: "customers" as const,
+      hint: "Open Customer Analytics →"
+    },
+    {
+      title: "Average Household Size",
+      value: report.households.averageSize,
+      changeLabel: `${report.households.total} households tracked`,
+      category: "households" as const,
+      hint: "Open Household Analytics →"
+    }
+  ];
+
+  const handleSaveReport = () => {
+    const name = savedReportName.trim();
+    if (!name) return;
+    setSavedReports((current) => [
+      {
+        id: `saved_report_${Date.now()}`,
+        name,
+        category: activeCategory,
+        filters,
+        search
+      },
+      ...current
+    ]);
+    setSavedReportName("");
+  };
+
+  const exportRows = report.csvRows.map((row) => ({
+    receipt: row.receipt,
+    date: row.date,
+    customer: row.customer,
+    staff: row.staff,
+    category: row.category,
+    total: row.total,
+    items: row.items
+  }));
 
   return (
     <PermissionGate permission="viewReports">
       <section className="space-y-4">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-semibold">Reports</h2>
-            <p className="text-sm text-muted-foreground">Operational command center for sales, memberships, attendance, and customer behavior.</p>
+            <h2 className="text-2xl font-semibold">Reports & Analytics</h2>
+            <p className="text-sm text-muted-foreground">Business intelligence for revenue, memberships, attendance, households, waivers, rentals, and communications.</p>
           </div>
-          <Button
-            variant="secondary"
-            onClick={() =>
-              downloadCsv(
-                "cairn-reports-export.csv",
-                report.csvRows.map((row) => ({
-                  receipt: row.receipt,
-                  date: row.date,
-                  customer: row.customer,
-                  staff: row.staff,
-                  category: row.category,
-                  total: row.total,
-                  items: row.items
-                }))
-              )
-            }
-          >
-            Export CSV
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => downloadCsv("cairn-analytics-export.csv", exportRows)}
+            >
+              Export CSV
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() =>
+                downloadFile(
+                  "cairn-analytics-export.xlsx",
+                  exportRows.map((row) => Object.values(row).join("\t")).join("\n"),
+                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+              }
+            >
+              Export Excel
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() =>
+                downloadFile(
+                  "cairn-analytics-export.pdf.txt",
+                  "PDF export placeholder\n\nThis placeholder respects current analytics filters and date range.",
+                  "text/plain;charset=utf-8"
+                )
+              }
+            >
+              Export PDF
+            </Button>
+          </div>
         </header>
 
         {reportError ? <AlertCard title="Report Data Warning" message={reportError} tone="warning" /> : null}
@@ -294,11 +559,81 @@ export default function ReportsPage() {
             { id: "loc_001", name: "Summit Downtown" },
             { id: "loc_002", name: "Summit Uptown" }
           ]}
+          households={households.map((entry) => ({ id: entry.id, name: entry.householdName }))}
+          productCategories={productCategories}
           instructors={staffUsers.filter((entry) => entry.role === "instructor" || entry.canTeach)}
           programTypes={Array.from(new Set(programs.map((entry) => entry.programType).filter(Boolean)))}
           search={search}
           onSearchChange={setSearch}
         />
+
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <section className="space-y-3 rounded-xl border bg-card p-4" aria-label="executive-analytics-dashboard">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold">Executive Dashboard</h3>
+                <p className="text-sm text-muted-foreground">
+                  Click any metric to drill into filtered analytics for the current date range.
+                </p>
+              </div>
+              <span className="rounded-full bg-secondary px-3 py-1 text-xs text-muted-foreground">
+                {formatDate(report.range.start)} - {formatDate(report.range.end)}
+              </span>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {executiveCards.map((card) => (
+                <button
+                  key={card.title}
+                  type="button"
+                  className="rounded-xl border p-0 text-left transition hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => setActiveCategory(card.category)}
+                >
+                  <MetricCard title={card.title} value={card.value} changeLabel={card.changeLabel} footer={<p className="text-xs text-muted-foreground">{card.hint}</p>} />
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="space-y-3 rounded-xl border bg-card p-4" aria-label="saved-analytics-reports">
+            <div>
+              <h3 className="text-lg font-semibold">Saved Reports</h3>
+              <p className="text-sm text-muted-foreground">Save board decks, operational reviews, and repeat analytics views.</p>
+            </div>
+            <div className="space-y-2">
+              <label className="space-y-1 text-sm">
+                <span className="text-muted-foreground">Report name</span>
+                <input
+                  className="h-11 w-full rounded-md border bg-white px-3"
+                  value={savedReportName}
+                  onChange={(event) => setSavedReportName(event.target.value)}
+                  placeholder="Monthly Board Report"
+                />
+              </label>
+              <Button className="w-full" onClick={handleSaveReport}>Save Current Report</Button>
+            </div>
+            <div className="space-y-2">
+              {savedReports.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No saved report configurations yet.</p>
+              ) : (
+                savedReports.slice(0, 6).map((saved) => (
+                  <button
+                    key={saved.id}
+                    type="button"
+                    className="w-full rounded-md border px-3 py-2 text-left hover:bg-secondary"
+                    onClick={() => {
+                      setActiveCategory(saved.category);
+                      setFilters(saved.filters);
+                      setSearch(saved.search);
+                    }}
+                  >
+                    <p className="text-sm font-medium">{saved.name}</p>
+                    <p className="text-xs text-muted-foreground">{CATEGORY_LABELS[saved.category]} · {saved.filters.rangeKey.replaceAll("_", " ")}</p>
+                  </button>
+                ))
+              )}
+            </div>
+          </section>
+        </div>
 
         <div className="grid gap-2 lg:grid-cols-5" aria-label="report-categories">
           {(Object.keys(CATEGORY_LABELS) as ReportCategory[]).map((key) => (
@@ -314,10 +649,47 @@ export default function ReportsPage() {
         </div>
 
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <MetricCard title="Gross Sales" value={formatCurrency(report.sales.grossCents)} />
-          <MetricCard title="Net Sales" value={formatCurrency(report.sales.netCents)} />
-          <MetricCard title="Transactions" value={report.sales.transactionCount} />
-          <MetricCard title="Avg Transaction" value={formatCurrency(report.sales.averageTransactionCents)} />
+          <MetricCard title="Gross Sales" value={formatCurrency(report.sales.grossCents)} changeLabel={buildComparisonLabel(report.sales.grossCents, previousReport.sales.grossCents, (value) => formatCurrency(value))} />
+          <MetricCard title="Net Sales" value={formatCurrency(report.sales.netCents)} changeLabel={buildComparisonLabel(report.sales.netCents, previousReport.sales.netCents, (value) => formatCurrency(value))} />
+          <MetricCard title="Transactions" value={report.sales.transactionCount} changeLabel={buildComparisonLabel(report.sales.transactionCount, previousReport.sales.transactionCount)} />
+          <MetricCard title="Avg Transaction" value={formatCurrency(report.sales.averageTransactionCents)} changeLabel="Filtered by current range and segment" />
+        </div>
+
+        <div className="grid gap-3 lg:grid-cols-2">
+          <section className="rounded-xl border bg-card p-4">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h3 className="text-base font-semibold">Location Comparison</h3>
+                <p className="text-sm text-muted-foreground">Combined and per-location performance for the active filters.</p>
+              </div>
+              <span className="text-xs text-muted-foreground">Multi-location</span>
+            </div>
+            <div className="mt-3 space-y-2">
+              {locationComparison.map((entry) => (
+                <button
+                  key={entry.id}
+                  type="button"
+                  className="flex w-full items-center justify-between rounded-md bg-muted/30 px-3 py-2 text-left transition hover:bg-secondary"
+                  onClick={() => setFilters((current) => ({ ...current, locationId: entry.id }))}
+                >
+                  <div>
+                    <p className="text-sm font-medium">{entry.name}</p>
+                    <p className="text-xs text-muted-foreground">{entry.registrations} registrations · {entry.checkIns} check-ins</p>
+                  </div>
+                  <strong>{formatCurrency(entry.revenueCents)}</strong>
+                </button>
+              ))}
+            </div>
+          </section>
+          <section className="rounded-xl border bg-card p-4">
+            <h3 className="text-base font-semibold">Scheduled Reports</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Architecture placeholder for weekly executive digests, monthly board packets, and quarterly summaries.</p>
+            <div className="mt-3 grid gap-2 text-sm">
+              <div className="rounded-md bg-muted/30 px-3 py-2">Weekly Email Reports · Placeholder</div>
+              <div className="rounded-md bg-muted/30 px-3 py-2">Monthly Board Reports · Placeholder</div>
+              <div className="rounded-md bg-muted/30 px-3 py-2">Quarterly Summaries · Placeholder</div>
+            </div>
+          </section>
         </div>
 
         {activeCategory === "sales" ? (
@@ -572,15 +944,23 @@ export default function ReportsPage() {
         ) : null}
 
         {activeCategory === "customers" ? (
-          <ListCard
-            title="Customer Behavior"
-            emptyText="No customer activity in this range."
-            items={report.attendance.topVisitors.map((entry) => ({
-              id: entry.customerId,
-              primary: entry.customerName,
-              secondary: `${entry.visits} visits in selected range`
-            }))}
-          />
+          <div className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <StatusCard title="New Customers" value={`${report.members.newMembers}`} />
+              <StatusCard title="New Households" value={`${newHouseholds}`} />
+              <StatusCard title="Average Household Size" value={`${report.households.averageSize}`} />
+              <StatusCard title="Birthdays in Range" value={`${report.totals.birthdaysToday}`} />
+            </div>
+            <ListCard
+              title="Customer Behavior"
+              emptyText="No customer activity in this range."
+              items={report.attendance.topVisitors.map((entry) => ({
+                id: entry.customerId,
+                primary: entry.customerName,
+                secondary: `${entry.visits} visits in selected range`
+              }))}
+            />
+          </div>
         ) : null}
 
         {activeCategory === "programs" ? (
@@ -698,9 +1078,55 @@ export default function ReportsPage() {
         ) : null}
 
         {activeCategory === "waivers" ? (
-          <div className="grid gap-3 md:grid-cols-2">
-            <StatusCard title="Waivers Missing" value={`${report.totals.waiversMissing}`} />
-            <StatusCard title="Waiver Risk Customers" value={`${report.totals.waiversMissing}`} />
+          <div className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <StatusCard title="Current Waivers" value={`${waiverStatusCounts.valid}`} />
+              <StatusCard title="Missing Waivers" value={`${waiverStatusCounts.missing}`} />
+              <StatusCard title="Expiring Waivers" value={`${waiverStatusCounts.expiring_soon}`} />
+              <StatusCard title="Expired Waivers" value={`${waiverStatusCounts.expired}`} />
+            </div>
+            <ListCard
+              title="Waiver Follow-Up"
+              emptyText="No waiver issues in this range."
+              items={customers
+                .filter((entry) => {
+                  const status = getWaiverStatusForCustomer(entry.id, "wtpl_general");
+                  return status === "missing" || status === "expired" || status === "expiring_soon" || status === "outdated_version";
+                })
+                .slice(0, 8)
+                .map((entry) => ({
+                  id: entry.id,
+                  primary: `${entry.firstName} ${entry.lastName}`,
+                  secondary: `Status: ${getWaiverStatusForCustomer(entry.id, "wtpl_general").replaceAll("_", " ")}`
+                }))}
+            />
+          </div>
+        ) : null}
+
+        {activeCategory === "communications" ? (
+          <div className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <MetricCard title="Messages Sent" value={communications.filter((entry) => entry.status === "sent").length} />
+              <MetricCard title="Scheduled" value={communications.filter((entry) => entry.status === "scheduled").length} />
+              <MetricCard title="Failed" value={communications.filter((entry) => entry.status === "failed").length} />
+              <MetricCard title="Drafts" value={communications.filter((entry) => entry.status === "draft").length} />
+            </div>
+            <div className="grid gap-3 lg:grid-cols-2">
+              <BarBreakdownCard
+                title="Messages by Type"
+                data={Object.entries(communicationTypeCounts).map(([key, value]) => ({ label: key.replaceAll("_", " "), count: value }))}
+                bars={[{ key: "count", color: "#2563eb", name: "Messages" }]}
+              />
+              <ListCard
+                title="Recent Communication Activity"
+                emptyText="No communications recorded."
+                items={communications.slice(0, 10).map((entry) => ({
+                  id: entry.id,
+                  primary: entry.subject,
+                  secondary: `${entry.channel.replaceAll("_", " ")} · ${entry.status} · ${formatDateTime(entry.createdAt)}`
+                }))}
+              />
+            </div>
           </div>
         ) : null}
 

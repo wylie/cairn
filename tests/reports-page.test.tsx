@@ -49,6 +49,8 @@ async function switchStaff(user: ReturnType<typeof userEvent.setup>, pin: string
 describe("Reports dashboards", () => {
   beforeEach(() => {
     window.history.pushState({}, "", "/reports");
+    window.sessionStorage.clear();
+    window.localStorage.clear();
   });
 
   it("supports report category and range from query params", async () => {
@@ -76,7 +78,7 @@ describe("Reports dashboards", () => {
     );
     await switchStaff(user, "3333");
 
-    expect(screen.getByRole("heading", { name: "Reports" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Reports & Analytics" })).toBeInTheDocument();
     expect(screen.getByText("Gross Sales")).toBeInTheDocument();
     expect(screen.queryByText("Restricted")).not.toBeInTheDocument();
   });
@@ -159,6 +161,38 @@ describe("Reports dashboards", () => {
     expect(screen.getByText("Instructor Attendance Trend")).toBeInTheDocument();
   });
 
+  it("supports expanded date ranges and location drill-down", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <ReportsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "2222");
+    await user.click(screen.getByRole("button", { name: "QTD" }));
+    expect(screen.getByText("Executive Dashboard")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Summit Uptown/i }));
+    expect((screen.getByLabelText("Location") as HTMLSelectElement).value).toBe("loc_002");
+  });
+
+  it("saves and reapplies report configurations", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <ReportsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "1111");
+    await user.click(screen.getByRole("button", { name: "Memberships" }));
+    await user.type(screen.getByPlaceholderText("Monthly Board Report"), "Executive Dashboard");
+    await user.click(screen.getByRole("button", { name: "Save Current Report" }));
+    expect(screen.getByRole("button", { name: /executive dashboard/i })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /executive dashboard/i }));
+    expect(screen.getByRole("button", { name: "Memberships" })).toHaveClass("border-primary");
+  });
+
   it("exports CSV from report data", async () => {
     const storage = installStorageMock();
     window.localStorage.setItem(
@@ -220,6 +254,34 @@ describe("Reports dashboards", () => {
     Object.defineProperty(URL, "createObjectURL", { configurable: true, writable: true, value: originalCreate });
     Object.defineProperty(URL, "revokeObjectURL", { configurable: true, writable: true, value: originalRevoke });
     storage.restore();
+  });
+
+  it("supports excel and pdf placeholder exports", async () => {
+    const user = userEvent.setup();
+    const originalCreate = URL.createObjectURL;
+    const originalRevoke = URL.revokeObjectURL;
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      writable: true,
+      value: vi.fn(() => "blob://mock")
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      writable: true,
+      value: vi.fn()
+    });
+    render(
+      <TestProviders>
+        <TopBar />
+        <ReportsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "1111");
+    await user.click(screen.getByRole("button", { name: "Export Excel" }));
+    await user.click(screen.getByRole("button", { name: "Export PDF" }));
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(2);
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, writable: true, value: originalCreate });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, writable: true, value: originalRevoke });
   });
 
   it("shows graceful empty state for product chart when no transactions exist", async () => {

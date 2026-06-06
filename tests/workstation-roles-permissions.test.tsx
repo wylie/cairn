@@ -41,7 +41,7 @@ async function switchStaff(user: ReturnType<typeof userEvent.setup>, pin: string
 }
 
 describe("Role visibility and permission safety", () => {
-  it("instructor role hides POS/Products/Settings/Reports nav and keeps Calendar", async () => {
+  it("instructor role hides POS/Products/Settings/Reports & Analytics nav and keeps Calendar", async () => {
     const user = userEvent.setup();
     render(
       <TestProviders>
@@ -55,7 +55,7 @@ describe("Role visibility and permission safety", () => {
 
     expect(screen.queryByRole("link", { name: "POS" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Products" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Reports" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Reports & Analytics" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Settings" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Calendar" })).toBeInTheDocument();
   });

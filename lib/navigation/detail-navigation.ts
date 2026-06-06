@@ -4,7 +4,7 @@ const SOURCE_LABELS: Record<string, string> = {
   registrations: "Registrations",
   pos: "POS",
   calendar: "Calendar",
-  reports: "Reports",
+  reports: "Reports & Analytics",
   household: "Household",
   memberships: "Memberships",
   staff: "Staff",

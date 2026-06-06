@@ -13,7 +13,17 @@ import type {
   StaffRole
 } from "@/types/domain";
 
-export type ReportRangeKey = "today" | "7d" | "30d" | "90d" | "this_month" | "last_month" | "custom";
+export type ReportRangeKey =
+  | "today"
+  | "yesterday"
+  | "7d"
+  | "30d"
+  | "90d"
+  | "this_month"
+  | "last_month"
+  | "quarter_to_date"
+  | "year_to_date"
+  | "custom";
 
 export interface ReportFilters {
   rangeKey: ReportRangeKey;
@@ -25,6 +35,9 @@ export interface ReportFilters {
   ageGroup?: "all" | "youth" | "adult";
   membershipStatus?: "all" | Membership["status"];
   productType?: "all" | NonNullable<PosProduct["type"]>;
+  productCategory?: string | "all";
+  householdId?: string | "all";
+  customerSegment?: "all" | "adult" | "youth" | "staff" | "household";
 }
 
 export interface ReportInput {
@@ -161,6 +174,10 @@ function rangeFromFilters(now: Date, filters: ReportFilters) {
   const todayStart = startOfDay(now);
   const todayEnd = endOfDay(now);
   if (filters.rangeKey === "today") return { start: todayStart, end: todayEnd };
+  if (filters.rangeKey === "yesterday") {
+    const yesterday = addDays(now, -1);
+    return { start: startOfDay(yesterday), end: endOfDay(yesterday) };
+  }
   if (filters.rangeKey === "7d") return { start: startOfDay(addDays(now, -6)), end: todayEnd };
   if (filters.rangeKey === "30d") return { start: startOfDay(addDays(now, -29)), end: todayEnd };
   if (filters.rangeKey === "90d") return { start: startOfDay(addDays(now, -89)), end: todayEnd };
@@ -169,6 +186,13 @@ function rangeFromFilters(now: Date, filters: ReportFilters) {
     const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
     return { start, end };
+  }
+  if (filters.rangeKey === "quarter_to_date") {
+    const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
+    return { start: new Date(now.getFullYear(), quarterStartMonth, 1), end: todayEnd };
+  }
+  if (filters.rangeKey === "year_to_date") {
+    return { start: new Date(now.getFullYear(), 0, 1), end: todayEnd };
   }
   const start = filters.customStart ? startOfDay(new Date(filters.customStart)) : todayStart;
   const end = filters.customEnd ? endOfDay(new Date(filters.customEnd)) : todayEnd;
@@ -253,6 +277,15 @@ export function buildReportModel(input: ReportInput) {
     if (!scopedSessionIds.has(entry.sessionId)) return false;
     const time = entry.registeredAt ?? sessionsById.get(entry.sessionId)?.startsAt;
     if (!time || !inRange(time, start, end)) return false;
+    const customer = customersById.get(entry.customerId);
+    const age = computeAge(customer?.dateOfBirth);
+    if (input.filters.customerSegment === "adult" && age != null && age < 18) return false;
+    if (input.filters.customerSegment === "youth" && age != null && age >= 18) return false;
+    if (input.filters.customerSegment === "staff" && !customer?.staffProfile?.isStaff) return false;
+    if (input.filters.householdId && input.filters.householdId !== "all") {
+      const matchesHousehold = input.householdMembers.some((member) => member.householdId === input.filters.householdId && member.customerId === entry.customerId);
+      if (!matchesHousehold) return false;
+    }
     return true;
   });
 
@@ -263,6 +296,24 @@ export function buildReportModel(input: ReportInput) {
     if (input.filters.productType && input.filters.productType !== "all") {
       const hasType = safeItems(entry).some((item) => item.type === input.filters.productType);
       if (!hasType) return false;
+    }
+    if (input.filters.productCategory && input.filters.productCategory !== "all") {
+      const hasCategory = safeItems(entry).some((item) => item.category === input.filters.productCategory);
+      if (!hasCategory) return false;
+    }
+    if (input.filters.householdId && input.filters.householdId !== "all") {
+      const memberIds = input.householdMembers.filter((member) => member.householdId === input.filters.householdId).map((member) => member.customerId);
+      if (entry.householdId !== input.filters.householdId && !memberIds.includes(entry.customerId) && !memberIds.includes(entry.purchaserCustomerId ?? "")) {
+        return false;
+      }
+    }
+    if (input.filters.customerSegment && input.filters.customerSegment !== "all") {
+      const customer = customersById.get(entry.customerId);
+      const age = computeAge(customer?.dateOfBirth);
+      if (input.filters.customerSegment === "adult" && age != null && age < 18) return false;
+      if (input.filters.customerSegment === "youth" && age != null && age >= 18) return false;
+      if (input.filters.customerSegment === "staff" && !customer?.staffProfile?.isStaff) return false;
+      if (input.filters.customerSegment === "household" && !entry.householdId) return false;
     }
     return true;
   });

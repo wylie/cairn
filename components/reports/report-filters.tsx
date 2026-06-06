@@ -8,6 +8,8 @@ interface ReportFiltersProps {
   filters: ReportFilters;
   onChange: (next: ReportFilters) => void;
   locations: Array<{ id: string; name: string }>;
+  households: Array<{ id: string; name: string }>;
+  productCategories: Array<{ key: string; label: string }>;
   instructors: StaffUser[];
   programTypes: Array<Program["programType"]>;
   search: string;
@@ -16,13 +18,16 @@ interface ReportFiltersProps {
 
 const QUICK_RANGES: Array<{ key: ReportRangeKey; label: string }> = [
   { key: "today", label: "Today" },
-  { key: "7d", label: "7 days" },
-  { key: "30d", label: "30 days" },
+  { key: "yesterday", label: "Yesterday" },
+  { key: "7d", label: "Last 7 days" },
+  { key: "30d", label: "Last 30 days" },
   { key: "this_month", label: "This month" },
-  { key: "last_month", label: "Last month" }
+  { key: "last_month", label: "Last month" },
+  { key: "quarter_to_date", label: "QTD" },
+  { key: "year_to_date", label: "YTD" }
 ];
 
-export function ReportFiltersBar({ filters, onChange, locations, instructors, programTypes, search, onSearchChange }: ReportFiltersProps) {
+export function ReportFiltersBar({ filters, onChange, locations, households, productCategories, instructors, programTypes, search, onSearchChange }: ReportFiltersProps) {
   return (
     <section className="rounded-xl border bg-card p-3" aria-label="report-filters">
       <div className="flex flex-wrap gap-2">
@@ -118,6 +123,70 @@ export function ReportFiltersBar({ filters, onChange, locations, instructors, pr
             <option value="retail">Retail</option>
             <option value="comp">Comp</option>
           </select>
+        </label>
+        <label className="space-y-1 text-sm">
+          <span className="text-muted-foreground">Product category</span>
+          <select
+            className="h-11 w-full rounded-md border bg-white px-3"
+            value={filters.productCategory ?? "all"}
+            onChange={(event) => onChange({ ...filters, productCategory: event.target.value || "all" })}
+          >
+            <option value="all">All categories</option>
+            {productCategories.map((entry) => (
+              <option key={entry.key} value={entry.key}>
+                {entry.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="space-y-1 text-sm">
+          <span className="text-muted-foreground">Household</span>
+          <select
+            className="h-11 w-full rounded-md border bg-white px-3"
+            value={filters.householdId ?? "all"}
+            onChange={(event) => onChange({ ...filters, householdId: event.target.value || "all" })}
+          >
+            <option value="all">All households</option>
+            {households.map((entry) => (
+              <option key={entry.id} value={entry.id}>
+                {entry.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="space-y-1 text-sm">
+          <span className="text-muted-foreground">Customer segment</span>
+          <select
+            className="h-11 w-full rounded-md border bg-white px-3"
+            value={filters.customerSegment ?? "all"}
+            onChange={(event) => onChange({ ...filters, customerSegment: event.target.value as ReportFilters["customerSegment"] })}
+          >
+            <option value="all">All segments</option>
+            <option value="adult">Adults</option>
+            <option value="youth">Youth</option>
+            <option value="staff">Staff</option>
+            <option value="household">Household-linked</option>
+          </select>
+        </label>
+      </div>
+      <div className="mt-3 grid gap-3 md:grid-cols-2">
+        <label className="space-y-1 text-sm">
+          <span className="text-muted-foreground">Custom start</span>
+          <input
+            type="date"
+            className="h-11 w-full rounded-md border bg-white px-3"
+            value={filters.customStart ?? ""}
+            onChange={(event) => onChange({ ...filters, rangeKey: "custom", customStart: event.target.value || undefined })}
+          />
+        </label>
+        <label className="space-y-1 text-sm">
+          <span className="text-muted-foreground">Custom end</span>
+          <input
+            type="date"
+            className="h-11 w-full rounded-md border bg-white px-3"
+            value={filters.customEnd ?? ""}
+            onChange={(event) => onChange({ ...filters, rangeKey: "custom", customEnd: event.target.value || undefined })}
+          />
         </label>
       </div>
     </section>

@@ -1,5 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { beforeEach } from "vitest";
+import { vi } from "vitest";
 import { CheckInList } from "@/components/checkins/checkin-list";
 import { TopBar } from "@/components/layout/top-bar";
 import { TestProviders } from "@/tests/test-providers";
@@ -9,6 +11,27 @@ async function activateStaff(user: ReturnType<typeof userEvent.setup>, pin = "11
   await user.type(screen.getByLabelText("Staff PIN input"), pin);
   await user.click(screen.getByRole("button", { name: "Confirm" }));
 }
+
+function mockMobileViewport() {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query === "(max-width: 1023px)",
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn()
+    }))
+  });
+}
+
+beforeEach(() => {
+  window.localStorage.clear();
+  window.sessionStorage.clear();
+});
 
 describe("CheckInList date behavior", () => {
   it("search input appears on Today", () => {
@@ -121,6 +144,19 @@ describe("CheckInList date behavior", () => {
     );
 
     expect(screen.getByLabelText(/Maya Patel (initials avatar|profile photo)/i)).toBeInTheDocument();
+  });
+
+  it("renders the mobile front-desk workspace shell on smaller screens", () => {
+    mockMobileViewport();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CheckInList />
+      </TestProviders>
+    );
+
+    expect(screen.getByTestId("checkin-mobile-workspace")).toBeInTheDocument();
+    expect(screen.getByText(/Front Desk mode keeps search, active roster, and recent activity within thumb reach/i)).toBeInTheDocument();
   });
 });
 

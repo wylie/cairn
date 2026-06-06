@@ -312,6 +312,10 @@ export default function RegistrationsPage() {
   return (
     <section className="space-y-4" data-testid="registrations-workstation">
       <PageHeader title="Registrations" description="Operational center for rosters, waitlists, attendance, transfers, and cancellations." />
+      <div className="rounded-xl border bg-card p-3 lg:hidden">
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">Mobile workflow</p>
+        <p className="mt-1 text-sm text-muted-foreground">Search sessions first, then manage the roster and enrollment from stacked cards below.</p>
+      </div>
       {feedback ? <p role="status" className="rounded-lg border bg-secondary/20 px-3 py-2 text-sm">{feedback}</p> : null}
 
       <div className="grid gap-3 md:grid-cols-5">
@@ -368,7 +372,7 @@ export default function RegistrationsPage() {
           </div>
         </section>
 
-        <section className="rounded-xl border bg-card p-4 space-y-3" aria-label="session-details-panel">
+        <section className="rounded-xl border bg-card p-4 space-y-3 xl:sticky xl:top-28" aria-label="session-details-panel">
           <h2 className="text-base font-semibold">Session Details</h2>
           {!selectedSession ? <p className="text-sm text-muted-foreground">Select a session to view details.</p> : (
             <>
@@ -472,7 +476,7 @@ export default function RegistrationsPage() {
           )}
         </section>
 
-        <section className="rounded-xl border bg-card p-4 space-y-3" aria-label="customer-enrollment-panel">
+        <section className="rounded-xl border bg-card p-4 space-y-3 xl:sticky xl:top-28" aria-label="customer-enrollment-panel">
           <h2 className="text-base font-semibold">Customer Enrollment</h2>
           <label className="text-sm"><span className="mb-1 block text-muted-foreground">Search customer</span><Input value={customerSearch} onChange={(e) => setCustomerSearch(e.target.value)} placeholder="Name, email, phone, member ID" /></label>
           <div className="space-y-2 max-h-[38vh] overflow-auto pr-1">

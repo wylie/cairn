@@ -5,6 +5,23 @@ import CalendarPage from "@/app/(app)/calendar/page";
 import { TopBar } from "@/components/layout/top-bar";
 import { TestProviders } from "@/tests/test-providers";
 
+function mockViewport(isMobile: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: isMobile ? query === "(max-width: 1023px)" : false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn()
+    }))
+  });
+}
+
 function installStorageMock() {
   const store = new Map<string, string>();
   const original = window.localStorage;
@@ -43,6 +60,7 @@ async function activateStaff(user: ReturnType<typeof userEvent.setup>, pin = "22
 
 describe("Calendar interactive workstation", () => {
   beforeEach(() => {
+    mockViewport(false);
     if (typeof (window.localStorage as Storage & { clear?: unknown }).clear === "function") {
       window.localStorage.clear();
     }
@@ -82,6 +100,23 @@ describe("Calendar interactive workstation", () => {
 
     expect(screen.getByTestId("calendar-layout")).toBeInTheDocument();
     expect(screen.getByTestId("calendar-sidebar")).toBeInTheDocument();
+  });
+
+  it("switches month default to agenda on smaller screens", () => {
+    const storage = installStorageMock();
+    window.localStorage.setItem("cairn:calendar:view", "month");
+    mockViewport(true);
+
+    render(
+      <TestProviders>
+        <TopBar />
+        <CalendarPage />
+      </TestProviders>
+    );
+
+    expect(screen.getByTestId("calendar-mobile-workspace")).toHaveAttribute("data-current-view", "agenda");
+    expect(screen.getByText(/Agenda and day views are prioritized on smaller screens/i)).toBeInTheDocument();
+    storage.restore();
   });
 
   it("applies button hierarchy in calendar controls", () => {

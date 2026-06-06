@@ -19,7 +19,7 @@ type NavItem = {
 
 const operationalPermissions: StaffPermission[] = ["checkInCustomer", "checkOutCustomer", "viewCustomers", "usePOS", "rosterAccess", "editPrograms"];
 
-const navItems: NavItem[] = [
+export const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, section: "operations", permissions: operationalPermissions },
   { href: "/alerts", label: "Alerts", icon: Bell, section: "operations", permissions: operationalPermissions },
   { href: "/customers", label: "Customers", icon: Users, section: "operations", permissions: ["viewCustomers"] },
@@ -74,11 +74,25 @@ const navItems: NavItem[] = [
   { href: "/settings", label: "Settings", icon: Settings, section: "management", permissions: ["manageSettings", "manageStaff", "manageProducts"] }
 ];
 
-function buildOrgHref(pathname: string, href: string) {
+export function buildOrgHref(pathname: string, href: string) {
   const match = pathname.match(/^\/o\/([^/]+)/);
   const slug = match?.[1];
   if (!slug) return href;
   return `/o/${slug}${href}`;
+}
+
+export function getVisibleNavItems({
+  canAccessPermissions,
+  hasPermission
+}: {
+  canAccessPermissions?: (permissions?: StaffPermission[]) => boolean;
+  hasPermission?: (permission: StaffPermission) => boolean;
+}) {
+  return navItems.filter((item) => {
+    const permissionVisible = canAccessPermissions ? canAccessPermissions(item.permissions) : true;
+    const customVisible = item.isVisible ? item.isVisible({ canAccessPermissions, hasPermission }) : true;
+    return permissionVisible && customVisible;
+  });
 }
 
 function SidebarNavInner({
@@ -92,11 +106,7 @@ function SidebarNavInner({
   canAccessPermissions?: (permissions?: StaffPermission[]) => boolean;
   hasPermission?: (permission: StaffPermission) => boolean;
 }) {
-  const visibleItems = navItems.filter((item) => {
-    const permissionVisible = canAccessPermissions ? canAccessPermissions(item.permissions) : true;
-    const customVisible = item.isVisible ? item.isVisible({ canAccessPermissions, hasPermission }) : true;
-    return permissionVisible && customVisible;
-  });
+  const visibleItems = getVisibleNavItems({ canAccessPermissions, hasPermission });
   const operations = visibleItems.filter((item) => item.section === "operations");
   const management = visibleItems.filter((item) => item.section === "management");
 

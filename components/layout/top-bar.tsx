@@ -90,7 +90,7 @@ function TopBarInner() {
   };
 
   return (
-    <header className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4">
+    <header className="sticky top-3 z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card/95 p-4 backdrop-blur">
       <div>
         <p className="text-xs uppercase tracking-wide text-muted-foreground">Organization</p>
         <p className="font-semibold">{org?.name ?? "Unknown Organization"}</p>

@@ -318,17 +318,18 @@ export default function PosPage() {
 
   return (
     <PermissionGate permission="usePOS">
-      <section className="space-y-4">
+      <section className="space-y-4" data-testid="pos-mobile-workspace">
         <header>
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-3xl font-semibold">Front Desk POS</h2>
             <Link href="/pos/history" className="text-sm text-muted-foreground underline">Sales History</Link>
           </div>
           <p className="text-sm text-muted-foreground">Sell access products quickly, then check guests in without leaving this screen.</p>
+          <p className="text-sm text-muted-foreground lg:hidden">Mobile POS keeps customer lookup, products, and checkout in a single vertical flow with touch-safe controls.</p>
         </header>
 
         <div className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr_1fr]">
-          <div className="space-y-4 rounded-xl border bg-card p-4">
+          <div className="space-y-4 rounded-xl border bg-card p-4 xl:sticky xl:top-28">
             <h3 className="text-lg font-semibold">Customer</h3>
             <CustomerSearchCombobox
               label="Search customer"
@@ -457,6 +458,7 @@ export default function PosPage() {
 
           <div className="space-y-4 rounded-xl border bg-card p-4">
             <h3 className="text-lg font-semibold">Access Products</h3>
+            <p className="text-sm text-muted-foreground lg:hidden">Tap a product to add it to cart. Quick buttons stay first for fast counter transactions.</p>
             {canCustomizeQuickButtons ? (
               <div className="flex justify-end">
                 <Button type="button" variant="secondary" className="min-h-11" onClick={() => setShowQuickButtonsModal(true)}>
@@ -484,7 +486,7 @@ export default function PosPage() {
             />
           </div>
 
-          <aside className="space-y-4 rounded-xl border bg-card p-4">
+          <aside className="space-y-4 rounded-xl border bg-card p-4 xl:sticky xl:top-28">
             <h3 className="text-lg font-semibold">Cart & Payment</h3>
             <div className="rounded-lg border p-3">
               {groupedCartItems.length === 0 ? <p className="text-sm text-muted-foreground">No products in cart.</p> : null}

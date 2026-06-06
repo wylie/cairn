@@ -1,5 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { beforeEach } from "vitest";
+import { vi } from "vitest";
 import PosPage from "@/app/(app)/pos/page";
 import { CheckInList } from "@/components/checkins/checkin-list";
 import { CustomerList } from "@/components/customers/customer-list";
@@ -13,6 +15,27 @@ async function activateStaff(user: ReturnType<typeof userEvent.setup>, pin = "22
   await user.type(input, pin);
   await user.click(screen.getByRole("button", { name: "Confirm" }));
 }
+
+function mockMobileViewport() {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query === "(max-width: 1023px)",
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn()
+    }))
+  });
+}
+
+beforeEach(() => {
+  window.localStorage.clear();
+  window.sessionStorage.clear();
+});
 
 async function completeNewCustomerWizardInPos(
   user: ReturnType<typeof userEvent.setup>,
@@ -53,6 +76,21 @@ describe("POS page", () => {
     await user.click(screen.getByRole("button", { name: "Add Class Drop-In" }));
 
     expect(screen.getByText(/Member price: \$10.00/i)).toBeInTheDocument();
+  });
+
+  it("renders mobile POS guidance on smaller screens", async () => {
+    const user = userEvent.setup();
+    mockMobileViewport();
+    render(
+      <TestProviders>
+        <TopBar />
+        <PosPage />
+      </TestProviders>
+    );
+
+    await activateStaff(user, "2222");
+    expect(screen.getByTestId("pos-mobile-workspace")).toBeInTheDocument();
+    expect(screen.getByText(/Mobile POS keeps customer lookup, products, and checkout in a single vertical flow/i)).toBeInTheDocument();
   });
 
   it("keeps Complete + Check In button text contained with multiline-safe styling", async () => {

@@ -16,6 +16,7 @@ import {
 type ScheduleView
 } from "@/lib/data/session-schedule";
 import { data } from "@/lib/data";
+import { useIsMobileStaffLayout } from "@/lib/responsive/use-mobile";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useSettingsState } from "@/lib/state/settings-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
@@ -69,6 +70,10 @@ function buildRecurringDates(startDate: string, pattern: "none" | "weekly" | "ca
 
 const CALENDAR_VIEW_STORAGE_KEY = "cairn:calendar:view";
 const VIEW_OPTIONS: ScheduleView[] = ["day", "week", "month", "agenda"];
+function normalizeCalendarView(view: ScheduleView, isMobile: boolean) {
+  if (!isMobile) return view;
+  return view === "month" ? "agenda" : view;
+}
 function getStoredCalendarView(): ScheduleView | null {
   if (typeof window === "undefined") return null;
   const storage = window.localStorage as unknown as { getItem?: (key: string) => string | null };
@@ -119,9 +124,10 @@ export default function CalendarPage() {
   } = useCustomerState();
   const { settings } = useSettingsState();
   const { activeStaff, assertPermission, staffUsers, requestStaffSwitch } = useWorkstationState();
+  const isMobileStaffLayout = useIsMobileStaffLayout();
 
   const [view, setView] = useState<ScheduleView>(() => {
-    return getStoredCalendarView() ?? settings.calendar.defaultView ?? "week";
+    return normalizeCalendarView(getStoredCalendarView() ?? settings.calendar.defaultView ?? "week", false);
   });
   const [search, setSearch] = useState("");
   const [dateKey, setDateKey] = useState("2026-05-21");
@@ -158,10 +164,18 @@ export default function CalendarPage() {
   useEffect(() => {
     const stored = getStoredCalendarView();
     if (stored) return;
-    if (view !== settings.calendar.defaultView) {
-      setView(settings.calendar.defaultView);
+    const nextDefaultView = normalizeCalendarView(settings.calendar.defaultView, isMobileStaffLayout);
+    if (view !== nextDefaultView) {
+      setView(nextDefaultView);
     }
-  }, [settings.calendar.defaultView, view]);
+  }, [settings.calendar.defaultView, isMobileStaffLayout, view]);
+
+  useEffect(() => {
+    const normalizedView = normalizeCalendarView(view, isMobileStaffLayout);
+    if (normalizedView !== view) {
+      setView(normalizedView);
+    }
+  }, [isMobileStaffLayout, view]);
 
   const instructors = staffUsers.filter((entry) => (entry.role === "instructor" || entry.canTeach) && entry.activeInstructor !== false);
   const activePrograms = useMemo(() => programs.filter((entry) => entry.active !== false), [programs]);
@@ -493,7 +507,7 @@ export default function CalendarPage() {
   };
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-4" data-testid="calendar-mobile-workspace" data-current-view={view}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <PageHeader
           title="Schedule"
@@ -519,6 +533,12 @@ export default function CalendarPage() {
 
       {feedback ? <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{feedback}</p> : null}
       {warning ? <p role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">{warning}</p> : null}
+      {isMobileStaffLayout ? (
+        <div className="rounded-xl border bg-card p-3 lg:hidden">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">Instructor mobile mode</p>
+          <p className="mt-1 text-sm text-muted-foreground">Agenda and day views are prioritized on smaller screens for attendance, rosters, and session notes.</p>
+        </div>
+      ) : null}
 
       <ScheduleFilters
         search={search}
@@ -583,7 +603,7 @@ export default function CalendarPage() {
           )}
         </div>
 
-        <div className="space-y-4 xl:w-[400px]" data-testid="calendar-sidebar">
+        <div className="space-y-4 xl:w-[400px] xl:sticky xl:top-28" data-testid="calendar-sidebar">
           {showCreate ? (
             <SessionFormPanel
               mode="create"

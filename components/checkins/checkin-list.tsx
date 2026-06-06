@@ -376,12 +376,13 @@ export function CheckInList() {
   }, [sellCustomerId, showAddCustomer, selectedCustomer, selectedDecision, activeRecord]);
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-4" data-testid="checkin-mobile-workspace">
       <header className="rounded-xl border bg-card p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Daily Log</p>
             <h3 className="text-xl font-semibold">{isActiveDateToday ? "Today" : activeDateKey}</h3>
+            <p className="mt-1 text-sm text-muted-foreground lg:hidden">Front Desk mode keeps search, active roster, and recent activity within thumb reach.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={goToPreviousDay} aria-label="Previous Day">Previous</Button>
@@ -401,7 +402,11 @@ export function CheckInList() {
 
       {isActiveDateToday ? (
         <div className="grid gap-4 xl:grid-cols-[1fr_1fr_0.9fr]">
-          <div className="space-y-3 rounded-xl border bg-card p-4">
+          <div className="space-y-3 rounded-xl border bg-card p-4 lg:sticky lg:top-28">
+            <div className="rounded-lg bg-secondary/30 p-3 lg:hidden">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Quick mobile flow</p>
+              <p className="mt-1 text-sm text-muted-foreground">Search, review warnings, then check in without leaving this pane.</p>
+            </div>
             <SearchInput
               label="Scan barcode, member ID, phone, email, or search name"
               showLabel
@@ -429,7 +434,7 @@ export function CheckInList() {
                 }
               }}
             />
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2" data-testid="checkin-mobile-filters">
               {[
                 ["all", "All"],
                 ["eligible", "Eligible"],
@@ -726,11 +731,12 @@ export function CheckInList() {
             )}
           </div>
 
-          <aside id="current-roster" className="space-y-3 rounded-xl border bg-card p-4">
+          <aside id="current-roster" className="space-y-3 rounded-xl border bg-card p-4 xl:sticky xl:top-28">
             <div className="flex items-center justify-between gap-2">
               <h4 className="text-base font-semibold">Currently Checked In</h4>
               <span className="rounded-full bg-secondary px-2 py-0.5 text-xs text-muted-foreground">{checkedInList.length}</span>
             </div>
+            <p className="text-sm text-muted-foreground lg:hidden">Tap a record to review warnings, visit length, and checkout actions.</p>
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
               {[
                 ["all", "All"],

@@ -17,6 +17,19 @@ describe("AppShell", () => {
     mockPathname = "/o/summit/dashboard";
     window.localStorage.clear();
     document.cookie = `${ORG_REGISTRY_COOKIE}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn()
+      }))
+    });
   });
 
   it("renders sidebar and main content", () => {
@@ -57,5 +70,33 @@ describe("AppShell", () => {
     );
 
     expect(screen.getByRole("heading", { name: "North Shore Camp" })).toBeInTheDocument();
+  });
+
+  it("renders mobile navigation and quick actions on smaller screens", () => {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: query === "(max-width: 1023px)",
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn()
+      }))
+    });
+
+    render(
+      <TestProviders>
+        <AppShell>
+          <div>Page Content</div>
+        </AppShell>
+      </TestProviders>
+    );
+
+    expect(screen.getByTestId("mobile-staff-mode-banner")).toBeInTheDocument();
+    expect(screen.getByTestId("mobile-staff-navigation")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /open quick actions/i })).toBeInTheDocument();
   });
 });

@@ -818,11 +818,11 @@ export function CheckInList() {
                       </p>
                       <Button
                         variant="secondary"
-                        className="mt-2 h-9"
+                        className="mt-2 h-auto min-h-9 whitespace-normal text-left leading-tight"
                         onClick={() => handleCheckOut(record.id)}
                         aria-label={`Roster Check Out ${record.customerName}`}
                       >
-                        Check Out
+                        {`Check Out ${record.customerName}`}
                       </Button>
                     </article>
                   );

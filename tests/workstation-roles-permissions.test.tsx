@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { vi } from "vitest";
+import { beforeEach, vi } from "vitest";
 import { AppShell } from "@/components/layout/app-shell";
 import { CheckInList } from "@/components/checkins/checkin-list";
 import { TopBar } from "@/components/layout/top-bar";
@@ -41,6 +41,11 @@ async function switchStaff(user: ReturnType<typeof userEvent.setup>, pin: string
 }
 
 describe("Role visibility and permission safety", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+  });
+
   it("instructor role hides POS/Products/Settings/Reports & Analytics nav and keeps Calendar", async () => {
     const user = userEvent.setup();
     render(

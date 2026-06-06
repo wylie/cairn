@@ -6677,9 +6677,11 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
               }))
             : [];
     const shouldEnforcePreferences = input.status !== "draft";
+    const preferenceControlledChannel = input.channel === "email" || input.channel === "sms" || input.channel === "in_app_notification";
     const blockedRecipients = shouldEnforcePreferences ? derivedRecipients.filter((recipient) => {
       const customer = recipient.customerId ? customers.find((entry) => entry.id === recipient.customerId) : undefined;
       const preferences = customer?.communicationPreferences ?? DEFAULT_COMMUNICATION_PREFERENCES;
+      if (!preferenceControlledChannel) return false;
       if (input.channel === "email" && !preferences.email) return true;
       if (input.channel === "sms" && !preferences.sms) return true;
       if (!isTransactional && !preferences.marketing) return true;

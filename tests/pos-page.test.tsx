@@ -524,17 +524,18 @@ describe("POS page", () => {
     const search = screen.getByLabelText("Search products");
     await user.type(search, "pass");
     const baselineCount = screen.getAllByText("$28.00").length;
-    const options = screen.getAllByRole("option");
+    const productResults = screen.getByRole("listbox", { name: "Product search results" });
+    const options = within(productResults).getAllByRole("option");
     expect(options[0]).toHaveAttribute("aria-selected", "true");
     expect(options[0].className).toContain("ring-2");
 
     await user.keyboard("{ArrowDown}");
-    const moved = screen.getAllByRole("option");
+    const moved = within(productResults).getAllByRole("option");
     expect(moved[1]).toHaveAttribute("aria-selected", "true");
     expect(moved[1].className).toContain("ring-2");
 
     await user.keyboard("{ArrowUp}");
-    expect(screen.getAllByRole("option")[0]).toHaveAttribute("aria-selected", "true");
+    expect(within(productResults).getAllByRole("option")[0]).toHaveAttribute("aria-selected", "true");
 
     await user.keyboard("{Enter}");
     expect(screen.getAllByText("$28.00").length).toBeGreaterThan(baselineCount);
@@ -590,11 +591,12 @@ describe("POS page", () => {
 
     const input = screen.getByLabelText("Search customer");
     await user.type(input, "a");
-    const options = screen.getAllByRole("option");
+    const customerResults = screen.getByRole("listbox", { name: "Customer search results" });
+    const options = within(customerResults).getAllByRole("option");
     expect(options[0]).toHaveAttribute("aria-selected", "true");
 
     await user.keyboard("{ArrowDown}");
-    const moved = screen.getAllByRole("option");
+    const moved = within(customerResults).getAllByRole("option");
     expect(moved[1]).toHaveAttribute("aria-selected", "true");
 
     await user.keyboard("{Enter}");

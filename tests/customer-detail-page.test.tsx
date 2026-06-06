@@ -6,7 +6,7 @@ import { CustomerList } from "@/components/customers/customer-list";
 import { TopBar } from "@/components/layout/top-bar";
 import PosPage from "@/app/(app)/pos/page";
 import { TestProviders } from "@/tests/test-providers";
-import { vi } from "vitest";
+import { beforeEach, vi } from "vitest";
 
 vi.mock("next/navigation", async () => {
   const actual = await vi.importActual<typeof import("next/navigation")>("next/navigation");
@@ -50,6 +50,12 @@ async function activateStaff(user: ReturnType<typeof userEvent.setup>, pin = "22
 }
 
 describe("CustomerDetailPage", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+    window.history.pushState({}, "", "/customers/cust_001");
+  });
+
   it("renders expected sections", async () => {
     const page = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
     render(<TestProviders>{page}</TestProviders>);
@@ -390,7 +396,7 @@ describe("CustomerDetailPage", () => {
     render(<TestProviders>{page}</TestProviders>);
 
     const purchases = screen.getByLabelText("detail-purchases");
-    expect(within(purchases).getByText(/Monthly Membership|Membership|Punch Pass|Day Pass|Comp Access/i)).toBeInTheDocument();
+    expect(within(purchases).getAllByText(/Monthly Membership|Membership|Punch Pass|Day Pass|Comp Access/i).length).toBeGreaterThan(0);
   });
 
   it("renders empty states for sparse customer data", async () => {
@@ -804,7 +810,7 @@ describe("CustomerDetailPage", () => {
     await user.type(checkInSearch, "May Parker");
     expect((checkInSearch as HTMLInputElement).value).toBe("May Parker");
 
-    const posSearch = screen.getByLabelText("Search customer");
+    const posSearch = screen.getAllByLabelText("Search customer")[0];
     await user.clear(posSearch);
     await user.type(posSearch, "May Parker");
     expect((posSearch as HTMLInputElement).value).toBe("May Parker");
@@ -878,7 +884,7 @@ describe("CustomerDetailPage", () => {
     const householdSection = screen.getByLabelText("detail-household");
     await user.type(within(householdSection).getByLabelText("Household name"), "Patel Family");
     await user.click(within(householdSection).getByRole("button", { name: "Create Household" }));
-    const search = within(householdSection).getByLabelText("Search customer");
+    const search = within(householdSection).getByLabelText("Search household members");
     await user.type(search, "Jordan");
     await user.keyboard("{ArrowDown}{Enter}");
     expect(screen.getByRole("status")).toHaveTextContent("Jordan Kim added to household.");
@@ -902,7 +908,7 @@ describe("CustomerDetailPage", () => {
     const householdSection = screen.getByLabelText("detail-household");
     await user.type(within(householdSection).getByLabelText("Household name"), "Patel Family");
     await user.click(within(householdSection).getByRole("button", { name: "Create Household" }));
-    const search = within(householdSection).getByLabelText("Search customer");
+    const search = within(householdSection).getByLabelText("Search household members");
     await user.type(search, "Dana");
     await user.keyboard("{ArrowDown}{Enter}");
     expect(householdSection).toHaveTextContent("Dana Daypass");

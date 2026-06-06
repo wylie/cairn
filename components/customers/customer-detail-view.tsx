@@ -596,9 +596,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                         setProfileFeedback("Image is too large. Max size is 3MB.");
                         return;
                       }
-                      const reader = new FileReader();
-                      reader.onload = () => {
-                        const url = typeof reader.result === "string" ? reader.result : "";
+                      const applyPhoto = (url: string) => {
                         if (!url) return;
                         const result = updateCustomerPhoto({
                           customerId: customer.id,
@@ -607,6 +605,15 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                           updatedByStaffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : undefined
                         });
                         setProfileFeedback(result.message);
+                      };
+                      if (typeof URL !== "undefined" && typeof URL.createObjectURL === "function") {
+                        applyPhoto(URL.createObjectURL(file));
+                        return;
+                      }
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        const url = typeof reader.result === "string" ? reader.result : "";
+                        applyPhoto(url);
                       };
                       reader.readAsDataURL(file);
                     }}
@@ -1399,7 +1406,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
               <div className="space-y-2 rounded-lg border p-3">
                 <p className="font-medium">Add Household Member</p>
                 <CustomerSearchCombobox
-                  label="Search customer"
+                  label="Search household members"
                   placeholder="Search by name, member ID, phone, or email"
                   query={householdMemberQuery}
                   onQueryChange={setHouseholdMemberQuery}
@@ -2179,7 +2186,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
 
       <section id="timeline" aria-label="section-timeline" className="scroll-mt-40 space-y-4">
         <Card aria-label="detail-timeline">
-          <CardHeader><CardTitle>Activity Timeline</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Customer Timeline</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="flex flex-wrap gap-2">
               {[

@@ -79,12 +79,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
-      <MobileStaffNavigation
-        pathname={pathname}
-        currentOrgSlug={currentSlug}
-        canAccessPermissions={canAccessPermissions}
-        hasPermission={hasPermission}
-      />
+      {isMobileStaffLayout ? (
+        <MobileStaffNavigation
+          pathname={pathname}
+          currentOrgSlug={currentSlug}
+          canAccessPermissions={canAccessPermissions}
+          hasPermission={hasPermission}
+        />
+      ) : null}
     </div>
   );
 }

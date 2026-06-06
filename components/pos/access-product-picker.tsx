@@ -175,7 +175,7 @@ export function AccessProductPicker({
           onKeyDown={handleSearchKeyDown}
         />
         {query ? (
-          <div role="listbox" aria-label="Product search results" className="mt-2 rounded-lg border bg-card p-3">
+          <div role="listbox" aria-label="Product search results" className="mt-2 max-h-[50vh] overflow-y-auto rounded-lg border bg-card p-3 md:max-h-[420px]">
             {filteredProducts.length > 0 ? (
               <div data-testid="product-search-results-grid" className="grid gap-2 sm:grid-cols-2">
                 {filteredProducts.map((product, index) => (

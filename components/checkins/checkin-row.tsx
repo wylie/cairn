@@ -68,7 +68,13 @@ export function CheckInRow({
       </div>
       <div className="relative z-10 flex flex-col items-stretch gap-2 md:items-end">
         {record.status === "checked-in" && !readOnly ? (
-          <Button className="relative z-10 min-h-11 w-full md:w-auto" onClick={() => onCheckOut(record.id)} aria-label={`Check Out ${record.customerName}`}>Check Out</Button>
+          <Button
+            className="relative z-10 min-h-11 w-full whitespace-normal text-left leading-tight md:w-auto"
+            onClick={() => onCheckOut(record.id)}
+            aria-label={`Check Out ${record.customerName}`}
+          >
+            {`Check Out ${record.customerName}`}
+          </Button>
         ) : (
           <Link className="relative z-10 w-full md:w-auto" href={viewCustomerHref ?? `/customers/${record.customerId}`}>
             <Button variant="secondary" className="w-full md:w-auto">View Customer</Button>

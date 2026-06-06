@@ -9,7 +9,9 @@ export const COMMUNICATION_TEMPLATE_VARIABLES = [
   "membershipName",
   "expirationDate",
   "balanceDue",
-  "waiverName"
+  "waiverName",
+  "invoiceNumber",
+  "statementNumber"
 ] as const;
 
 export type CommunicationTemplateVariable = (typeof COMMUNICATION_TEMPLATE_VARIABLES)[number];
@@ -41,6 +43,9 @@ export function getDefaultCommunicationTemplates(organizationId: string): Commun
     build("waitlist_promotion", "Waitlist promotion offer", "A spot opened in {{programName}}", "Hello {{customerName}}, a spot is available in {{programName}} on {{sessionDate}}. Confirm your registration as soon as possible.", ["customerName", "programName", "sessionDate"]),
     build("program_cancellation", "Program cancellation", "{{programName}} has been cancelled", "Hello {{customerName}}, {{programName}} on {{sessionDate}} has been cancelled. We will follow up with next steps.", ["customerName", "programName", "sessionDate"]),
     build("birthday_greeting", "Birthday greeting", "Happy Birthday from {{facilityName}}", "Happy Birthday, {{customerName}}. We look forward to seeing you at {{facilityName}} soon.", ["customerName", "facilityName"]),
+    build("invoice_available", "Invoice available", "Invoice {{invoiceNumber}} is ready", "Hello {{customerName}}, invoice {{invoiceNumber}} is now available from {{facilityName}} for {{balanceDue}}.", ["customerName", "invoiceNumber", "balanceDue", "facilityName"]),
+    build("statement_ready", "Statement ready", "Statement {{statementNumber}} is ready", "Hello {{customerName}}, your statement {{statementNumber}} is ready to review from {{facilityName}}.", ["customerName", "statementNumber", "facilityName"]),
+    build("failed_payment_notice", "Failed payment notice", "Payment could not be processed", "Hello {{customerName}}, we could not process your payment for {{membershipName}}. Outstanding balance: {{balanceDue}}.", ["customerName", "membershipName", "balanceDue", "facilityName"]),
     build("payment_reminder", "Payment reminder", "Balance due: {{balanceDue}}", "Hello {{customerName}}, your balance due is {{balanceDue}}. Please review your account at {{facilityName}}.", ["customerName", "balanceDue", "facilityName"]),
     build("general_announcement", "General announcement", "Facility update", "Hello {{customerName}}, we have an update from {{facilityName}}.", ["customerName", "facilityName"]),
     build("custom", "Custom", "", "", [...COMMUNICATION_TEMPLATE_VARIABLES])

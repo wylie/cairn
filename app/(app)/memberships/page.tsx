@@ -54,9 +54,10 @@ function statusTone(label: ReturnType<typeof statusLabel>): "success" | "warning
 
 export default function MembershipsWorkspacePage() {
   const pathname = usePathname() ?? "";
+  const currentOrgSlug = pathname.match(/^\/o\/([^/]+)/)?.[1] ?? "summit";
   const searchParams = useSearchParams();
   const currentSearch = searchParams?.toString?.() ?? "";
-  const { customers, customerAccessRecords, accessProducts, updateCustomerAccessRecord, households, householdMembers, operationsAlerts } = useCustomerState();
+  const { customers, customerAccessRecords, accessProducts, updateCustomerAccessRecord, households, householdMembers, operationsAlerts, billingAccounts, billingInvoices, billingStatements, membershipRenewals, billingCreditEntries } = useCustomerState();
   const { settings } = useSettingsState();
   const { activeStaff, hasPermission } = useWorkstationState();
 
@@ -177,6 +178,42 @@ export default function MembershipsWorkspacePage() {
           )
         : [],
     [operationsAlerts, selected]
+  );
+  const selectedBillingAccount = useMemo(
+    () =>
+      selected
+        ? billingAccounts.find(
+            (entry) =>
+              (selected.record.householdId && entry.ownerType === "household" && entry.ownerId === selected.record.householdId) ||
+              (entry.ownerType === "customer" && entry.ownerId === selected.record.customerId)
+          )
+        : undefined,
+    [billingAccounts, selected]
+  );
+  const selectedRenewals = useMemo(
+    () => (selected ? membershipRenewals.filter((entry) => entry.membershipId === selected.record.id || entry.customerId === selected.record.customerId) : []),
+    [membershipRenewals, selected]
+  );
+  const selectedInvoices = useMemo(
+    () =>
+      selectedBillingAccount
+        ? billingInvoices.filter((entry) => entry.billingAccountId === selectedBillingAccount.id).slice(0, 4)
+        : [],
+    [billingInvoices, selectedBillingAccount]
+  );
+  const selectedStatements = useMemo(
+    () =>
+      selectedBillingAccount
+        ? billingStatements.filter((entry) => entry.billingAccountId === selectedBillingAccount.id).slice(0, 3)
+        : [],
+    [billingStatements, selectedBillingAccount]
+  );
+  const selectedCredits = useMemo(
+    () =>
+      selectedBillingAccount
+        ? billingCreditEntries.filter((entry) => entry.billingAccountId === selectedBillingAccount.id).slice(0, 4)
+        : [],
+    [billingCreditEntries, selectedBillingAccount]
   );
 
   const onStaffAction = (action: StaffAction, recordId: string) => {
@@ -519,6 +556,32 @@ export default function MembershipsWorkspacePage() {
                       ))}
                     </div>
                   )}
+                </div>
+
+                <div className="rounded-lg border p-3" aria-label="membership-billing-section">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="font-medium">Billing</p>
+                    <Link href={`/o/${currentOrgSlug}/billing`} className="text-xs font-medium text-primary hover:underline">Open Billing</Link>
+                  </div>
+                  <div className="space-y-2 text-xs text-muted-foreground">
+                    <p>Renewal schedule: {selectedRenewals[0] ? `${selectedRenewals[0].billingFrequency} · ${formatShortDate(selectedRenewals[0].renewalDate)}` : "Not configured"}</p>
+                    <p>Account balance: {selectedBillingAccount ? `$${Math.abs(selectedBillingAccount.currentBalanceCents / 100).toFixed(2)}` : "No billing account"}</p>
+                    <p>Credits available: {selectedBillingAccount ? `$${(selectedBillingAccount.availableCreditCents / 100).toFixed(2)}` : "$0.00"}</p>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    <div>
+                      <p className="font-medium text-foreground">Recent Invoices</p>
+                      {selectedInvoices.length === 0 ? <p className="text-xs text-muted-foreground">No invoices yet.</p> : selectedInvoices.map((invoice) => <p key={invoice.id} className="text-xs text-muted-foreground">{invoice.invoiceNumber} · {invoice.status} · {formatShortDate(invoice.dueDate)}</p>)}
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">Statements</p>
+                      {selectedStatements.length === 0 ? <p className="text-xs text-muted-foreground">No statements yet.</p> : selectedStatements.map((statement) => <p key={statement.id} className="text-xs text-muted-foreground">{statement.statementNumber} · {formatShortDate(statement.statementDate)}</p>)}
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">Credits</p>
+                      {selectedCredits.length === 0 ? <p className="text-xs text-muted-foreground">No credits recorded.</p> : selectedCredits.map((credit) => <p key={credit.id} className="text-xs text-muted-foreground">{credit.action.replaceAll("_", " ")} · ${(credit.amountCents / 100).toFixed(2)}</p>)}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-2" aria-label="membership-staff-actions">

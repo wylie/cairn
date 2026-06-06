@@ -40,6 +40,7 @@ const navItems: NavItem[] = [
       )
   },
   { href: "/memberships", label: "Memberships", icon: ShieldCheck, section: "operations", permissions: ["viewCustomers", "viewMembershipReports"] },
+  { href: "/billing", label: "Billing", icon: CreditCard, section: "management", permissions: ["manageBillingSettings", "viewFinancialReports"] },
   { href: "/check-in", label: "Check-in", icon: ScanLine, section: "operations", permissions: ["checkInCustomer", "checkOutCustomer"] },
   { href: "/calendar", label: "Calendar", icon: Calendar, section: "operations", permissions: ["rosterAccess", "editPrograms", "checkInCustomer"] },
   { href: "/registrations", label: "Registrations", icon: ClipboardList, section: "operations", permissions: ["rosterAccess", "editPrograms"] },

@@ -175,6 +175,9 @@ export type CommunicationSource =
   | "waitlist_promotion"
   | "program_cancellation"
   | "birthday"
+  | "invoice_available"
+  | "statement_ready"
+  | "failed_payment_notice"
   | "payment_reminder"
   | "system_alert";
 
@@ -187,6 +190,9 @@ export type CommunicationTemplateType =
   | "waitlist_promotion"
   | "program_cancellation"
   | "birthday_greeting"
+  | "invoice_available"
+  | "statement_ready"
+  | "failed_payment_notice"
   | "payment_reminder"
   | "general_announcement"
   | "custom";
@@ -199,8 +205,12 @@ export type AutomatedCommunicationTrigger =
   | "program_registration"
   | "waitlist_promotion"
   | "birthday"
+  | "invoice_available"
+  | "statement_ready"
   | "payment_failure"
   | "program_cancellation";
+
+export type RenewalBillingFrequency = "monthly" | "quarterly" | "annual" | "custom";
 
 export type CommunicationContactMethod = "email" | "sms" | "in_app_notification";
 
@@ -377,10 +387,14 @@ export interface Membership {
   customerId: string;
   planName: string;
   status: MembershipState;
+  householdId?: string;
   purchaseDate?: string;
   startDate?: string;
   expirationDate?: string;
   renewalDate?: string;
+  billingFrequency?: RenewalBillingFrequency;
+  renewalAmountCents?: number;
+  autoRenew?: boolean;
   freezeStartDate?: string;
   freezeEndDate?: string;
   freezeReason?: string;
@@ -1008,4 +1022,145 @@ export interface PosTransaction {
   checkInTriggered: boolean;
   receiptNumber: string;
   checkInSlots?: PostSaleCheckInSlot[];
+}
+
+export type BillingAccountOwnerType = "customer" | "household" | "organization";
+export type BillingAccountStatus = "current" | "due" | "credit";
+export type BillingPaymentMethodType = "credit_card" | "ach" | "cash" | "gift_card" | "store_credit" | "comp";
+
+export interface BillingAccount {
+  id: string;
+  organizationId: string;
+  locationId?: string;
+  ownerType: BillingAccountOwnerType;
+  ownerId: string;
+  primaryBillingCustomerId?: string;
+  status: BillingAccountStatus;
+  currentBalanceCents: number;
+  availableCreditCents: number;
+  autoApplyCredits?: boolean;
+  paymentMethodTypes: BillingPaymentMethodType[];
+  lastPaymentMethodLabel?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export type BillingCreditAction = "add" | "remove" | "transfer_in" | "transfer_out" | "apply" | "refund";
+
+export interface BillingCreditEntry {
+  id: string;
+  organizationId: string;
+  billingAccountId: string;
+  amountCents: number;
+  action: BillingCreditAction;
+  reason: string;
+  customerId?: string;
+  householdId?: string;
+  invoiceId?: string;
+  transactionId?: string;
+  refundId?: string;
+  transferBillingAccountId?: string;
+  createdAt: string;
+  createdByStaffId?: string;
+  createdByStaffName?: string;
+}
+
+export interface BillingInvoiceLineItem {
+  id: string;
+  label: string;
+  category: "membership" | "program" | "retail" | "fee" | "adjustment" | "pass";
+  quantity: number;
+  unitAmountCents: number;
+  lineTotalCents: number;
+  customerId?: string;
+  householdId?: string;
+  membershipId?: string;
+  sessionId?: string;
+  productId?: string;
+}
+
+export type BillingInvoiceStatus = "draft" | "open" | "paid" | "overdue" | "cancelled";
+
+export interface BillingInvoice {
+  id: string;
+  organizationId: string;
+  billingAccountId: string;
+  invoiceNumber: string;
+  issueDate: string;
+  dueDate: string;
+  status: BillingInvoiceStatus;
+  lineItems: BillingInvoiceLineItem[];
+  subtotalCents: number;
+  taxCents: number;
+  discountCents: number;
+  totalCents: number;
+  appliedCreditCents: number;
+  balanceCents: number;
+  customerId?: string;
+  householdId?: string;
+  membershipId?: string;
+  renewalId?: string;
+  transactionId?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface BillingStatement {
+  id: string;
+  organizationId: string;
+  billingAccountId: string;
+  statementNumber: string;
+  statementDate: string;
+  periodStart: string;
+  periodEnd: string;
+  invoiceIds: string[];
+  chargesCents: number;
+  creditsCents: number;
+  paymentsCents: number;
+  refundsCents: number;
+  balanceCents: number;
+  customerId?: string;
+  householdId?: string;
+  createdAt: string;
+}
+
+export type MembershipRenewalStatus = "pending" | "processing" | "succeeded" | "failed" | "cancelled" | "skipped";
+
+export interface MembershipRenewalRecord {
+  id: string;
+  organizationId: string;
+  billingAccountId: string;
+  membershipId: string;
+  customerId: string;
+  householdId?: string;
+  billingFrequency: RenewalBillingFrequency;
+  renewalAmountCents: number;
+  renewalDate: string;
+  status: MembershipRenewalStatus;
+  invoiceId?: string;
+  transactionId?: string;
+  failureReason?: string;
+  nextRetryAt?: string;
+  grantTemporaryAccessUntil?: string;
+  createdAt: string;
+  processedAt?: string;
+  createdByStaffId?: string;
+  createdByStaffName?: string;
+}
+
+export type BillingRefundType = "full" | "partial" | "store_credit";
+
+export interface BillingRefundRecord {
+  id: string;
+  organizationId: string;
+  billingAccountId: string;
+  amountCents: number;
+  type: BillingRefundType;
+  reason: string;
+  relatedReceiptId?: string;
+  relatedInvoiceId?: string;
+  createdAt: string;
+  createdByStaffId?: string;
+  createdByStaffName?: string;
 }

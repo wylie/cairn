@@ -77,7 +77,11 @@ export default function ReportsPage() {
     accessProducts,
     productCategories,
     households,
-    householdMembers
+    householdMembers,
+    billingAccounts,
+    billingInvoices,
+    membershipRenewals,
+    billingRefunds
   } = useCustomerState();
   const { activeStaff, hasPermission, staffUsers } = useWorkstationState();
 
@@ -213,6 +217,22 @@ export default function ReportsPage() {
     if (total === 0) return 0;
     return Math.round((registrations.filter((entry) => entry.status === "cancelled").length / total) * 100);
   }, [registrations]);
+  const outstandingBalancesCents = useMemo(
+    () => billingAccounts.filter((entry) => entry.currentBalanceCents < 0).reduce((sum, entry) => sum + Math.abs(entry.currentBalanceCents), 0),
+    [billingAccounts]
+  );
+  const accountCreditsCents = useMemo(
+    () => billingAccounts.reduce((sum, entry) => sum + entry.availableCreditCents, 0),
+    [billingAccounts]
+  );
+  const failedBillingPayments = useMemo(
+    () => membershipRenewals.filter((entry) => entry.status === "failed").length,
+    [membershipRenewals]
+  );
+  const refundsValueCents = useMemo(
+    () => billingRefunds.reduce((sum, entry) => sum + entry.amountCents, 0),
+    [billingRefunds]
+  );
 
   return (
     <PermissionGate permission="viewReports">
@@ -633,6 +653,12 @@ export default function ReportsPage() {
               <MetricCard title="Net Revenue" value={formatCurrency(report.sales.netCents)} />
               <StatusCard title="Refund Count" value={`${report.financial.refunds}`} />
               <StatusCard title="Comp Transactions" value={`${report.financial.comps}`} />
+              <MetricCard title="Outstanding Balances" value={formatCurrency(outstandingBalancesCents)} />
+              <MetricCard title="Credits" value={formatCurrency(accountCreditsCents)} />
+              <StatusCard title="Renewals" value={`${membershipRenewals.length}`} />
+              <StatusCard title="Failed Payments" value={`${failedBillingPayments}`} />
+              <MetricCard title="Refund Value" value={formatCurrency(refundsValueCents)} />
+              <StatusCard title="Invoices" value={`${billingInvoices.length}`} />
             </div>
           ) : (
             <AlertCard title="Restricted" tone="warning" message="Financial summary is available to manager and owner roles." />

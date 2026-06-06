@@ -7,6 +7,14 @@ import { accessRecords as seedAccessRecords } from "@/lib/mocks/access-records";
 import { customers as seedCustomers } from "@/lib/mocks/customers";
 import { locations as seedLocations } from "@/lib/mocks/locations";
 import { memberships as seedMemberships } from "@/lib/mocks/memberships";
+import {
+  billingAccounts as seedBillingAccounts,
+  billingCreditEntries as seedBillingCreditEntries,
+  billingInvoices as seedBillingInvoices,
+  billingRefunds as seedBillingRefunds,
+  billingStatements as seedBillingStatements,
+  membershipRenewals as seedMembershipRenewals
+} from "@/lib/mocks/billing";
 import { punchPasses as seedPunchPasses } from "@/lib/mocks/passes";
 import { posProducts as seedPosProducts } from "@/lib/mocks/products";
 import { classCampSessions as seedSessions, programs as seedPrograms } from "@/lib/mocks/programs";
@@ -29,8 +37,15 @@ import { mockPaymentProvider, type PaymentMethod } from "@/lib/payments/provider
 import { normalizeTransactions } from "@/lib/transactions";
 import { evaluateCustomerAccess, getEligibleAccess, type AccessDecision } from "@/lib/access-rules";
 import { getDefaultCommunicationTemplates, renderTemplateVariables } from "@/lib/communications/templates";
+import { billingProvider, invoiceProvider, refundProvider } from "@/lib/billing/providers";
 import type {
   AutomatedCommunicationTrigger,
+  BillingAccount,
+  BillingCreditEntry,
+  BillingInvoice,
+  BillingPaymentMethodType,
+  BillingRefundRecord,
+  BillingStatement,
   CheckInLogRecord,
   CheckInSource,
   CommunicationContactMethod,
@@ -49,6 +64,7 @@ import type {
   EntryMethod,
   InventoryAuditEntry,
   Membership,
+  MembershipRenewalRecord,
   PosProduct,
   PosTransaction,
   PosTransactionItem,
@@ -109,6 +125,25 @@ function titleCase(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+function formatCurrencyAmount(cents: number) {
+  return `$${Math.abs(cents / 100).toFixed(2)}`;
+}
+
+function getBillingAccountStatus(currentBalanceCents: number, availableCreditCents: number): BillingAccount["status"] {
+  if (currentBalanceCents < 0) return "due";
+  if (availableCreditCents > 0 || currentBalanceCents > 0) return "credit";
+  return "current";
+}
+
+function getNextRenewalDate(dateKey: string, frequency: MembershipRenewalRecord["billingFrequency"]) {
+  const date = dateFromKey(dateKey);
+  if (frequency === "quarterly") date.setUTCMonth(date.getUTCMonth() + 3);
+  else if (frequency === "annual") date.setUTCFullYear(date.getUTCFullYear() + 1);
+  else if (frequency === "custom") date.setUTCDate(date.getUTCDate() + 45);
+  else date.setUTCMonth(date.getUTCMonth() + 1);
+  return toDateKey(date);
+}
+
 const DEFAULT_COMMUNICATION_PREFERENCES: CommunicationPreferenceSettings = {
   email: true,
   sms: true,
@@ -148,6 +183,10 @@ function inferCommunicationSource(
       return "program_cancellation";
     case "payment_failure":
       return "payment_reminder";
+    case "invoice_available":
+      return "invoice_available";
+    case "statement_ready":
+      return "statement_ready";
     case "birthday":
       return "birthday";
     default:
@@ -171,6 +210,12 @@ function inferCommunicationSource(
       return "birthday";
     case "payment_reminder":
       return "payment_reminder";
+    case "invoice_available":
+      return "invoice_available";
+    case "statement_ready":
+      return "statement_ready";
+    case "failed_payment_notice":
+      return "failed_payment_notice";
     default:
       return "manual";
   }
@@ -312,6 +357,12 @@ function expandSaleCheckInSlots(
 
 interface CustomerStateContextValue {
   customers: Customer[];
+  billingAccounts: BillingAccount[];
+  billingCreditEntries: BillingCreditEntry[];
+  billingInvoices: BillingInvoice[];
+  billingStatements: BillingStatement[];
+  membershipRenewals: MembershipRenewalRecord[];
+  billingRefunds: BillingRefundRecord[];
   memberships: Membership[];
   punchPasses: PunchPass[];
   accessProducts: PosProduct[];
@@ -479,6 +530,38 @@ interface CustomerStateContextValue {
     customerId: string,
     updates: Partial<CommunicationPreferenceSettings>
   ) => { ok: boolean; message: string };
+  adjustBillingCredit: (input: {
+    billingAccountId: string;
+    amountCents: number;
+    action: BillingCreditEntry["action"];
+    reason: string;
+    transferBillingAccountId?: string;
+    invoiceId?: string;
+    customerId?: string;
+    householdId?: string;
+    createdByStaffId?: string;
+    createdByStaffName?: string;
+  }) => { ok: boolean; message: string; creditEntryId?: string };
+  createBillingStatement: (input: {
+    billingAccountId: string;
+    periodStart: string;
+    periodEnd: string;
+    customerId?: string;
+    householdId?: string;
+  }) => { ok: boolean; message: string; statementId?: string };
+  retryMembershipRenewal: (renewalId: string, options?: { createdByStaffId?: string; createdByStaffName?: string }) => { ok: boolean; message: string };
+  markBillingInvoicePaid: (invoiceId: string, options?: { createdByStaffId?: string; createdByStaffName?: string; paymentMethodType?: BillingPaymentMethodType }) => { ok: boolean; message: string };
+  grantTemporaryAccessForRenewal: (renewalId: string, untilDate: string, options?: { createdByStaffId?: string; createdByStaffName?: string }) => { ok: boolean; message: string };
+  createBillingRefund: (input: {
+    billingAccountId: string;
+    amountCents: number;
+    type: BillingRefundRecord["type"];
+    reason: string;
+    relatedReceiptId?: string;
+    relatedInvoiceId?: string;
+    createdByStaffId?: string;
+    createdByStaffName?: string;
+  }) => { ok: boolean; message: string; refundId?: string };
   addCustomerRelationship: (
     customerId: string,
     input: { relatedCustomerId: string; relationshipType: CustomerRelationshipType; notes?: string }
@@ -885,6 +968,30 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     () => seedMemberships.filter((entry) => seededCustomersForOrg.some((customer) => customer.id === entry.customerId)),
     [seededCustomersForOrg]
   );
+  const seededBillingAccountsForOrg = useMemo(
+    () => seedBillingAccounts.filter((entry) => entry.organizationId === activeOrgId),
+    [activeOrgId]
+  );
+  const seededBillingCreditEntriesForOrg = useMemo(
+    () => seedBillingCreditEntries.filter((entry) => entry.organizationId === activeOrgId),
+    [activeOrgId]
+  );
+  const seededBillingInvoicesForOrg = useMemo(
+    () => seedBillingInvoices.filter((entry) => entry.organizationId === activeOrgId),
+    [activeOrgId]
+  );
+  const seededBillingStatementsForOrg = useMemo(
+    () => seedBillingStatements.filter((entry) => entry.organizationId === activeOrgId),
+    [activeOrgId]
+  );
+  const seededMembershipRenewalsForOrg = useMemo(
+    () => seedMembershipRenewals.filter((entry) => entry.organizationId === activeOrgId),
+    [activeOrgId]
+  );
+  const seededBillingRefundsForOrg = useMemo(
+    () => seedBillingRefunds.filter((entry) => entry.organizationId === activeOrgId),
+    [activeOrgId]
+  );
   const seededPunchPassesForOrg = useMemo(
     () => seedPunchPasses.filter((entry) => seededCustomersForOrg.some((customer) => customer.id === entry.customerId)),
     [seededCustomersForOrg]
@@ -1062,6 +1169,12 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
 
   const storageKeys = useMemo(() => ({
     customers: buildScopedMockKey(activeOrgId, activeLocationId, "customers"),
+    billingAccounts: buildScopedMockKey(activeOrgId, activeLocationId, "billingAccounts"),
+    billingCredits: buildScopedMockKey(activeOrgId, activeLocationId, "billingCredits"),
+    billingInvoices: buildScopedMockKey(activeOrgId, activeLocationId, "billingInvoices"),
+    billingStatements: buildScopedMockKey(activeOrgId, activeLocationId, "billingStatements"),
+    membershipRenewals: buildScopedMockKey(activeOrgId, activeLocationId, "membershipRenewals"),
+    billingRefunds: buildScopedMockKey(activeOrgId, activeLocationId, "billingRefunds"),
     passes: buildScopedMockKey(activeOrgId, activeLocationId, "punchPasses"),
     checkins: buildScopedMockKey(activeOrgId, activeLocationId, "checkIns"),
     memberships: buildScopedMockKey(activeOrgId, activeLocationId, "memberships"),
@@ -1099,6 +1212,12 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
   );
 
   const [customers, setCustomers] = useState<Customer[]>(normalizeCustomersForState(seededCustomersForOrg, seededCustomersForOrg));
+  const [billingAccounts, setBillingAccounts] = useState<BillingAccount[]>(seededBillingAccountsForOrg);
+  const [billingCreditEntries, setBillingCreditEntries] = useState<BillingCreditEntry[]>(seededBillingCreditEntriesForOrg);
+  const [billingInvoices, setBillingInvoices] = useState<BillingInvoice[]>(seededBillingInvoicesForOrg);
+  const [billingStatements, setBillingStatements] = useState<BillingStatement[]>(seededBillingStatementsForOrg);
+  const [membershipRenewals, setMembershipRenewals] = useState<MembershipRenewalRecord[]>(seededMembershipRenewalsForOrg);
+  const [billingRefunds, setBillingRefunds] = useState<BillingRefundRecord[]>(seededBillingRefundsForOrg);
   const [memberships, setMemberships] = useState<Membership[]>(seededMembershipsForOrg);
   const [punchPasses, setPunchPasses] = useState<PunchPass[]>(seededPunchPassesForOrg);
   const [transactions, setTransactions] = useState<PosTransaction[]>(
@@ -1193,6 +1312,12 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
 
     const loadedCustomers = loadMockState(storageKeys.customers, seededCustomersForOrg) as Customer[];
     setCustomers(normalizeCustomersForState(mergeSeedCustomers(loadedCustomers, seededCustomersForOrg), seededCustomersForOrg));
+    setBillingAccounts(loadMockState(storageKeys.billingAccounts, seededBillingAccountsForOrg) as BillingAccount[]);
+    setBillingCreditEntries(loadMockState(storageKeys.billingCredits, seededBillingCreditEntriesForOrg) as BillingCreditEntry[]);
+    setBillingInvoices(loadMockState(storageKeys.billingInvoices, seededBillingInvoicesForOrg) as BillingInvoice[]);
+    setBillingStatements(loadMockState(storageKeys.billingStatements, seededBillingStatementsForOrg) as BillingStatement[]);
+    setMembershipRenewals(loadMockState(storageKeys.membershipRenewals, seededMembershipRenewalsForOrg) as MembershipRenewalRecord[]);
+    setBillingRefunds(loadMockState(storageKeys.billingRefunds, seededBillingRefundsForOrg) as BillingRefundRecord[]);
     setMemberships(loadMockState(storageKeys.memberships, seededMembershipsForOrg));
     setPunchPasses(loadMockState(storageKeys.passes, seededPunchPassesForOrg));
     setAccessProducts(products);
@@ -1243,12 +1368,47 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     );
     setCheckInLogRecords(storedCheckIns);
     setHydrated(true);
-  }, [activeOrgId, activeLocationId, seededManualCommunicationsForOrg, seededOperationsTasksForOrg]);
+  }, [
+    activeOrgId,
+    activeLocationId,
+    seededBillingAccountsForOrg,
+    seededBillingCreditEntriesForOrg,
+    seededBillingInvoicesForOrg,
+    seededBillingRefundsForOrg,
+    seededBillingStatementsForOrg,
+    seededManualCommunicationsForOrg,
+    seededMembershipRenewalsForOrg,
+    seededOperationsTasksForOrg
+  ]);
 
   useEffect(() => {
     if (!hydrated) return;
     saveMockState(storageKeys.customers, customers);
   }, [customers, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
+    saveMockState(storageKeys.billingAccounts, billingAccounts);
+  }, [billingAccounts, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
+    saveMockState(storageKeys.billingCredits, billingCreditEntries);
+  }, [billingCreditEntries, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
+    saveMockState(storageKeys.billingInvoices, billingInvoices);
+  }, [billingInvoices, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
+    saveMockState(storageKeys.billingStatements, billingStatements);
+  }, [billingStatements, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
+    saveMockState(storageKeys.membershipRenewals, membershipRenewals);
+  }, [membershipRenewals, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
+    saveMockState(storageKeys.billingRefunds, billingRefunds);
+  }, [billingRefunds, hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -1689,12 +1849,229 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         });
       });
 
+    billingInvoices.forEach((invoice) => {
+      const customer = invoice.customerId ? customers.find((entry) => entry.id === invoice.customerId) : undefined;
+      const household = invoice.householdId ? households.find((entry) => entry.id === invoice.householdId) : undefined;
+      const billingCustomer =
+        customer ??
+        customers.find(
+          (entry) =>
+            entry.id === household?.billingCustomerId ||
+            entry.id === household?.primaryContactCustomerId ||
+            entry.id === billingAccounts.find((account) => account.id === invoice.billingAccountId)?.primaryBillingCustomerId
+        );
+      if (!billingCustomer) return;
+      generated.push({
+        id: `comm_invoice_available_${invoice.id}`,
+        organizationId: activeOrgId,
+        locationId: billingCustomer.locationId,
+        channel: "email",
+        status: invoice.status === "draft" ? "draft" : "sent",
+        recipientType: household ? "household" : "customer",
+        recipientLabel: household?.householdName ?? `${billingCustomer.firstName} ${billingCustomer.lastName}`,
+        subject: `Invoice ${invoice.invoiceNumber} available`,
+        message: `Invoice ${invoice.invoiceNumber} for ${formatCurrencyAmount(invoice.totalCents)} is now available.`,
+        body: `Invoice ${invoice.invoiceNumber} for ${formatCurrencyAmount(invoice.totalCents)} is now available.`,
+        customerId: billingCustomer.id,
+        householdId: household?.id,
+        membershipId: invoice.membershipId,
+        templateType: "invoice_available",
+        automatedTrigger: "invoice_available",
+        source: "invoice_available",
+        isTransactional: true,
+        recipients: [
+          {
+            id: billingCustomer.id,
+            type: "customer",
+            label: `${billingCustomer.firstName} ${billingCustomer.lastName}`,
+            customerId: billingCustomer.id,
+            householdId: household?.id,
+            email: billingCustomer.email,
+            phone: billingCustomer.phone
+          }
+        ],
+        sender: { kind: "system", name: "System" },
+        relatedRecords: [
+          { kind: "customer", id: billingCustomer.id, label: `${billingCustomer.firstName} ${billingCustomer.lastName}` },
+          ...(household ? [{ kind: "household" as const, id: household.id, label: household.householdName }] : []),
+          { kind: "receipt", id: invoice.id, label: invoice.invoiceNumber }
+        ],
+        sentAt: invoice.createdAt,
+        createdAt: invoice.createdAt,
+        createdByStaffName: "System",
+        deliveryStatus: "delivered"
+      });
+
+      if (invoice.status === "open" || invoice.status === "overdue") {
+        generated.push({
+          id: `comm_invoice_reminder_${invoice.id}`,
+          organizationId: activeOrgId,
+          locationId: billingCustomer.locationId,
+          channel: "email",
+          status: "scheduled",
+          recipientType: household ? "household" : "customer",
+          recipientLabel: household?.householdName ?? `${billingCustomer.firstName} ${billingCustomer.lastName}`,
+          subject: invoice.status === "overdue" ? "Past due balance reminder" : "Payment reminder",
+          message: `${invoice.invoiceNumber} has ${formatCurrencyAmount(invoice.balanceCents)} remaining.`,
+          body: `${invoice.invoiceNumber} has ${formatCurrencyAmount(invoice.balanceCents)} remaining.`,
+          customerId: billingCustomer.id,
+          householdId: household?.id,
+          membershipId: invoice.membershipId,
+          templateType: "payment_reminder",
+          automatedTrigger: "payment_failure",
+          source: "payment_reminder",
+          isTransactional: true,
+          recipients: [
+            {
+              id: billingCustomer.id,
+              type: "customer",
+              label: `${billingCustomer.firstName} ${billingCustomer.lastName}`,
+              customerId: billingCustomer.id,
+              householdId: household?.id,
+              email: billingCustomer.email,
+              phone: billingCustomer.phone
+            }
+          ],
+          sender: { kind: "system", name: "System" },
+          relatedRecords: [
+            { kind: "customer", id: billingCustomer.id, label: `${billingCustomer.firstName} ${billingCustomer.lastName}` },
+            ...(household ? [{ kind: "household" as const, id: household.id, label: household.householdName }] : []),
+            { kind: "receipt", id: invoice.id, label: invoice.invoiceNumber }
+          ],
+          scheduledFor: `${activeDateKey}T17:30:00Z`,
+          createdAt: `${activeDateKey}T08:10:00Z`,
+          createdByStaffName: "System"
+        });
+      }
+    });
+
+    billingStatements.forEach((statement) => {
+      const customer = statement.customerId ? customers.find((entry) => entry.id === statement.customerId) : undefined;
+      const household = statement.householdId ? households.find((entry) => entry.id === statement.householdId) : undefined;
+      const billingCustomer =
+        customer ??
+        customers.find(
+          (entry) =>
+            entry.id === household?.billingCustomerId ||
+            entry.id === household?.primaryContactCustomerId ||
+            entry.id === billingAccounts.find((account) => account.id === statement.billingAccountId)?.primaryBillingCustomerId
+        );
+      if (!billingCustomer) return;
+      generated.push({
+        id: `comm_statement_ready_${statement.id}`,
+        organizationId: activeOrgId,
+        locationId: billingCustomer.locationId,
+        channel: "email",
+        status: "sent",
+        recipientType: household ? "household" : "customer",
+        recipientLabel: household?.householdName ?? `${billingCustomer.firstName} ${billingCustomer.lastName}`,
+        subject: `Statement ${statement.statementNumber} ready`,
+        message: `Your billing statement for ${statement.periodStart} to ${statement.periodEnd} is ready.`,
+        body: `Your billing statement for ${statement.periodStart} to ${statement.periodEnd} is ready.`,
+        customerId: billingCustomer.id,
+        householdId: household?.id,
+        templateType: "statement_ready",
+        automatedTrigger: "statement_ready",
+        source: "statement_ready",
+        isTransactional: true,
+        recipients: [
+          {
+            id: billingCustomer.id,
+            type: "customer",
+            label: `${billingCustomer.firstName} ${billingCustomer.lastName}`,
+            customerId: billingCustomer.id,
+            householdId: household?.id,
+            email: billingCustomer.email,
+            phone: billingCustomer.phone
+          }
+        ],
+        sender: { kind: "system", name: "System" },
+        relatedRecords: [
+          { kind: "customer", id: billingCustomer.id, label: `${billingCustomer.firstName} ${billingCustomer.lastName}` },
+          ...(household ? [{ kind: "household" as const, id: household.id, label: household.householdName }] : []),
+          { kind: "alert", id: statement.id, label: statement.statementNumber }
+        ],
+        sentAt: statement.createdAt,
+        createdAt: statement.createdAt,
+        createdByStaffName: "System",
+        deliveryStatus: "delivered"
+      });
+    });
+
+    membershipRenewals.forEach((renewal) => {
+      if (renewal.status !== "failed") return;
+      const customer = customers.find((entry) => entry.id === renewal.customerId);
+      const household = renewal.householdId ? households.find((entry) => entry.id === renewal.householdId) : undefined;
+      if (!customer) return;
+      generated.push({
+        id: `comm_failed_payment_${renewal.id}`,
+        organizationId: activeOrgId,
+        locationId: customer.locationId,
+        channel: "email",
+        status: "sent",
+        recipientType: household ? "household" : "customer",
+        recipientLabel: household?.householdName ?? `${customer.firstName} ${customer.lastName}`,
+        subject: "Failed payment notice",
+        message: renewal.failureReason
+          ? `We could not process your renewal: ${renewal.failureReason}.`
+          : "We could not process your renewal.",
+        body: renewal.failureReason
+          ? `We could not process your renewal: ${renewal.failureReason}.`
+          : "We could not process your renewal.",
+        customerId: customer.id,
+        householdId: household?.id,
+        membershipId: renewal.membershipId,
+        templateType: "failed_payment_notice",
+        automatedTrigger: "payment_failure",
+        source: "failed_payment_notice",
+        isTransactional: true,
+        recipients: [
+          {
+            id: customer.id,
+            type: "customer",
+            label: `${customer.firstName} ${customer.lastName}`,
+            customerId: customer.id,
+            householdId: household?.id,
+            email: customer.email,
+            phone: customer.phone
+          }
+        ],
+        sender: { kind: "system", name: "System" },
+        relatedRecords: [
+          { kind: "customer", id: customer.id, label: `${customer.firstName} ${customer.lastName}` },
+          ...(household ? [{ kind: "household" as const, id: household.id, label: household.householdName }] : []),
+          { kind: "alert", id: renewal.id, label: renewal.status }
+        ],
+        sentAt: renewal.processedAt ?? renewal.createdAt,
+        createdAt: renewal.createdAt,
+        createdByStaffName: "System",
+        deliveryStatus: "delivered"
+      });
+    });
+
     return [...generated, ...manualCommunications].sort((a, b) => {
       const aDate = a.sentAt ?? a.scheduledFor ?? a.createdAt;
       const bDate = b.sentAt ?? b.scheduledFor ?? b.createdAt;
       return bDate.localeCompare(aDate);
     });
-  }, [activeDateKey, activeOrgId, customers, manualCommunications, memberships, programs, registrations, sessions, transactions, waiverTemplates, waivers]);
+  }, [
+    activeDateKey,
+    activeOrgId,
+    billingAccounts,
+    billingInvoices,
+    billingStatements,
+    customers,
+    households,
+    manualCommunications,
+    memberships,
+    membershipRenewals,
+    programs,
+    registrations,
+    sessions,
+    transactions,
+    waiverTemplates,
+    waivers
+  ]);
 
   const operationsAlerts = useMemo<OperationsAlertRecord[]>(() => {
     const alerts: OperationsAlertRecord[] = [];
@@ -2134,6 +2511,98 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       }
     });
 
+    billingAccounts.forEach((account) => {
+      const household = account.ownerType === "household" ? households.find((entry) => entry.id === account.ownerId) : undefined;
+      const customer =
+        (account.ownerType === "customer" ? customers.find((entry) => entry.id === account.ownerId) : undefined) ??
+        customers.find(
+          (entry) =>
+            entry.id === account.primaryBillingCustomerId ||
+            entry.id === household?.billingCustomerId ||
+            entry.id === household?.primaryContactCustomerId
+        );
+      const label = household?.householdName ?? (customer ? `${customer.firstName} ${customer.lastName}` : "Billing account");
+      const locationId = account.locationId ?? customer?.locationId ?? activeLocationId;
+
+      if (account.currentBalanceCents < 0) {
+        alerts.push({
+          id: `alert_billing_due_${account.id}`,
+          organizationId: activeOrgId,
+          locationId,
+          source: "system",
+          type: "financial",
+          severity: Math.abs(account.currentBalanceCents) >= 10000 ? "critical" : "warning",
+          status: "open",
+          title: "Past due balance",
+          description: `${label} has ${formatCurrencyAmount(Math.abs(account.currentBalanceCents))} due.`,
+          customerId: customer?.id,
+          createdAt: `${activeDateKey}T08:40:00Z`
+        });
+      }
+
+      if (account.availableCreditCents >= 5000) {
+        alerts.push({
+          id: `alert_billing_credit_${account.id}`,
+          organizationId: activeOrgId,
+          locationId,
+          source: "system",
+          type: "financial",
+          severity: "info",
+          status: "open",
+          title: "Large credit balance",
+          description: `${label} has ${formatCurrencyAmount(account.availableCreditCents)} in available credit.`,
+          customerId: customer?.id,
+          createdAt: `${activeDateKey}T08:45:00Z`
+        });
+      }
+    });
+
+    billingInvoices.forEach((invoice) => {
+      if (invoice.status !== "overdue" && !(invoice.status === "open" && invoice.balanceCents > 0)) return;
+      const customer = invoice.customerId ? customers.find((entry) => entry.id === invoice.customerId) : undefined;
+      const household = invoice.householdId ? households.find((entry) => entry.id === invoice.householdId) : undefined;
+      const locationId =
+        customer?.locationId ??
+        households.find((entry) => entry.id === invoice.householdId)?.locationId ??
+        activeLocationId;
+      alerts.push({
+        id: `alert_billing_invoice_${invoice.id}`,
+        organizationId: activeOrgId,
+        locationId,
+        source: "system",
+        type: "financial",
+        severity: invoice.status === "overdue" ? "critical" : "warning",
+        status: "open",
+        title: invoice.status === "overdue" ? "Invoice overdue" : "Outstanding balance",
+        description: `${invoice.invoiceNumber} has ${formatCurrencyAmount(invoice.balanceCents)} remaining for ${household?.householdName ?? (customer ? `${customer.firstName} ${customer.lastName}` : "this account")}.`,
+        customerId: customer?.id,
+        transactionId: invoice.transactionId,
+        membershipId: invoice.membershipId,
+        createdAt: invoice.updatedAt ?? invoice.createdAt
+      });
+    });
+
+    membershipRenewals.forEach((renewal) => {
+      if (renewal.status !== "failed") return;
+      const customer = customers.find((entry) => entry.id === renewal.customerId);
+      alerts.push({
+        id: `alert_billing_renewal_${renewal.id}`,
+        organizationId: activeOrgId,
+        locationId: customer?.locationId ?? activeLocationId,
+        source: "system",
+        type: "financial",
+        severity: "critical",
+        status: "open",
+        title: "Renewal failure",
+        description: renewal.failureReason
+          ? `${customer ? `${customer.firstName} ${customer.lastName}` : "Member"} renewal failed: ${renewal.failureReason}.`
+          : `${customer ? `${customer.firstName} ${customer.lastName}` : "Member"} renewal failed.`,
+        customerId: customer?.id,
+        membershipId: renewal.membershipId,
+        createdAt: renewal.processedAt ?? renewal.createdAt
+      });
+    });
+
     customers.forEach((customer) => {
       const staffProfile = customer.staffProfile;
       if (!staffProfile?.isStaff) return;
@@ -2185,10 +2654,16 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     activeDateKey,
     activeLocationId,
     activeOrgId,
+    billingAccounts,
+    billingInvoices,
+    billingRefunds,
+    billingStatements,
     customerAccessRecords,
     customers,
     getWaiverStatusForCustomer,
     householdMembers,
+    households,
+    membershipRenewals,
     operationsAlertOverrides,
     operationsManualAlerts,
     programs,
@@ -3432,6 +3907,348 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       )
     );
     return { ok: true, message: "Communication preferences updated." };
+  };
+
+  const adjustBillingCredit: CustomerStateContextValue["adjustBillingCredit"] = (input) => {
+    const account = billingAccounts.find((entry) => entry.id === input.billingAccountId);
+    if (!account) return { ok: false, message: "Billing account not found." };
+    const destinationAccount =
+      input.action === "transfer_out" && input.transferBillingAccountId
+        ? billingAccounts.find((entry) => entry.id === input.transferBillingAccountId)
+        : undefined;
+    if (input.action === "transfer_out" && input.transferBillingAccountId && !destinationAccount) {
+      return { ok: false, message: "Destination billing account not found." };
+    }
+    const amountCents = Math.abs(Math.round(input.amountCents));
+    if (!amountCents) return { ok: false, message: "Enter a credit amount greater than zero." };
+    if ((input.action === "remove" || input.action === "apply" || input.action === "transfer_out") && account.availableCreditCents < amountCents) {
+      return { ok: false, message: "Not enough available credit on this account." };
+    }
+
+    const createdAt = new Date().toISOString();
+    const creditEntryId = `billcred_${Math.random().toString(36).slice(2, 9)}`;
+    const increaseCredit = input.action === "add" || input.action === "transfer_in" || input.action === "refund";
+    const reduceDue = input.action === "add" || input.action === "transfer_in" || input.action === "refund" || input.action === "apply";
+
+    setBillingAccounts((prev) =>
+      prev.map((entry) => {
+        if (entry.id !== input.billingAccountId) return entry;
+        const availableCreditCents = increaseCredit
+          ? entry.availableCreditCents + amountCents
+          : entry.availableCreditCents - amountCents;
+        const currentBalanceCents = reduceDue
+          ? entry.currentBalanceCents + amountCents
+          : entry.currentBalanceCents - amountCents;
+        return {
+          ...entry,
+          availableCreditCents: Math.max(0, availableCreditCents),
+          currentBalanceCents,
+          status: getBillingAccountStatus(currentBalanceCents, Math.max(0, availableCreditCents)),
+          updatedAt: createdAt
+        };
+      })
+    );
+
+    const primaryEntry: BillingCreditEntry = {
+      id: creditEntryId,
+      organizationId: activeOrgId,
+      billingAccountId: input.billingAccountId,
+      amountCents,
+      action: input.action,
+      reason: input.reason.trim(),
+      transferBillingAccountId: input.transferBillingAccountId,
+      invoiceId: input.invoiceId,
+      customerId: input.customerId,
+      householdId: input.householdId,
+      createdAt,
+      createdByStaffId: input.createdByStaffId,
+      createdByStaffName: input.createdByStaffName
+    };
+
+    const extraEntries: BillingCreditEntry[] = [];
+    if (input.action === "transfer_out" && input.transferBillingAccountId) {
+      setBillingAccounts((prev) =>
+        prev.map((entry) => {
+          if (entry.id !== input.transferBillingAccountId) return entry;
+          const availableCreditCents = entry.availableCreditCents + amountCents;
+          const currentBalanceCents = entry.currentBalanceCents + amountCents;
+          return {
+            ...entry,
+            availableCreditCents,
+            currentBalanceCents,
+            status: getBillingAccountStatus(currentBalanceCents, availableCreditCents),
+            updatedAt: createdAt
+          };
+        })
+      );
+      extraEntries.push({
+        id: `billcred_${Math.random().toString(36).slice(2, 9)}`,
+        organizationId: activeOrgId,
+        billingAccountId: input.transferBillingAccountId,
+        amountCents,
+        action: "transfer_in",
+        reason: `Transfer from ${account.id}: ${input.reason.trim()}`,
+        transferBillingAccountId: input.billingAccountId,
+        createdAt,
+        createdByStaffId: input.createdByStaffId,
+        createdByStaffName: input.createdByStaffName
+      });
+    }
+
+    setBillingCreditEntries((prev) => [primaryEntry, ...extraEntries, ...prev]);
+    return { ok: true, message: "Billing credit updated.", creditEntryId };
+  };
+
+  const createBillingStatement: CustomerStateContextValue["createBillingStatement"] = (input) => {
+    const account = billingAccounts.find((entry) => entry.id === input.billingAccountId);
+    if (!account) return { ok: false, message: "Billing account not found." };
+    const invoices = billingInvoices.filter(
+      (entry) =>
+        entry.billingAccountId === input.billingAccountId &&
+        entry.issueDate >= input.periodStart &&
+        entry.issueDate <= input.periodEnd
+    );
+    const credits = billingCreditEntries
+      .filter(
+        (entry) =>
+          entry.billingAccountId === input.billingAccountId &&
+          entry.createdAt.slice(0, 10) >= input.periodStart &&
+          entry.createdAt.slice(0, 10) <= input.periodEnd
+      )
+      .reduce((sum, entry) => sum + entry.amountCents, 0);
+    const refunds = billingRefunds
+      .filter(
+        (entry) =>
+          entry.billingAccountId === input.billingAccountId &&
+          entry.createdAt.slice(0, 10) >= input.periodStart &&
+          entry.createdAt.slice(0, 10) <= input.periodEnd
+      )
+      .reduce((sum, entry) => sum + entry.amountCents, 0);
+    const chargesCents = invoices.reduce((sum, entry) => sum + entry.totalCents, 0);
+    const paymentsCents = invoices.reduce((sum, entry) => sum + Math.max(entry.totalCents - entry.balanceCents - entry.appliedCreditCents, 0), 0);
+    const statement: BillingStatement = {
+      id: `stmt_${Math.random().toString(36).slice(2, 9)}`,
+      organizationId: activeOrgId,
+      billingAccountId: input.billingAccountId,
+      statementNumber: `STMT-${new Date().getUTCFullYear()}-${String(billingStatements.length + 1).padStart(3, "0")}`,
+      statementDate: activeDateKey,
+      periodStart: input.periodStart,
+      periodEnd: input.periodEnd,
+      invoiceIds: invoices.map((entry) => entry.id),
+      chargesCents,
+      creditsCents: credits,
+      paymentsCents,
+      refundsCents: refunds,
+      balanceCents: Math.abs(account.currentBalanceCents),
+      customerId: input.customerId,
+      householdId: input.householdId,
+      createdAt: new Date().toISOString()
+    };
+    const issued = invoiceProvider.generateStatement({ statement });
+    if (!issued.ok) return { ok: false, message: issued.message };
+    setBillingStatements((prev) => [statement, ...prev]);
+    return { ok: true, message: "Billing statement created.", statementId: statement.id };
+  };
+
+  const markBillingInvoicePaid: CustomerStateContextValue["markBillingInvoicePaid"] = (invoiceId, options) => {
+    const invoice = billingInvoices.find((entry) => entry.id === invoiceId);
+    if (!invoice) return { ok: false, message: "Invoice not found." };
+    const paidAt = new Date().toISOString();
+    const balanceDelta = invoice.balanceCents;
+
+    setBillingInvoices((prev) =>
+      prev.map((entry) =>
+        entry.id !== invoiceId
+          ? entry
+          : {
+              ...entry,
+              status: "paid",
+              balanceCents: 0,
+              updatedAt: paidAt
+            }
+      )
+    );
+
+    setBillingAccounts((prev) =>
+      prev.map((entry) => {
+        if (entry.id !== invoice.billingAccountId) return entry;
+        const currentBalanceCents = entry.currentBalanceCents + balanceDelta;
+        return {
+          ...entry,
+          currentBalanceCents,
+          status: getBillingAccountStatus(currentBalanceCents, entry.availableCreditCents),
+          updatedAt: paidAt
+        };
+      })
+    );
+
+    return { ok: true, message: "Invoice marked paid." };
+  };
+
+  const retryMembershipRenewal: CustomerStateContextValue["retryMembershipRenewal"] = (renewalId, options) => {
+    const renewal = membershipRenewals.find((entry) => entry.id === renewalId);
+    if (!renewal) return { ok: false, message: "Renewal not found." };
+    const account = billingAccounts.find((entry) => entry.id === renewal.billingAccountId);
+    if (!account) return { ok: false, message: "Billing account not found." };
+
+    setMembershipRenewals((prev) =>
+      prev.map((entry) =>
+        entry.id !== renewalId
+          ? entry
+          : {
+              ...entry,
+              status: "processing",
+              processedAt: new Date().toISOString(),
+              createdByStaffId: options?.createdByStaffId ?? entry.createdByStaffId,
+              createdByStaffName: options?.createdByStaffName ?? entry.createdByStaffName
+            }
+      )
+    );
+
+    const processed = billingProvider.processRenewal({ renewal, account });
+    if (!processed.ok) {
+      setMembershipRenewals((prev) =>
+        prev.map((entry) =>
+          entry.id !== renewalId
+            ? entry
+            : {
+                ...entry,
+                status: "failed",
+                failureReason: processed.message,
+                processedAt: processed.processedAt
+              }
+        )
+      );
+      return { ok: false, message: processed.message };
+    }
+
+    setMembershipRenewals((prev) =>
+      prev.map((entry) =>
+        entry.id !== renewalId
+          ? entry
+          : {
+              ...entry,
+              status: "succeeded",
+              failureReason: undefined,
+              nextRetryAt: undefined,
+              processedAt: processed.processedAt
+            }
+      )
+    );
+
+    if (renewal.invoiceId) {
+      markBillingInvoicePaid(renewal.invoiceId, {
+        createdByStaffId: options?.createdByStaffId,
+        createdByStaffName: options?.createdByStaffName,
+        paymentMethodType: "credit_card"
+      });
+    }
+
+    const membership = memberships.find((entry) => entry.id === renewal.membershipId);
+    if (membership) {
+      const nextDate = getNextRenewalDate(renewal.renewalDate, renewal.billingFrequency);
+      setMemberships((prev) =>
+        prev.map((entry) =>
+          entry.id !== renewal.membershipId
+            ? entry
+            : {
+                ...entry,
+                status: "active",
+                renewalDate: nextDate,
+                expirationDate: nextDate
+              }
+        )
+      );
+      setCustomerAccessRecords((prev) =>
+        prev.map((entry) =>
+          entry.customerId === membership.customerId &&
+          entry.notes === membership.planName
+            ? {
+                ...entry,
+                status: "active",
+                expirationDate: nextDate,
+                updatedAt: processed.processedAt,
+                updatedByStaffId: options?.createdByStaffId,
+                updatedByStaffName: options?.createdByStaffName
+              }
+            : entry
+        )
+      );
+    }
+
+    return { ok: true, message: "Renewal retried successfully." };
+  };
+
+  const grantTemporaryAccessForRenewal: CustomerStateContextValue["grantTemporaryAccessForRenewal"] = (renewalId, untilDate, options) => {
+    const renewal = membershipRenewals.find((entry) => entry.id === renewalId);
+    if (!renewal) return { ok: false, message: "Renewal not found." };
+    const renewalMembership = memberships.find((membership) => membership.id === renewal.membershipId);
+    const timestamp = new Date().toISOString();
+    setMembershipRenewals((prev) =>
+      prev.map((entry) =>
+        entry.id !== renewalId
+          ? entry
+          : {
+              ...entry,
+              grantTemporaryAccessUntil: untilDate,
+              createdByStaffId: options?.createdByStaffId ?? entry.createdByStaffId,
+              createdByStaffName: options?.createdByStaffName ?? entry.createdByStaffName,
+              processedAt: timestamp
+            }
+      )
+    );
+    setCustomerAccessRecords((prev) =>
+      prev.map((entry) =>
+        entry.customerId === renewal.customerId && entry.notes === renewalMembership?.planName
+          ? {
+              ...entry,
+              status: "active",
+              expirationDate: untilDate,
+              updatedAt: timestamp,
+              updatedByStaffId: options?.createdByStaffId,
+              updatedByStaffName: options?.createdByStaffName,
+              notes: `${entry.notes ? `${entry.notes}\n` : ""}Temporary billing access through ${untilDate}`
+            }
+          : entry
+      )
+    );
+    return { ok: true, message: "Temporary access granted." };
+  };
+
+  const createBillingRefund: CustomerStateContextValue["createBillingRefund"] = (input) => {
+    const account = billingAccounts.find((entry) => entry.id === input.billingAccountId);
+    if (!account) return { ok: false, message: "Billing account not found." };
+    const amountCents = Math.abs(Math.round(input.amountCents));
+    if (!amountCents) return { ok: false, message: "Enter a refund amount greater than zero." };
+    const refund: BillingRefundRecord = {
+      id: `billrefund_${Math.random().toString(36).slice(2, 9)}`,
+      organizationId: activeOrgId,
+      billingAccountId: input.billingAccountId,
+      amountCents,
+      type: input.type,
+      reason: input.reason.trim(),
+      relatedReceiptId: input.relatedReceiptId,
+      relatedInvoiceId: input.relatedInvoiceId,
+      createdAt: new Date().toISOString(),
+      createdByStaffId: input.createdByStaffId,
+      createdByStaffName: input.createdByStaffName
+    };
+    const issued = refundProvider.issueRefund({ refund });
+    if (!issued.ok) return { ok: false, message: issued.message };
+    setBillingRefunds((prev) => [refund, ...prev]);
+
+    if (input.type === "store_credit") {
+      adjustBillingCredit({
+        billingAccountId: input.billingAccountId,
+        amountCents,
+        action: "refund",
+        reason: input.reason,
+        createdByStaffId: input.createdByStaffId,
+        createdByStaffName: input.createdByStaffName
+      });
+    }
+
+    return { ok: true, message: "Refund recorded.", refundId: refund.id };
   };
 
   const addCustomerRelationship = (
@@ -5659,6 +6476,12 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
   const value = useMemo<CustomerStateContextValue>(
     () => ({
       customers,
+      billingAccounts,
+      billingCreditEntries,
+      billingInvoices,
+      billingStatements,
+      membershipRenewals,
+      billingRefunds,
       memberships,
       punchPasses,
       accessProducts,
@@ -5723,6 +6546,12 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       updateCustomerProfile,
       updateCustomerPhoto,
       updateCustomerCommunicationPreferences,
+      adjustBillingCredit,
+      createBillingStatement,
+      retryMembershipRenewal,
+      markBillingInvoicePaid,
+      grantTemporaryAccessForRenewal,
+      createBillingRefund,
       addCustomerRelationship,
       removeCustomerRelationship,
       createSession,
@@ -5778,6 +6607,12 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       toggleCheckIn,
       resetMockState() {
         setCustomers(seededCustomersForOrg);
+        setBillingAccounts(seededBillingAccountsForOrg);
+        setBillingCreditEntries(seededBillingCreditEntriesForOrg);
+        setBillingInvoices(seededBillingInvoicesForOrg);
+        setBillingStatements(seededBillingStatementsForOrg);
+        setMembershipRenewals(seededMembershipRenewalsForOrg);
+        setBillingRefunds(seededBillingRefundsForOrg);
         setMemberships(seededMembershipsForOrg);
         setPunchPasses(seededPunchPassesForOrg);
         setCheckInLogRecords(seededCheckIns);
@@ -5803,12 +6638,18 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         clearScopedMockState(
           activeOrgId,
           activeLocationId,
-          ["customers", "punchPasses", "checkIns", "memberships", "transactions", "products", "inventoryAudit", "productCategories", "programs", "sessions", "registrations", "registrationActivity", "accessRecords", "waivers", "signedWaiverRecords", "waiverTemplates", "waiverTemplateVersions", "households", "householdMembers", "communications", "operationsAlertOverrides", "operationsManualAlerts", "operationsTasks"]
+          ["customers", "billingAccounts", "billingCredits", "billingInvoices", "billingStatements", "membershipRenewals", "billingRefunds", "punchPasses", "checkIns", "memberships", "transactions", "products", "inventoryAudit", "productCategories", "programs", "sessions", "registrations", "registrationActivity", "accessRecords", "waivers", "signedWaiverRecords", "waiverTemplates", "waiverTemplateVersions", "households", "householdMembers", "communications", "operationsAlertOverrides", "operationsManualAlerts", "operationsTasks"]
         );
       }
     }),
     [
       customers,
+      billingAccounts,
+      billingCreditEntries,
+      billingInvoices,
+      billingStatements,
+      membershipRenewals,
+      billingRefunds,
       memberships,
       punchPasses,
       accessProducts,

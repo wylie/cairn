@@ -5,6 +5,7 @@ import DashboardPage from "@/app/(app)/dashboard/page";
 import CustomersPage from "@/app/(app)/customers/page";
 import HouseholdsPage from "@/app/(app)/households/page";
 import CommunicationsPage from "@/app/(app)/communications/page";
+import BillingPage from "@/app/(app)/billing/page";
 import CheckInPage from "@/app/(app)/check-in/page";
 import CalendarPage from "@/app/(app)/calendar/page";
 import ProgramsPage from "@/app/(app)/programs/page";
@@ -18,7 +19,9 @@ import WaiversPage from "@/app/(app)/waivers/page";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/dashboard",
-  useSearchParams: () => new URLSearchParams()
+  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
+  useParams: () => ({ orgSlug: "summit" })
 }));
 
 describe("Primary routes smoke", () => {
@@ -27,6 +30,7 @@ describe("Primary routes smoke", () => {
     CustomersPage,
     HouseholdsPage,
     CommunicationsPage,
+    BillingPage,
     CheckInPage,
     CalendarPage,
     RegistrationsPage,

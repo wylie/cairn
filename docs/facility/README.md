@@ -1,32 +1,39 @@
-# Facility Guide Index
+# Facility Documentation
 
-This section is written for facilities using Cairn in daily operations.
+This section is for facility administrators, front desk staff, instructors, and managers using Cairn in daily operations.
 
-## Setup
-- [Facility Onboarding](./onboarding.md)
-- [Branding](./branding.md)
-- [Customer Portal](./customer-portal.md)
+## Start Here
+- [Getting Started](./getting-started.md)
+- [Troubleshooting](./troubleshooting.md)
 
-## Daily Operations
-- [Alerts & Tasks](./alerts.md)
+## Core Operations
 - [Customers](./customers.md)
 - [Households](./households.md)
 - [Memberships](./memberships.md)
-- [Waivers](./waivers.md)
-- [Programs](./programs.md)
-- [Registrations](./registrations.md)
 - [Check-In](./check-in.md)
+- [Registrations](./registrations.md)
+- [Waivers](./waivers.md)
+- [Communications](./communications.md)
+- [Rentals](./rentals.md)
+- [Reports](./reports.md)
+- [Alerts](./alerts.md)
+- [Staff](./staff.md)
+- [Settings](./settings.md)
+
+## Additional Implemented Feature Guides
+These guides remain useful because Cairn already includes these feature areas today.
+
+- [Branding](./branding.md)
+- [Programs](./programs.md)
 - [POS](./pos.md)
 - [Products](./products.md)
-- [Rentals](./rentals.md)
-- [Communications](./communications.md)
 - [Billing](./billing.md)
-- [Analytics](./analytics.md)
+- [Customer Portal](./customer-portal.md)
 - [Digital Membership Cards](./digital-membership-cards.md)
 - [Integrations Foundation](./integrations-foundation.md)
 
-## Reference
-- [Permissions](../reference/permissions.md)
-- [Page Access Matrix](../reference/page-access-matrix.md)
+## Reference Links
 - [Demo Accounts](../reference/demo-accounts.md)
-- [Facility Configuration](../reference/facility-configuration.md)
+- [Permissions Matrix](../reference/permissions-matrix.md)
+- [Routes](../reference/routes.md)
+- [Known Issues](../reference/known-issues.md)

@@ -1,55 +1,80 @@
 # Cairn
 
-Cairn is a multi-tenant facility operations platform for recreation centers, gyms, camps, outdoor programs, and similar membership- and registration-driven organizations.
+Cairn is a multi-tenant facility operations platform for recreation centers, camps, climbing gyms, outdoor programs, fitness facilities, and other organizations that manage customers, memberships, check-ins, registrations, waivers, staff, and point-of-sale workflows.
 
-This README is now a documentation hub. It points you to focused markdown docs instead of acting as a catch-all reference.
+This repository README is the front door for the Cairn documentation system. Use it to choose the right documentation path instead of relying on one long catch-all file.
+
+## Core Philosophy
+- Organization-scoped operations: every facility runs inside its own public site, customer portal, and staff portal.
+- Operational speed matters: front desk, instructor, and manager workflows should stay fast under real daily load.
+- Privacy by default: customer-facing experiences are scoped to the authenticated customer and their authorized household.
+- Mock-first architecture: the product is fully demoable today while preserving clean seams for future backend and provider integrations.
+- Shared systems over one-off screens: navigation, avatars, permissions, formatting, and workflow patterns should stay consistent across Cairn.
+
+## Major Features
+- Multi-tenant facility landing pages, customer portals, and staff portals
+- Customers, households, relationships, profile photos, and activity timelines
+- Memberships, passes, receipts, billing foundation, and digital membership cards
+- Check-in, occupancy tracking, waiver enforcement, and customer search
+- Programs, sessions, registrations, attendance, and waitlists
+- POS checkout, products, discounts, receipts, and purchase history
+- Rentals, reservations, maintenance blocks, and utilization reporting
+- Communications hub, alerts, tasks, and operational dashboards
+- Analytics, reports, organization provisioning, and integrations foundation
+
+## Screenshots
+Screenshots belong in [`docs/images/`](./docs/images/).
+
+Current documentation placeholders:
+- Facility landing page
+- Staff dashboard
+- Check-In workspace
+- Customer profile
+- POS checkout
+- Customer portal dashboard
 
 ## Documentation Paths
 
 ### I'm a Facility
-- [Documentation Home](./docs/README.md)
-- [Facility Guide Index](./docs/facility/README.md)
-- [Facility Onboarding](./docs/facility/onboarding.md)
-- [Branding](./docs/facility/branding.md)
-- [Alerts & Tasks](./docs/facility/alerts.md)
+Start here if you operate a facility in Cairn.
+
+- [Facility Getting Started](./docs/facility/getting-started.md)
 - [Customers](./docs/facility/customers.md)
 - [Households](./docs/facility/households.md)
 - [Memberships](./docs/facility/memberships.md)
-- [Waivers](./docs/facility/waivers.md)
-- [Programs](./docs/facility/programs.md)
-- [Registrations](./docs/facility/registrations.md)
 - [Check-In](./docs/facility/check-in.md)
-- [POS](./docs/facility/pos.md)
-- [Products](./docs/facility/products.md)
-- [Rentals](./docs/facility/rentals.md)
+- [Registrations](./docs/facility/registrations.md)
+- [Waivers](./docs/facility/waivers.md)
 - [Communications](./docs/facility/communications.md)
-- [Billing](./docs/facility/billing.md)
-- [Analytics](./docs/facility/analytics.md)
-- [Customer Portal](./docs/facility/customer-portal.md)
-- [Digital Membership Cards](./docs/facility/digital-membership-cards.md)
-- [Integrations Foundation](./docs/facility/integrations-foundation.md)
+- [Rentals](./docs/facility/rentals.md)
+- [Reports](./docs/facility/reports.md)
+- [Alerts](./docs/facility/alerts.md)
+- [Staff](./docs/facility/staff.md)
+- [Settings](./docs/facility/settings.md)
+- [Troubleshooting](./docs/facility/troubleshooting.md)
 
 ### I'm a Developer
-- [Developer Guide Index](./docs/developer/README.md)
-- [System Architecture](./docs/developer/system-architecture.md)
-- [Local Development](./docs/developer/local-development.md)
-- [Testing](./docs/developer/testing.md)
-- [Organizations & Provisioning](./docs/developer/organizations.md)
-- [Platform Administration](./docs/developer/platform-administration.md)
-- [Permissions Reference](./docs/reference/permissions.md)
-- [Page Access Matrix](./docs/reference/page-access-matrix.md)
-- [Routes & Portals](./docs/reference/routes-and-portals.md)
+Start here if you are building or maintaining Cairn.
 
-## Demo / Local URLs
-- Public marketing: `/`
-- Demo facility landing: `/f/summit`
-- Alternate facility landing: `/f/riverbend`
-- Staff portal dashboard: `/o/summit/dashboard`
-- Customer portal dashboard: `/p/summit/account/dashboard`
-- Customer portal alias: `/p/summit/dashboard`
-- Public program catalog: `/p/summit/programs`
-- Public checkout: `/p/summit/checkout`
-- Platform admin: `/admin`
+- [Architecture](./docs/developer/architecture.md)
+- [Deployment](./docs/developer/deployment.md)
+- [Demo Data](./docs/developer/demo-data.md)
+- [Permissions](./docs/developer/permissions.md)
+- [Facility Provisioning](./docs/developer/facility-provisioning.md)
+- [Routing](./docs/developer/routing.md)
+- [UI Standards](./docs/developer/ui-standards.md)
+- [Contributing](./docs/developer/contributing.md)
+- [Testing](./docs/developer/testing.md)
+
+### Reference Documentation
+Use these docs when you need a stable reference instead of a workflow guide.
+
+- [Demo Accounts](./docs/reference/demo-accounts.md)
+- [Permissions Matrix](./docs/reference/permissions-matrix.md)
+- [Terminology](./docs/reference/terminology.md)
+- [Environments](./docs/reference/environments.md)
+- [Routes](./docs/reference/routes.md)
+- [Known Issues](./docs/reference/known-issues.md)
 
 ## Local Development
 ```bash
@@ -57,17 +82,40 @@ npm install
 npm run dev
 ```
 
-## Validation
-```bash
-npm test
-npm run build
-```
+Useful local routes:
+- `/`
+- `/f/summit`
+- `/o/summit/dashboard`
+- `/p/summit/account/dashboard`
+- `/admin`
 
-## Existing Documentation
-The repo still includes the earlier product and planning docs in `docs/`, including:
+## Demo Environment
+The current hosted demo is documented in [Reference: Environments](./docs/reference/environments.md).
+
+Use that page for demo access notes. All other documentation assumes you are working in your Cairn instance.
+
+## Contributing
+1. Read the relevant facility or developer guide before changing behavior.
+2. Follow the shared UI, routing, permission, and formatting patterns already documented in `docs/`.
+3. Update tests when behavior changes.
+4. Update documentation in the same change when workflows, routes, permissions, or setup expectations change.
+
+See [Contributing](./docs/developer/contributing.md) for the expected workflow.
+
+## Current Development Status
+Cairn is in an actively evolving product-build stage.
+
+Current implementation status:
+- major staff, customer, public, and platform-admin experiences are present
+- most workflows are mock-data and local-state driven
+- provider integrations, payments, and external services are represented by abstractions and placeholders
+- some repository test suites still reflect older UI assumptions and require ongoing cleanup
+
+## Existing Notes
+The earlier planning and engineering notes remain available and are not removed:
+- [Documentation Hub](./docs/README.md)
 - [Architecture Notes](./docs/architecture.md)
 - [Database Schema Notes](./docs/database-schema.md)
-- [Known Issues](./docs/known-issues.md)
 - [Product Vision](./docs/product-vision.md)
 - [Roadmap](./docs/roadmap.md)
 - [Style Guide](./docs/style-guide.md)

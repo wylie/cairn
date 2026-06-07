@@ -1,44 +1,46 @@
 # Households
 
 ## Overview
+Households are managed family or relationship units. They centralize customer relationships, membership coverage, waivers, registrations, purchases, billing, communications, and shared activity.
 
-Households in Cairn are fully managed family units, not just relationship tags. A household aggregates:
-- members
-- roles and guardian relationships
-- memberships
-- waiver status
-- registrations
-- visits
-- purchases and balances
-- communications
-- activity timeline
+## What You Can Do
+- create household groupings
+- assign roles such as primary adult, guardian, child, or emergency contact
+- review shared membership, waiver, billing, and registration health
+- view household-wide communications, tasks, alerts, and activity
+- open member profiles and dependent portal views
 
 ## Common Workflows
-- review a family before check-in or registration
-- see which household members are missing waivers
-- understand shared billing and membership coverage
-- check in one member or the entire household
+### Create a household
+1. Open Households.
+2. Create a new household record.
+3. Set the primary contact.
+4. Add members and relationship roles.
 
-## Step-by-Step: Use the Household Workspace
-1. Open **Households**.
-2. Search by household name, member name, contact email, or phone.
-3. Open a household detail page.
-4. Review health cards, memberships, waivers, upcoming programs, and outstanding balance.
-5. Use quick actions such as:
-   - Check In Household
-   - Register for Program
-   - Sign Waivers
-   - Renew Membership
-   - View Receipts
+### Add a household member
+1. Open the household detail page.
+2. Search for an existing customer or create one.
+3. Assign the correct household role.
+4. Save the relationship.
+
+### Review household health
+1. Open a household.
+2. Review cards for members, active memberships, missing waivers, programs, balance, and visits.
+3. Use quick actions to resolve blockers.
+
+### Manage household check-in
+1. Open the household detail page.
+2. Choose `Check In Household`.
+3. Select all or only eligible members.
+4. Review blocked members before completing the action.
 
 ## Tips
-- Household pages are useful when a parent asks about multiple children at once.
-- Guardian visibility carries into the customer portal; customers only see their own managed household members.
-- Household health summaries surface missing waivers and balance issues quickly.
+- Keep adult/guardian roles accurate. They determine customer portal visibility and waiver signing scope.
+- Use household health before busy check-in or registration periods.
+- Household records are often the fastest path to understanding a family account.
 
 ## Related Features
 - [Customers](./customers.md)
 - [Memberships](./memberships.md)
-- [Waivers](./waivers.md)
 - [Registrations](./registrations.md)
-- [Check-In](./check-in.md)
+- [Communications](./communications.md)

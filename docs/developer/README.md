@@ -1,24 +1,26 @@
-# Developer Guide
+# Developer Documentation
 
-This section documents how Cairn is structured today and how to work on it safely.
+This section documents how Cairn is structured, how to work on it safely, and what conventions should remain stable as the product expands.
 
 ## Core Guides
-- [System Architecture](./system-architecture.md)
-- [Local Development](./local-development.md)
-- [Testing](./testing.md)
-- [Organizations & Provisioning](./organizations.md)
-- [Platform Administration](./platform-administration.md)
+- [Architecture](./architecture.md)
+- [Deployment](./deployment.md)
+- [Demo Data](./demo-data.md)
+- [Permissions](./permissions.md)
+- [Facility Provisioning](./facility-provisioning.md)
+- [Routing](./routing.md)
 - [UI Standards](./ui-standards.md)
+- [Contributing](./contributing.md)
+- [Testing](./testing.md)
 
-## Reference Material
-- [Permissions Reference](../reference/permissions.md)
-- [Page Access Matrix](../reference/page-access-matrix.md)
+## Additional Engineering Notes Still Kept
+- [Local Development](./local-development.md)
+- [System Architecture](./system-architecture.md)
+- [Organizations](./organizations.md)
+- [Platform Administration](./platform-administration.md)
+
+## Reference Links
 - [Demo Accounts](../reference/demo-accounts.md)
-- [Facility Configuration Reference](../reference/facility-configuration.md)
-- [Routes & Portals](../reference/routes-and-portals.md)
-
-## Useful Existing Docs
-- [Root Architecture Notes](../architecture.md)
-- [Testing Strategy](../testing-strategy.md)
-- [Style Guide](../style-guide.md)
-- [Database Schema Notes](../database-schema.md)
+- [Permissions Matrix](../reference/permissions-matrix.md)
+- [Routes](../reference/routes.md)
+- [Known Issues](../reference/known-issues.md)

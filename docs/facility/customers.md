@@ -1,45 +1,64 @@
 # Customers
 
 ## Overview
+Customers are the core person records used across check-in, memberships, registrations, waivers, POS, households, communications, rentals, and reporting.
 
-Customer records are the core identity layer inside Cairn. Profiles connect contact information, households, memberships, waivers, registrations, visits, purchases, documents, communications, alerts, and timeline history.
+## What You Can Do
+- create and edit customer records
+- upload and replace customer photos
+- review profile sections through jump navigation
+- view visits, purchases, notes, waivers, relationships, communications, and alerts
+- open related household, membership, registration, and receipt records
 
 ## Common Workflows
-- create a new customer
-- search and review a customer profile
-- update profile data and emergency contacts
-- upload a profile photo
-- review waivers, memberships, and purchases during support questions
+### Create a customer
+1. Open Customers.
+2. Select `Add Customer`.
+3. Enter required details.
+4. Save.
+5. Add household relationships if needed.
 
-## Step-by-Step: Create and Review a Customer
-1. Go to **Customers**.
-2. Use **Add Customer**.
-3. Enter required profile details.
-4. Open the created profile.
-5. Review the sections in jump navigation:
-   - overview
-   - profile
-   - relationships
-   - access
-   - waivers
-   - registrations
-   - visits
-   - purchases
-   - documents
-   - communications
-   - notes
-   - payment
-   - activity timeline
-   - staff profile when applicable
+### Edit a customer
+1. Open the customer profile from Customers, Check-In, POS, Registrations, or Household.
+2. Use the context-aware back link when returning to the previous workflow.
+3. Update fields and save.
+
+### Upload or replace a photo
+1. Open the customer profile header.
+2. Select `Upload Photo` or `Replace Photo`.
+3. Choose a supported image file.
+4. Confirm the preview.
+
+### Resolve waiver issues from the profile
+1. Open the Waivers section in the profile.
+2. Review status, expiration, and signer details.
+3. Re-sign or direct the customer into the waiver workflow.
+4. Add an alert or note if follow-up is required.
+
+## Profile Sections
+Typical customer profiles include:
+- Overview
+- Profile
+- Relationships
+- Access
+- Waivers
+- Registrations
+- Visits
+- Purchases
+- Documents
+- Communications
+- Notes
+- Payment
+- Activity Timeline
+- Staff Profile when applicable
 
 ## Tips
-- Customer photos improve check-in, roster, and household identification.
-- Alerts and communications are operationally important; use them instead of burying critical information in notes alone.
-- Use the context-aware back links when moving between check-in, POS, and profile review.
+- Photos improve check-in accuracy and roster usability.
+- Use the profile timeline when you need a chronological explanation of what happened.
+- Use alerts for real operational blockers, not ordinary notes.
 
 ## Related Features
 - [Households](./households.md)
 - [Memberships](./memberships.md)
 - [Waivers](./waivers.md)
-- [Check-In](./check-in.md)
 - [Communications](./communications.md)

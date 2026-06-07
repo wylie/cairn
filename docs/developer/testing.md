@@ -1,47 +1,31 @@
 # Testing
 
-## Tooling
-- Vitest
-- React Testing Library
-- jsdom
+## Overview
+Cairn uses automated tests to protect cross-workflow behavior in a stateful, multi-tenant UI.
 
-## Commands
+## Core Commands
 ```bash
 npm test
-npm run test:watch
 npm run build
 ```
 
-## Coverage Focus
-Current tests emphasize user-visible behavior across:
-- navigation and portal routing
-- customer list and customer detail
-- check-in and occupancy
-- programs, calendar, and registrations
-- POS and receipts
-- memberships and billing foundation
-- waivers and public signing
-- customer portal
-- platform administration
-- integrations framework
+## What Should Be Covered
+- route and permission access
+- customer portal privacy boundaries
+- check-in, registration, waiver, and receipt workflows
+- household relationships and managed-member scope
+- context-aware navigation
+- formatting, avatars, and shared UI patterns
+- reporting and dashboard deep links
 
-## Test Organization
-- `tests/*.test.tsx`: route/component/integration coverage
-- `tests/*.test.ts`: utility and provider coverage
+## Known Reality
+Some repository test suites still lag behind current UI and seeded-state behavior. Contributors should fix expectation drift instead of working around it.
 
-## Practical Guidance
-- Prefer behavior tests over implementation detail assertions.
-- Test permission boundaries explicitly.
-- Test route-aware behavior with real-ish params and pathname mocks.
-- Preserve mock seed realism; many workflows rely on relationships across customers, households, access, registrations, and transactions.
-
-## Known Reality of the Repo
-The suite is extensive and not always fully green. When working in Cairn, separate:
-- regressions introduced by your change
-- pre-existing failures in older operational suites
-
-If a change is docs-only, a full test run is usually not necessary unless the request explicitly requires it.
+## Testing Priorities
+- protect operational workflows first
+- protect privacy and authorization rules second
+- protect shared UI utilities and formatting standards third
 
 ## Related Documentation
-- [Testing Strategy](../testing-strategy.md)
-- [Permissions Reference](../reference/permissions.md)
+- [Demo Data](./demo-data.md)
+- [Architecture](./architecture.md)

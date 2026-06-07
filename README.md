@@ -82,12 +82,51 @@ npm install
 npm run dev
 ```
 
-Useful local routes:
-- `/`
-- `/f/summit`
-- `/o/summit/dashboard`
-- `/p/summit/account/dashboard`
-- `/admin`
+## Useful Local Routes
+
+When running Cairn locally (`npm run dev`), these routes can help you quickly access the major experiences within the platform.
+
+| Route | Purpose |
+|---------|-----------|
+| `/` | Public marketing homepage for Cairn. This is the entry point visitors see before logging in. |
+| `/f/summit` | Facility landing page for the Summit Rec Collective demo facility. Displays public-facing facility information, programs, announcements, and login options. |
+| `/o/summit/dashboard` | Staff operations portal for Summit Rec Collective. This is where front desk staff, managers, and owners perform daily work such as check-ins, memberships, POS transactions, registrations, reports, and customer management. |
+| `/p/summit/account/dashboard` | Customer portal experience. Members can view their memberships, household information, registrations, waivers, digital membership cards, and account details. |
+| `/admin` | Platform administration area. Used to manage organizations, facilities, feature flags, demo data, permissions, and other Cairn-wide settings. Intended for Cairn administrators only. |
+
+### Route Naming Conventions
+
+Cairn separates experiences into distinct areas of the application:
+
+- `/` → Public website
+- `/f/...` → Facility-facing public pages
+- `/o/...` → Operational staff portal
+- `/p/...` → Customer portal
+- `/admin` → Platform administration
+
+Example:
+
+```
+/o/summit/customers
+```
+
+can be interpreted as:
+
+- `o` = Operations portal
+- `summit` = Facility slug
+- `customers` = Customer management workspace
+
+### Demo Facility
+
+Most local development examples use the demo organization:
+
+Organization: Summit Rec Collective
+
+Facilities:
+- Summit Downtown
+- Summit Uptown
+
+All screenshots and walkthroughs throughout the documentation reference this demo environment unless otherwise noted.
 
 ## Demo Environment
 The current hosted demo is documented in [Reference: Environments](./docs/reference/environments.md).

@@ -10,7 +10,7 @@ export interface MockAuthUser {
   role: StaffRole;
   organizationSlugs: string[];
   locationIds: string[];
-  kind?: "staff" | "platform_admin";
+  kind?: "staff" | "platform_admin" | "support_staff";
 }
 
 export const mockAuthUsers: MockAuthUser[] = [
@@ -24,6 +24,17 @@ export const mockAuthUsers: MockAuthUser[] = [
     organizationSlugs: [],
     locationIds: [],
     kind: "platform_admin"
+  },
+  {
+    id: "auth_support_staff",
+    email: "support@cairn.app",
+    password: "dev1234",
+    firstName: "Casey",
+    lastName: "Support",
+    role: "owner",
+    organizationSlugs: [],
+    locationIds: [],
+    kind: "support_staff"
   },
   {
     id: "auth_owner_summit",

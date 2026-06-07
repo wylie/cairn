@@ -1,14 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { MobileStaffNavigation } from "@/components/layout/mobile-staff-navigation";
 import { TopBar } from "@/components/layout/top-bar";
 import { DevPerfMonitor } from "@/components/dev/dev-perf-monitor";
+import { Button } from "@/components/ui/button";
 import { data } from "@/lib/data";
 import { getRuntimeOrganizationsClient } from "@/lib/platform-admin/registry";
 import { useIsMobileStaffLayout } from "@/lib/responsive/use-mobile";
+import { useCustomerState } from "@/lib/state/customer-state";
+import { useSupportState } from "@/lib/state/support-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import type { StaffPermission } from "@/types/domain";
 import { getCurrentOrgSlugClient } from "@/lib/tenant/client";
@@ -30,8 +33,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     () => organizations.find((entry) => entry.slug === currentSlug) ?? organizations[0],
     [organizations, currentSlug]
   );
-  const { hasAnyPermission, hasPermission, activeStaff } = useWorkstationState();
+  const { hasAnyPermission, hasPermission, activeStaff, staffUsers } = useWorkstationState();
+  const { createCommunication } = useCustomerState();
+  const { activeImpersonationSession, endImpersonation, logSupportEvent, markImpersonationNotified, impersonationSessions } = useSupportState();
   const isMobileStaffLayout = useIsMobileStaffLayout();
+  const supportPathLogRef = useRef<string | null>(null);
 
   const canAccessPermissions = useCallback((permissions?: StaffPermission[]) => {
     if (!activeStaff) return true;
@@ -45,6 +51,67 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (hasPermission("editPrograms") && !hasPermission("usePOS")) return "Instructor Mobile";
     return "Front Desk Mobile";
   }, [activeStaff, hasPermission]);
+
+  const currentSupportSession = useMemo(
+    () => (activeImpersonationSession?.organizationSlug === currentSlug && activeImpersonationSession.status === "active" ? activeImpersonationSession : null),
+    [activeImpersonationSession, currentSlug]
+  );
+
+  const notificationDeliveredAt = useMemo(
+    () => impersonationSessions.find((entry) => entry.id === currentSupportSession?.id)?.notificationDeliveredAt,
+    [impersonationSessions, currentSupportSession?.id]
+  );
+
+  useEffect(() => {
+    if (!currentSupportSession) return;
+    const dedupeKey = `cairn_support_notice_${currentSupportSession.id}`;
+    if (notificationDeliveredAt || (typeof window !== "undefined" && window.sessionStorage.getItem(dedupeKey) === "sent")) return;
+
+    const adminRecipients = staffUsers
+      .filter((entry) => entry.role === "owner" || entry.role === "manager")
+      .map((entry) => ({
+        id: entry.id,
+        type: "staff" as const,
+        label: `${entry.firstName} ${entry.lastName}`,
+        staffUserId: entry.id,
+        email: entry.email,
+        phone: entry.phone
+      }));
+
+    createCommunication({
+      channel: "system_notification",
+      status: "sent",
+      deliveryStatus: "unread",
+      recipientType: "staff",
+      recipientLabel: "Facility administration",
+      subject: `Cairn support session started for ${currentSupportSession.organizationName}`,
+      message: `${currentSupportSession.supportStaffName} is assisting ${currentSupportSession.organizationName}. Reason: ${currentSupportSession.reason}.`,
+      recipients: adminRecipients,
+      source: "system_alert",
+      isTransactional: true,
+      createdByStaffName: "Cairn Support"
+    });
+    markImpersonationNotified(currentSupportSession.id);
+    if (typeof window !== "undefined") window.sessionStorage.setItem(dedupeKey, "sent");
+  }, [createCommunication, currentSupportSession, markImpersonationNotified, notificationDeliveredAt, staffUsers]);
+
+  useEffect(() => {
+    if (!currentSupportSession) return;
+    const facilityAccessKey = `${currentSupportSession.id}:${pathname}`;
+    if (supportPathLogRef.current === facilityAccessKey) return;
+    supportPathLogRef.current = facilityAccessKey;
+    logSupportEvent({
+      supportStaffId: currentSupportSession.supportStaffId,
+      supportStaffName: currentSupportSession.supportStaffName,
+      supportStaffEmail: currentSupportSession.supportStaffEmail,
+      organizationSlug: currentSupportSession.organizationSlug,
+      organizationName: currentSupportSession.organizationName,
+      facilityName: currentSupportSession.facilityName,
+      actionTaken: "facility_access",
+      reasonProvided: currentSupportSession.reason,
+      metadata: { pathname }
+    });
+  }, [currentSupportSession, logSupportEvent, pathname]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -64,6 +131,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
         <main className="space-y-4">
+          {currentSupportSession ? (
+            <div className="rounded-xl border border-amber-300 bg-amber-100 px-4 py-3 text-amber-950">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-amber-900">Support Mode</p>
+                  <p className="font-semibold">You are currently assisting {currentSupportSession.organizationName}.</p>
+                  <p className="text-sm text-amber-900">Reason: {currentSupportSession.reason}. All support activity is logged and visible to the facility.</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="caution"
+                  onClick={() => {
+                    endImpersonation("Support session ended by support staff.");
+                    window.location.assign("/admin/support");
+                  }}
+                >
+                  End Session
+                </Button>
+              </div>
+            </div>
+          ) : null}
           {isMobileStaffLayout ? (
             <div className="rounded-xl border bg-card px-4 py-3 lg:hidden" data-testid="mobile-staff-mode-banner">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Mobile Staff Mode</p>

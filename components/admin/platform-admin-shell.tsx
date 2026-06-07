@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, LayoutDashboard, Layers3, FlaskConical, CreditCard, Settings, PlugZap } from "lucide-react";
+import { useMemo } from "react";
+import { BellRing, Building2, LayoutDashboard, Layers3, FlaskConical, CreditCard, Settings, PlugZap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getSessionFromCookieClient } from "@/lib/tenant/client";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/support", label: "Support Console", icon: BellRing },
   { href: "/admin/organizations", label: "Organizations", icon: Building2 },
   { href: "/admin/templates", label: "Templates", icon: Layers3 },
   { href: "/admin/demo-facilities", label: "Demo Facilities", icon: FlaskConical },
@@ -18,6 +21,12 @@ const navItems = [
 
 export function PlatformAdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "/admin";
+  const session = getSessionFromCookieClient();
+  const isSupportStaff = session?.kind === "support_staff";
+  const visibleNavItems = useMemo(
+    () => (isSupportStaff ? navItems.filter((item) => item.href === "/admin/support") : navItems),
+    [isSupportStaff]
+  );
 
   const handleSignOut = async () => {
     await fetch("/api/auth/mock-logout", { method: "POST" });
@@ -28,11 +37,15 @@ export function PlatformAdminShell({ children }: { children: React.ReactNode }) 
     <div className="min-h-screen bg-background">
       <div className="mx-auto grid w-full max-w-[1680px] grid-cols-1 gap-6 px-4 py-4 lg:grid-cols-[296px_minmax(0,1fr)] lg:px-6 lg:py-6">
         <aside className="rounded-xl border bg-card p-4 lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)]">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Platform Admin</p>
-          <h1 className="mt-1 text-lg font-semibold">Cairn Control Plane</h1>
-          <p className="mt-1 text-xs text-muted-foreground">Organization provisioning, templates, demos, and platform controls.</p>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">{isSupportStaff ? "Support Staff" : "Platform Admin"}</p>
+          <h1 className="mt-1 text-lg font-semibold">{isSupportStaff ? "Cairn Support Console" : "Cairn Control Plane"}</h1>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {isSupportStaff
+              ? "Assist facilities through explicit, logged support workflows."
+              : "Organization provisioning, templates, demos, and platform controls."}
+          </p>
           <nav className="mt-5 space-y-1">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
                 <Link
@@ -53,8 +66,8 @@ export function PlatformAdminShell({ children }: { children: React.ReactNode }) 
         <main className="space-y-4">
           <header className="flex items-center justify-between gap-3 rounded-xl border bg-card p-4">
             <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Platform Scope</p>
-              <p className="font-semibold">Global administration outside facility portals</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">{isSupportStaff ? "Support Scope" : "Platform Scope"}</p>
+              <p className="font-semibold">{isSupportStaff ? "Cross-facility support with explicit audit trails" : "Global administration outside facility portals"}</p>
             </div>
             <Button type="button" variant="outline" onClick={handleSignOut}>
               Sign out

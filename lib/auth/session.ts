@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 export const AUTH_COOKIE = "cairn_mock_auth";
 
 export interface MockSession {
-  kind?: "staff" | "customer" | "platform_admin";
+  kind?: "staff" | "customer" | "platform_admin" | "support_staff";
   userId: string;
   email: string;
   organizationSlugs: string[];

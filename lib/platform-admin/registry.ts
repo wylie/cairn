@@ -1,4 +1,4 @@
-import type { FacilityType, Organization, StaffPermission } from "@/types/domain";
+import type { FacilityType, Organization, StaffPermission, SupportTier } from "@/types/domain";
 import { organizations as seededOrganizations } from "@/lib/mocks/organizations";
 import { locations as seededLocations } from "@/lib/mocks/locations";
 import { staffUsers as seededStaffUsers } from "@/lib/mocks/staff";
@@ -23,11 +23,13 @@ export type ProvisioningFacilityType =
 export interface RuntimeOrganizationRecord extends Organization {
   status: PlatformOrganizationStatus;
   createdAt: string;
+  lastActivityAt?: string;
   description?: string;
   primaryColor?: string;
   secondaryColor?: string;
   seoTitle?: string;
   seoDescription?: string;
+  supportTier?: SupportTier;
   isDemo?: boolean;
   isReadOnlyDemo?: boolean;
   isResettableDemo?: boolean;
@@ -198,6 +200,7 @@ export function buildSeedProvisionedOrganizations(): ProvisionedOrganizationReco
       ...organization,
       status: organization.slug === "riverbend" ? "trial" : "active",
       createdAt: organization.slug === "riverbend" ? "2026-05-10T09:00:00Z" : "2026-04-01T09:00:00Z",
+      lastActivityAt: organization.slug === "riverbend" ? "2026-06-06T16:45:00Z" : "2026-06-07T14:10:00Z",
       description:
         organization.slug === "riverbend"
           ? "Outdoor and seasonal recreation organization used for camp and trail operations demos."
@@ -206,6 +209,7 @@ export function buildSeedProvisionedOrganizations(): ProvisionedOrganizationReco
       secondaryColor: organization.slug === "riverbend" ? "#1E3A8A" : "#1F2937",
       seoTitle: `${organization.name} | Cairn Facility Portal`,
       seoDescription: `Customer and staff access for ${organization.name}.`,
+      supportTier: organization.slug === "riverbend" ? "standard" : "priority",
       isDemo: true,
       isReadOnlyDemo: organization.slug === "riverbend",
       isResettableDemo: true,
@@ -266,11 +270,13 @@ export function buildProvisionedOrganization(input: {
     timezone: "America/New_York",
     status: "trial" as const,
     createdAt: new Date().toISOString(),
+    lastActivityAt: new Date().toISOString(),
     description: input.description?.trim() || `${input.name} provisioned from the ${template.name}.`,
     primaryColor: input.primaryColor,
     secondaryColor: input.secondaryColor,
     seoTitle: `${input.name} | Cairn Facility Portal`,
     seoDescription: `${input.name} customer and staff portals provisioned with Cairn.`,
+    supportTier: "standard",
     templateId: template.id,
     primaryLocationName: input.primaryLocationName,
     ownerName: input.ownerName,

@@ -255,6 +255,88 @@ export interface AuditLogEntry {
   createdAt: string;
 }
 
+export type SupportRequestCategory =
+  | "bug_report"
+  | "feature_request"
+  | "product_feedback"
+  | "training_request"
+  | "general_support";
+
+export type SupportRequestPriority = "low" | "normal" | "high" | "urgent";
+export type SupportRequestStatus = "open" | "in_review" | "resolved" | "archived";
+export type SupportTier = "standard" | "priority" | "enterprise";
+
+export interface SupportStaffMember {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: "support_staff";
+  active: boolean;
+}
+
+export interface SupportRequestRecord {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  status: SupportRequestStatus;
+  category: SupportRequestCategory;
+  priority: SupportRequestPriority;
+  name: string;
+  email: string;
+  organizationSlug?: string;
+  organizationName?: string;
+  facilityName?: string;
+  pageUrl?: string;
+  title?: string;
+  description: string;
+  workflowAffected?: string;
+  businessImpact?: string;
+  requestedDate?: string;
+  estimatedAttendees?: number;
+  topicsRequested?: string;
+  screenshotName?: string;
+  submittedBySupportStaffId?: string;
+  submittedBySupportStaffName?: string;
+}
+
+export interface SupportImpersonationSession {
+  id: string;
+  supportStaffId: string;
+  supportStaffName: string;
+  supportStaffEmail: string;
+  organizationSlug: string;
+  organizationName: string;
+  facilityName?: string;
+  reason: string;
+  startedAt: string;
+  endedAt?: string;
+  status: "active" | "ended";
+  notificationDeliveredAt?: string;
+}
+
+export interface SupportAuditEvent {
+  id: string;
+  timestamp: string;
+  supportStaffId: string;
+  supportStaffName: string;
+  supportStaffEmail?: string;
+  organizationSlug?: string;
+  organizationName?: string;
+  facilityName?: string;
+  actionTaken:
+    | "support_login"
+    | "organization_access"
+    | "facility_access"
+    | "impersonation_start"
+    | "impersonation_end"
+    | "data_edit"
+    | "support_note_added"
+    | "support_request_submitted";
+  reasonProvided?: string;
+  metadata?: Record<string, string | number | boolean | null>;
+}
+
 export type OperationsAlertType =
   | "customer"
   | "membership"

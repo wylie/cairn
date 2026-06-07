@@ -26,7 +26,7 @@ export function getAllowedOrgSlugsFromSessionCookie(): string[] | null {
 }
 
 export function getSessionFromCookieClient(): {
-  kind?: "staff" | "customer" | "platform_admin";
+  kind?: "staff" | "customer" | "platform_admin" | "support_staff";
   userId: string;
   email: string;
   organizationSlugs: string[];
@@ -36,7 +36,7 @@ export function getSessionFromCookieClient(): {
   if (!raw) return null;
   try {
     const json = atob(raw.replaceAll("-", "+").replaceAll("_", "/"));
-    const parsed = JSON.parse(json) as { kind?: "staff" | "customer" | "platform_admin"; userId?: string; email?: string; organizationSlugs?: string[]; customerId?: string };
+    const parsed = JSON.parse(json) as { kind?: "staff" | "customer" | "platform_admin" | "support_staff"; userId?: string; email?: string; organizationSlugs?: string[]; customerId?: string };
     if (!parsed.userId || !parsed.email || !Array.isArray(parsed.organizationSlugs)) return null;
     return {
       userId: parsed.userId,

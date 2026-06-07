@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { AUTH_COOKIE, decodeSession } from "@/lib/auth/session";
 import { resolveOrganizationBySlug } from "@/lib/tenant/resolve";
 import { ORG_REGISTRY_COOKIE, parseProvisionedOrganizationsFromRequestCookie } from "@/lib/platform-admin/registry";
+import { SUPPORT_SESSION_COOKIE, decodeSupportSession } from "@/lib/support/session";
 
 const PROTECTED_PREFIXES = [
   "/dashboard",
@@ -45,6 +46,9 @@ export function middleware(req: NextRequest) {
       if (session.kind === "platform_admin") {
         return NextResponse.redirect(new URL("/admin", req.url));
       }
+      if (session.kind === "support_staff") {
+        return NextResponse.redirect(new URL("/admin/support", req.url));
+      }
       if (session.kind === "customer") {
         const org = session.organizationSlugs[0] ?? "summit";
         return NextResponse.redirect(new URL(`/p/${org}/account/dashboard`, req.url));
@@ -60,7 +64,7 @@ export function middleware(req: NextRequest) {
 
   if (pathname === "/org-chooser") {
     if (!session) return NextResponse.redirect(new URL("/login", req.url));
-    if (session.kind === "platform_admin") {
+    if (session.kind === "platform_admin" || session.kind === "support_staff") {
       return NextResponse.redirect(new URL("/admin", req.url));
     }
     if (session.kind === "customer") {
@@ -75,12 +79,23 @@ export function middleware(req: NextRequest) {
       if (session?.kind === "platform_admin") {
         return NextResponse.redirect(new URL("/admin", req.url));
       }
+      if (session?.kind === "support_staff") {
+        return NextResponse.redirect(new URL("/admin/support", req.url));
+      }
       return NextResponse.next();
     }
-    if (session?.kind !== "platform_admin") {
+    if (session?.kind !== "platform_admin" && session?.kind !== "support_staff") {
       const loginUrl = new URL("/admin/login", req.url);
       loginUrl.searchParams.set("next", pathname + search);
       return NextResponse.redirect(loginUrl);
+    }
+    if (session?.kind === "support_staff") {
+      if (pathname === "/admin") {
+        return NextResponse.redirect(new URL("/admin/support", req.url));
+      }
+      if (!pathname.startsWith("/admin/support")) {
+        return NextResponse.redirect(new URL("/admin/support", req.url));
+      }
     }
     return NextResponse.next();
   }
@@ -113,6 +128,18 @@ export function middleware(req: NextRequest) {
       const loginUrl = new URL(`/o/${slug}/login`, req.url);
       loginUrl.searchParams.set("next", pathname + search);
       return NextResponse.redirect(loginUrl);
+    }
+
+    if (session.kind === "support_staff") {
+      const supportSession = decodeSupportSession(req.cookies.get(SUPPORT_SESSION_COOKIE)?.value);
+      if (!supportSession || supportSession.organizationSlug !== slug || supportSession.status !== "active") {
+        return NextResponse.redirect(new URL("/admin/support", req.url));
+      }
+      const url = req.nextUrl.clone();
+      url.pathname = rest === "/" ? "/dashboard" : rest;
+      const response = NextResponse.rewrite(url);
+      response.cookies.set("cairn_org_slug", slug, { path: "/", sameSite: "lax", httpOnly: false });
+      return response;
     }
 
     if (!session.organizationSlugs.includes(slug)) {

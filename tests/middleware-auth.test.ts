@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { middleware } from "@/middleware";
 import { AUTH_COOKIE, encodeSession } from "@/lib/auth/session";
 import { ORG_REGISTRY_COOKIE, buildProvisionedOrganization } from "@/lib/platform-admin/registry";
+import { SUPPORT_SESSION_COOKIE, encodeSupportSession } from "@/lib/support/session";
 
 describe("middleware auth routing", () => {
   it("keeps root public", () => {
@@ -76,6 +77,58 @@ describe("middleware auth routing", () => {
     const loginRes = middleware(loginReq);
     expect(loginRes.status).toBe(307);
     expect(loginRes.headers.get("location")).toContain("/admin");
+  });
+
+  it("allows support staff into the support console but not other admin pages", () => {
+    const session = encodeSession({
+      userId: "auth_support_staff",
+      email: "support@cairn.app",
+      organizationSlugs: [],
+      kind: "support_staff"
+    });
+    const supportReq = new NextRequest("http://localhost:3000/admin/support", {
+      headers: { cookie: `${AUTH_COOKIE}=${session}` }
+    });
+    const orgReq = new NextRequest("http://localhost:3000/admin/organizations", {
+      headers: { cookie: `${AUTH_COOKIE}=${session}` }
+    });
+
+    expect(middleware(supportReq).status).toBe(200);
+    const orgRes = middleware(orgReq);
+    expect(orgRes.status).toBe(307);
+    expect(orgRes.headers.get("location")).toContain("/admin/support");
+  });
+
+  it("allows support staff into a facility only with an active support session", () => {
+    const session = encodeSession({
+      userId: "auth_support_staff",
+      email: "support@cairn.app",
+      organizationSlugs: [],
+      kind: "support_staff"
+    });
+    const supportSession = encodeSupportSession({
+      id: "support_session_001",
+      supportStaffId: "auth_support_staff",
+      supportStaffName: "Casey Support",
+      supportStaffEmail: "support@cairn.app",
+      organizationSlug: "summit",
+      organizationName: "Summit Rec Collective",
+      facilityName: "Summit Downtown",
+      reason: "Investigating a support ticket",
+      startedAt: "2026-06-07T12:00:00Z",
+      status: "active"
+    });
+    const allowedReq = new NextRequest("http://localhost:3000/o/summit/dashboard", {
+      headers: { cookie: `${AUTH_COOKIE}=${session}; ${SUPPORT_SESSION_COOKIE}=${supportSession}` }
+    });
+    const blockedReq = new NextRequest("http://localhost:3000/o/riverbend/dashboard", {
+      headers: { cookie: `${AUTH_COOKIE}=${session}; ${SUPPORT_SESSION_COOKIE}=${supportSession}` }
+    });
+
+    expect(middleware(allowedReq).status).toBe(200);
+    const blockedRes = middleware(blockedReq);
+    expect(blockedRes.status).toBe(307);
+    expect(blockedRes.headers.get("location")).toContain("/admin/support");
   });
 
   it("recognizes provisioned organization slugs from the registry cookie", () => {

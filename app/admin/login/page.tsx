@@ -31,11 +31,12 @@ function PlatformAdminLoginContent() {
         setError(payload.message ?? "Unable to sign in.");
         return;
       }
-      if (payload.user?.kind !== "platform_admin") {
-        setError("This account is not authorized for platform administration.");
+      if (!["platform_admin", "support_staff"].includes(payload.user?.kind ?? "")) {
+        setError("This account is not authorized for Cairn platform or support access.");
         return;
       }
-      router.push(next && next.startsWith("/admin") ? next : defaultTarget);
+      const fallbackTarget = payload.user?.kind === "support_staff" ? "/admin/support" : defaultTarget;
+      router.push(next && next.startsWith("/admin") ? next : fallbackTarget);
       router.refresh();
     } catch {
       setError("Unable to sign in.");
@@ -49,12 +50,13 @@ function PlatformAdminLoginContent() {
       <Card className="w-full">
         <CardHeader>
           <CardTitle>Platform Admin Login</CardTitle>
-          <CardDescription>Authenticate into Cairn platform administration.</CardDescription>
+          <CardDescription>Authenticate into Cairn platform administration or the support console.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
-            <p className="font-medium">Demo platform admin</p>
-            <p className="mt-2">platform@cairn.app / dev1234</p>
+            <p className="font-medium">Demo credentials</p>
+            <p className="mt-2">Platform Admin: platform@cairn.app / dev1234</p>
+            <p className="mt-1">Support Staff: support@cairn.app / dev1234</p>
           </div>
           <form className="space-y-3" onSubmit={onSubmit}>
             <label className="block space-y-1 text-sm">

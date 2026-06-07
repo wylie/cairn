@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Notice } from "@/components/ui/notice";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import { parseOrgSlugFromPathname } from "@/lib/tenant/path";
@@ -343,7 +344,7 @@ export default function RegistrationsPage() {
         <p className="text-xs uppercase tracking-wide text-muted-foreground">Mobile workflow</p>
         <p className="mt-1 text-sm text-muted-foreground">Search sessions first, then manage the roster and enrollment from stacked cards below.</p>
       </div>
-      {feedback ? <p role="status" className="rounded-lg border bg-secondary/20 px-3 py-2 text-sm">{feedback}</p> : null}
+      {feedback ? <Notice role="status" tone="info">{feedback}</Notice> : null}
 
       <div className="grid gap-3 md:grid-cols-5">
         <button type="button" className="rounded-xl border bg-card p-4 text-left" onClick={() => setRegistrationFilter("all")}>

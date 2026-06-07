@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { SearchInput } from "@/components/shared/search-input";
 import { StaffSwitcher } from "@/components/staff/staff-switcher";
 import { Button } from "@/components/ui/button";
+import { Notice } from "@/components/ui/notice";
 import { filterCustomers } from "@/lib/data/customer-search";
 import { getMembershipForCustomer, getPassForCustomer, getWaiverForCustomer } from "@/lib/data/selectors";
 import { buildCustomerDetailHref } from "@/lib/navigation/detail-navigation";
@@ -101,16 +102,16 @@ export function CustomerList() {
         {waiverFilter === "missing" ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-900">Waiver Status: Missing</span> : null}
         {birthdayFilter === "today" ? <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-900">Birthday: Today</span> : null}
       </div>
-      {feedback ? <div role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{feedback}</div> : null}
+      {feedback ? <Notice role="status" tone="success" className="px-4 py-3">{feedback}</Notice> : null}
       {warning ? (
-        <div role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <Notice role="alert" tone="warning" className="px-4 py-3">
           <p>{warning}</p>
           {showSwitchPrompt ? (
             <div className="mt-2">
               <StaffSwitcher label="Switch Staff" title="Switch Staff PIN" />
             </div>
           ) : null}
-        </div>
+        </Notice>
       ) : null}
       {filtered.length === 0 ? (
         <div className="space-y-2">

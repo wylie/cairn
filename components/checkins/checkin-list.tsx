@@ -14,6 +14,7 @@ import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import { CustomerAvatar } from "@/components/customers/customer-avatar";
 import { InfoField } from "@/components/shared/info-field";
+import { Notice } from "@/components/ui/notice";
 import { buildCustomerDetailHref } from "@/lib/navigation/detail-navigation";
 import { formatDateWithAge, formatShortDate, formatTime } from "@/lib/format/date";
 import { isMembershipCardQueryMatch, selectPrimaryMembershipCardRecord } from "@/lib/memberships/cards";
@@ -917,7 +918,7 @@ export function CheckInList() {
       )}
 
       {feedback ? (
-        <div role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        <Notice role="status" tone="success" className="px-4 py-3">
           <p>{feedback}</p>
           {undoState ? (
             <div className="mt-2 flex flex-wrap gap-2">
@@ -929,10 +930,10 @@ export function CheckInList() {
               })}>View Customer</Link> : null}
             </div>
           ) : null}
-        </div>
+        </Notice>
       ) : null}
       {warning ? (
-        <div role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <Notice role="alert" tone="warning" className="px-4 py-3">
           <p>{warning}</p>
           {showSwitchPrompt ? (
             <div className="mt-2">
@@ -944,7 +945,7 @@ export function CheckInList() {
               <Button variant="secondary" onClick={() => setSellCustomerId(sellCustomerId)}>Sell Access</Button>
             </div>
           ) : null}
-        </div>
+        </Notice>
       ) : null}
 
       {todayLogRecords.length === 0 ? (

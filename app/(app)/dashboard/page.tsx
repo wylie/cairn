@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
+import { EmptyState } from "@/components/shared/empty-state";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import { formatTime } from "@/lib/format/date";
@@ -194,12 +195,17 @@ export default function DashboardPage() {
         <section className="rounded-xl border bg-card p-4">
           <h3 className="text-base font-semibold">Needs Attention</h3>
           {needsAttention.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">No urgent operational issues right now.</p>
+            <div className="mt-3">
+              <EmptyState
+                title="No urgent issues right now"
+                description="Alerts, renewals, and waiver problems will appear here when staff action is needed."
+              />
+            </div>
           ) : (
             <ul className="mt-3 space-y-2 text-sm">
               {needsAttention.map((item) => (
                 <li key={item.label}>
-                  <Link href={item.href} className="flex cursor-pointer items-center justify-between rounded-md bg-muted/30 px-3 py-2 transition hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <Link href={item.href} className="flex cursor-pointer items-center justify-between rounded-lg border border-border/80 bg-muted/20 px-3 py-2 transition hover:-translate-y-0.5 hover:bg-secondary/80 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                     <div>
                       <span>{item.label}</span>
                       <p className="text-xs text-muted-foreground">{item.hint}</p>
@@ -231,12 +237,17 @@ export default function DashboardPage() {
         <section className="rounded-xl border bg-card p-4">
           <h3 className="text-base font-semibold">Today&apos;s Schedule</h3>
           {report.programs.upcomingSessions.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">No upcoming sessions today.</p>
+            <div className="mt-3">
+              <EmptyState
+                title="No upcoming sessions today"
+                description="When sessions are scheduled for today, staff will be able to jump straight into the roster from here."
+              />
+            </div>
           ) : (
             <ul className="mt-3 space-y-2 text-sm">
               {report.programs.upcomingSessions.slice(0, 6).map((session) => (
                 <li key={session.id}>
-                  <Link href={`/registrations?sessionId=${session.id}`} className="block cursor-pointer rounded-md bg-muted/30 px-3 py-2 transition hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <Link href={`/registrations?sessionId=${session.id}`} className="block cursor-pointer rounded-lg border border-border/80 bg-muted/20 px-3 py-2 transition hover:-translate-y-0.5 hover:bg-secondary/80 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                     <p className="font-medium">{session.title}</p>
                     <p className="text-muted-foreground">
                       {formatTime(session.startsAt)} · {session.registered}/{session.capacity} registered
@@ -251,10 +262,10 @@ export default function DashboardPage() {
         <section className="rounded-xl border bg-card p-4">
           <h3 className="text-base font-semibold">Facility Pulse</h3>
           <div className="mt-3 grid gap-2 text-sm">
-            <Link href="/reports?category=attendance&range=today" className="flex cursor-pointer items-center justify-between rounded-md bg-muted/30 px-3 py-2 transition hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span>Busiest hour today</span><strong>{busiestHour}</strong></Link>
-            <Link href="/check-in#current-roster" className="flex cursor-pointer items-center justify-between rounded-md bg-muted/30 px-3 py-2 transition hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span>Current occupancy</span><strong>{report.occupancy.current}</strong></Link>
-            <Link href="/reports?category=sales&range=today" className="flex cursor-pointer items-center justify-between rounded-md bg-muted/30 px-3 py-2 transition hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span>Sales today</span><strong>{formatCurrency(report.totals.revenueTodayCents)}</strong></Link>
-            <Link href="/reports?category=attendance&range=today" className="flex cursor-pointer items-center justify-between rounded-md bg-muted/30 px-3 py-2 transition hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span>Check-ins vs last week</span><strong>{report.totals.todayCheckIns} vs {Math.max(0, report.totals.todayCheckIns - 2)}</strong></Link>
+            <Link href="/reports?category=attendance&range=today" className="flex cursor-pointer items-center justify-between rounded-lg border border-border/80 bg-muted/20 px-3 py-2 transition hover:-translate-y-0.5 hover:bg-secondary/80 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span>Busiest hour today</span><strong>{busiestHour}</strong></Link>
+            <Link href="/check-in#current-roster" className="flex cursor-pointer items-center justify-between rounded-lg border border-border/80 bg-muted/20 px-3 py-2 transition hover:-translate-y-0.5 hover:bg-secondary/80 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span>Current occupancy</span><strong>{report.occupancy.current}</strong></Link>
+            <Link href="/reports?category=sales&range=today" className="flex cursor-pointer items-center justify-between rounded-lg border border-border/80 bg-muted/20 px-3 py-2 transition hover:-translate-y-0.5 hover:bg-secondary/80 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span>Sales today</span><strong>{formatCurrency(report.totals.revenueTodayCents)}</strong></Link>
+            <Link href="/reports?category=attendance&range=today" className="flex cursor-pointer items-center justify-between rounded-lg border border-border/80 bg-muted/20 px-3 py-2 transition hover:-translate-y-0.5 hover:bg-secondary/80 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span>Check-ins vs last week</span><strong>{report.totals.todayCheckIns} vs {Math.max(0, report.totals.todayCheckIns - 2)}</strong></Link>
           </div>
         </section>
       </div>
@@ -264,7 +275,7 @@ export default function DashboardPage() {
           <Link
             key={widget.title}
             href={widget.href}
-            className="cursor-pointer rounded-xl border bg-card p-4 transition hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="cursor-pointer rounded-xl border border-border/90 bg-card p-4 transition hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-base font-semibold">{widget.title}</h3>
@@ -272,7 +283,7 @@ export default function DashboardPage() {
             </div>
             <div className="mt-3 space-y-2 text-sm">
               {widget.items.map((item) => (
-                <div key={item.label} className="flex items-center justify-between rounded-md bg-muted/30 px-3 py-2">
+                <div key={item.label} className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/20 px-3 py-2">
                   <span>{item.label}</span>
                   <strong>{item.value}</strong>
                 </div>
@@ -299,7 +310,7 @@ function DashboardMetricLink({
   return (
     <Link
       href={href}
-      className="cursor-pointer rounded-xl border bg-card p-4 transition hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="cursor-pointer rounded-xl border border-border/90 bg-card p-4 transition hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <p className="text-sm text-muted-foreground">{title}</p>
       <p className="text-3xl font-semibold">{value}</p>

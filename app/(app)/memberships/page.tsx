@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ModalShell } from "@/components/ui/modal-shell";
+import { Notice } from "@/components/ui/notice";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useSettingsState } from "@/lib/state/settings-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
@@ -380,9 +381,7 @@ export default function MembershipsWorkspacePage() {
         }
       />
 
-      {feedback ? (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800" role="status">{feedback}</div>
-      ) : null}
+      {feedback ? <Notice role="status" tone="success">{feedback}</Notice> : null}
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="membership-metrics">
         <MetricCard title="Active memberships" value={dashboard.active} onClick={() => setFilter("active")} />

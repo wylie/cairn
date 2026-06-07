@@ -17,6 +17,7 @@ import { PermissionGate } from "@/components/staff/permission-gate";
 import { StaffSwitcher } from "@/components/staff/staff-switcher";
 import { Button } from "@/components/ui/button";
 import { InfoField } from "@/components/shared/info-field";
+import { Notice } from "@/components/ui/notice";
 import { filterCustomers } from "@/lib/data/customer-search";
 import { formatShortDate } from "@/lib/format/date";
 import { useCustomerState } from "@/lib/state/customer-state";
@@ -610,12 +611,12 @@ export default function PosPage() {
           </aside>
         </div>
 
-        {feedback ? <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{feedback}</p> : null}
+        {feedback ? <Notice role="status" tone="success">{feedback}</Notice> : null}
         {warning ? (
-          <div role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <Notice role="alert" tone="warning">
             <p>{warning}</p>
             {shouldShowSwitchStaff ? <div className="mt-2"><StaffSwitcher label="Switch Staff" title="Switch Staff PIN" /></div> : null}
-          </div>
+          </Notice>
         ) : null}
         <MockReceiptPanel transaction={receipt ?? null} />
         {receipt ? (

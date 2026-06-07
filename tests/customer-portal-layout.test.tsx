@@ -19,7 +19,7 @@ describe("customer portal layout container", () => {
       </TestProviders>
     );
     const container = screen.getByTestId("customer-portal-container");
-    expect(container.className).toContain("max-w-6xl");
+    expect(container.className).toContain("max-w-[1560px]");
   });
 
   it("purchases uses the shared portal container", () => {
@@ -29,14 +29,13 @@ describe("customer portal layout container", () => {
       </TestProviders>
     );
     const container = screen.getByTestId("customer-portal-container");
-    expect(container.className).toContain("max-w-6xl");
+    expect(container.className).toContain("max-w-[1560px]");
   });
 
   it("program catalog uses the shared portal container", async () => {
     const Page = await PublicProgramsPage({ params: Promise.resolve({ orgSlug: "summit" }) });
     render(Page);
     const container = screen.getByTestId("customer-portal-container");
-    expect(container.className).toContain("max-w-6xl");
+    expect(container.className).toContain("max-w-[1560px]");
   });
 });
-

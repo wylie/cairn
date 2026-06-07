@@ -7,6 +7,7 @@ import { Bell } from "lucide-react";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useSettingsState } from "@/lib/state/settings-state";
 import { ActiveStaffIndicator } from "@/components/staff/active-staff-indicator";
+import { TOP_BAR_UTILITY_CONTROL_CLASS } from "@/components/layout/utility-header";
 import { data } from "@/lib/data";
 import { getRuntimeOrganizationsClient } from "@/lib/platform-admin/registry";
 import { Button } from "@/components/ui/button";
@@ -90,7 +91,7 @@ function TopBarInner() {
   };
 
   return (
-    <header className="sticky top-3 z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card/95 p-4 backdrop-blur">
+    <header className="sticky top-3 z-20 flex flex-wrap items-center justify-between gap-4 rounded-xl border bg-card/95 p-6 backdrop-blur">
       <div>
         <p className="text-xs uppercase tracking-wide text-muted-foreground">Organization</p>
         <p className="font-semibold">{org?.name ?? "Unknown Organization"}</p>
@@ -103,14 +104,14 @@ function TopBarInner() {
           prefetch
           aria-label="View current check-ins"
           data-testid="header-occupancy"
-          className="rounded-md bg-secondary px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className={TOP_BAR_UTILITY_CONTROL_CLASS}
         >
           {occupancyCount} currently in
         </Link>
         {selectableOrgs.length > 1 ? (
           <select
             aria-label="Switch organization"
-            className="h-10 rounded-md border bg-background px-2 text-sm"
+            className="h-12 rounded-lg border bg-background px-3 text-sm text-foreground shadow-sm"
             value={currentSlug}
             onChange={(event) => window.location.assign(`/o/${event.target.value}${suffixPath}`)}
           >
@@ -133,7 +134,7 @@ function TopBarInner() {
                   markCommunicationRead(entry.id);
                 });
             }}
-            className="relative"
+            className="relative h-12 min-h-12 rounded-lg px-4"
           >
             <Bell className="h-4 w-4" aria-hidden="true" />
             {unreadNotificationCount > 0 ? (
@@ -160,7 +161,7 @@ function TopBarInner() {
             </div>
           ) : null}
         </div>
-        <Button type="button" variant="outline" onClick={handleSignOut}>Sign out</Button>
+        <Button type="button" variant="outline" onClick={handleSignOut} className="h-12 rounded-lg px-4">Sign out</Button>
         <ActiveStaffIndicator />
       </div>
     </header>

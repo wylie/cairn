@@ -3,39 +3,28 @@
 import type { ReactNode } from "react";
 import { CustomerAvatar } from "@/components/customers/customer-avatar";
 import { Badge } from "@/components/ui/badge";
-import { buildMembershipCardMatrix, getMembershipCardStatus, getMembershipCardStatusLabel, getMembershipCardStatusTone } from "@/lib/memberships/cards";
+import { getMembershipCardStatus, getMembershipCardStatusLabel, getMembershipCardStatusTone } from "@/lib/memberships/cards";
 import { formatDate } from "@/lib/format/date";
 import { cn } from "@/lib/utils";
 import type { Customer, CustomerAccessRecord } from "@/types/domain";
 
-function MembershipQrCode({ token, className }: { token: string; className?: string }) {
-  const matrix = buildMembershipCardMatrix(token);
-  const cellSize = 4;
-  const size = matrix.length * cellSize;
+function MembershipScanToken({ token, className }: { token: string; className?: string }) {
+  const groups = token.match(/.{1,3}/g) ?? [token];
 
   return (
-    <svg
-      aria-label={`Membership QR code ${token}`}
-      viewBox={`0 0 ${size} ${size}`}
-      className={cn("rounded-lg bg-white p-2", className)}
+    <div
+      aria-label={`Membership access token ${token}`}
+      className={cn("flex h-32 w-32 flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3 text-center", className)}
       role="img"
     >
-      <rect width={size} height={size} fill="white" />
-      {matrix.flatMap((row, rowIndex) =>
-        row.map((filled, colIndex) =>
-          filled ? (
-            <rect
-              key={`${rowIndex}-${colIndex}`}
-              x={colIndex * cellSize}
-              y={rowIndex * cellSize}
-              width={cellSize}
-              height={cellSize}
-              fill="black"
-            />
-          ) : null
-        )
-      )}
-    </svg>
+      <div className="grid grid-cols-3 gap-1">
+        {Array.from({ length: 9 }).map((_, index) => (
+          <span key={index} className={`h-3 w-3 rounded-sm ${index % 2 === 0 ? "bg-slate-900" : "bg-slate-300"}`} />
+        ))}
+      </div>
+      <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Scanner token</p>
+      <p className="mt-1 font-mono text-[10px] leading-4 text-slate-800">{groups.join(" ")}</p>
+    </div>
   );
 }
 
@@ -101,7 +90,7 @@ export function DigitalMembershipCard({
         </div>
       </div>
 
-      <div className={cn("grid gap-4 p-4", compact ? "md:grid-cols-[1fr_auto]" : "md:grid-cols-[1.4fr_auto]")}>
+      <div className={cn("grid gap-5 p-6", compact ? "md:grid-cols-[1fr_auto]" : "md:grid-cols-[1.4fr_auto]")}>
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <CustomerAvatar customer={customer} size={compact ? "md" : "lg"} className="border-white/50 bg-card" />
@@ -127,9 +116,10 @@ export function DigitalMembershipCard({
         </div>
 
         <div className="space-y-2 md:text-right">
-          <MembershipQrCode token={qrToken} className="mx-auto h-32 w-32 md:mx-0" />
-          <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Access QR</p>
+          <MembershipScanToken token={qrToken} className="mx-auto md:mx-0" />
+          <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Access Token</p>
           <p className="font-mono text-xs text-slate-700">{qrToken}</p>
+          <p className="text-[11px] text-slate-500">Visual placeholder for future QR scanning. Token lookup already works in check-in search.</p>
         </div>
       </div>
     </div>

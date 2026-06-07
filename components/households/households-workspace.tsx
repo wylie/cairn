@@ -401,7 +401,7 @@ export function HouseholdsWorkspace({
 
       {feedback ? <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{feedback}</p> : null}
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5" aria-label="household-dashboard-widgets">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5" aria-label="household-dashboard-widgets">
         <Link href={buildHouseholdWorkspaceHref("missing-waivers")}><SummaryCard label="Households Missing Waivers" value={`${householdRows.filter((row) => row.missingWaivers.length > 0).length}`} interactive /></Link>
         <Link href={buildHouseholdWorkspaceHref("outstanding-balance")}><SummaryCard label="Households With Outstanding Balance" value={`${householdRows.filter((row) => row.outstandingBalance > 0).length}`} interactive /></Link>
         <Link href={buildHouseholdWorkspaceHref("upcoming-renewals")}><SummaryCard label="Households With Upcoming Renewals" value={`${upcomingRenewals.length}`} interactive /></Link>
@@ -409,7 +409,7 @@ export function HouseholdsWorkspace({
         <Link href={buildHouseholdWorkspaceHref("recent-activity")}><SummaryCard label="Recent Household Activity" value={householdRows.reduce((sum, row) => sum + row.recentActivity.length, 0).toString()} interactive /></Link>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[320px_1fr]">
+      <div className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
         <Card aria-label="household-list">
           <CardHeader>
             <CardTitle>Household Dashboard</CardTitle>
@@ -618,7 +618,8 @@ export function HouseholdsWorkspace({
                 </CardContent>
               </Card>
 
-              <div className="grid gap-4 xl:grid-cols-2">
+              <div className="xl:columns-2 xl:gap-4">
+                <div className="mb-4 break-inside-avoid">
                 <SectionCard title="Household Members" ariaLabel="household-members-section" id="household-members-section">
                   <div className="space-y-3">
                     {selected.members.map((entry) => {
@@ -679,7 +680,9 @@ export function HouseholdsWorkspace({
                     })}
                   </div>
                 </SectionCard>
+                </div>
 
+                <div className="mb-4 break-inside-avoid">
                 <SectionCard title="Household Relationships" ariaLabel="household-relationships-section" id="household-relationships-section">
                   <div className="space-y-3">
                     <div className="rounded-lg border p-3">
@@ -698,7 +701,9 @@ export function HouseholdsWorkspace({
                     </div>
                   </div>
                 </SectionCard>
+                </div>
 
+                <div className="mb-4 break-inside-avoid">
                 <SectionCard title="Household Access" ariaLabel="household-access-section" id="household-access-section">
                   <div className="space-y-3">
                     <p>Who can currently enter: {selected.activeMemberships.map((entry) => customers.find((customer) => customer.id === entry.customerId)?.firstName).filter(Boolean).join(", ") || "None"}</p>
@@ -711,7 +716,9 @@ export function HouseholdsWorkspace({
                     </div>
                   </div>
                 </SectionCard>
+                </div>
 
+                <div className="mb-4 break-inside-avoid">
                 <SectionCard title="Household Memberships" ariaLabel="household-memberships-section" id="household-memberships-section">
                   <div className="space-y-3">
                     {selected.activeMemberships.length === 0 ? <p className="text-sm text-muted-foreground">No household memberships found.</p> : null}
@@ -764,7 +771,9 @@ export function HouseholdsWorkspace({
                     ))}
                   </div>
                 </SectionCard>
+                </div>
 
+                <div className="mb-4 break-inside-avoid">
                 <SectionCard title="Household Waivers" ariaLabel="household-waivers-section" id="household-waivers-section">
                   <div className="space-y-3">
                     <div className="grid gap-2 md:grid-cols-2">
@@ -793,7 +802,9 @@ export function HouseholdsWorkspace({
                     </div>
                   </div>
                 </SectionCard>
+                </div>
 
+                <div className="mb-4 break-inside-avoid">
                 <SectionCard title="Household Check-In" ariaLabel="household-checkin-section" id="household-checkin-section">
                   <div className="space-y-3">
                     <p>Currently in facility: {selected.currentlyIn.length}</p>
@@ -819,7 +830,9 @@ export function HouseholdsWorkspace({
                     </div>
                   </div>
                 </SectionCard>
+                </div>
 
+                <div className="mb-4 break-inside-avoid">
                 <SectionCard title="Household Registrations" ariaLabel="household-registrations-section" id="household-registrations-section">
                   <div className="space-y-3">
                     {selected.members.map((entry) => {
@@ -845,7 +858,9 @@ export function HouseholdsWorkspace({
                     </div>
                   </div>
                 </SectionCard>
+                </div>
 
+                <div className="mb-4 break-inside-avoid">
                 <SectionCard title="Household Billing" ariaLabel="household-billing-section" id="household-billing-section">
                   <div className="space-y-3">
                     <p>Outstanding balances: {formatCurrency(selected.outstandingBalance)}</p>
@@ -870,7 +885,9 @@ export function HouseholdsWorkspace({
                     </div>
                   </div>
                 </SectionCard>
+                </div>
 
+                <div className="mb-4 break-inside-avoid">
                 <SectionCard title="Household Purchase History" ariaLabel="household-purchases-section" id="household-purchases-section">
                   <div className="space-y-2">
                     {selected.recentPurchases.length === 0 ? <p className="text-sm text-muted-foreground">No household purchases yet.</p> : null}
@@ -893,7 +910,9 @@ export function HouseholdsWorkspace({
                     </div>
                   </div>
                 </SectionCard>
+                </div>
 
+                <div className="mb-4 break-inside-avoid">
                 <SectionCard title="Household Communications" ariaLabel="household-communications-section" id="household-communications-section">
                   <div className="space-y-3">
                     <p>Emails, SMS reminders, alerts, tasks, and internal notes are tracked in one household timeline.</p>
@@ -921,7 +940,9 @@ export function HouseholdsWorkspace({
                     </div>
                   </div>
                 </SectionCard>
+                </div>
 
+                <div className="mb-4 break-inside-avoid">
                 <SectionCard title="Household Timeline" ariaLabel="household-timeline-section" id="household-timeline-section">
                   <div className="space-y-2">
                     {selected.recentActivity.slice(0, 10).map((entry) => (
@@ -932,6 +953,7 @@ export function HouseholdsWorkspace({
                     ))}
                   </div>
                 </SectionCard>
+                </div>
               </div>
             </>
           )}

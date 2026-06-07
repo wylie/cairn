@@ -36,6 +36,7 @@ Cairn documentation is organized for two primary audiences:
 - [Testing](./developer/testing.md)
 - [Organizations & Provisioning](./developer/organizations.md)
 - [Platform Administration](./developer/platform-administration.md)
+- [UI Standards](./developer/ui-standards.md)
 
 ### Reference
 - [Permissions Reference](./reference/permissions.md)

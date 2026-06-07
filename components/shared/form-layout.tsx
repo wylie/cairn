@@ -17,14 +17,14 @@ export function FormGrid({
   ...props
 }: { children: ReactNode; className?: string; label?: string } & React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("grid grid-cols-1 gap-3 md:grid-cols-2", className)} aria-label={label} {...props}>
+    <div className={cn("grid grid-cols-1 gap-4 md:grid-cols-2", className)} aria-label={label} {...props}>
       {children}
     </div>
   );
 }
 
 export function FieldGroup({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("space-y-3", className)}>{children}</div>;
+  return <div className={cn("space-y-4", className)}>{children}</div>;
 }
 
 export function FormSection({
@@ -39,8 +39,8 @@ export function FormSection({
   className?: string;
 }) {
   return (
-    <section className={cn("space-y-3", className)}>
-      <div className="space-y-1">
+    <section className={cn("space-y-4", className)}>
+      <div className="space-y-2">
         <p className="text-sm font-medium">{title}</p>
         {description ? <p className={FORM_HELPER_CLASS}>{description}</p> : null}
       </div>
@@ -63,7 +63,7 @@ export function FormField({
   className?: string;
 }) {
   return (
-    <label className={cn("space-y-1.5 text-sm", className)}>
+    <label className={cn("space-y-2 text-sm", className)}>
       <span className={FORM_LABEL_CLASS}>{label}</span>
       {children}
       {helperText ? <span className={FORM_HELPER_CLASS}>{helperText}</span> : null}

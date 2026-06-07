@@ -65,7 +65,7 @@ export function CustomerCard({
     : false;
   return (
     <Card className="h-full transition hover:-translate-y-0.5 hover:shadow">
-      <CardContent className="flex h-full flex-col gap-3 p-4">
+      <CardContent className="flex h-full flex-col gap-4 p-6">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
             <Link href={profileHref} aria-label={`Open customer profile for ${customer.firstName} ${customer.lastName}`}>
@@ -85,7 +85,7 @@ export function CustomerCard({
           ) : null}
         </div>
 
-        <div aria-label="Quick Info" className="grid grid-cols-2 gap-1.5">
+        <div aria-label="Quick Info" className="grid grid-cols-2 gap-2">
           <QuickInfoItem label="Preferred" value={preferredLabel} warning={!hasPreferred} />
           <QuickInfoItem label="Pronouns" value={pronounsLabel} warning={!hasPronouns} />
           <QuickInfoItem label="DOB / Age" value={dobDisplay} warning={!hasValidDob} />
@@ -127,7 +127,7 @@ export function CustomerCard({
 
 function QuickInfoItem({ label, value, warning, className }: { label: string; value: string; warning?: boolean; className?: string }) {
   return (
-    <div className={`rounded-sm bg-secondary/35 px-2 py-1.5 ${className ?? ""}`}>
+    <div className={`rounded-md bg-secondary/35 px-3 py-2 ${className ?? ""}`}>
       <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className={`whitespace-pre-line text-sm font-medium leading-5 ${warning ? "text-amber-700" : "text-foreground"}`}>{value}</p>
     </div>

@@ -70,5 +70,7 @@ describe("membership card page", () => {
 
     expect(screen.getByText("Expired")).toBeInTheDocument();
     expect(screen.getByText("Summit Rec Collective")).toBeInTheDocument();
+    expect(screen.getByText("Access Token")).toBeInTheDocument();
+    expect(screen.getByText(/Visual placeholder for future QR scanning/i)).toBeInTheDocument();
   });
 });

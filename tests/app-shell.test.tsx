@@ -33,7 +33,7 @@ describe("AppShell", () => {
   });
 
   it("renders sidebar and main content", () => {
-    render(
+    const { container } = render(
       <TestProviders>
         <AppShell>
           <div>Page Content</div>
@@ -43,6 +43,7 @@ describe("AppShell", () => {
 
     expect(screen.getByText("Facility Ops")).toBeInTheDocument();
     expect(screen.getByText("Page Content")).toBeInTheDocument();
+    expect(container.querySelector(".max-w-\\[1680px\\]")).not.toBeNull();
   });
 
   it("uses runtime provisioned organizations for the shell heading", () => {

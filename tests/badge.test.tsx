@@ -15,5 +15,7 @@ describe("Badge", () => {
     expect(screen.getByText("Active").className).toContain("emerald");
     expect(screen.getByText("Expiring").className).toContain("amber");
     expect(screen.getByText("Expired").className).toContain("rose");
+    expect(screen.getByText("Active").className).toContain("min-h-7");
+    expect(screen.getByText("Active").className).toContain("justify-center");
   });
 });

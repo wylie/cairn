@@ -32,7 +32,7 @@ export function Avatar({
   const initials = `${firstInitial}${lastInitial}`.toUpperCase() || "P";
   const resolvedSizeClassName = sizeClassName ?? sizeClassMap[size];
   const sharedClassName = cn(
-    "aspect-square shrink-0 overflow-hidden rounded-full border border-border/90 bg-card object-cover shadow-[0_1px_2px_rgba(16,24,40,0.08)]",
+    "aspect-square shrink-0 overflow-hidden rounded-full border border-border/90 bg-card object-cover align-middle shadow-[0_1px_2px_rgba(16,24,40,0.08)]",
     resolvedSizeClassName,
     className
   );
@@ -45,6 +45,7 @@ export function Avatar({
         alt={alt ?? `${resolvedName} profile photo`}
         className={sharedClassName}
         loading="lazy"
+        decoding="async"
       />
     );
   }
@@ -53,7 +54,7 @@ export function Avatar({
     <div
       aria-label={alt ?? `${resolvedName} initials avatar`}
       className={cn(
-        "flex aspect-square shrink-0 items-center justify-center rounded-full border border-border/90 bg-secondary font-semibold text-foreground shadow-[0_1px_2px_rgba(16,24,40,0.08)]",
+        "flex aspect-square shrink-0 items-center justify-center rounded-full border border-border/90 bg-secondary font-semibold text-foreground align-middle shadow-[0_1px_2px_rgba(16,24,40,0.08)]",
         resolvedSizeClassName,
         className
       )}

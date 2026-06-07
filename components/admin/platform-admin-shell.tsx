@@ -26,7 +26,7 @@ export function PlatformAdminShell({ children }: { children: React.ReactNode }) 
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto grid max-w-[1440px] grid-cols-1 gap-4 p-4 lg:grid-cols-[280px_1fr] lg:p-6">
+      <div className="mx-auto grid w-full max-w-[1680px] grid-cols-1 gap-6 px-4 py-4 lg:grid-cols-[296px_minmax(0,1fr)] lg:px-6 lg:py-6">
         <aside className="rounded-xl border bg-card p-4 lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)]">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Platform Admin</p>
           <h1 className="mt-1 text-lg font-semibold">Cairn Control Plane</h1>

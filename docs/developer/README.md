@@ -8,6 +8,7 @@ This section documents how Cairn is structured today and how to work on it safel
 - [Testing](./testing.md)
 - [Organizations & Provisioning](./organizations.md)
 - [Platform Administration](./platform-administration.md)
+- [UI Standards](./ui-standards.md)
 
 ## Reference Material
 - [Permissions Reference](../reference/permissions.md)

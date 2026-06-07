@@ -41,6 +41,7 @@ export function CheckInList() {
     evaluateCustomerEntry,
     sellAccessProducts,
     addCustomer,
+    updateCustomerWaiver,
     householdMembers,
     familyCheckIn,
     checkInRecords,
@@ -88,6 +89,7 @@ export function CheckInList() {
   const selectedHouseholdMembership = selectedCustomer
     ? householdMembers.find((entry) => entry.customerId === selectedCustomer.id)
     : undefined;
+  const selectedHouseholdHref = selectedHouseholdMembership ? `/households/${selectedHouseholdMembership.householdId}` : null;
   const canActForHousehold = Boolean(selectedHouseholdMembership?.canCheckInOthers);
   const householdDependents = selectedHouseholdMembership
     ? householdMembers
@@ -410,6 +412,53 @@ export function CheckInList() {
             <Button variant="outline" onClick={goToNextDay} aria-label="Next Day">Next</Button>
           </div>
         </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button variant="secondary" className="min-h-11" onClick={() => setShowAddCustomer(true)}>Add Customer</Button>
+          {selectedCustomer ? (
+            <>
+              <Button
+                variant="secondary"
+                className="min-h-11"
+                onClick={() => setSellCustomerId(selectedCustomer.id)}
+              >
+                Sell Access
+              </Button>
+              <Button
+                variant="secondary"
+                className="min-h-11"
+                onClick={() => {
+                  if (!selectedCustomer || !activeStaff) {
+                    setWarning("Select staff PIN to continue.");
+                    setShowSwitchPrompt(true);
+                    requestStaffSwitch("Staff PIN Required");
+                    return;
+                  }
+                  const result = updateCustomerWaiver(selectedCustomer.id, {
+                    status: "valid",
+                    signedAt: new Date().toISOString(),
+                    expiresAt: "2027-05-20",
+                    signedByStaffId: activeStaff.id,
+                    updatedByStaffId: activeStaff.id,
+                    updatedByStaffName: `${activeStaff.firstName} ${activeStaff.lastName}`
+                  });
+                  if (!result.ok) {
+                    setWarning(result.message);
+                    return;
+                  }
+                  setWarning("");
+                  setFeedback("Waiver marked valid.");
+                }}
+              >
+                Sign Waiver
+              </Button>
+              {selectedHouseholdHref ? (
+                <Link href={selectedHouseholdHref}>
+                  <Button variant="secondary" className="min-h-11">View Household</Button>
+                </Link>
+              ) : null}
+            </>
+          ) : null}
+        </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
           <Link href="/check-in#current-roster" data-testid="occupancy-count" className="rounded-md bg-secondary px-3 py-2 text-sm transition-colors hover:bg-secondary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="View current check-ins">
             Currently In: {occupancyCount}
@@ -679,18 +728,39 @@ export function CheckInList() {
                   <Button variant="secondary" className="min-h-11" onClick={() => setSellCustomerId(selectedCustomer.id)}>
                     Sell Access
                   </Button>
-                  <Button variant="secondary" className="min-h-11">
-                    Renew Membership
+                  <Button
+                    variant="secondary"
+                    className="min-h-11"
+                    onClick={() => {
+                      if (!activeStaff) {
+                        setWarning("Select staff PIN to continue.");
+                        setShowSwitchPrompt(true);
+                        requestStaffSwitch("Staff PIN Required");
+                        return;
+                      }
+                      const result = updateCustomerWaiver(selectedCustomer.id, {
+                        status: "valid",
+                        signedAt: new Date().toISOString(),
+                        expiresAt: "2027-05-20",
+                        signedByStaffId: activeStaff.id,
+                        updatedByStaffId: activeStaff.id,
+                        updatedByStaffName: `${activeStaff.firstName} ${activeStaff.lastName}`
+                      });
+                      if (!result.ok) {
+                        setWarning(result.message);
+                        return;
+                      }
+                      setWarning("");
+                      setFeedback("Waiver marked valid.");
+                    }}
+                  >
+                    Sign Waiver
                   </Button>
-                  <Button variant="secondary" className="min-h-11">
-                    Mark Waiver Signed
-                  </Button>
-                  <Button variant="secondary" className="min-h-11">
-                    Add Household Member
-                  </Button>
-                  <Button variant="secondary" className="min-h-11">
-                    Emergency Contact
-                  </Button>
+                  {selectedHouseholdHref ? (
+                    <Link href={selectedHouseholdHref} className="inline-flex min-h-11 items-center justify-center rounded-md border px-3 text-sm font-medium">
+                      View Household
+                    </Link>
+                  ) : null}
                   <Link href={buildCustomerDetailHref({
                     customerId: selectedCustomer.id,
                     currentPathname: pathname,

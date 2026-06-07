@@ -365,6 +365,19 @@ export default function MembershipsWorkspacePage() {
       <PageHeader
         title="Memberships"
         description="Operational workspace for renewals, freezes, household coverage, and lifecycle actions."
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Link href="/customers">
+              <Button variant="secondary">Add Customer</Button>
+            </Link>
+            <Link href="/households">
+              <Button variant="secondary">View Households</Button>
+            </Link>
+            <Link href="/reports?category=memberships">
+              <Button variant="secondary">Open Reports</Button>
+            </Link>
+          </div>
+        }
       />
 
       {feedback ? (

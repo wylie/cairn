@@ -56,6 +56,18 @@ describe("Programs page IA", () => {
     expect(screen.getByLabelText("program-form-layout")).toBeInTheDocument();
   });
 
+  it("surfaces quick actions for registrations and session creation", () => {
+    render(
+      <TestProviders>
+        <TopBar />
+        <ProgramsPage />
+      </TestProviders>
+    );
+
+    expect(screen.getByRole("link", { name: "View Registrations" })).toHaveAttribute("href", "/registrations");
+    expect(screen.getByRole("link", { name: "Create Session" })).toHaveAttribute("href", "/calendar");
+  });
+
   it("Edit Program opens populated form", async () => {
     const user = userEvent.setup();
     render(

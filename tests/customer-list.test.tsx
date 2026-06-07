@@ -161,6 +161,18 @@ describe("CustomerList", () => {
     expect(within(mayaCard).queryByText(/Spring St|New York|maya.patel@example.com/i)).not.toBeInTheDocument();
   });
 
+  it("customer cards expose household drill-in when the customer belongs to a household", () => {
+    render(
+      <TestProviders>
+        <CustomerList />
+      </TestProviders>
+    );
+
+    const alexCard = screen.getByText("Alex Rivera").closest("div[class*='p-4']") as HTMLElement;
+    const householdLink = within(alexCard).getByRole("link", { name: "View Household" });
+    expect(householdLink.getAttribute("href")).toMatch(/^\/households\/hh_/);
+  });
+
   it("pronouns render in quick info tiles", () => {
     render(
       <TestProviders>

@@ -12,6 +12,7 @@ export function CustomerCard({
   membership,
   punchPass,
   waiver,
+  householdHref,
   canCheckIn,
   blockedReason,
   viewProfileHref,
@@ -22,6 +23,7 @@ export function CustomerCard({
   membership?: Membership;
   punchPass?: PunchPass;
   waiver?: Waiver;
+  householdHref?: string;
   canCheckIn: boolean;
   blockedReason?: string;
   viewProfileHref?: string;
@@ -101,6 +103,11 @@ export function CustomerCard({
           <Link href={profileHref}>
             <Button variant="secondary" className="min-h-11">View Profile</Button>
           </Link>
+          {householdHref ? (
+            <Link href={householdHref}>
+              <Button variant="secondary" className="min-h-11">View Household</Button>
+            </Link>
+          ) : null}
           <Button onClick={() => onSellAccess(customer.id)} variant="secondary" className="min-h-11">Sell Access</Button>
           <Button
             onClick={() => onToggleCheckIn(customer.id)}

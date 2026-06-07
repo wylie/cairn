@@ -154,6 +154,23 @@ describe("CheckInList date behavior", () => {
     expect(screen.getByText("Maya Patel")).toBeInTheDocument();
   });
 
+  it("selected customers expose household and waiver quick actions", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <CheckInList />
+      </TestProviders>
+    );
+    await activateStaff(user, "1111");
+
+    await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Alex");
+    await user.keyboard("{Enter}");
+
+    expect(screen.getAllByRole("link", { name: "View Household" })[0].getAttribute("href")).toMatch(/^\/households\/hh_/);
+    expect(screen.getAllByRole("button", { name: "Sign Waiver" }).length).toBeGreaterThan(0);
+  });
+
   it("currently checked-in roster shows customer avatars", () => {
     render(
       <TestProviders>

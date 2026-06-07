@@ -139,6 +139,7 @@ export default function PosPage() {
     ? householdMembers.find((entry) => entry.customerId === selectedCustomer.id)
     : undefined;
   const canPurchaseForHousehold = Boolean(selectedMembership?.canPurchaseForOthers);
+  const selectedHouseholdHref = selectedMembership ? `/households/${selectedMembership.householdId}` : null;
   const householdPurchaseMembers = selectedMembership
     ? householdMembers
         .filter((entry) => entry.householdId === selectedMembership.householdId)
@@ -369,11 +370,16 @@ export default function PosPage() {
                   })} className="inline-flex min-h-11 items-center rounded-md border px-3 text-sm">
                     View Profile
                   </Link>
+                  {selectedHouseholdHref ? (
+                    <Link href={selectedHouseholdHref} className="inline-flex min-h-11 items-center rounded-md border px-3 text-sm">
+                      View Household
+                    </Link>
+                  ) : null}
                   <Link href="/check-in" className="inline-flex min-h-11 items-center rounded-md border px-3 text-sm">
                     Check In
                   </Link>
                   <Button variant="secondary" className="min-h-11" onClick={() => customerSearchInputRef.current?.focus()}>
-                    Sell Access
+                    Add Products
                   </Button>
                 </div>
               </div>

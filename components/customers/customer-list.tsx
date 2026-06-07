@@ -133,6 +133,11 @@ export function CustomerList() {
               membership={membership}
               punchPass={punchPass}
               waiver={getWaiverForCustomer(customer)}
+              householdHref={
+                householdMembers.find((entry) => entry.customerId === customer.id)?.householdId
+                  ? `/households/${householdMembers.find((entry) => entry.customerId === customer.id)?.householdId}`
+                  : undefined
+              }
               canCheckIn={canCheckIn}
               blockedReason={blockedReason}
               viewProfileHref={buildCustomerDetailHref({

@@ -78,6 +78,23 @@ describe("POS page", () => {
     expect(screen.getByText(/Member price: \$10.00/i)).toBeInTheDocument();
   });
 
+  it("selected customer actions surface household drill-in and product focus", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <PosPage />
+      </TestProviders>
+    );
+    await activateStaff(user, "2222");
+
+    await user.type(screen.getByLabelText("Search customer"), "Alex");
+    await user.keyboard("{ArrowDown}{Enter}");
+
+    expect(screen.getByRole("link", { name: "View Household" }).getAttribute("href")).toMatch(/^\/households\/hh_/);
+    expect(screen.getByRole("button", { name: "Add Products" })).toBeInTheDocument();
+  });
+
   it("renders mobile POS guidance on smaller screens", async () => {
     const user = userEvent.setup();
     mockMobileViewport();
@@ -697,8 +714,8 @@ describe("Customer integrations", () => {
     await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Sam");
     await user.keyboard("{Enter}");
 
-    expect(screen.getByRole("button", { name: "Sell Access" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Sell Access" }));
+    expect(screen.getAllByRole("button", { name: "Sell Access" }).length).toBeGreaterThan(0);
+    await user.click(screen.getAllByRole("button", { name: "Sell Access" })[0]);
     await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
     await user.click(screen.getByRole("button", { name: "Complete + Check In" }));
 

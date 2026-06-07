@@ -21,6 +21,16 @@ function formatDateRange(start: string, end: string) {
   return `${formatDate(start, "-", { weekday: "short", month: "short", day: "numeric" })} • ${formatTime(start)} - ${formatTime(end)}`;
 }
 
+function getDefaultRegistrationDateRange() {
+  const now = new Date();
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0));
+  return {
+    dateFrom: start.toISOString().slice(0, 10),
+    dateTo: end.toISOString().slice(0, 10)
+  };
+}
+
 function getSessionStatus(session: ClassCampSession): "Open" | "Full" | "Waitlist Active" | "Cancelled" {
   if (session.status === "cancelled") return "Cancelled";
   if (session.enrolled < session.capacity) return "Open";
@@ -107,11 +117,12 @@ export default function RegistrationsPage() {
 
   const [sessionQuery, setSessionQuery] = useState("");
   const [customerSearch, setCustomerSearch] = useState("");
+  const defaultDateRange = getDefaultRegistrationDateRange();
   const [programFilter, setProgramFilter] = useState("all");
   const [instructorFilter, setInstructorFilter] = useState("all");
   const [locationFilter, setLocationFilter] = useState("all");
-  const [dateFrom, setDateFrom] = useState(searchParams?.get?.("dateFrom") ?? "2026-05-01");
-  const [dateTo, setDateTo] = useState(searchParams?.get?.("dateTo") ?? "2026-06-30");
+  const [dateFrom, setDateFrom] = useState(searchParams?.get?.("dateFrom") ?? defaultDateRange.dateFrom);
+  const [dateTo, setDateTo] = useState(searchParams?.get?.("dateTo") ?? defaultDateRange.dateTo);
   const [ageGroup, setAgeGroup] = useState<"all" | "youth" | "adult">("all");
   const [availableOnly, setAvailableOnly] = useState(false);
   const [waitlistOnly, setWaitlistOnly] = useState(false);
@@ -311,7 +322,23 @@ export default function RegistrationsPage() {
 
   return (
     <section className="space-y-4" data-testid="registrations-workstation">
-      <PageHeader title="Registrations" description="Operational center for rosters, waitlists, attendance, transfers, and cancellations." />
+      <PageHeader
+        title="Registrations"
+        description="Operational center for rosters, waitlists, attendance, transfers, and cancellations."
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Link href="/customers">
+              <Button variant="secondary">Add Customer</Button>
+            </Link>
+            <Link href="/calendar">
+              <Button variant="secondary">Create Session</Button>
+            </Link>
+            <Link href="/programs">
+              <Button variant="secondary">View Programs</Button>
+            </Link>
+          </div>
+        }
+      />
       <div className="rounded-xl border bg-card p-3 lg:hidden">
         <p className="text-xs uppercase tracking-wide text-muted-foreground">Mobile workflow</p>
         <p className="mt-1 text-sm text-muted-foreground">Search sessions first, then manage the roster and enrollment from stacked cards below.</p>

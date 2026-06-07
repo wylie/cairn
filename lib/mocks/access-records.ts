@@ -1,4 +1,5 @@
 import type { CustomerAccessRecord } from "@/types/domain";
+import { dateKeyAtOffset } from "@/lib/demo/dates";
 
 export const accessRecords: CustomerAccessRecord[] = [
   {
@@ -7,8 +8,8 @@ export const accessRecords: CustomerAccessRecord[] = [
     productId: "prd_003",
     type: "membership",
     status: "active",
-    startDate: "2026-05-01",
-    expirationDate: "2026-06-12",
+    startDate: dateKeyAtOffset(-28),
+    expirationDate: dateKeyAtOffset(12),
     unlimitedAccess: true,
     locationsAllowed: ["loc_001", "loc_002"],
     grantedByStaffId: "staff_001",
@@ -20,8 +21,8 @@ export const accessRecords: CustomerAccessRecord[] = [
     productId: "prd_002",
     type: "punch-pass",
     status: "active",
-    startDate: "2026-05-01",
-    expirationDate: "2026-05-25",
+    startDate: dateKeyAtOffset(-35),
+    expirationDate: dateKeyAtOffset(20),
     remainingPunches: 7,
     locationsAllowed: ["loc_001"],
     grantedByStaffId: "staff_001",
@@ -33,8 +34,8 @@ export const accessRecords: CustomerAccessRecord[] = [
     productId: "prd_005",
     type: "membership",
     status: "active",
-    startDate: "2026-05-10",
-    expirationDate: "2026-06-02",
+    startDate: dateKeyAtOffset(-21),
+    expirationDate: dateKeyAtOffset(4),
     unlimitedAccess: true,
     locationsAllowed: ["loc_002"],
     grantedByStaffId: "staff_001",
@@ -46,9 +47,8 @@ export const accessRecords: CustomerAccessRecord[] = [
     productId: "prd_003",
     type: "membership",
     status: "expired",
-    startDate: "2026-04-01",
-    expirationDate: "2026-05-10",
-    unlimitedAccess: true,
+    startDate: dateKeyAtOffset(-40),
+    expirationDate: dateKeyAtOffset(-2),
     locationsAllowed: ["loc_001"]
   },
   {
@@ -57,8 +57,8 @@ export const accessRecords: CustomerAccessRecord[] = [
     productId: "prd_001",
     type: "day-pass",
     status: "active",
-    startDate: "2026-05-20",
-    expirationDate: "2026-05-20",
+    startDate: dateKeyAtOffset(0),
+    expirationDate: dateKeyAtOffset(0),
     locationsAllowed: ["loc_001"],
     grantedByStaffId: "staff_001",
     grantedByStaffName: "Taylor Nguyen"
@@ -70,8 +70,8 @@ export const accessRecords: CustomerAccessRecord[] = [
     productId: "prd_005",
     type: "household-membership",
     status: "active",
-    startDate: "2026-05-10",
-    expirationDate: "2026-06-14",
+    startDate: dateKeyAtOffset(-21),
+    expirationDate: dateKeyAtOffset(14),
     unlimitedAccess: true,
     coveredCustomerIds: ["cust_003", "cust_004", "cust_002"],
     locationsAllowed: ["loc_001", "loc_002"],
@@ -85,12 +85,24 @@ export const accessRecords: CustomerAccessRecord[] = [
     productId: "prd_003",
     type: "household-membership",
     status: "active",
-    startDate: "2026-05-20",
-    expirationDate: "2026-06-18",
+    startDate: dateKeyAtOffset(-17),
+    expirationDate: dateKeyAtOffset(18),
     unlimitedAccess: true,
     coveredCustomerIds: ["cust_001", "cust_006"],
     locationsAllowed: ["loc_001"],
     grantedByStaffId: "staff_001",
     grantedByStaffName: "Taylor Nguyen"
+  },
+  {
+    id: "acc_008",
+    customerId: "cust_007",
+    productId: "prd_004",
+    type: "time-pass",
+    status: "active",
+    startDate: dateKeyAtOffset(-3),
+    expirationDate: dateKeyAtOffset(25),
+    locationsAllowed: ["loc_002"],
+    grantedByStaffId: "staff_002",
+    grantedByStaffName: "Maya Lopez"
   }
 ];

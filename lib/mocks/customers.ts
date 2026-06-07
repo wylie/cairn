@@ -1,4 +1,8 @@
 import type { Customer } from "@/types/domain";
+import { dateKeyAtOffset, isoAtOffset, today } from "@/lib/demo/dates";
+
+const now = today();
+const birthdayToday = `${now.getUTCFullYear() - 34}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
 
 export const customers: Customer[] = [
   {
@@ -24,6 +28,7 @@ export const customers: Customer[] = [
     membershipId: "mem_001",
     waiverId: "wav_001",
     notes: "Prefers morning sessions.",
+    createdAt: isoAtOffset(-120, 10, 0),
     relatedCustomers: [{ relatedCustomerId: "cust_003", relationshipType: "emergency_contact", notes: "Primary emergency contact." }],
     paymentMethods: [
       {
@@ -31,12 +36,14 @@ export const customers: Customer[] = [
         cardBrand: "Visa",
         last4: "4242",
         expirationMonth: 4,
-        expirationYear: 2028,
+        expirationYear: now.getUTCFullYear() + 2,
         billingName: "Maya Patel",
         isDefault: true,
-        addedAt: "2026-05-01T10:00:00Z"
+        addedAt: isoAtOffset(-36, 10, 0)
       }
-    ]
+    ],
+    profilePhotoUpdatedAt: isoAtOffset(-5, 9, 30),
+    profilePhotoUpdatedBy: "Taylor Nguyen"
   },
   {
     id: "cust_002",
@@ -59,7 +66,8 @@ export const customers: Customer[] = [
     tags: ["Yoga", "10 Visit Pass"],
     checkInStatus: "out",
     punchPassId: "pass_001",
-    waiverId: "wav_002"
+    waiverId: "wav_002",
+    createdAt: isoAtOffset(-98, 15, 10)
   },
   {
     id: "cust_003",
@@ -82,7 +90,11 @@ export const customers: Customer[] = [
     tags: ["Camp Parent"],
     checkInStatus: "out",
     membershipId: "mem_003",
-    notes: "Guardian on file for Sam Rivera."
+    notes: "Guardian on file for Sam Rivera.",
+    createdAt: isoAtOffset(-84, 11, 45),
+    profilePhotoUrl: "/demo/customer-alex.jpg",
+    profilePhotoUpdatedAt: isoAtOffset(-12, 16, 20),
+    profilePhotoUpdatedBy: "Maya Lopez"
   },
   {
     id: "cust_004",
@@ -95,7 +107,7 @@ export const customers: Customer[] = [
     pronouns: "They/them",
     email: "sam.noaccess@example.com",
     phone: "(212) 555-0199",
-    dateOfBirth: "2000-11-21",
+    dateOfBirth: "2014-11-21",
     addressLine1: "88 Orchard Ave",
     city: "Asheville",
     state: "NC",
@@ -104,7 +116,8 @@ export const customers: Customer[] = [
     emergencyContactPhone: "(828) 555-9199",
     tags: ["Guest"],
     checkInStatus: "out",
-    membershipId: "mem_004"
+    membershipId: "mem_004",
+    createdAt: isoAtOffset(-40, 13, 5)
   },
   {
     id: "cust_005",
@@ -127,7 +140,8 @@ export const customers: Customer[] = [
     tags: ["Day Pass"],
     checkInStatus: "out",
     dayPassProductName: "Day Pass",
-    waiverId: "wav_005"
+    waiverId: "wav_005",
+    createdAt: isoAtOffset(-18, 10, 30)
   },
   {
     id: "cust_006",
@@ -149,7 +163,31 @@ export const customers: Customer[] = [
     emergencyContactPhone: "(828) 555-9106",
     tags: ["Climbing", "Drop-in"],
     checkInStatus: "out",
-    waiverId: "wav_001"
+    waiverId: "wav_001",
+    createdAt: isoAtOffset(-26, 9, 40)
+  },
+  {
+    id: "cust_007",
+    memberId: "M-1007",
+    organizationId: "org_summit",
+    locationId: "loc_002",
+    firstName: "Riley",
+    lastName: "Morgan",
+    preferredName: "Riley",
+    pronouns: "They/them",
+    email: "riley.morgan@example.com",
+    phone: "(718) 555-0165",
+    dateOfBirth: birthdayToday,
+    addressLine1: "77 Harbor Way",
+    city: "Brooklyn",
+    state: "NY",
+    postalCode: "11201",
+    emergencyContactName: "Casey Morgan",
+    emergencyContactPhone: "(718) 555-9065",
+    tags: ["Birthday", "Workshop"],
+    checkInStatus: "out",
+    notes: "Used to keep dashboard birthday reminders active.",
+    createdAt: isoAtOffset(-7, 12, 5)
   },
   {
     id: "cust_staff_001",
@@ -172,6 +210,7 @@ export const customers: Customer[] = [
     tags: ["Staff"],
     checkInStatus: "out",
     waiverId: "wav_001",
+    createdAt: isoAtOffset(-400, 9, 0),
     staffProfile: {
       isStaff: true,
       staffId: "staff_001",
@@ -181,10 +220,10 @@ export const customers: Customer[] = [
       locations: ["loc_001", "loc_002"],
       assignedPrograms: ["prog_101", "prog_202"],
       permissions: ["manageSettings", "manageStaff", "manageRoles", "manageWaivers", "viewReports", "usePOS", "checkInCustomer", "checkOutCustomer"],
-      startDate: "2023-01-10",
+      startDate: dateKeyAtOffset(-880),
       certifications: ["CPR", "First Aid"],
       staffNotes: "Organization owner with full access.",
-      lastActive: "2026-05-24T12:25:00Z"
+      lastActive: isoAtOffset(0, 12, 25)
     }
   },
   {
@@ -208,6 +247,7 @@ export const customers: Customer[] = [
     tags: ["Staff"],
     checkInStatus: "out",
     waiverId: "wav_002",
+    createdAt: isoAtOffset(-320, 9, 0),
     staffProfile: {
       isStaff: true,
       staffId: "staff_002",
@@ -217,10 +257,10 @@ export const customers: Customer[] = [
       locations: ["loc_001"],
       assignedPrograms: ["prog_101", "prog_301"],
       permissions: ["manageStaff", "editPrograms", "viewReports", "usePOS", "checkInCustomer", "checkOutCustomer"],
-      startDate: "2024-03-01",
+      startDate: dateKeyAtOffset(-460),
       certifications: ["Belay Certified", "First Aid"],
       staffNotes: "Operations manager for Downtown.",
-      lastActive: "2026-05-24T12:20:00Z"
+      lastActive: isoAtOffset(0, 12, 20)
     }
   },
   {
@@ -244,6 +284,7 @@ export const customers: Customer[] = [
     tags: ["Staff"],
     checkInStatus: "out",
     waiverId: "wav_005",
+    createdAt: isoAtOffset(-170, 9, 0),
     staffProfile: {
       isStaff: true,
       staffId: "staff_003",
@@ -253,10 +294,10 @@ export const customers: Customer[] = [
       locations: ["loc_001"],
       assignedPrograms: [],
       permissions: ["usePOS", "checkInCustomer", "checkOutCustomer", "createCustomer", "viewCustomers"],
-      startDate: "2025-01-06",
+      startDate: dateKeyAtOffset(-150),
       certifications: ["CPR"],
       staffNotes: "Front desk primary evening shift.",
-      lastActive: "2026-05-24T12:12:00Z"
+      lastActive: isoAtOffset(0, 12, 12)
     }
   },
   {
@@ -270,16 +311,17 @@ export const customers: Customer[] = [
     pronouns: "She/they",
     email: "jordan.kim.staff@example.com",
     phone: "(212) 555-3004",
-    dateOfBirth: "1997-01-20",
-    addressLine1: "500 Fifth Ave",
+    dateOfBirth: "1994-01-12",
+    addressLine1: "12 Park Loop",
     city: "New York",
     state: "NY",
-    postalCode: "10036",
-    emergencyContactName: "Morgan Kim",
-    emergencyContactPhone: "(212) 555-9444",
+    postalCode: "10019",
+    emergencyContactName: "Casey Kim",
+    emergencyContactPhone: "(212) 555-9004",
     tags: ["Staff"],
     checkInStatus: "out",
-    waiverId: "wav_002",
+    waiverId: "wav_001",
+    createdAt: isoAtOffset(-260, 9, 0),
     staffProfile: {
       isStaff: true,
       staffId: "staff_004",
@@ -287,16 +329,16 @@ export const customers: Customer[] = [
       status: "active",
       staffPin: "4444",
       locations: ["loc_001"],
-      assignedPrograms: ["prog_202", "prog_301"],
-      permissions: ["editPrograms", "rosterAccess"],
-      startDate: "2024-09-15",
+      assignedPrograms: ["prog_202", "prog_303"],
+      permissions: ["rosterAccess", "messageAssignedParticipants", "editPrograms"],
+      startDate: dateKeyAtOffset(-240),
       certifications: ["Coach Level 1", "Belay Certified"],
       staffNotes: "Lead youth program coach.",
-      lastActive: "2026-05-24T11:55:00Z"
+      lastActive: isoAtOffset(0, 11, 55)
     }
   },
   {
-    id: "cust_staff_005",
+    id: "cust_staff_008",
     memberId: "S-2008",
     organizationId: "org_summit",
     locationId: "loc_001",
@@ -306,16 +348,17 @@ export const customers: Customer[] = [
     pronouns: "She/they",
     email: "iris.chen@example.com",
     phone: "(212) 555-3008",
-    dateOfBirth: "1990-06-30",
-    addressLine1: "15 Orchard St",
+    dateOfBirth: "1994-06-12",
+    addressLine1: "18 Hudson St",
     city: "New York",
     state: "NY",
-    postalCode: "10002",
-    emergencyContactName: "Avery Chen",
-    emergencyContactPhone: "(212) 555-9888",
+    postalCode: "10013",
+    emergencyContactName: "Cameron Chen",
+    emergencyContactPhone: "(212) 555-9008",
     tags: ["Staff"],
     checkInStatus: "out",
-    waiverId: "wav_002",
+    waiverId: "wav_001",
+    createdAt: isoAtOffset(-240, 9, 0),
     staffProfile: {
       isStaff: true,
       staffId: "staff_008",
@@ -324,66 +367,55 @@ export const customers: Customer[] = [
       staffPin: "8888",
       locations: ["loc_001"],
       assignedPrograms: ["prog_101"],
-      permissions: ["editPrograms", "rosterAccess"],
-      startDate: "2025-02-10",
+      permissions: ["rosterAccess", "messageAssignedParticipants", "editPrograms"],
+      startDate: dateKeyAtOffset(-220),
       certifications: ["Mobility Coach"],
       staffNotes: "Morning mobility instructor.",
-      lastActive: "2026-05-23T18:35:00Z"
+      lastActive: isoAtOffset(-1, 18, 35)
     }
   },
   {
-    id: "cust_f_001",
-    memberId: "F-3001",
-    organizationId: "org_riverbend",
-    locationId: "loc_101",
-    firstName: "Rowan",
-    lastName: "Pike",
-    preferredName: "Rowan",
-    pronouns: "They/them",
-    email: "rowan@riverbend.example",
-    phone: "(828) 555-4101",
-    dateOfBirth: "1992-04-14",
-    addressLine1: "12 Creek Rd",
-    city: "Asheville",
-    state: "NC",
-    postalCode: "28801",
-    emergencyContactName: "Leah Pike",
-    emergencyContactPhone: "(828) 555-4102",
-    tags: [],
-    checkInStatus: "out"
-  },
-  {
-    id: "cust_f_staff_001",
-    memberId: "FS-3101",
+    id: "cust_rb_001",
+    memberId: "RB-1001",
     organizationId: "org_riverbend",
     locationId: "loc_101",
     firstName: "Avery",
     lastName: "Morgan",
     preferredName: "Avery",
     pronouns: "She/her",
-    email: "owner@riverbend.example",
+    email: "avery.morgan@example.com",
     phone: "(828) 555-4201",
-    dateOfBirth: "1986-08-11",
-    addressLine1: "98 Orchard Lane",
+    dateOfBirth: "1987-05-06",
+    addressLine1: "22 Forest Rd",
     city: "Asheville",
     state: "NC",
     postalCode: "28804",
-    emergencyContactName: "Sky Morgan",
-    emergencyContactPhone: "(828) 555-4202",
-    tags: ["Staff"],
+    emergencyContactName: "Jamie Morgan",
+    emergencyContactPhone: "(828) 555-9201",
+    tags: ["Camp", "Riverbend"],
     checkInStatus: "out",
-    staffProfile: {
-      isStaff: true,
-      staffId: "staff_f_001",
-      role: "owner",
-      status: "active",
-      staffPin: "9111",
-      locations: ["loc_101", "loc_102"],
-      assignedPrograms: [],
-      permissions: ["manageStaff", "manageSettings", "manageProducts", "manageWaivers", "viewReports", "viewFinancialReports", "usePOS", "checkInCustomer", "checkOutCustomer"],
-      startDate: "2023-07-01",
-      staffNotes: "Riverbend owner",
-      lastActive: "2026-05-24T10:00:00Z"
-    }
+    createdAt: isoAtOffset(-45, 9, 0)
+  },
+  {
+    id: "cust_rb_002",
+    memberId: "RB-1002",
+    organizationId: "org_riverbend",
+    locationId: "loc_102",
+    firstName: "Luca",
+    lastName: "Bennett",
+    preferredName: "Luca",
+    pronouns: "He/him",
+    email: "luca.bennett@example.com",
+    phone: "(828) 555-4202",
+    dateOfBirth: "2012-07-19",
+    addressLine1: "91 Trail View",
+    city: "Asheville",
+    state: "NC",
+    postalCode: "28805",
+    emergencyContactName: "Avery Morgan",
+    emergencyContactPhone: "(828) 555-4201",
+    tags: ["Youth", "Riverbend"],
+    checkInStatus: "out",
+    createdAt: isoAtOffset(-12, 11, 20)
   }
 ];

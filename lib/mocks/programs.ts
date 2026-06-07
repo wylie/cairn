@@ -1,4 +1,10 @@
 import type { ClassCampSession, Program } from "@/types/domain";
+import { isoAt, daysFromNow, startOfThisWeek, startOfThisMonth, today } from "@/lib/demo/dates";
+
+const now = today();
+const weekStart = startOfThisWeek(now);
+const monthStart = startOfThisMonth(now);
+const day = (offset: number) => daysFromNow(offset, now);
 
 export const programs: Program[] = [
   {
@@ -101,6 +107,35 @@ export const programs: Program[] = [
     minimumAge: 9,
     maximumAge: 15,
     defaultInstructorId: "staff_004"
+  },
+  {
+    id: "prog_707",
+    organizationId: "org_summit",
+    title: "Private Lesson Intensive",
+    description: "One-on-one coaching blocks with flexible focus areas.",
+    category: "clinic",
+    programType: "appointment_session",
+    active: true,
+    colorToken: "red",
+    defaultCapacity: 1,
+    requiresWaiver: true,
+    requiredWaiverTemplateIds: ["wtpl_general"],
+    defaultInstructorId: "staff_004"
+  },
+  {
+    id: "prog_808",
+    organizationId: "org_summit",
+    title: "Weekend Skills Workshop",
+    description: "Short-format workshop for skill-building and community engagement.",
+    category: "clinic",
+    programType: "clinic",
+    active: true,
+    colorToken: "blue",
+    defaultCapacity: 20,
+    requiresWaiver: true,
+    requiredWaiverTemplateIds: ["wtpl_general"],
+    waitlistEnabled: true,
+    defaultInstructorId: "staff_002"
   }
 ];
 
@@ -115,8 +150,8 @@ export const classCampSessions: ClassCampSession[] = [
     waitlistEnabled: true,
     waitlistCount: 0,
     status: "scheduled",
-    startsAt: "2026-05-21T11:00:00Z",
-    endsAt: "2026-05-21T11:50:00Z",
+    startsAt: isoAt(now, 11, 0),
+    endsAt: isoAt(now, 11, 50),
     capacity: 20,
     enrolled: 14
   },
@@ -130,8 +165,8 @@ export const classCampSessions: ClassCampSession[] = [
     waitlistEnabled: true,
     waitlistCount: 2,
     status: "scheduled",
-    startsAt: "2026-06-15T13:00:00Z",
-    endsAt: "2026-06-15T20:00:00Z",
+    startsAt: isoAt(day(1), 13, 0),
+    endsAt: isoAt(day(1), 20, 0),
     capacity: 28,
     enrolled: 25
   },
@@ -145,8 +180,8 @@ export const classCampSessions: ClassCampSession[] = [
     waitlistEnabled: true,
     waitlistCount: 1,
     status: "scheduled",
-    startsAt: "2026-05-21T22:00:00Z",
-    endsAt: "2026-05-21T23:00:00Z",
+    startsAt: isoAt(day(0), 18, 30),
+    endsAt: isoAt(day(0), 19, 30),
     capacity: 18,
     enrolled: 9,
     seriesId: "series_yoga_weekly",
@@ -155,15 +190,15 @@ export const classCampSessions: ClassCampSession[] = [
   {
     id: "sess_004",
     programId: "prog_505",
-    locationId: "loc_001",
+    locationId: "loc_002",
     title: "Mountain Bike Skills",
     instructorStaffId: "staff_004",
     instructorName: "Iris Chen",
     waitlistEnabled: true,
     waitlistCount: 0,
     status: "scheduled",
-    startsAt: "2026-05-22T14:00:00Z",
-    endsAt: "2026-05-22T16:00:00Z",
+    startsAt: isoAt(day(2), 14, 0),
+    endsAt: isoAt(day(2), 16, 0),
     capacity: 12,
     enrolled: 8
   },
@@ -177,11 +212,91 @@ export const classCampSessions: ClassCampSession[] = [
     waitlistEnabled: true,
     waitlistCount: 3,
     status: "scheduled",
-    startsAt: "2026-06-22T13:00:00Z",
-    endsAt: "2026-06-22T20:00:00Z",
+    startsAt: isoAt(day(5), 13, 0),
+    endsAt: isoAt(day(5), 20, 0),
     capacity: 20,
     enrolled: 20,
     seriesId: "series_summer_camp_1",
     recurrenceRule: "FREQ=DAILY;BYDAY=MO,TU,WE,TH,FR"
+  },
+  {
+    id: "sess_006",
+    programId: "prog_303",
+    locationId: "loc_001",
+    title: "Intro to Climbing",
+    instructorStaffId: "staff_002",
+    instructorName: "Maya Lopez",
+    waitlistEnabled: true,
+    waitlistCount: 4,
+    status: "scheduled",
+    startsAt: isoAt(day(3), 17, 0),
+    endsAt: isoAt(day(3), 18, 30),
+    capacity: 16,
+    enrolled: 16
+  },
+  {
+    id: "sess_007",
+    programId: "prog_707",
+    locationId: "loc_001",
+    title: "Private Lesson Intensive",
+    instructorStaffId: "staff_004",
+    instructorName: "Iris Chen",
+    waitlistEnabled: false,
+    waitlistCount: 0,
+    status: "scheduled",
+    startsAt: isoAt(day(4), 15, 0),
+    endsAt: isoAt(day(4), 16, 0),
+    capacity: 1,
+    enrolled: 1
+  },
+  {
+    id: "sess_008",
+    programId: "prog_808",
+    locationId: "loc_002",
+    title: "Weekend Skills Workshop",
+    instructorStaffId: "staff_002",
+    instructorName: "Maya Lopez",
+    waitlistEnabled: true,
+    waitlistCount: 1,
+    status: "scheduled",
+    startsAt: isoAt(day(6), 10, 0),
+    endsAt: isoAt(day(6), 13, 0),
+    capacity: 20,
+    enrolled: 6
+  },
+  {
+    id: "sess_009",
+    programId: "prog_101",
+    locationId: "loc_001",
+    title: "Morning Mobility Flow",
+    instructorStaffId: "staff_004",
+    instructorName: "Iris Chen",
+    waitlistEnabled: true,
+    waitlistCount: 0,
+    status: "completed",
+    startsAt: isoAt(day(-2), 11, 0),
+    endsAt: isoAt(day(-2), 11, 50),
+    capacity: 20,
+    enrolled: 13,
+    seriesId: "series_mobility_weekly",
+    recurrenceRule: "FREQ=WEEKLY"
+  },
+  {
+    id: "sess_010",
+    programId: "prog_404",
+    locationId: "loc_001",
+    title: "Yoga Flow",
+    instructorStaffId: "staff_002",
+    instructorName: "Maya Lopez",
+    waitlistEnabled: true,
+    waitlistCount: 0,
+    status: "cancelled",
+    startsAt: isoAt(day(1), 22, 0),
+    endsAt: isoAt(day(1), 23, 0),
+    capacity: 18,
+    enrolled: 5,
+    cancelledAt: isoAt(now, 8, 45),
+    seriesId: "series_yoga_weekly",
+    recurrenceRule: "FREQ=WEEKLY"
   }
 ];

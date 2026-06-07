@@ -107,8 +107,9 @@ import { resolveTenant } from "@/lib/tenant/resolve";
 import { getCurrentOrgSlugClient } from "@/lib/tenant/client";
 import { parseOrgSlugFromPathname } from "@/lib/tenant/path";
 import { useSettingsState } from "@/lib/state/settings-state";
+import { shouldRefreshDemoSeed } from "@/lib/demo/seed";
 
-const BASE_DATE = "2026-05-20";
+const BASE_DATE = toDateKey(new Date());
 
 function toDateKey(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -138,7 +139,7 @@ function diffDays(fromKey: string, toKey?: string) {
 function isMinor(dateOfBirth?: string) {
   if (!dateOfBirth) return false;
   const birthYear = Number(dateOfBirth.slice(0, 4));
-  return Number.isFinite(birthYear) ? 2026 - birthYear < 18 : false;
+  return Number.isFinite(birthYear) ? new Date().getUTCFullYear() - birthYear < 18 : false;
 }
 
 function titleCase(value: string) {
@@ -1358,6 +1359,47 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
   };
 
   useEffect(() => {
+    const demoSeedVersionKey = buildScopedMockKey(activeOrgId, activeLocationId, "demoSeedVersion");
+    const storedSeedVersion = loadMockState(demoSeedVersionKey, "") as string;
+    if (shouldRefreshDemoSeed(activeOrgId, storedSeedVersion)) {
+      clearScopedMockState(activeOrgId, activeLocationId, [
+        "customers",
+        "billingAccounts",
+        "billingCredits",
+        "billingInvoices",
+        "billingStatements",
+        "membershipRenewals",
+        "billingRefunds",
+        "punchPasses",
+        "checkIns",
+        "memberships",
+        "transactions",
+        "products",
+        "inventoryAudit",
+        "productCategories",
+        "programs",
+        "sessions",
+        "registrations",
+        "registrationActivity",
+        "accessRecords",
+        "waivers",
+        "signedWaiverRecords",
+        "waiverTemplates",
+        "waiverTemplateVersions",
+        "households",
+        "householdMembers",
+        "rentableResources",
+        "reservations",
+        "maintenanceBlocks",
+        "communications",
+        "membershipCardEvents",
+        "operationsAlertOverrides",
+        "operationsManualAlerts",
+        "operationsTasks"
+      ]);
+      saveMockState(demoSeedVersionKey, BASE_DATE);
+    }
+
     const products = (loadMockState(storageKeys.products, seededProductsForOrg) as PosProduct[]).map(normalizeProductForState);
     const categories = loadMockState(storageKeys.productCategories, seededProductCategoriesForOrg) as ProductCategoryRecord[];
     const inventoryAudit = loadMockState(storageKeys.inventoryAudit, []) as InventoryAuditEntry[];

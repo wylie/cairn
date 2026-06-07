@@ -1,4 +1,5 @@
 import type { MaintenanceBlock, RentableResource, ReservationRecord } from "@/types/domain";
+import { isoAtOffset } from "@/lib/demo/dates";
 
 export const rentableResources: RentableResource[] = [
   {
@@ -22,7 +23,7 @@ export const rentableResources: RentableResource[] = [
     cleanupBufferMinutes: 15,
     status: "active",
     color: "#0693C2",
-    createdAt: "2026-05-01T08:00:00Z"
+    createdAt: isoAtOffset(-30, 8, 0)
   },
   {
     id: "res_party_001",
@@ -43,7 +44,7 @@ export const rentableResources: RentableResource[] = [
     cleanupBufferMinutes: 30,
     status: "active",
     color: "#F59E0B",
-    createdAt: "2026-05-01T08:15:00Z"
+    createdAt: isoAtOffset(-29, 8, 15)
   },
   {
     id: "res_kayak_001",
@@ -63,7 +64,7 @@ export const rentableResources: RentableResource[] = [
     cleanupBufferMinutes: 15,
     status: "active",
     color: "#10B981",
-    createdAt: "2026-05-03T09:00:00Z"
+    createdAt: isoAtOffset(-27, 9, 0)
   },
   {
     id: "res_bike_001",
@@ -81,7 +82,7 @@ export const rentableResources: RentableResource[] = [
     waiverTemplateIds: ["wtpl_general"],
     status: "maintenance",
     color: "#EF4444",
-    createdAt: "2026-05-04T09:00:00Z"
+    createdAt: isoAtOffset(-26, 9, 0)
   },
   {
     id: "res_lesson_001",
@@ -100,7 +101,7 @@ export const rentableResources: RentableResource[] = [
     waiverTemplateIds: ["wtpl_general"],
     status: "active",
     color: "#8B5CF6",
-    createdAt: "2026-05-05T11:00:00Z"
+    createdAt: isoAtOffset(-25, 11, 0)
   }
 ];
 
@@ -115,14 +116,14 @@ export const reservations: ReservationRecord[] = [
     title: "Community Planning Session",
     customerId: "cust_001",
     participants: [{ customerId: "cust_001", displayName: "Maya Patel" }],
-    startsAt: "2026-05-21T15:00:00Z",
-    endsAt: "2026-05-21T17:00:00Z",
+    startsAt: isoAtOffset(0, 15, 0),
+    endsAt: isoAtOffset(0, 17, 0),
     setupBufferMinutes: 15,
     cleanupBufferMinutes: 15,
-    unavailableStartsAt: "2026-05-21T14:45:00Z",
-    unavailableEndsAt: "2026-05-21T17:15:00Z",
+    unavailableStartsAt: isoAtOffset(0, 14, 45),
+    unavailableEndsAt: isoAtOffset(0, 17, 15),
     totalPriceCents: 7500,
-    createdAt: "2026-05-18T13:00:00Z",
+    createdAt: isoAtOffset(-3, 13, 0),
     createdByStaffId: "staff_001",
     createdByStaffName: "Taylor Nguyen"
   },
@@ -137,18 +138,18 @@ export const reservations: ReservationRecord[] = [
     customerId: "cust_003",
     householdId: "hh_001",
     participants: [{ customerId: "cust_003", householdId: "hh_001", displayName: "Alex Rivera" }],
-    startsAt: "2026-05-21T13:00:00Z",
-    endsAt: "2026-05-21T16:00:00Z",
+    startsAt: isoAtOffset(0, 13, 0),
+    endsAt: isoAtOffset(0, 16, 0),
     cleanupBufferMinutes: 15,
-    unavailableStartsAt: "2026-05-21T13:00:00Z",
-    unavailableEndsAt: "2026-05-21T16:15:00Z",
+    unavailableStartsAt: isoAtOffset(0, 13, 0),
+    unavailableEndsAt: isoAtOffset(0, 16, 15),
     waiverTemplateIds: ["wtpl_general"],
     requiresWaiver: true,
     totalPriceCents: 9600,
-    checkedInAt: "2026-05-21T12:55:00Z",
+    checkedInAt: isoAtOffset(0, 12, 55),
     checkedInByStaffId: "staff_002",
     checkedInByStaffName: "Maya Lopez",
-    createdAt: "2026-05-20T11:00:00Z",
+    createdAt: isoAtOffset(-1, 11, 0),
     createdByStaffId: "staff_002",
     createdByStaffName: "Maya Lopez"
   },
@@ -164,20 +165,40 @@ export const reservations: ReservationRecord[] = [
     householdId: "hh_001",
     participants: [
       { customerId: "cust_003", householdId: "hh_001", displayName: "Alex Rivera" },
-      { customerId: "cust_004", householdId: "hh_001", displayName: "Jordan Rivera" }
+      { customerId: "cust_004", householdId: "hh_001", displayName: "Sam Noaccess" }
     ],
-    startsAt: "2026-05-24T17:00:00Z",
-    endsAt: "2026-05-24T19:00:00Z",
+    startsAt: isoAtOffset(3, 17, 0),
+    endsAt: isoAtOffset(3, 19, 0),
     setupBufferMinutes: 30,
     cleanupBufferMinutes: 30,
-    unavailableStartsAt: "2026-05-24T16:30:00Z",
-    unavailableEndsAt: "2026-05-24T19:30:00Z",
+    unavailableStartsAt: isoAtOffset(3, 16, 30),
+    unavailableEndsAt: isoAtOffset(3, 19, 30),
     waiverTemplateIds: ["wtpl_general"],
     requiresWaiver: true,
     totalPriceCents: 18000,
-    createdAt: "2026-05-15T15:00:00Z",
+    createdAt: isoAtOffset(-6, 15, 0),
     createdByStaffId: "staff_001",
     createdByStaffName: "Taylor Nguyen"
+  },
+  {
+    id: "rsv_004",
+    organizationId: "org_summit",
+    locationId: "loc_002",
+    resourceId: "res_bike_001",
+    reservationType: "equipment_checkout",
+    status: "checked_out",
+    title: "Overdue Bike Rental",
+    customerId: "cust_006",
+    participants: [{ customerId: "cust_006", displayName: "Jimbo James" }],
+    startsAt: isoAtOffset(-1, 9, 0),
+    endsAt: isoAtOffset(-1, 12, 0),
+    unavailableStartsAt: isoAtOffset(-1, 9, 0),
+    unavailableEndsAt: isoAtOffset(-1, 12, 15),
+    totalPriceCents: 9900,
+    checkedInAt: isoAtOffset(-1, 8, 55),
+    createdAt: isoAtOffset(-2, 16, 10),
+    createdByStaffId: "staff_003",
+    createdByStaffName: "Sam Rivera"
   }
 ];
 
@@ -189,10 +210,10 @@ export const maintenanceBlocks: MaintenanceBlock[] = [
     resourceId: "res_bike_001",
     title: "Bike under repair",
     description: "Brake bleed and fork service in progress.",
-    startsAt: "2026-05-20T08:00:00Z",
-    endsAt: "2026-05-27T18:00:00Z",
-    createdAt: "2026-05-20T07:30:00Z",
+    startsAt: isoAtOffset(0, 8, 0),
+    endsAt: isoAtOffset(7, 18, 0),
+    createdAt: isoAtOffset(0, 7, 30),
     createdByStaffId: "staff_003",
-    createdByStaffName: "Sam Carter"
+    createdByStaffName: "Sam Rivera"
   }
 ];

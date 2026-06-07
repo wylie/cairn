@@ -6,6 +6,7 @@ import type {
   BillingStatement,
   MembershipRenewalRecord
 } from "@/types/domain";
+import { dateKeyAtOffset, isoAtOffset } from "@/lib/demo/dates";
 
 export const billingAccounts: BillingAccount[] = [
   {
@@ -21,8 +22,8 @@ export const billingAccounts: BillingAccount[] = [
     autoApplyCredits: true,
     paymentMethodTypes: ["credit_card", "store_credit"],
     lastPaymentMethodLabel: "Visa ending 4242",
-    createdAt: "2026-04-01T10:00:00Z",
-    updatedAt: "2026-06-01T08:45:00Z"
+    createdAt: isoAtOffset(-66, 10, 0),
+    updatedAt: isoAtOffset(-1, 8, 45)
   },
   {
     id: "billacct_hh_003",
@@ -37,8 +38,8 @@ export const billingAccounts: BillingAccount[] = [
     autoApplyCredits: true,
     paymentMethodTypes: ["credit_card", "store_credit"],
     lastPaymentMethodLabel: "Visa ending 4242",
-    createdAt: "2026-03-10T13:15:00Z",
-    updatedAt: "2026-05-30T11:20:00Z"
+    createdAt: isoAtOffset(-90, 13, 15),
+    updatedAt: isoAtOffset(-2, 11, 20)
   },
   {
     id: "billacct_cust_005",
@@ -53,8 +54,8 @@ export const billingAccounts: BillingAccount[] = [
     autoApplyCredits: false,
     paymentMethodTypes: ["cash"],
     lastPaymentMethodLabel: "Pay at front desk",
-    createdAt: "2026-04-18T10:30:00Z",
-    updatedAt: "2026-05-22T10:25:00Z"
+    createdAt: isoAtOffset(-18, 10, 30),
+    updatedAt: isoAtOffset(0, 10, 25)
   }
 ];
 
@@ -69,7 +70,7 @@ export const billingCreditEntries: BillingCreditEntry[] = [
     householdId: "hh_003",
     customerId: "cust_001",
     refundId: "billrefund_001",
-    createdAt: "2026-05-30T11:20:00Z",
+    createdAt: isoAtOffset(-2, 11, 20),
     createdByStaffId: "staff_002",
     createdByStaffName: "Maya Lopez"
   },
@@ -83,7 +84,7 @@ export const billingCreditEntries: BillingCreditEntry[] = [
     householdId: "hh_001",
     customerId: "cust_003",
     invoiceId: "inv_002",
-    createdAt: "2026-05-28T09:00:00Z",
+    createdAt: isoAtOffset(-5, 9, 0),
     createdByStaffId: "staff_001",
     createdByStaffName: "Taylor Nguyen"
   }
@@ -95,8 +96,8 @@ export const billingInvoices: BillingInvoice[] = [
     organizationId: "org_summit",
     billingAccountId: "billacct_hh_003",
     invoiceNumber: "INV-2026-001",
-    issueDate: "2026-05-12",
-    dueDate: "2026-05-12",
+    issueDate: dateKeyAtOffset(-25),
+    dueDate: dateKeyAtOffset(-25),
     status: "paid",
     lineItems: [
       {
@@ -123,16 +124,16 @@ export const billingInvoices: BillingInvoice[] = [
     renewalId: "renew_001",
     transactionId: "txn_seed_003",
     notes: "Auto-renewal completed successfully.",
-    createdAt: "2026-05-12T07:00:00Z",
-    updatedAt: "2026-05-12T07:05:00Z"
+    createdAt: isoAtOffset(-25, 7, 0),
+    updatedAt: isoAtOffset(-25, 7, 5)
   },
   {
     id: "inv_002",
     organizationId: "org_summit",
     billingAccountId: "billacct_hh_001",
     invoiceNumber: "INV-2026-014",
-    issueDate: "2026-05-20",
-    dueDate: "2026-05-27",
+    issueDate: dateKeyAtOffset(-5),
+    dueDate: dateKeyAtOffset(2),
     status: "overdue",
     lineItems: [
       {
@@ -158,16 +159,16 @@ export const billingInvoices: BillingInvoice[] = [
     membershipId: "mem_003",
     renewalId: "renew_002",
     notes: "Retry after billing contact update.",
-    createdAt: "2026-05-20T08:00:00Z",
-    updatedAt: "2026-06-02T09:10:00Z"
+    createdAt: isoAtOffset(-5, 8, 0),
+    updatedAt: isoAtOffset(-1, 9, 10)
   },
   {
     id: "inv_003",
     organizationId: "org_summit",
     billingAccountId: "billacct_cust_005",
     invoiceNumber: "INV-2026-021",
-    issueDate: "2026-06-05",
-    dueDate: "2026-06-12",
+    issueDate: dateKeyAtOffset(0),
+    dueDate: dateKeyAtOffset(7),
     status: "open",
     lineItems: [
       {
@@ -190,7 +191,7 @@ export const billingInvoices: BillingInvoice[] = [
     customerId: "cust_005",
     membershipId: "mem_004",
     renewalId: "renew_003",
-    createdAt: "2026-06-05T08:00:00Z"
+    createdAt: isoAtOffset(0, 8, 0)
   }
 ];
 
@@ -200,9 +201,9 @@ export const billingStatements: BillingStatement[] = [
     organizationId: "org_summit",
     billingAccountId: "billacct_hh_001",
     statementNumber: "STMT-2026-001",
-    statementDate: "2026-06-01",
-    periodStart: "2026-05-01",
-    periodEnd: "2026-05-31",
+    statementDate: dateKeyAtOffset(0),
+    periodStart: dateKeyAtOffset(-30),
+    periodEnd: dateKeyAtOffset(-1),
     invoiceIds: ["inv_002"],
     chargesCents: 10000,
     creditsCents: 1500,
@@ -211,16 +212,16 @@ export const billingStatements: BillingStatement[] = [
     balanceCents: 8500,
     customerId: "cust_003",
     householdId: "hh_001",
-    createdAt: "2026-06-01T08:30:00Z"
+    createdAt: isoAtOffset(0, 8, 30)
   },
   {
     id: "stmt_002",
     organizationId: "org_summit",
     billingAccountId: "billacct_hh_003",
     statementNumber: "STMT-2026-002",
-    statementDate: "2026-06-01",
-    periodStart: "2026-05-01",
-    periodEnd: "2026-05-31",
+    statementDate: dateKeyAtOffset(0),
+    periodStart: dateKeyAtOffset(-30),
+    periodEnd: dateKeyAtOffset(-1),
     invoiceIds: ["inv_001"],
     chargesCents: 10900,
     creditsCents: 5000,
@@ -229,7 +230,7 @@ export const billingStatements: BillingStatement[] = [
     balanceCents: 5000,
     customerId: "cust_001",
     householdId: "hh_003",
-    createdAt: "2026-06-01T09:00:00Z"
+    createdAt: isoAtOffset(0, 9, 0)
   }
 ];
 
@@ -243,12 +244,12 @@ export const membershipRenewals: MembershipRenewalRecord[] = [
     householdId: "hh_003",
     billingFrequency: "monthly",
     renewalAmountCents: 10900,
-    renewalDate: "2026-05-12",
+    renewalDate: dateKeyAtOffset(12),
     status: "succeeded",
     invoiceId: "inv_001",
     transactionId: "txn_seed_003",
-    createdAt: "2026-05-12T06:55:00Z",
-    processedAt: "2026-05-12T07:05:00Z"
+    createdAt: isoAtOffset(-25, 6, 55),
+    processedAt: isoAtOffset(-25, 7, 5)
   },
   {
     id: "renew_002",
@@ -259,14 +260,14 @@ export const membershipRenewals: MembershipRenewalRecord[] = [
     householdId: "hh_001",
     billingFrequency: "monthly",
     renewalAmountCents: 10000,
-    renewalDate: "2026-06-02",
+    renewalDate: dateKeyAtOffset(4),
     status: "failed",
     invoiceId: "inv_002",
     failureReason: "Card expired",
-    nextRetryAt: "2026-06-06T09:00:00Z",
-    grantTemporaryAccessUntil: "2026-06-09",
-    createdAt: "2026-06-02T08:45:00Z",
-    processedAt: "2026-06-02T09:05:00Z"
+    nextRetryAt: isoAtOffset(1, 9, 0),
+    grantTemporaryAccessUntil: dateKeyAtOffset(3),
+    createdAt: isoAtOffset(-4, 8, 45),
+    processedAt: isoAtOffset(-4, 9, 5)
   },
   {
     id: "renew_003",
@@ -276,10 +277,10 @@ export const membershipRenewals: MembershipRenewalRecord[] = [
     customerId: "cust_005",
     billingFrequency: "monthly",
     renewalAmountCents: 8500,
-    renewalDate: "2026-06-12",
+    renewalDate: dateKeyAtOffset(2),
     status: "pending",
     invoiceId: "inv_003",
-    createdAt: "2026-06-05T08:00:00Z"
+    createdAt: isoAtOffset(0, 8, 0)
   }
 ];
 
@@ -292,7 +293,7 @@ export const billingRefunds: BillingRefundRecord[] = [
     type: "store_credit",
     reason: "Class cancellation credit",
     relatedReceiptId: "txn_seed_003",
-    createdAt: "2026-05-30T11:20:00Z",
+    createdAt: isoAtOffset(-2, 11, 20),
     createdByStaffId: "staff_002",
     createdByStaffName: "Maya Lopez"
   }

@@ -3,6 +3,12 @@
 ## Overview
 These are the current demo accounts used for platform admin, staff, and customer portal access.
 
+The seeded demo organizations are:
+- `summit`
+- `riverbend`
+
+These organizations use living demo data generated relative to the current date. Activity stays current without requiring hardcoded date maintenance.
+
 ## Authentication Rules
 - staff use email and password for login
 - staff PINs are used for workstation switching and protected prompts
@@ -44,3 +50,4 @@ These are the current demo accounts used for platform admin, staff, and customer
 ## Related Documentation
 - [Permissions Matrix](./permissions-matrix.md)
 - [Environments](./environments.md)
+- [Developer: Demo Data](../developer/demo-data.md)

@@ -131,7 +131,9 @@ All screenshots and walkthroughs throughout the documentation reference this dem
 ## Demo Environment
 The current hosted demo is documented in [Reference: Environments](./docs/reference/environments.md).
 
-Use that page for demo access notes. All other documentation assumes you are working in your Cairn instance.
+Use that page for demo access notes. The seeded demo organizations now use living date-relative data so dashboards, check-ins, sessions, receipts, alerts, and reports stay current as the calendar moves forward.
+
+All other documentation assumes you are working in your Cairn instance.
 
 ## Contributing
 1. Read the relevant facility or developer guide before changing behavior.

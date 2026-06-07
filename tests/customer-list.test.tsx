@@ -92,6 +92,9 @@ async function completeNewCustomerWizard(
 describe("CustomerList", () => {
   beforeEach(() => {
     window.history.pushState({}, "", "/customers");
+    if (typeof window.localStorage.clear === "function") {
+      window.localStorage.clear();
+    }
   });
 
   it("renders customers", () => {

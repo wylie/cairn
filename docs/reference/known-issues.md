@@ -6,6 +6,12 @@
 - Provider integrations remain placeholders, so communications, billing, and payment behaviors are not yet backed by live services.
 - Some export, download, and email actions are placeholders rather than production-ready implementations.
 
+## Demo Data Status
+The seeded demo organizations now use living date-relative data instead of fixed stale timestamps.
+
+Remaining limitation:
+- once a demo user changes local mock state, their browser keeps those changes until the daily demo seed version refresh or local storage is cleared
+
 ## Operational Guidance
 - Treat the current implementation as an actively evolving product build.
 - Validate high-risk workflows manually when changing permissions, privacy rules, receipts, waivers, or check-in logic.

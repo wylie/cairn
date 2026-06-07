@@ -17,4 +17,15 @@ export const organizations: Organization[] = [
   }
 ];
 
+export const demoOrganizationIds = organizations.map((entry) => entry.id);
+export const demoOrganizationSlugs = organizations.map((entry) => entry.slug);
+
+export function isDemoOrganizationId(organizationId: string) {
+  return demoOrganizationIds.includes(organizationId);
+}
+
+export function isDemoOrganizationSlug(orgSlug: string) {
+  return demoOrganizationSlugs.includes(orgSlug);
+}
+
 export const defaultOrganization = organizations[0];

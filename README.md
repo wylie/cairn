@@ -1,59 +1,74 @@
 # Cairn
 
-Cairn is a modern web-based SaaS app for gym and recreation facility operations.
+Cairn is a multi-tenant facility operations platform for recreation centers, gyms, camps, outdoor programs, and similar membership- and registration-driven organizations.
 
-## Stack
-- Next.js App Router
-- TypeScript
-- Tailwind CSS
-- shadcn/ui-style reusable components
-- Supabase-ready architecture with mock data for now
-- Stripe-ready placeholders (no billing implementation yet)
-- Vitest + React Testing Library
+This README is now a documentation hub. It points you to focused markdown docs instead of acting as a catch-all reference.
 
-## Core routes
-- `/dashboard`
-- `/customers`
-- `/customers/[id]`
-- `/check-in`
-- `/calendar`
-- `/programs`
-- `/pos`
-- `/reports`
-- `/settings`
+## Documentation Paths
 
-## Sample local URLs
+### I'm a Facility
+- [Documentation Home](./docs/README.md)
+- [Facility Guide Index](./docs/facility/README.md)
+- [Facility Onboarding](./docs/facility/onboarding.md)
+- [Branding](./docs/facility/branding.md)
+- [Alerts & Tasks](./docs/facility/alerts.md)
+- [Customers](./docs/facility/customers.md)
+- [Households](./docs/facility/households.md)
+- [Memberships](./docs/facility/memberships.md)
+- [Waivers](./docs/facility/waivers.md)
+- [Programs](./docs/facility/programs.md)
+- [Registrations](./docs/facility/registrations.md)
+- [Check-In](./docs/facility/check-in.md)
+- [POS](./docs/facility/pos.md)
+- [Products](./docs/facility/products.md)
+- [Rentals](./docs/facility/rentals.md)
+- [Communications](./docs/facility/communications.md)
+- [Billing](./docs/facility/billing.md)
+- [Analytics](./docs/facility/analytics.md)
+- [Customer Portal](./docs/facility/customer-portal.md)
+- [Digital Membership Cards](./docs/facility/digital-membership-cards.md)
+- [Integrations Foundation](./docs/facility/integrations-foundation.md)
+
+### I'm a Developer
+- [Developer Guide Index](./docs/developer/README.md)
+- [System Architecture](./docs/developer/system-architecture.md)
+- [Local Development](./docs/developer/local-development.md)
+- [Testing](./docs/developer/testing.md)
+- [Organizations & Provisioning](./docs/developer/organizations.md)
+- [Platform Administration](./docs/developer/platform-administration.md)
+- [Permissions Reference](./docs/reference/permissions.md)
+- [Page Access Matrix](./docs/reference/page-access-matrix.md)
+- [Routes & Portals](./docs/reference/routes-and-portals.md)
+
+## Demo / Local URLs
 - Public marketing: `/`
 - Demo facility landing: `/f/summit`
-- Demo facility landing (alt org): `/f/riverbend`
-- Customer portal dashboard: `/p/summit/account/dashboard`
-- Customer portal direct dashboard alias: `/p/summit/dashboard`
-- Customer portal memberships: `/p/summit/account/memberships`
-- Customer membership detail example: `/p/summit/memberships/mem_001`
-- Customer portal registrations: `/p/summit/account/registrations`
-- Customer registration detail example: `/p/summit/registrations/reg_001`
-- Customer portal purchases: `/p/summit/account/purchases`
-- Customer receipt detail example: `/p/summit/purchases/txn_001`
-- Customer portal household: `/p/summit/account/household`
-- Public program catalog: `/p/summit/programs`
+- Alternate facility landing: `/f/riverbend`
 - Staff portal dashboard: `/o/summit/dashboard`
+- Customer portal dashboard: `/p/summit/account/dashboard`
+- Customer portal alias: `/p/summit/dashboard`
+- Public program catalog: `/p/summit/programs`
+- Public checkout: `/p/summit/checkout`
+- Platform admin: `/admin`
 
-## Run locally
+## Local Development
 ```bash
 npm install
 npm run dev
 ```
 
-## Run tests
+## Validation
 ```bash
 npm test
-npm run test:watch
-```
-
-## Build
-```bash
 npm run build
 ```
 
-## Docs
-See `/docs` for product vision, architecture, schema plan, roadmap, testing strategy, and style guide.
+## Existing Documentation
+The repo still includes the earlier product and planning docs in `docs/`, including:
+- [Architecture Notes](./docs/architecture.md)
+- [Database Schema Notes](./docs/database-schema.md)
+- [Known Issues](./docs/known-issues.md)
+- [Product Vision](./docs/product-vision.md)
+- [Roadmap](./docs/roadmap.md)
+- [Style Guide](./docs/style-guide.md)
+- [Testing Strategy](./docs/testing-strategy.md)

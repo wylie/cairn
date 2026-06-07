@@ -4,9 +4,17 @@ These demo accounts are for local development only.
 
 ## Authentication Notes
 
-- Login password: used to sign into Cairn at `/login`.
+- Login password: used to sign into Cairn at `/login`, `/o/:orgSlug/login`, `/p/:orgSlug/login`, or `/admin/login`.
 - Staff PIN: used for quick workstation switching and manager approval prompts inside the app.
 - Staff PIN does **not** replace login password authentication.
+- Customer portal users authenticate with email + password only.
+- Platform administrators authenticate with email + password only.
+
+## Platform Admin
+
+| Role | Login Email | Password | Staff PIN | Permission Summary |
+| --- | --- | --- | --- | --- |
+| Platform Administrator | `platform@cairn.app` | `dev1234` | N/A | Global `/admin` access for organization provisioning and platform controls |
 
 ## Summit Rec Collective (`summit`)
 
@@ -28,3 +36,11 @@ These demo accounts are for local development only.
 | Role | Login Email | Password | Staff PIN | Permission Summary |
 | --- | --- | --- | --- | --- |
 | Manager (multi-org) | `multi@example.com` | `dev1234` | Uses active staff PIN after org/location context | Access to both Summit and Riverbend organizations |
+
+## Customer Portal Demo Users
+
+| Customer | Login Email | Password | Staff PIN | Permission Summary |
+| --- | --- | --- | --- | --- |
+| Maya Patel | `maya.patel@example.com` | `dev1234` | N/A | Summit customer portal access |
+| Alex Rivera | `alex.rivera@example.com` | `dev1234` | N/A | Summit customer portal access |
+| Oslo Fisher | `oslo.fisher@example.com` | `dev1234` | N/A | Summit customer portal access |

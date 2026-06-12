@@ -131,7 +131,7 @@ Facilities:
 All screenshots and walkthroughs throughout the documentation reference this demo environment unless otherwise noted.
 
 ## Pricing and Support
-Cairn is the facility operations product built by Stone Cairn.
+Cairn is the facility operations product built by Stone Cairn. Stone Cairn is an Argon Collective LLC company.
 
 Pilot pricing is informational inside the application. Cairn does not enforce feature gates, staff seat limits, customer limits, household limits, or transaction fees. Organizations scale by facilities operated and by the support relationship they choose.
 

@@ -1,6 +1,7 @@
 import { memo } from "react";
 import Link from "next/link";
 import { LayoutDashboard, Bell, Home, Users, ScanLine, Calendar, Boxes, CreditCard, BarChart3, Settings, Tags, UserCog, ClipboardList, FileCheck2, ShieldCheck, MessagesSquare, TentTree, PlugZap } from "lucide-react";
+import { getActiveRouteHref } from "@/lib/navigation/route-matching";
 import { cn } from "@/lib/utils";
 import type { StaffPermission } from "@/types/domain";
 
@@ -113,16 +114,16 @@ function SidebarNavInner({
 
   const renderGroup = (heading: string, items: NavItem[]) => {
     if (items.length === 0) return null;
+    const activeHref = getActiveRouteHref(
+      pathname,
+      visibleItems.map((item) => ({ href: currentOrgSlug ? `/o/${currentOrgSlug}${item.href}` : buildOrgHref(pathname, item.href) }))
+    );
     return (
       <div className="space-y-1">
         <p className="px-2 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{heading}</p>
         {items.map((item) => {
           const orgHref = currentOrgSlug ? `/o/${currentOrgSlug}${item.href}` : buildOrgHref(pathname, item.href);
-          const isActive =
-            pathname === item.href ||
-            Boolean(pathname?.startsWith(`${item.href}/`)) ||
-            pathname === orgHref ||
-            Boolean(pathname?.startsWith(`${orgHref}/`));
+          const isActive = activeHref === orgHref;
           return (
             <Link
               key={item.href}

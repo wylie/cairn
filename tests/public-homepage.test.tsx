@@ -14,10 +14,19 @@ describe("Public homepage", () => {
     expect(screen.getByText(/What we don/i)).toBeInTheDocument();
     expect(screen.getByText(/No feature gating/i)).toBeInTheDocument();
     expect(screen.getByText(/30-day trial/i)).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: /Start Free Trial/i })[0]).toHaveAttribute("href", "/request-demo?intent=trial");
-    expect(screen.getAllByRole("link", { name: /Explore Demo Facility/i })[0]).toHaveAttribute("href", "/f/summit");
-    expect(screen.getAllByRole("link", { name: /Request Live Demo/i })[0]).toHaveAttribute("href", "/request-demo");
-    expect(screen.getAllByRole("link", { name: /Contact Us/i })[0]).toHaveAttribute("href", "mailto:support@stonecairn.app");
+    expect(screen.getAllByRole("link", { name: /Start Free Trial/i })).toHaveLength(1);
+    expect(screen.getByRole("link", { name: /Start Free Trial/i })).toHaveAttribute("href", "/request-demo?intent=trial");
+    expect(screen.getAllByRole("link", { name: /Request Live Demo/i })).toHaveLength(1);
+    expect(screen.getByRole("link", { name: /Request Live Demo/i })).toHaveAttribute("href", "/request-demo");
+    expect(screen.getAllByRole("link", { name: /Explore Demo Facility/i })).toHaveLength(1);
+    expect(screen.getByRole("link", { name: /Explore Demo Facility/i })).toHaveAttribute("href", "/f/summit");
+    expect(screen.getAllByRole("link", { name: /Contact Us/i }).map((link) => link.getAttribute("href"))).toEqual(
+      expect.arrayContaining(["mailto:hello@stonecairn.app", "mailto:support@stonecairn.app"])
+    );
+    expect(screen.getByText(/Need support for a larger organization/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Starting at \$599/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/An Argon Collective LLC company/i)).toBeInTheDocument();
+    expect(screen.getByText(/© 2026 Argon Collective LLC/i)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Staff Login/i })).not.toBeInTheDocument();
   });
 

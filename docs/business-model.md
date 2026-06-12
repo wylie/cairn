@@ -4,6 +4,8 @@ Cairn is the facility operations product built by Stone Cairn.
 
 Production domain: `stonecairn.app`
 
+Legal ownership: Argon Collective LLC.
+
 Pilot and demo environments may continue to run on the current hosted deployment while Cairn prepares for production operations.
 
 ## Pricing Philosophy
@@ -28,7 +30,9 @@ Organizations pay based on:
 | --- | --- | --- | --- | --- |
 | Single Facility | $149/month | $1,490/year | 1 facility | Independent facilities |
 | Multi-Facility | $299/month | $2,990/year | Up to 5 facilities | Growing multi-location organizations |
-| Enterprise | Starting at $599/month | Starting at $5,990/year | Unlimited facilities | Associations, networks, and complex implementations |
+| Enterprise | Let's talk | Let's talk | Unlimited facilities | Associations, networks, and complex implementations |
+
+Public marketing should not show Enterprise pricing during the pilot. Use: "Need support for a larger organization? Let's talk."
 
 ## Included In Every Plan
 - Unlimited staff accounts

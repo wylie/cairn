@@ -116,4 +116,17 @@ describe("SidebarNav", () => {
       expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
     });
   });
+
+  it("highlights only one active item for detail routes", () => {
+    const { container } = render(<SidebarNav pathname="/o/summit/customers/cust_001" currentOrgSlug="summit" />);
+    expect(screen.getByRole("link", { name: "Customers" })).toHaveClass("bg-primary");
+    expect(container.querySelectorAll("a.bg-primary")).toHaveLength(1);
+  });
+
+  it("does not activate partial sibling route matches", () => {
+    const { container } = render(<SidebarNav pathname="/o/summit/products" currentOrgSlug="summit" />);
+    expect(screen.getByRole("link", { name: "Products" })).toHaveClass("bg-primary");
+    expect(screen.getByRole("link", { name: "POS" })).not.toHaveClass("bg-primary");
+    expect(container.querySelectorAll("a.bg-primary")).toHaveLength(1);
+  });
 });

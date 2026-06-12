@@ -48,7 +48,7 @@ const audiences = [
 ];
 
 export default function HomePage() {
-  const pricingPlans = Object.values(cairnPricingPlans);
+  const pricingPlans = Object.values(cairnPricingPlans).filter((plan) => plan.key !== "enterprise");
   const supportTiers = Object.values(cairnSupportTiers);
 
   return (
@@ -56,7 +56,7 @@ export default function HomePage() {
       <PublicAnalytics />
       <main className="mx-auto max-w-6xl space-y-16 px-6 py-14 md:px-10">
         <section className="rounded-2xl border border-slate-200 bg-white/90 p-8 shadow-sm md:p-12">
-          <p className="text-sm font-semibold uppercase tracking-wide text-sky-700">Built by Stone Cairn</p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-sky-700">Built by Stone Cairn.</p>
           <h1 className="mt-3 max-w-3xl text-3xl font-semibold leading-tight md:text-5xl">Cairn</h1>
           <p className="mt-4 max-w-3xl text-base text-slate-600 md:text-lg">
             Modern facility operations software for recreation centers, climbing gyms, camps, and community organizations.
@@ -64,20 +64,6 @@ export default function HomePage() {
           <p className="mt-3 max-w-3xl text-base text-slate-600">
             Cairn helps teams manage customers, check-ins, memberships, programs, POS, waivers, households, staff, and reports from one web-based system.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/request-demo?intent=trial" className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:opacity-90">
-              Start Free Trial
-            </Link>
-            <Link href="/f/summit" className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:opacity-90">
-              Explore Demo Facility
-            </Link>
-            <Link href="/request-demo" className="inline-flex min-h-11 items-center rounded-md border border-slate-300 px-5 text-sm font-medium text-slate-700 hover:bg-slate-50">
-              Request Live Demo
-            </Link>
-            <a href="mailto:support@stonecairn.app" className="inline-flex min-h-11 items-center rounded-md border border-slate-300 px-5 text-sm font-medium text-slate-700 hover:bg-slate-50">
-              Contact Us
-            </a>
-          </div>
         </section>
 
         <section aria-label="Feature highlights" className="space-y-4">
@@ -167,6 +153,16 @@ export default function HomePage() {
                 </ul>
               </article>
             ))}
+            <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <p className="text-lg font-semibold">Larger Organizations</p>
+              <p className="mt-2 text-sm text-slate-600">Need support for a larger organization? Let&apos;s talk.</p>
+              <div className="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-700">
+                We can discuss multi-site rollout, onboarding, migration assistance, staff training, and implementation planning.
+              </div>
+              <a href="mailto:hello@stonecairn.app" className="mt-5 inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:opacity-90">
+                Contact Us
+              </a>
+            </article>
           </div>
         </section>
 
@@ -221,14 +217,8 @@ export default function HomePage() {
         <section className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm md:p-10">
           <h2 className="text-2xl font-semibold">Ready to run your facility with Cairn?</h2>
           <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-            <Link href="/request-demo?intent=trial" className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:opacity-90">
-              Start Free Trial
-            </Link>
             <Link href="/f/summit" className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:opacity-90">
               Explore Demo Facility
-            </Link>
-            <Link href="/request-demo" className="inline-flex min-h-11 items-center rounded-md border border-slate-300 px-5 text-sm font-medium text-slate-700 hover:bg-slate-50">
-              Request Live Demo
             </Link>
             <a href="mailto:support@stonecairn.app" className="inline-flex min-h-11 items-center rounded-md border border-slate-300 px-5 text-sm font-medium text-slate-700 hover:bg-slate-50">
               Contact Us
@@ -241,12 +231,15 @@ export default function HomePage() {
           <div>
             <p className="font-semibold text-slate-900">Cairn</p>
             <p>Facility Operations Software</p>
-            <p>Built by Stone Cairn</p>
+            <p>Built by Stone Cairn.</p>
+            <p>An Argon Collective LLC company</p>
+            <p className="mt-2">© 2026 Argon Collective LLC</p>
           </div>
           <nav className="flex flex-wrap gap-4">
             <Link href="/docs" className="hover:text-slate-900">Documentation</Link>
             <a href="mailto:support@stonecairn.app" className="hover:text-slate-900">Support</a>
             <a href="mailto:hello@stonecairn.app" className="hover:text-slate-900">Contact</a>
+            <Link href="/legal" className="hover:text-slate-900">Legal</Link>
           </nav>
         </div>
       </footer>

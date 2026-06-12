@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 import { BellRing, Building2, LayoutDashboard, Layers3, FlaskConical, CreditCard, Settings, PlugZap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getActiveRouteHref } from "@/lib/navigation/route-matching";
 import { getSessionFromCookieClient } from "@/lib/tenant/client";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +28,7 @@ export function PlatformAdminShell({ children }: { children: React.ReactNode }) 
     () => (isSupportStaff ? navItems.filter((item) => item.href === "/admin/support") : navItems),
     [isSupportStaff]
   );
+  const activeHref = getActiveRouteHref(pathname, visibleNavItems, { exactHrefs: ["/admin"] });
 
   const handleSignOut = async () => {
     await fetch("/api/auth/mock-logout", { method: "POST" });
@@ -46,7 +48,7 @@ export function PlatformAdminShell({ children }: { children: React.ReactNode }) 
           </p>
           <nav className="mt-5 space-y-1">
             {visibleNavItems.map((item) => {
-              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const active = activeHref === item.href;
               return (
                 <Link
                   key={item.href}

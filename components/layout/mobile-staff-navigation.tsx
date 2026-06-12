@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { Menu, Plus, X } from "lucide-react";
 import { buildOrgHref, getVisibleNavItems } from "@/components/layout/sidebar-nav";
 import { Button } from "@/components/ui/button";
+import { getActiveRouteHref } from "@/lib/navigation/route-matching";
 import type { StaffPermission } from "@/types/domain";
 import { cn } from "@/lib/utils";
 
@@ -73,6 +74,10 @@ export function MobileStaffNavigation({
   const quickActions = getQuickActions(pathname).filter((action) =>
     canAccessPermissions ? canAccessPermissions(action.permissions) : true
   );
+  const activeHref = getActiveRouteHref(
+    pathname,
+    visibleItems.map((item) => ({ href: currentOrgSlug ? `/o/${currentOrgSlug}${item.href}` : buildOrgHref(pathname, item.href) }))
+  );
 
   return (
     <>
@@ -81,7 +86,7 @@ export function MobileStaffNavigation({
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-2">
             {bottomItems.map((item) => {
               const href = currentOrgSlug ? `/o/${currentOrgSlug}${item.href}` : buildOrgHref(pathname, item.href);
-              const isActive = pathname === href || pathname.startsWith(`${href}/`);
+              const isActive = activeHref === href;
               return (
                 <Link
                   key={item.href}
@@ -152,7 +157,7 @@ export function MobileStaffNavigation({
               <div className="grid gap-2 sm:grid-cols-2">
                 {visibleItems.map((item) => {
                   const href = currentOrgSlug ? `/o/${currentOrgSlug}${item.href}` : buildOrgHref(pathname, item.href);
-                  const isActive = pathname === href || pathname.startsWith(`${href}/`);
+                  const isActive = activeHref === href;
                   return (
                     <Link
                       key={item.href}
@@ -176,4 +181,3 @@ export function MobileStaffNavigation({
     </>
   );
 }
-

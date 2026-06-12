@@ -361,8 +361,8 @@ export const posProducts: PosProduct[] = [
   {
     id: "prd_f_002",
     organizationId: "org_riverbend",
-    name: "Riverbend Membership",
-    description: "Monthly unlimited access at Riverbend locations.",
+    name: "Riverstone Membership",
+    description: "Monthly unlimited access at Riverstone locations.",
     category: "memberships",
     priceCents: 9900,
     type: "membership",

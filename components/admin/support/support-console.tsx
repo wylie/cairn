@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { formatDateTime } from "@/lib/format/date";
+import { getSupportTierName } from "@/lib/business-model";
 import { buildSeedProvisionedOrganizations } from "@/lib/platform-admin/registry";
 import { usePlatformAdminState } from "@/lib/state/platform-admin-state";
 import { getSupportFacilityHealthSnapshot, useSupportState } from "@/lib/state/support-state";
@@ -165,7 +166,7 @@ export function SupportConsole() {
                     <p className="text-sm text-muted-foreground">{facility.primaryLocationName ?? facility.organizationSlug}</p>
                   </div>
                   <div className="text-right text-sm">
-                    <p className="font-medium">{facility.supportTier} support</p>
+                    <p className="font-medium">{getSupportTierName(facility.supportTier)}</p>
                     <p className="text-muted-foreground">{facility.trialStatus}</p>
                   </div>
                 </div>

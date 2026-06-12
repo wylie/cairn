@@ -14,6 +14,7 @@ This guide is the entry point for facility administrators and staff. It explains
 3. Review products, memberships, passes, waiver templates, and starter programs.
 4. Validate customer-facing routes such as programs, waivers, and the customer login.
 5. Confirm dashboard widgets and alerts reflect your operating needs.
+6. Review your trial, plan, and support tier in Settings. Pilot billing details are informational and do not restrict features.
 
 ## Common First Tasks
 ### Create a customer
@@ -58,8 +59,10 @@ This guide is the entry point for facility administrators and staff. It explains
 - Use dashboard widgets and quick actions first. They already deep-link into the main workflows.
 - Keep households accurate. Household scope affects memberships, portal visibility, waivers, purchases, and registrations.
 - Use alerts to surface issues instead of relying on memory.
+- Use the floating **Need Help?** button to report bugs, suggest improvements, ask questions, request training, or contact support during pilot testing.
 
 ## Related Features
 - [Settings](./settings.md)
 - [Troubleshooting](./troubleshooting.md)
 - [Demo Accounts](../reference/demo-accounts.md)
+- [Business Model](../business-model.md)

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSettingsState } from "@/lib/state/settings-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
+import { formatFacilitiesIncluded, getPlanName, getSupportTierName } from "@/lib/business-model";
 import { PERMISSION_DESCRIPTIONS, PERMISSION_LABELS } from "@/lib/staff/permissions";
 import type { Location, StaffPermission, StaffRole, StaffRoleDefinition } from "@/types/domain";
 
@@ -19,6 +20,7 @@ type SettingsSection =
   | "locations"
   | "staff_roles"
   | "permissions"
+  | "billing"
   | "membership_access"
   | "waivers"
   | "pos_payments"
@@ -31,6 +33,7 @@ const settingsSections: Array<{ id: SettingsSection; label: string }> = [
   { id: "locations", label: "Locations" },
   { id: "staff_roles", label: "Staff Roles" },
   { id: "permissions", label: "Permissions" },
+  { id: "billing", label: "Billing" },
   { id: "membership_access", label: "Membership & Access" },
   { id: "waivers", label: "Waivers" },
   { id: "pos_payments", label: "POS & Payments" },
@@ -186,6 +189,7 @@ export default function SettingsPage() {
       locations: false,
       staff_roles: false,
       permissions: false,
+      billing: false,
       membership_access: JSON.stringify(membershipDraft) !== JSON.stringify(settings.membershipAccess),
       waivers: JSON.stringify(waiverDraft) !== JSON.stringify(settings.waiver),
       pos_payments: JSON.stringify(posDraft) !== JSON.stringify(settings.posPayments),
@@ -705,6 +709,36 @@ export default function SettingsPage() {
               </Card>
             ) : null}
 
+            {activeSection === "billing" ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Organization Billing</CardTitle>
+                  <CardDescription>Informational subscription details. Cairn does not restrict features, seats, customers, households, or transactions by plan.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
+                    <p className="font-semibold">Complete platform access</p>
+                    <p className="mt-1">Organizations pay based on facilities operated and support level. Every plan receives the full Cairn product.</p>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <BillingMetric label="Current plan" value={getPlanName(facilityDraft.subscriptionPlan ?? "single_facility")} />
+                    <BillingMetric label="Billing frequency" value={(facilityDraft.billingFrequency ?? "monthly").replaceAll("_", " ")} />
+                    <BillingMetric label="Support tier" value={getSupportTierName(facilityDraft.supportTier ?? "standard")} />
+                    <BillingMetric label="Billing status" value={(facilityDraft.billingStatus ?? "trialing").replaceAll("_", " ")} />
+                    <BillingMetric label="Trial status" value={(facilityDraft.trialStatus ?? "trial").replaceAll("_", " ")} />
+                    <BillingMetric label="Renewal date" value={facilityDraft.renewalDate ?? "Not scheduled"} />
+                    <BillingMetric label="Facilities used" value={String(settings.locations.filter((entry) => entry.active !== false).length)} />
+                    <BillingMetric label="Facilities included" value={formatFacilitiesIncluded(facilityDraft.facilitiesIncluded ?? 1)} />
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <Button variant="outline" onClick={() => setFeedback("Plan upgrades are handled by Cairn for pilot customers.")}>Upgrade plan</Button>
+                    <Button variant="outline" onClick={() => setFeedback("Billing frequency changes are informational during the pilot.")}>Change billing frequency</Button>
+                    <Button variant="outline" onClick={() => setFeedback("Contact Cairn at support@stonecairn.app.")}>Contact Cairn</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null}
+
             {activeSection === "membership_access" ? (
               <Card>
                 <CardHeader><CardTitle>Membership & Access Defaults</CardTitle></CardHeader>
@@ -1170,4 +1204,13 @@ function SelectBehavior({ value, onChange }: { value: "warn" | "block" | "manage
 
 function BooleanField({ label, value, onChange }: { label: string; value: boolean; onChange: (value: boolean) => void }) {
   return <CheckboxField label={label} checked={value} onChange={onChange} />;
+}
+
+function BillingMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border bg-card p-3">
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-1 text-lg font-semibold capitalize">{value}</p>
+    </div>
+  );
 }

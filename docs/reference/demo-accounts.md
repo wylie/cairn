@@ -5,7 +5,8 @@ These are the current demo accounts used for platform admin, staff, and customer
 
 The seeded demo organizations are:
 - `summit`
-- `riverbend`
+- `riverbend` (Riverstone Nature Center)
+- `western-carolina-ymca`
 
 These organizations use living demo data generated relative to the current date. Activity stays current without requiring hardcoded date maintenance.
 
@@ -30,10 +31,13 @@ These organizations use living demo data generated relative to the current date.
 | Front Desk | `sam@summitrec.co` | `dev1234` | `3333` |
 | Instructor | `iris@summitrec.co` | `dev1234` | `8888` |
 
-### Riverbend Recreation Collective
+### Riverstone Nature Center
 | Role | Email | Password | PIN |
 | --- | --- | --- | --- |
 | Owner | `owner@riverbend.example` | `dev1234` | `9111` |
+
+### Western Carolina YMCA Association
+The Western Carolina YMCA Association is seeded as an enterprise platform-admin demo organization for provisioning, billing, and support visibility. Staff login accounts can be added through organization provisioning workflows.
 
 ### Multi-Organization Staff
 | Role | Email | Password | PIN |
@@ -51,3 +55,4 @@ These organizations use living demo data generated relative to the current date.
 - [Permissions Matrix](./permissions-matrix.md)
 - [Environments](./environments.md)
 - [Developer: Demo Data](../developer/demo-data.md)
+- [Business Model](../business-model.md)

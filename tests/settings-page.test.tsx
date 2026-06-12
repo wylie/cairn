@@ -174,6 +174,27 @@ describe("Settings system MVP", () => {
     expect(screen.getByLabelText("Time format")).toHaveValue("24-hour");
   });
 
+  it("renders informational billing settings without feature restrictions", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <SettingsPage />
+      </TestProviders>
+    );
+    await switchStaff(user, "1111");
+    await user.click(screen.getByRole("button", { name: "Billing" }));
+
+    expect(screen.getByRole("heading", { name: "Organization Billing" })).toBeInTheDocument();
+    expect(screen.getByText("Multi-Facility")).toBeInTheDocument();
+    expect(screen.getByText(/monthly/i)).toBeInTheDocument();
+    expect(screen.getByText("Priority Support")).toBeInTheDocument();
+    expect(screen.getByText(/Informational subscription details/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Upgrade plan" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Change billing frequency" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Contact Cairn" })).toBeInTheDocument();
+  });
+
   it("closes modals with Escape and outside click", async () => {
     const user = userEvent.setup();
     render(

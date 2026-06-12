@@ -62,8 +62,8 @@ const seededRequests: SupportRequestRecord[] = [
     name: "Avery Morgan",
     email: "owner@riverbend.example",
     organizationSlug: "riverbend",
-    organizationName: "Riverbend Recreation Collective",
-    facilityName: "Riverbend North Base",
+    organizationName: "Riverstone Nature Center",
+    facilityName: "Riverstone Outdoor Center",
     pageUrl: "/o/riverbend/registrations",
     title: "Staff-friendly camp session transfer workflow",
     description: "Moving a child between camp weeks should retain waiver and guardian context.",
@@ -106,6 +106,7 @@ type SupportStateContextValue = {
     organizationName?: string;
     facilityName?: string;
     pageUrl?: string;
+    userRole?: string;
     category: SupportRequestCategory;
     priority: SupportRequestPriority;
     title?: string;
@@ -204,6 +205,7 @@ export function SupportStateProvider({ children }: { children: React.ReactNode }
       organizationName: input.organizationName,
       facilityName: input.facilityName,
       pageUrl: input.pageUrl,
+      userRole: input.userRole,
       title: input.title?.trim() || undefined,
       description,
       workflowAffected: input.workflowAffected?.trim() || undefined,

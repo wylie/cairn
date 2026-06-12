@@ -28,7 +28,7 @@ export const locations: Location[] = [
   {
     id: "loc_101",
     organizationId: "org_riverbend",
-    name: "Riverbend Main",
+    name: "Riverstone Main",
     shortName: "Main",
     addressLine1: "14 Orchard Rd",
     city: "Asheville",
@@ -40,7 +40,7 @@ export const locations: Location[] = [
   {
     id: "loc_102",
     organizationId: "org_riverbend",
-    name: "Riverbend Trail Center",
+    name: "Riverstone Trail Center",
     shortName: "Trail Center",
     addressLine1: "88 Pine Loop",
     city: "Asheville",

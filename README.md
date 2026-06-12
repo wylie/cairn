@@ -8,6 +8,7 @@ This repository README is the front door for the Cairn documentation system. Use
 - Organization-scoped operations: every facility runs inside its own public site, customer portal, and staff portal.
 - Operational speed matters: front desk, instructor, and manager workflows should stay fast under real daily load.
 - Privacy by default: customer-facing experiences are scoped to the authenticated customer and their authorized household.
+- Pilot-ready business model: Cairn is built by Stone Cairn and charges by facility and support relationship, not by seats, customers, households, transactions, or feature access.
 - Mock-first architecture: the product is fully demoable today while preserving clean seams for future backend and provider integrations.
 - Shared systems over one-off screens: navigation, avatars, permissions, formatting, and workflow patterns should stay consistent across Cairn.
 
@@ -75,6 +76,7 @@ Use these docs when you need a stable reference instead of a workflow guide.
 - [Environments](./docs/reference/environments.md)
 - [Routes](./docs/reference/routes.md)
 - [Known Issues](./docs/reference/known-issues.md)
+- [Business Model](./docs/business-model.md)
 
 ## Local Development
 ```bash
@@ -127,6 +129,13 @@ Facilities:
 - Summit Uptown
 
 All screenshots and walkthroughs throughout the documentation reference this demo environment unless otherwise noted.
+
+## Pricing and Support
+Cairn is the facility operations product built by Stone Cairn.
+
+Pilot pricing is informational inside the application. Cairn does not enforce feature gates, staff seat limits, customer limits, household limits, or transaction fees. Organizations scale by facilities operated and by the support relationship they choose.
+
+See [Business Model](./docs/business-model.md) for plans, support tiers, trial expectations, and pilot feedback workflows.
 
 ## Demo Environment
 The current hosted demo is documented in [Reference: Environments](./docs/reference/environments.md).

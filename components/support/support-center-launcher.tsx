@@ -9,16 +9,17 @@ import { ModalShell } from "@/components/ui/modal-shell";
 import { data } from "@/lib/data";
 import { getRuntimeOrganizationsClient } from "@/lib/platform-admin/registry";
 import { useSupportState } from "@/lib/state/support-state";
+import { getSessionFromCookieClient } from "@/lib/tenant/client";
 import { parseOrgSlugFromPathname } from "@/lib/tenant/path";
 import { cn } from "@/lib/utils";
 import type { SupportRequestCategory, SupportRequestPriority } from "@/types/domain";
 
 const categoryOptions: Array<{ value: SupportRequestCategory; label: string; description: string }> = [
-  { value: "bug_report", label: "Bug Report", description: "Something is broken or behaving incorrectly." },
-  { value: "feature_request", label: "Feature Request", description: "A workflow gap or enhancement request." },
-  { value: "product_feedback", label: "Product Feedback", description: "General input on fit, friction, or usability." },
-  { value: "training_request", label: "Training Request", description: "Request onboarding, workflow review, or best-practices help." },
-  { value: "general_support", label: "General Support Question", description: "Ask Cairn support for help or clarification." }
+  { value: "bug_report", label: "Report a Bug", description: "Something is broken or behaving incorrectly." },
+  { value: "feature_request", label: "Suggest an Improvement", description: "A workflow gap or enhancement request." },
+  { value: "product_feedback", label: "Ask a Question", description: "General input, product fit, or usability question." },
+  { value: "training_request", label: "Request Training", description: "Request onboarding, workflow review, or best-practices help." },
+  { value: "general_support", label: "Contact Support", description: "Ask Cairn support for help or clarification." }
 ];
 
 const priorityOptions: Array<{ value: SupportRequestPriority; label: string }> = [
@@ -32,6 +33,15 @@ function getFacilityName(entry: unknown): string | undefined {
   if (!entry || typeof entry !== "object") return undefined;
   const candidate = entry as { primaryLocationName?: unknown };
   return typeof candidate.primaryLocationName === "string" ? candidate.primaryLocationName : undefined;
+}
+
+function getCurrentRoleLabel() {
+  const session = getSessionFromCookieClient();
+  if (!session) return "Early Tester";
+  if (session.kind === "platform_admin") return "Platform Administrator";
+  if (session.kind === "support_staff") return "Support Staff";
+  if (session.kind === "customer") return "Customer Portal User";
+  return "Staff User";
 }
 
 export function SupportCenterLauncher() {
@@ -60,6 +70,7 @@ export function SupportCenterLauncher() {
   const [estimatedAttendees, setEstimatedAttendees] = useState("6");
   const [topicsRequested, setTopicsRequested] = useState("");
   const [screenshotName, setScreenshotName] = useState("");
+  const userRole = useMemo(() => (typeof document !== "undefined" ? getCurrentRoleLabel() : "Early Tester"), []);
 
   const resetForm = () => {
     setCategory("general_support");
@@ -96,7 +107,8 @@ export function SupportCenterLauncher() {
       pageUrl: pathname,
       organizationSlug: currentOrganization?.slug,
       organizationName: currentOrganization?.name,
-      facilityName: getFacilityName(currentOrganization)
+      facilityName: getFacilityName(currentOrganization),
+      userRole
     });
     setMessage(result.message);
     if (!result.ok) return;
@@ -137,6 +149,7 @@ export function SupportCenterLauncher() {
               <p className="font-semibold">Current page context</p>
               <p className="mt-1 text-sky-900">Page: <span className="font-medium">{pathname}</span></p>
               <p className="text-sky-900">Organization: <span className="font-medium">{currentOrganization?.name ?? "Your Cairn instance"}</span></p>
+              <p className="text-sky-900">Role: <span className="font-medium">{userRole}</span></p>
             </div>
           </div>
 

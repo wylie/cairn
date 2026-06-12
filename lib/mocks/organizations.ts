@@ -11,7 +11,7 @@ export const organizations: Organization[] = [
   {
     id: "org_riverbend",
     slug: "riverbend",
-    name: "Riverbend Recreation Collective",
+    name: "Riverstone Nature Center",
     facilityType: "camp",
     timezone: "America/New_York"
   }

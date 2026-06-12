@@ -1,11 +1,24 @@
 export type FacilityType = "climbing" | "yoga" | "fitness" | "camp" | "bike_park" | "hybrid";
 
+export type SupportTier = "standard" | "priority" | "concierge";
+export type CairnPlanKey = "single_facility" | "multi_facility" | "enterprise";
+export type CairnBillingFrequency = "monthly" | "annual";
+export type CairnBillingStatus = "trialing" | "active" | "past_due" | "cancelled";
+export type CairnTrialStatus = "trial" | "active" | "expired" | "not_applicable";
+
 export interface Organization {
   id: string;
   slug: string;
   name: string;
   facilityType: FacilityType;
   timezone: string;
+  subscriptionPlan?: CairnPlanKey;
+  billingFrequency?: CairnBillingFrequency;
+  billingStatus?: CairnBillingStatus;
+  trialStatus?: CairnTrialStatus;
+  renewalDate?: string;
+  supportTier?: SupportTier;
+  facilitiesIncluded?: number | "unlimited";
 }
 
 export interface Location {
@@ -44,6 +57,13 @@ export interface FacilityProfile {
   timezone: string;
   dateFormat?: "MM/DD/YYYY" | "DD/MM/YYYY" | "YYYY-MM-DD" | "Month D, YYYY";
   timeFormat?: "12-hour" | "24-hour";
+  subscriptionPlan?: CairnPlanKey;
+  billingFrequency?: CairnBillingFrequency;
+  billingStatus?: CairnBillingStatus;
+  trialStatus?: CairnTrialStatus;
+  renewalDate?: string;
+  supportTier?: SupportTier;
+  facilitiesIncluded?: number | "unlimited";
 }
 
 export interface StaffRoleDefinition {
@@ -264,7 +284,6 @@ export type SupportRequestCategory =
 
 export type SupportRequestPriority = "low" | "normal" | "high" | "urgent";
 export type SupportRequestStatus = "open" | "in_review" | "resolved" | "archived";
-export type SupportTier = "standard" | "priority" | "enterprise";
 
 export interface SupportStaffMember {
   id: string;
@@ -288,6 +307,7 @@ export interface SupportRequestRecord {
   organizationName?: string;
   facilityName?: string;
   pageUrl?: string;
+  userRole?: string;
   title?: string;
   description: string;
   workflowAffected?: string;

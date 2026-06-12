@@ -12,6 +12,7 @@ Settings control branding, facility configuration, calendar defaults, closeout b
 - calendar default view
 - closeout and automatic checkout behavior
 - operational defaults and placeholders for subscriptions or integrations
+- informational billing plan, billing frequency, support tier, trial status, renewal date, and facility counts
 
 ## Common Workflows
 ### Configure facility settings
@@ -33,12 +34,22 @@ Settings control branding, facility configuration, calendar defaults, closeout b
 4. Save changes.
 5. Confirm dates and times update throughout the app.
 
+### Review plan and support information
+1. Open Settings.
+2. Select Billing.
+3. Review the current plan, billing frequency, support tier, billing status, trial status, renewal date, facilities used, and facilities included.
+4. Use Upgrade plan, Change billing frequency, or Contact Cairn as placeholders during the pilot.
+
+Billing settings are informational. Cairn does not restrict functionality based on plan.
+
 ## Tips
 - Branding changes affect public, customer, and staff experiences.
 - Check facility hours and closeout time together so occupancy numbers remain accurate.
 - Keep customer-facing contact details current because they appear in receipts, cards, and public pages.
+- Cairn support tiers affect response expectations and operational support, not feature access.
 
 ## Related Features
 - [Staff](./staff.md)
 - [Reports](./reports.md)
 - [Reference: Terminology](../reference/terminology.md)
+- [Business Model](../business-model.md)

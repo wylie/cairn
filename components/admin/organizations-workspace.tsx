@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PLATFORM_TEMPLATES } from "@/lib/platform-admin/registry";
 import { usePlatformAdminState, getTemplatePreviewForFacilityType } from "@/lib/state/platform-admin-state";
+import { formatFacilitiesIncluded, getPlanName, getSupportTierName } from "@/lib/business-model";
 import type { PlatformOrganizationStatus, ProvisioningFacilityType } from "@/lib/platform-admin/registry";
 import { formatDate } from "@/lib/format/date";
 
@@ -248,7 +249,14 @@ export function OrganizationsWorkspace() {
                 <MetricCard label="Facility Type" value={titleCase(selected.facilityType)} />
                 <MetricCard label="Status" value={titleCase(selected.status)} />
                 <MetricCard label="Created Date" value={formatDate(selected.createdAt)} />
+                <MetricCard label="Current Plan" value={getPlanName(selected.subscriptionPlan ?? "single_facility")} />
+                <MetricCard label="Billing Frequency" value={titleCase(selected.billingFrequency ?? "monthly")} />
+                <MetricCard label="Support Tier" value={getSupportTierName(selected.supportTier ?? "standard")} />
+                <MetricCard label="Billing Status" value={titleCase(selected.billingStatus ?? "trialing")} />
+                <MetricCard label="Trial Status" value={titleCase(selected.trialStatus ?? "trial")} />
+                <MetricCard label="Renewal Date" value={selected.renewalDate ? formatDate(selected.renewalDate) : "Not scheduled"} />
                 <MetricCard label="Locations" value={String(selected.stats.locations)} />
+                <MetricCard label="Facilities Included" value={formatFacilitiesIncluded(selected.facilitiesIncluded ?? selected.stats.locations)} />
                 <MetricCard label="Members" value={String(selected.stats.members)} />
                 <MetricCard label="Staff" value={String(selected.stats.staff)} />
                 <MetricCard label="Template" value={PLATFORM_TEMPLATES.find((entry) => entry.id === selected.templateId)?.name ?? selected.templateId} />

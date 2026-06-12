@@ -39,7 +39,8 @@ Template metadata lives in `lib/platform-admin/registry.ts`.
 ## Demo Facilities
 Current seeded demo organizations:
 - `summit` — Summit Rec Collective
-- `riverbend` — Riverbend Recreation Collective
+- `riverbend` — Riverstone Nature Center
+- `western-carolina-ymca` — Western Carolina YMCA Association
 
 Provisioned demo metadata supports:
 - demo-only designation

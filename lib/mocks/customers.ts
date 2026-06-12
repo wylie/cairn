@@ -392,7 +392,7 @@ export const customers: Customer[] = [
     postalCode: "28804",
     emergencyContactName: "Jamie Morgan",
     emergencyContactPhone: "(828) 555-9201",
-    tags: ["Camp", "Riverbend"],
+    tags: ["Camp", "Riverstone"],
     checkInStatus: "out",
     createdAt: isoAtOffset(-45, 9, 0)
   },
@@ -414,7 +414,7 @@ export const customers: Customer[] = [
     postalCode: "28805",
     emergencyContactName: "Avery Morgan",
     emergencyContactPhone: "(828) 555-4201",
-    tags: ["Youth", "Riverbend"],
+    tags: ["Youth", "Riverstone"],
     checkInStatus: "out",
     createdAt: isoAtOffset(-12, 11, 20)
   }

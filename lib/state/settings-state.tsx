@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { data } from "@/lib/data";
+import { getDemoSubscriptionForSlug } from "@/lib/business-model";
 import { buildScopedMockKey, loadMockState, saveMockState } from "@/lib/mock-storage";
 import { ROLE_PERMISSION_PRESETS } from "@/lib/staff/permissions";
 import type { FacilityProfile, Location, StaffPermission, StaffRoleDefinition, StaffUser } from "@/types/domain";
@@ -190,7 +191,8 @@ const defaultSettings: SettingsStateSnapshot = {
     description: "Community-centered climbing and movement facility.",
     emergencyContact: "(212) 555-1999",
     dateFormat: "MM/DD/YYYY",
-    timeFormat: "12-hour"
+    timeFormat: "12-hour",
+    ...getDemoSubscriptionForSlug("summit", 2)
   },
   locations: (data.locations ?? []).map((entry, index) => ({
     ...entry,
@@ -303,6 +305,7 @@ export function SettingsStateProvider({ children }: { children: React.ReactNode 
   }, [fallbackSlug, orgSlug]);
   const tenant = useMemo(() => resolveTenant(orgSlug), [orgSlug]);
   const activeOrgId = tenant?.organizationId ?? "org_summit";
+  const seededSubscription = getDemoSubscriptionForSlug(orgSlug, tenant?.allowedLocations.length ?? 1);
   const settingsStorageKey = useMemo(
     () => buildScopedMockKey(activeOrgId, "settings", "v1"),
     [activeOrgId]
@@ -312,7 +315,14 @@ export function SettingsStateProvider({ children }: { children: React.ReactNode 
     facilityProfile: {
       ...defaultSettings.facilityProfile,
       organizationId: activeOrgId,
-      facilityName: tenant?.organizationName ?? defaultSettings.facilityProfile.facilityName
+      facilityName: tenant?.organizationName ?? defaultSettings.facilityProfile.facilityName,
+      subscriptionPlan: seededSubscription.plan,
+      billingFrequency: seededSubscription.billingFrequency,
+      billingStatus: seededSubscription.billingStatus,
+      trialStatus: seededSubscription.trialStatus,
+      renewalDate: seededSubscription.renewalDate,
+      supportTier: seededSubscription.supportTier,
+      facilitiesIncluded: seededSubscription.facilitiesIncluded
     },
     locations: (() => {
       const seededLocations = defaultSettings.locations.filter((entry) => entry.organizationId === activeOrgId);

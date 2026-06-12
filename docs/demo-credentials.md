@@ -25,17 +25,17 @@ These demo accounts are for local development only.
 | Front Desk | `sam@summitrec.co` | `dev1234` | `3333` | Daily operations: check-in, customers, POS, roster |
 | Instructor | `iris@summitrec.co` | `dev1234` | `8888` | Program operations: roster and attendance-focused access |
 
-## Riverbend Recreation Collective (`riverbend`)
+## Riverstone Nature Center (`riverbend`)
 
 | Role | Login Email | Password | Staff PIN | Permission Summary |
 | --- | --- | --- | --- | --- |
-| Owner | `owner@riverbend.example` | `dev1234` | `9111` | Full access for Riverbend locations |
+| Owner | `owner@riverbend.example` | `dev1234` | `9111` | Full access for Riverstone locations |
 
 ## Multi-Organization Demo User
 
 | Role | Login Email | Password | Staff PIN | Permission Summary |
 | --- | --- | --- | --- | --- |
-| Manager (multi-org) | `multi@example.com` | `dev1234` | Uses active staff PIN after org/location context | Access to both Summit and Riverbend organizations |
+| Manager (multi-org) | `multi@example.com` | `dev1234` | Uses active staff PIN after org/location context | Access to both Summit and Riverstone organizations |
 
 ## Customer Portal Demo Users
 

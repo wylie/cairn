@@ -23,6 +23,12 @@ describe("support center launcher", () => {
     );
 
     await user.click(screen.getByRole("button", { name: /Need Help\?/i }));
+    expect(screen.getByRole("option", { name: "Report a Bug" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Suggest an Improvement" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Ask a Question" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Request Training" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Contact Support" })).toBeInTheDocument();
+    expect(screen.getByText(/Role:/i)).toBeInTheDocument();
     await user.type(screen.getByLabelText("Name"), "Morgan Hale");
     await user.type(screen.getByLabelText("Email"), "morgan@example.com");
     await user.selectOptions(screen.getByLabelText("Category"), "feature_request");

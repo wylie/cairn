@@ -41,6 +41,20 @@ describe("platform admin pages", () => {
     expect(screen.getAllByText("Demo Only").length).toBeGreaterThan(0);
   });
 
+  it("surfaces organization billing and support details", () => {
+    render(
+      <AdminProviders>
+        <OrganizationsWorkspace />
+      </AdminProviders>
+    );
+
+    expect(screen.getAllByText("Summit Rec Collective").length).toBeGreaterThan(0);
+    expect(screen.getByText("Multi-Facility")).toBeInTheDocument();
+    expect(screen.getByText("Priority Support")).toBeInTheDocument();
+    expect(screen.getAllByText(/monthly/i).length).toBeGreaterThan(0);
+    expect(screen.getByText("Facilities Included")).toBeInTheDocument();
+  });
+
   it("creates an organization and shows generated assets", async () => {
     const user = userEvent.setup();
     render(

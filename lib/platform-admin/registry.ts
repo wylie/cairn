@@ -1,4 +1,5 @@
-import type { FacilityType, Organization, StaffPermission, SupportTier } from "@/types/domain";
+import type { FacilityType, Organization, StaffPermission } from "@/types/domain";
+import { getDefaultTrialSubscription, getDemoSubscriptionForSlug } from "@/lib/business-model";
 import { organizations as seededOrganizations } from "@/lib/mocks/organizations";
 import { locations as seededLocations } from "@/lib/mocks/locations";
 import { staffUsers as seededStaffUsers } from "@/lib/mocks/staff";
@@ -29,7 +30,6 @@ export interface RuntimeOrganizationRecord extends Organization {
   secondaryColor?: string;
   seoTitle?: string;
   seoDescription?: string;
-  supportTier?: SupportTier;
   isDemo?: boolean;
   isReadOnlyDemo?: boolean;
   isResettableDemo?: boolean;
@@ -188,28 +188,33 @@ export function slugifyOrganizationName(name: string) {
 }
 
 export function buildSeedProvisionedOrganizations(): ProvisionedOrganizationRecord[] {
-  return seededOrganizations.map((organization) => {
+  const seeded = seededOrganizations.map((organization) => {
     const orgLocations = seededLocations.filter((location) => location.organizationId === organization.id);
     const orgStaff = seededStaffUsers.filter((staff) => staff.organizationId === organization.id);
     const orgCustomers = seededCustomers.filter((customer) => customer.organizationId === organization.id);
+    const slug = organization.slug === "riverbend" ? "riverbend" : organization.slug;
+    const subscription = getDemoSubscriptionForSlug(slug, orgLocations.length);
     const template =
       organization.slug === "riverbend"
         ? inferTemplateForFacilityType("Camp")
         : inferTemplateForFacilityType("Climbing Gym");
+    const displayName = organization.slug === "riverbend" ? "Riverstone Nature Center" : organization.name;
     return {
       ...organization,
-      status: organization.slug === "riverbend" ? "trial" : "active",
+      name: displayName,
+      status: "active" as const,
       createdAt: organization.slug === "riverbend" ? "2026-05-10T09:00:00Z" : "2026-04-01T09:00:00Z",
       lastActivityAt: organization.slug === "riverbend" ? "2026-06-06T16:45:00Z" : "2026-06-07T14:10:00Z",
       description:
         organization.slug === "riverbend"
-          ? "Outdoor and seasonal recreation organization used for camp and trail operations demos."
+          ? "Nature center and outdoor education organization used for program and rental operations demos."
           : "Modern hybrid recreation facility used as the primary Cairn demo organization.",
       primaryColor: organization.slug === "riverbend" ? "#2563EB" : "#0E9AC8",
       secondaryColor: organization.slug === "riverbend" ? "#1E3A8A" : "#1F2937",
-      seoTitle: `${organization.name} | Cairn Facility Portal`,
-      seoDescription: `Customer and staff access for ${organization.name}.`,
-      supportTier: organization.slug === "riverbend" ? "standard" : "priority",
+      seoTitle: `${displayName} | Cairn Facility Portal`,
+      seoDescription: `Customer and staff access for ${displayName}.`,
+      ...subscription,
+      subscriptionPlan: subscription.plan,
       isDemo: true,
       isReadOnlyDemo: organization.slug === "riverbend",
       isResettableDemo: true,
@@ -220,7 +225,7 @@ export function buildSeedProvisionedOrganizations(): ProvisionedOrganizationReco
       branding: {
         primaryColor: organization.slug === "riverbend" ? "#2563EB" : "#0E9AC8",
         secondaryColor: organization.slug === "riverbend" ? "#1E3A8A" : "#1F2937",
-        logoText: organization.name
+        logoText: displayName
           .split(" ")
           .slice(0, 2)
           .map((chunk) => chunk[0])
@@ -247,6 +252,58 @@ export function buildSeedProvisionedOrganizations(): ProvisionedOrganizationReco
       }
     };
   });
+  const westernSubscription = getDemoSubscriptionForSlug("western-carolina-ymca", 12);
+  const westernTemplate = inferTemplateForFacilityType("YMCA");
+  return [
+    ...seeded,
+    {
+      id: "org_western_carolina_ymca",
+      slug: "western-carolina-ymca",
+      name: "Western Carolina YMCA Association",
+      facilityType: "hybrid",
+      timezone: "America/New_York",
+      status: "active" as const,
+      createdAt: "2026-02-15T09:00:00Z",
+      lastActivityAt: "2026-06-07T17:20:00Z",
+      description: "Regional YMCA association demo showing enterprise facilities, shared administration, and concierge support.",
+      primaryColor: "#0E9AC8",
+      secondaryColor: "#1F2937",
+      seoTitle: "Western Carolina YMCA Association | Cairn Facility Portal",
+      seoDescription: "Customer and staff access for Western Carolina YMCA Association.",
+      ...westernSubscription,
+      subscriptionPlan: westernSubscription.plan,
+      isDemo: true,
+      isReadOnlyDemo: true,
+      isResettableDemo: true,
+      templateId: westernTemplate.id,
+      primaryLocationName: "Western Carolina YMCA Main Branch",
+      ownerName: "Jordan Ellis",
+      ownerEmail: "jordan@westerncarolinaymca.example",
+      branding: {
+        primaryColor: "#0E9AC8",
+        secondaryColor: "#1F2937",
+        logoText: "WC"
+      },
+      generatedAssets: {
+        staffPortal: "/o/western-carolina-ymca",
+        customerPortal: "/p/western-carolina-ymca",
+        facilityLandingPage: "/f/western-carolina-ymca",
+        settingsPath: "/o/western-carolina-ymca/settings"
+      },
+      stats: {
+        locations: 12,
+        members: 18420,
+        staff: 312
+      },
+      starterData: {
+        roles: ["Owner", "Manager", "Front Desk", "Instructor", "Staff"],
+        waivers: westernTemplate.starterWaivers,
+        products: westernTemplate.starterProducts,
+        dashboardWidgets: westernTemplate.dashboardWidgets,
+        reports: westernTemplate.reports
+      }
+    }
+  ];
 }
 
 export function buildProvisionedOrganization(input: {
@@ -262,6 +319,7 @@ export function buildProvisionedOrganization(input: {
 }) {
   const template = inferTemplateForFacilityType(input.facilityType);
   const id = `org_${input.slug.replace(/-/g, "_")}`;
+  const subscription = getDefaultTrialSubscription(1);
   return {
     id,
     slug: input.slug,
@@ -276,7 +334,8 @@ export function buildProvisionedOrganization(input: {
     secondaryColor: input.secondaryColor,
     seoTitle: `${input.name} | Cairn Facility Portal`,
     seoDescription: `${input.name} customer and staff portals provisioned with Cairn.`,
-    supportTier: "standard",
+    ...subscription,
+    subscriptionPlan: subscription.plan,
     templateId: template.id,
     primaryLocationName: input.primaryLocationName,
     ownerName: input.ownerName,

@@ -8,11 +8,16 @@ import { TestProviders } from "@/tests/test-providers";
 describe("Public homepage", () => {
   it("renders without auth dependency and includes marketing CTAs", () => {
     render(<HomePage />);
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-      /Modern facility operations software/i
-    );
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Cairn");
+    expect(screen.getAllByText(/Built by Stone Cairn/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Simple pricing that grows with your organization/i)).toBeInTheDocument();
+    expect(screen.getByText(/What we don/i)).toBeInTheDocument();
+    expect(screen.getByText(/No feature gating/i)).toBeInTheDocument();
+    expect(screen.getByText(/30-day trial/i)).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /Start Free Trial/i })[0]).toHaveAttribute("href", "/request-demo?intent=trial");
     expect(screen.getAllByRole("link", { name: /Explore Demo Facility/i })[0]).toHaveAttribute("href", "/f/summit");
     expect(screen.getAllByRole("link", { name: /Request Live Demo/i })[0]).toHaveAttribute("href", "/request-demo");
+    expect(screen.getAllByRole("link", { name: /Contact Us/i })[0]).toHaveAttribute("href", "mailto:support@stonecairn.app");
     expect(screen.queryByRole("link", { name: /Staff Login/i })).not.toBeInTheDocument();
   });
 

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach } from "vitest";
 import { vi } from "vitest";
 import { AppShell } from "@/components/layout/app-shell";
@@ -46,7 +46,7 @@ describe("AppShell", () => {
     expect(container.querySelector(".max-w-\\[1680px\\]")).not.toBeNull();
   });
 
-  it("uses runtime provisioned organizations for the shell heading", () => {
+  it("uses runtime provisioned organizations for the shell heading", async () => {
     const record = buildProvisionedOrganization({
       name: "North Shore Camp",
       slug: "north-shore",
@@ -70,7 +70,7 @@ describe("AppShell", () => {
       </TestProviders>
     );
 
-    expect(screen.getByRole("heading", { name: "North Shore Camp" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("heading", { name: "North Shore Camp" })).toBeInTheDocument());
   });
 
   it("renders mobile navigation and quick actions on smaller screens", () => {

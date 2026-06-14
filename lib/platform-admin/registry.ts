@@ -384,7 +384,9 @@ export function parseProvisionedOrganizations(raw: string | undefined | null) {
 
 export function mergeProvisionedOrganizations(organizations: ProvisionedOrganizationRecord[]) {
   const merged = new Map<string, ProvisionedOrganizationRecord>();
-  for (const entry of [...buildSeedProvisionedOrganizations(), ...organizations]) {
+  // Seeded demo identities are canonical. Browser storage may contain stale demo
+  // names from an earlier release, but custom provisioned organizations remain intact.
+  for (const entry of [...organizations, ...buildSeedProvisionedOrganizations()]) {
     merged.set(entry.slug, entry);
   }
   return Array.from(merged.values());

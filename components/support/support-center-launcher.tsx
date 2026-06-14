@@ -6,8 +6,7 @@ import { LifeBuoy, MessageSquarePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ModalShell } from "@/components/ui/modal-shell";
-import { data } from "@/lib/data";
-import { getRuntimeOrganizationsClient } from "@/lib/platform-admin/registry";
+import { useRuntimeOrganizations } from "@/lib/platform-admin/use-runtime-organizations";
 import { useSupportState } from "@/lib/state/support-state";
 import { getSessionFromCookieClient } from "@/lib/tenant/client";
 import { parseOrgSlugFromPathname } from "@/lib/tenant/path";
@@ -47,10 +46,7 @@ function getCurrentRoleLabel() {
 export function SupportCenterLauncher() {
   const pathname = usePathname() ?? "/";
   const { submitSupportRequest } = useSupportState();
-  const organizations = useMemo(
-    () => (typeof document !== "undefined" ? getRuntimeOrganizationsClient() : data.organizations),
-    []
-  );
+  const organizations = useRuntimeOrganizations();
   const currentOrgSlug = parseOrgSlugFromPathname(pathname);
   const currentOrganization = useMemo(
     () => organizations.find((entry) => entry.slug === currentOrgSlug),

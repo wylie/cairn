@@ -7,8 +7,7 @@ import { MobileStaffNavigation } from "@/components/layout/mobile-staff-navigati
 import { TopBar } from "@/components/layout/top-bar";
 import { DevPerfMonitor } from "@/components/dev/dev-perf-monitor";
 import { Button } from "@/components/ui/button";
-import { data } from "@/lib/data";
-import { getRuntimeOrganizationsClient } from "@/lib/platform-admin/registry";
+import { useRuntimeOrganizations } from "@/lib/platform-admin/use-runtime-organizations";
 import { useIsMobileStaffLayout } from "@/lib/responsive/use-mobile";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useSupportState } from "@/lib/state/support-state";
@@ -19,16 +18,14 @@ import { parseOrgSlugFromPathname } from "@/lib/tenant/path";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
-  const organizations = useMemo(
-    () => (typeof document !== "undefined" ? getRuntimeOrganizationsClient() : data.organizations),
-    []
-  );
-  const fallbackSlug = parseOrgSlugFromPathname(pathname) ?? organizations[0]?.slug ?? "summit";
+  const organizations = useRuntimeOrganizations();
+  const routeSlug = parseOrgSlugFromPathname(pathname);
+  const fallbackSlug = routeSlug ?? organizations[0]?.slug ?? "summit";
   const [currentSlug, setCurrentSlug] = useState(fallbackSlug);
   useEffect(() => {
-    const slugFromCookie = getCurrentOrgSlugClient(fallbackSlug);
+    const slugFromCookie = routeSlug ?? getCurrentOrgSlugClient(fallbackSlug);
     if (slugFromCookie !== currentSlug) setCurrentSlug(slugFromCookie);
-  }, [fallbackSlug, currentSlug]);
+  }, [fallbackSlug, currentSlug, routeSlug]);
   const currentOrganization = useMemo(
     () => organizations.find((entry) => entry.slug === currentSlug) ?? organizations[0],
     [organizations, currentSlug]

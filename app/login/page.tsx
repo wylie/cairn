@@ -1,29 +1,15 @@
 import Link from "next/link";
-import { data } from "@/lib/data";
 
 export default function GlobalLoginPage() {
   return (
     <div className="mx-auto flex min-h-screen max-w-2xl items-center p-4">
       <section className="w-full rounded-xl border bg-card p-6">
-        <h1 className="text-2xl font-semibold">Choose a facility for staff login</h1>
+        <h1 className="text-2xl font-semibold">Staff access is facility-specific</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Staff login is organization-specific. Select your facility to continue.
+          Open Staff Login from your facility&apos;s Cairn page or use the facility-specific link provided by your administrator.
         </p>
-        <div className="mt-5 space-y-3">
-          {(data.organizations ?? []).map((organization) => (
-            <div key={organization.id} className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <p className="font-medium">{organization.name}</p>
-                <p className="text-xs text-muted-foreground">/{organization.slug}</p>
-              </div>
-              <Link
-                href={`/o/${organization.slug}/login`}
-                className="inline-flex min-h-10 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground"
-              >
-                Staff Login
-              </Link>
-            </div>
-          ))}
+        <div className="mt-5 rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
+          Cairn does not publish a directory of customer organizations. This keeps each facility&apos;s staff access private and clearly scoped.
         </div>
         <div className="mt-4 rounded-lg border border-dashed p-3 text-sm">
           <p className="font-medium">Platform administration</p>

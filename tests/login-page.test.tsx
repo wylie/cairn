@@ -13,11 +13,12 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("Login page demo helpers", () => {
-  it("shows organization-specific staff login chooser", () => {
+  it("does not expose a global facility chooser", () => {
     render(<LoginPage />);
-    expect(screen.getByText("Choose a facility for staff login")).toBeInTheDocument();
-    const links = screen.getAllByRole("link", { name: "Staff Login" });
-    expect(links[0]).toHaveAttribute("href", "/o/summit/login");
+    expect(screen.getByText("Staff access is facility-specific")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Staff Login" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Summit Rec Collective")).not.toBeInTheDocument();
+    expect(screen.queryByText("Riverstone Nature Center")).not.toBeInTheDocument();
   });
 
   it("does not render inline credentials in global login chooser", () => {

@@ -8,27 +8,25 @@ import { useCustomerState } from "@/lib/state/customer-state";
 import { useSettingsState } from "@/lib/state/settings-state";
 import { ActiveStaffIndicator } from "@/components/staff/active-staff-indicator";
 import { TOP_BAR_UTILITY_CONTROL_CLASS } from "@/components/layout/utility-header";
-import { data } from "@/lib/data";
-import { getRuntimeOrganizationsClient } from "@/lib/platform-admin/registry";
+import { useRuntimeOrganizations } from "@/lib/platform-admin/use-runtime-organizations";
 import { Button } from "@/components/ui/button";
 import { getAllowedOrgSlugsFromSessionCookie, getCurrentOrgSlugClient } from "@/lib/tenant/client";
-import { parseOrgSlugFromPathname } from "@/lib/tenant/path";
+import { getStaffLoginPath, parseOrgSlugFromPathname } from "@/lib/tenant/path";
+import { cn } from "@/lib/utils";
 
 function TopBarInner() {
   const pathname = usePathname() ?? "";
-  const organizations = useMemo(
-    () => (typeof document !== "undefined" ? getRuntimeOrganizationsClient() : data.organizations),
-    []
-  );
-  const fallbackSlug = parseOrgSlugFromPathname(pathname) ?? organizations[0]?.slug ?? "summit";
+  const organizations = useRuntimeOrganizations();
+  const routeSlug = parseOrgSlugFromPathname(pathname);
+  const fallbackSlug = routeSlug ?? organizations[0]?.slug ?? "summit";
   const [currentSlug, setCurrentSlug] = useState(fallbackSlug);
-  const [allowedOrgSlugs, setAllowedOrgSlugs] = useState<string[]>(organizations.map((entry) => entry.slug));
+  const [allowedOrgSlugs, setAllowedOrgSlugs] = useState<string[]>([fallbackSlug]);
   useEffect(() => {
-    const cookieSlug = getCurrentOrgSlugClient(fallbackSlug);
+    const cookieSlug = routeSlug ?? getCurrentOrgSlugClient(fallbackSlug);
     if (cookieSlug !== currentSlug) setCurrentSlug(cookieSlug);
     const allowed = getAllowedOrgSlugsFromSessionCookie();
     if (allowed?.length) setAllowedOrgSlugs(allowed);
-  }, [fallbackSlug, currentSlug]);
+  }, [fallbackSlug, currentSlug, routeSlug]);
   const selectableOrgs = useMemo(
     () => organizations.filter((entry) => allowedOrgSlugs.includes(entry.slug)),
     [organizations, allowedOrgSlugs]
@@ -49,15 +47,17 @@ function TopBarInner() {
     [pathname, currentSlug]
   );
   const notificationItems = useMemo(() => {
-    const unreadMessages = communications
-      .filter((entry) => ["system_notification", "in_app_notification"].includes(entry.channel) && entry.deliveryStatus !== "read")
-      .slice(0, 4)
+    const messages = communications
+      .filter((entry) => ["system_notification", "in_app_notification"].includes(entry.channel))
+      .slice(0, 6)
       .map((entry) => ({
         id: entry.id,
         title: entry.subject,
         detail: entry.message,
         kind: "notification" as const,
-        occurredAt: entry.sentAt ?? entry.createdAt
+        occurredAt: entry.sentAt ?? entry.createdAt,
+        isUnread: entry.deliveryStatus !== "read",
+        communicationId: entry.id
       }));
     const openAlerts = operationsAlerts
       .filter((entry) => entry.status === "open")
@@ -67,7 +67,9 @@ function TopBarInner() {
         title: entry.title,
         detail: entry.description ?? "Operational alert",
         kind: "alert" as const,
-        occurredAt: entry.createdAt
+        occurredAt: entry.createdAt,
+        isUnread: false,
+        communicationId: undefined
       }));
     const openTasks = operationsTasks
       .filter((entry) => entry.status === "open" || entry.status === "in_progress")
@@ -77,9 +79,11 @@ function TopBarInner() {
         title: entry.title,
         detail: entry.description ?? "Staff task",
         kind: "task" as const,
-        occurredAt: entry.createdAt
+        occurredAt: entry.createdAt,
+        isUnread: false,
+        communicationId: undefined
       }));
-    return [...unreadMessages, ...openAlerts, ...openTasks].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+    return [...messages, ...openAlerts, ...openTasks].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
   }, [communications, operationsAlerts, operationsTasks]);
   const unreadNotificationCount = communications.filter(
     (entry) => ["system_notification", "in_app_notification"].includes(entry.channel) && entry.deliveryStatus !== "read"
@@ -87,7 +91,7 @@ function TopBarInner() {
 
   const handleSignOut = async () => {
     await fetch("/api/auth/mock-logout", { method: "POST" });
-    window.location.assign("/login");
+    window.location.assign(getStaffLoginPath(pathname, currentSlug));
   };
 
   return (
@@ -125,15 +129,8 @@ function TopBarInner() {
             type="button"
             variant="outline"
             aria-label="Open notifications"
-            onClick={() => {
-              setNotificationsOpen((prev) => !prev);
-              communications
-                .filter((entry) => ["system_notification", "in_app_notification"].includes(entry.channel) && entry.deliveryStatus !== "read")
-                .slice(0, 4)
-                .forEach((entry) => {
-                  markCommunicationRead(entry.id);
-                });
-            }}
+            aria-expanded={notificationsOpen}
+            onClick={() => setNotificationsOpen((prev) => !prev)}
             className="relative h-12 min-h-12 rounded-lg px-4"
           >
             <Bell className="h-4 w-4" aria-hidden="true" />
@@ -146,14 +143,54 @@ function TopBarInner() {
           {notificationsOpen ? (
             <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border bg-card p-3 shadow-lg">
               <div className="mb-2 flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold">Notifications</p>
-                <span className="text-xs text-muted-foreground">{notificationItems.length} items</span>
+                <div>
+                  <p className="text-sm font-semibold">Notifications</p>
+                  <p className="text-xs text-muted-foreground">{unreadNotificationCount} unread</p>
+                </div>
+                {unreadNotificationCount > 0 ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      communications
+                        .filter((entry) => ["system_notification", "in_app_notification"].includes(entry.channel) && entry.deliveryStatus !== "read")
+                        .forEach((entry) => markCommunicationRead(entry.id));
+                    }}
+                  >
+                    Mark all read
+                  </Button>
+                ) : null}
               </div>
               <div className="space-y-2">
-                {notificationItems.length === 0 ? <p className="text-sm text-muted-foreground">No new notifications.</p> : null}
+                {notificationItems.length === 0 ? <p className="text-sm text-muted-foreground">No notifications.</p> : null}
                 {notificationItems.map((item) => (
-                  <div key={item.id} className="rounded-lg border p-2 text-sm">
-                    <p className="font-medium">{item.title}</p>
+                  <div
+                    key={item.id}
+                    data-read-state={item.isUnread ? "unread" : "read"}
+                    className={cn(
+                      "rounded-lg border p-3 text-sm transition-colors",
+                      item.isUnread ? "border-sky-200 bg-sky-50" : "bg-muted/20 text-muted-foreground"
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        {item.isUnread ? <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-label="Unread" /> : null}
+                        <p className={cn("truncate", item.isUnread ? "font-semibold text-foreground" : "font-medium")}>{item.title}</p>
+                      </div>
+                      {item.isUnread && item.communicationId ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 shrink-0 px-2 text-xs"
+                          onClick={() => markCommunicationRead(item.communicationId!)}
+                          aria-label={`Mark ${item.title} as read`}
+                        >
+                          Mark read
+                        </Button>
+                      ) : null}
+                    </div>
                     <p className="text-muted-foreground">{item.detail}</p>
                   </div>
                 ))}

@@ -52,4 +52,13 @@ describe("platform admin registry", () => {
     expect(parseProvisionedOrganizations("not-json")).toEqual([]);
     expect(parseProvisionedOrganizations(JSON.stringify([{ bad: true }]))).toEqual([]);
   });
+
+  it("keeps seeded demo identities canonical when browser data is stale", () => {
+    const riverstone = buildSeedProvisionedOrganizations().find((entry) => entry.slug === "riverbend")!;
+    const merged = mergeProvisionedOrganizations([
+      { ...riverstone, name: "Riverbend Recreation Collective" }
+    ]);
+
+    expect(merged.find((entry) => entry.slug === "riverbend")?.name).toBe("Riverstone Nature Center");
+  });
 });

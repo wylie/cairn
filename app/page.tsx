@@ -2,29 +2,19 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicAnalytics } from "@/components/public/public-analytics";
 import { cairnPricingPlans, cairnSupportTiers, pricingPrinciples } from "@/lib/business-model";
+import { SITE_URL, buildSocialMetadata } from "@/lib/metadata";
+
+const homeTitle = "Cairn | Facility Operations Software";
+const homeDescription =
+  "Modern facility operations software for recreation, wellness, camps, memberships, check-ins, POS, programs, and reporting.";
 
 export const metadata: Metadata = {
-  title: "Cairn | Facility Operations Software",
-  description:
-    "Modern facility operations software for recreation, wellness, camps, memberships, check-ins, POS, programs, and reporting.",
+  title: homeTitle,
+  description: homeDescription,
   alternates: {
-    canonical: "https://stonecairn.app/"
+    canonical: SITE_URL
   },
-  openGraph: {
-    title: "Cairn | Facility Operations Software",
-    description:
-      "Modern facility operations software for recreation, wellness, camps, memberships, check-ins, POS, programs, and reporting.",
-    url: "https://stonecairn.app/",
-    siteName: "Cairn",
-    images: [{ url: "https://stonecairn.app/og-image-placeholder.png", width: 1200, height: 630 }]
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Cairn | Facility Operations Software",
-    description:
-      "Modern facility operations software for recreation, wellness, camps, memberships, check-ins, POS, programs, and reporting.",
-    images: ["https://stonecairn.app/og-image-placeholder.png"]
-  }
+  ...buildSocialMetadata({ title: homeTitle, description: homeDescription, url: SITE_URL })
 };
 
 const features = [

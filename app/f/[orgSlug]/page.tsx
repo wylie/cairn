@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getOrganizationForPublic, getPublicPrograms } from "@/lib/public-programs";
 import { RuntimeFacilityLanding } from "@/components/public/runtime-facility-landing";
 import { data } from "@/lib/data";
+import { buildSocialMetadata } from "@/lib/metadata";
 
 export async function generateMetadata({
   params
@@ -19,8 +20,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical: `https://cairn.example.com/f/${orgSlug}` },
-    openGraph: { title, description },
-    twitter: { card: "summary_large_image", title, description },
+    ...buildSocialMetadata({ title, description, url: `https://cairn.example.com/f/${orgSlug}` }),
     robots: { index: true, follow: true }
   };
 }

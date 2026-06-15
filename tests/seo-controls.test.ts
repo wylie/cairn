@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { metadata as rootMetadata } from "@/app/layout";
+import manifest from "@/app/manifest";
 import { metadata as publicMetadata } from "@/app/page";
 import { metadata as loginMetadata } from "@/app/login/layout";
 import { metadata as protectedMetadata } from "@/app/(app)/layout";
@@ -7,10 +9,43 @@ import robots from "@/app/robots";
 import sitemap from "@/app/sitemap";
 
 describe("SEO controls", () => {
+  it("defines global social sharing metadata and home screen assets", () => {
+    expect(rootMetadata.openGraph?.title).toBe("Cairn");
+    expect(rootMetadata.openGraph?.type).toBe("website");
+    expect(rootMetadata.openGraph?.url).toBe("https://stonecairn.app");
+    expect(rootMetadata.openGraph?.images).toEqual(
+      expect.arrayContaining([expect.objectContaining({ url: "/images/og-default.png", width: 1200, height: 630 })])
+    );
+    expect(rootMetadata.twitter?.card).toBe("summary_large_image");
+    expect(rootMetadata.icons).toEqual(
+      expect.objectContaining({ apple: [expect.objectContaining({ url: "/icons/apple-touch-icon.png", sizes: "180x180" })] })
+    );
+  });
+
+  it("defines a standalone web app manifest with mobile icons", () => {
+    const config = manifest();
+    expect(config).toEqual(
+      expect.objectContaining({
+        name: "Cairn",
+        short_name: "Cairn",
+        display: "standalone",
+        theme_color: "#0693C2",
+        background_color: "#F8FAFC"
+      })
+    );
+    expect(config.icons).toEqual([
+      expect.objectContaining({ src: "/icons/icon-192.png", sizes: "192x192" }),
+      expect.objectContaining({ src: "/icons/icon-512.png", sizes: "512x512" })
+    ]);
+  });
+
   it("public homepage has SEO metadata", () => {
     expect(publicMetadata.title).toBe("Cairn | Facility Operations Software");
     expect(publicMetadata.description).toMatch(/Modern facility operations software/i);
     expect(publicMetadata.openGraph?.title).toBe("Cairn | Facility Operations Software");
+    expect(publicMetadata.openGraph?.images).toEqual(
+      expect.arrayContaining([expect.objectContaining({ url: "/images/og-default.png" })])
+    );
     expect(publicMetadata.twitter?.card).toBe("summary_large_image");
   });
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 import { BellRing, Building2, LayoutDashboard, Layers3, FlaskConical, CreditCard, Settings, PlugZap } from "lucide-react";
+import { CairnBrand } from "@/components/brand/cairn-brand";
 import { Button } from "@/components/ui/button";
 import { getActiveRouteHref } from "@/lib/navigation/route-matching";
 import { getSessionFromCookieClient } from "@/lib/tenant/client";
@@ -39,8 +40,13 @@ export function PlatformAdminShell({ children }: { children: React.ReactNode }) 
     <div className="min-h-screen bg-background">
       <div className="mx-auto grid w-full max-w-[1680px] grid-cols-1 gap-6 px-4 py-4 lg:grid-cols-[296px_minmax(0,1fr)] lg:px-6 lg:py-6">
         <aside className="rounded-xl border bg-card p-4 lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)]">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">{isSupportStaff ? "Support Staff" : "Platform Admin"}</p>
-          <h1 className="mt-1 text-lg font-semibold">{isSupportStaff ? "Cairn Support Console" : "Cairn Control Plane"}</h1>
+          <div className="flex items-center gap-3">
+            <CairnBrand className="h-10 w-10" />
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">{isSupportStaff ? "Support Staff" : "Platform Admin"}</p>
+              <h1 className="text-lg font-semibold">{isSupportStaff ? "Cairn Support Console" : "Cairn Control Plane"}</h1>
+            </div>
+          </div>
           <p className="mt-1 text-xs text-muted-foreground">
             {isSupportStaff
               ? "Assist facilities through explicit, logged support workflows."

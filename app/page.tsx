@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CairnBrand } from "@/components/brand/cairn-brand";
 import { PublicAnalytics } from "@/components/public/public-analytics";
 import { cairnPricingPlans, cairnSupportTiers, pricingPrinciples } from "@/lib/business-model";
 import { SITE_URL, buildSocialMetadata } from "@/lib/metadata";
@@ -46,8 +47,8 @@ export default function HomePage() {
       <PublicAnalytics />
       <main className="mx-auto max-w-6xl space-y-16 px-6 py-14 md:px-10">
         <section className="rounded-2xl border border-slate-200 bg-white/90 p-8 shadow-sm md:p-12">
-          <p className="text-sm font-semibold uppercase tracking-wide text-sky-700">Built by Stone Cairn.</p>
-          <h1 className="mt-3 max-w-3xl text-3xl font-semibold leading-tight md:text-5xl">Cairn</h1>
+          <CairnBrand variant="wordmark" className="h-16 w-auto" />
+          <h1 className="sr-only">Cairn</h1>
           <p className="mt-4 max-w-3xl text-base text-slate-600 md:text-lg">
             Modern facility operations software for recreation centers, climbing gyms, camps, and community organizations.
           </p>
@@ -219,10 +220,9 @@ export default function HomePage() {
       <footer className="border-t border-slate-200 bg-white">
         <div className="mx-auto grid max-w-6xl gap-4 px-6 py-8 text-sm text-slate-600 md:grid-cols-[1fr_auto] md:px-10">
           <div>
-            <p className="font-semibold text-slate-900">Cairn</p>
-            <p>Facility Operations Software</p>
-            <p>Built by Stone Cairn.</p>
-            <p>An Argon Collective LLC company</p>
+            <CairnBrand variant="wordmark" className="h-10 w-auto" />
+            <p className="mt-3 text-slate-700">The operating system for modern recreation facilities.</p>
+            <p className="mt-1 text-xs text-slate-500">Built by Argon Collective LLC.</p>
             <p className="mt-2">© 2026 Argon Collective LLC</p>
           </div>
           <nav className="flex flex-wrap gap-4">

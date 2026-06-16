@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CairnBrand } from "@/components/brand/cairn-brand";
 import { getOrganizationForPublic, getPublicPrograms } from "@/lib/public-programs";
 import { RuntimeFacilityLanding } from "@/components/public/runtime-facility-landing";
 import { data } from "@/lib/data";
@@ -49,7 +50,10 @@ export default async function FacilityLandingPage({
     <div className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-white text-slate-900">
       <main className="mx-auto max-w-6xl space-y-8 p-6 md:p-10">
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-10">
-          <p className="text-xs uppercase tracking-wide text-slate-500">Facility Portal</p>
+          <div className="flex items-center gap-2">
+            <CairnBrand className="h-8 w-8" />
+            <p className="text-xs uppercase tracking-wide text-slate-500">Facility Portal</p>
+          </div>
           <div className="mt-2 flex flex-wrap items-center gap-3">
             <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-lg font-semibold" style={{ color: brandPrimary }}>
               {org.name

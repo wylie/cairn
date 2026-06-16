@@ -15,6 +15,10 @@ export const metadata: Metadata = {
   description: DEFAULT_SOCIAL_DESCRIPTION,
   manifest: "/manifest.webmanifest",
   icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" }
+    ],
     apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }]
   },
   ...buildSocialMetadata()

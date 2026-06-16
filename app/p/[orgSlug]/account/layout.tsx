@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CairnBrand } from "@/components/brand/cairn-brand";
 
 export const metadata: Metadata = {
   robots: {
@@ -35,9 +36,12 @@ export default async function CustomerAccountLayout({
     <div className="min-h-screen bg-slate-50">
       <header className="border-b bg-white">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Cairn Customer Portal</p>
-            <h1 className="text-lg font-semibold">Welcome Back</h1>
+          <div className="flex items-center gap-3">
+            <CairnBrand className="h-9 w-9" />
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Cairn Customer Portal</p>
+              <h1 className="text-lg font-semibold">Welcome Back</h1>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Link className="inline-flex min-h-11 items-center rounded-md border px-3 text-sm" href={`/p/${orgSlug}/programs`}>Program Catalog</Link>

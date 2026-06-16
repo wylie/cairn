@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import { CairnBrand } from "@/components/brand/cairn-brand";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { MobileStaffNavigation } from "@/components/layout/mobile-staff-navigation";
 import { TopBar } from "@/components/layout/top-bar";
@@ -115,9 +116,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <DevPerfMonitor />
       <div className="mx-auto grid w-full max-w-[1680px] grid-cols-1 gap-6 px-4 py-4 pb-32 lg:grid-cols-[272px_minmax(0,1fr)] lg:px-6 lg:py-6 lg:pb-6">
         <aside className="hidden rounded-xl border bg-card p-4 lg:sticky lg:top-6 lg:block lg:h-[calc(100vh-3rem)]">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Facility Ops</p>
-          <h1 className="mt-1 text-lg font-semibold">{currentOrganization?.name}</h1>
-          <p className="mt-1 text-xs text-muted-foreground">{currentOrganization?.facilityType.replace("_", " ")}</p>
+          <div className="flex items-center gap-3">
+            <CairnBrand className="h-10 w-10" />
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Facility Ops</p>
+              <h1 className="text-lg font-semibold">{currentOrganization?.name}</h1>
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">{currentOrganization?.facilityType.replace("_", " ")}</p>
           <div className="mt-5">
             <SidebarNav
               pathname={pathname}

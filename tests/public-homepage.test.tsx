@@ -9,7 +9,6 @@ describe("Public homepage", () => {
   it("renders without auth dependency and includes marketing CTAs", () => {
     render(<HomePage />);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Cairn");
-    expect(screen.getAllByText(/Built by Stone Cairn/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Simple pricing that grows with your organization/i)).toBeInTheDocument();
     expect(screen.getByText(/What we don/i)).toBeInTheDocument();
     expect(screen.getByText(/No feature gating/i)).toBeInTheDocument();
@@ -25,7 +24,8 @@ describe("Public homepage", () => {
     );
     expect(screen.getByText(/Need support for a larger organization/i)).toBeInTheDocument();
     expect(screen.queryByText(/Starting at \$599/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/An Argon Collective LLC company/i)).toBeInTheDocument();
+    expect(screen.getByText(/The operating system for modern recreation facilities/i)).toBeInTheDocument();
+    expect(screen.getByText(/Built by Argon Collective LLC/i)).toBeInTheDocument();
     expect(screen.getByText(/© 2026 Argon Collective LLC/i)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Staff Login/i })).not.toBeInTheDocument();
   });

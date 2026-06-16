@@ -2,6 +2,7 @@
 
 import { Suspense, use, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { CairnBrand } from "@/components/brand/cairn-brand";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,6 +67,7 @@ function StaffOrgLoginContent({
     <div className="mx-auto flex min-h-screen max-w-md items-center p-4">
       <Card className="w-full">
         <CardHeader>
+          <CairnBrand className="mb-3 h-11 w-11" />
           <CardTitle>Staff Login</CardTitle>
           <CardDescription>{orgSlug} staff portal</CardDescription>
         </CardHeader>

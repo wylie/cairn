@@ -18,7 +18,13 @@ describe("SEO controls", () => {
     );
     expect(rootMetadata.twitter?.card).toBe("summary_large_image");
     expect(rootMetadata.icons).toEqual(
-      expect.objectContaining({ apple: [expect.objectContaining({ url: "/icons/apple-touch-icon.png", sizes: "180x180" })] })
+      expect.objectContaining({
+        icon: [
+          expect.objectContaining({ url: "/favicon.svg", type: "image/svg+xml" }),
+          expect.objectContaining({ url: "/favicon.ico", sizes: "any" })
+        ],
+        apple: [expect.objectContaining({ url: "/icons/apple-touch-icon.png", sizes: "180x180" })]
+      })
     );
   });
 

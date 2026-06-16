@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { CairnBrand } from "@/components/brand/cairn-brand";
 
 export default function GlobalLoginPage() {
   return (
     <div className="mx-auto flex min-h-screen max-w-2xl items-center p-4">
       <section className="w-full rounded-xl border bg-card p-6">
+        <CairnBrand variant="wordmark" className="mb-5 h-12 w-auto" />
         <h1 className="text-2xl font-semibold">Staff access is facility-specific</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Open Staff Login from your facility&apos;s Cairn page or use the facility-specific link provided by your administrator.

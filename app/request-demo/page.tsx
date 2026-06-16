@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { CairnBrand } from "@/components/brand/cairn-brand";
 
 export const metadata: Metadata = {
   title: "Request Live Demo | Cairn",
@@ -9,6 +10,7 @@ export default function RequestDemoPage() {
   return (
     <main className="mx-auto min-h-screen max-w-3xl px-6 py-14 md:px-10">
       <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+        <CairnBrand variant="wordmark" className="mb-5 h-12 w-auto" />
         <h1 className="text-3xl font-semibold">Request Live Demo</h1>
         <p className="mt-3 text-sm text-slate-600">
           Share your details and we will schedule a live walkthrough of Cairn for your facility team.

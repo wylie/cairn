@@ -5,6 +5,7 @@ import { metadata as publicMetadata } from "@/app/page";
 import { metadata as loginMetadata } from "@/app/login/layout";
 import { metadata as protectedMetadata } from "@/app/(app)/layout";
 import { metadata as customerAccountMetadata } from "@/app/p/[orgSlug]/account/layout";
+import { CAIRN_ICON_METADATA } from "@/lib/metadata";
 import robots from "@/app/robots";
 import sitemap from "@/app/sitemap";
 
@@ -17,6 +18,7 @@ describe("SEO controls", () => {
       expect.arrayContaining([expect.objectContaining({ url: "/images/og-default.png", width: 1200, height: 630 })])
     );
     expect(rootMetadata.twitter?.card).toBe("summary_large_image");
+    expect(rootMetadata.icons).toBe(CAIRN_ICON_METADATA);
     expect(rootMetadata.icons).toEqual(
       expect.objectContaining({
         icon: [
@@ -48,6 +50,8 @@ describe("SEO controls", () => {
   it("public homepage has SEO metadata", () => {
     expect(publicMetadata.title).toBe("Cairn | Facility Operations Software");
     expect(publicMetadata.description).toMatch(/Modern facility operations software/i);
+    expect(publicMetadata.manifest).toBe("/manifest.webmanifest");
+    expect(publicMetadata.icons).toBe(CAIRN_ICON_METADATA);
     expect(publicMetadata.openGraph?.title).toBe("Cairn | Facility Operations Software");
     expect(publicMetadata.openGraph?.images).toEqual(
       expect.arrayContaining([expect.objectContaining({ url: "/images/og-default.png" })])

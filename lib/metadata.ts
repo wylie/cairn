@@ -5,6 +5,13 @@ export const DEFAULT_SOCIAL_TITLE = "Cairn";
 export const DEFAULT_SOCIAL_DESCRIPTION =
   "The operating system for modern recreation facilities. Manage memberships, check-ins, programs, households, waivers, and more in one place.";
 export const DEFAULT_SOCIAL_IMAGE = "/images/og-default.png";
+export const CAIRN_ICON_METADATA = {
+  icon: [
+    { url: "/favicon.svg", type: "image/svg+xml" },
+    { url: "/favicon.ico", sizes: "any" }
+  ],
+  apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }]
+} satisfies Metadata["icons"];
 
 type SocialMetadataOptions = {
   title?: string;

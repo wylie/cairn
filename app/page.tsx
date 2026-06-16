@@ -3,7 +3,7 @@ import Link from "next/link";
 import { CairnBrand } from "@/components/brand/cairn-brand";
 import { PublicAnalytics } from "@/components/public/public-analytics";
 import { cairnPricingPlans, cairnSupportTiers, pricingPrinciples } from "@/lib/business-model";
-import { SITE_URL, buildSocialMetadata } from "@/lib/metadata";
+import { CAIRN_ICON_METADATA, SITE_URL, buildSocialMetadata } from "@/lib/metadata";
 
 const homeTitle = "Cairn | Facility Operations Software";
 const homeDescription =
@@ -12,6 +12,8 @@ const homeDescription =
 export const metadata: Metadata = {
   title: homeTitle,
   description: homeDescription,
+  manifest: "/manifest.webmanifest",
+  icons: CAIRN_ICON_METADATA,
   alternates: {
     canonical: SITE_URL
   },

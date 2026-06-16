@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SupportCenterLauncher } from "@/components/support/support-center-launcher";
 import {
+  CAIRN_ICON_METADATA,
   DEFAULT_SOCIAL_DESCRIPTION,
   DEFAULT_SOCIAL_TITLE,
   SITE_URL,
@@ -14,13 +15,7 @@ export const metadata: Metadata = {
   title: DEFAULT_SOCIAL_TITLE,
   description: DEFAULT_SOCIAL_DESCRIPTION,
   manifest: "/manifest.webmanifest",
-  icons: {
-    icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/favicon.ico", sizes: "any" }
-    ],
-    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }]
-  },
+  icons: CAIRN_ICON_METADATA,
   ...buildSocialMetadata()
 };
 

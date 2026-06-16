@@ -14,6 +14,21 @@ import { getAllowedOrgSlugsFromSessionCookie, getCurrentOrgSlugClient } from "@/
 import { getStaffLoginPath, parseOrgSlugFromPathname } from "@/lib/tenant/path";
 import { cn } from "@/lib/utils";
 
+type TopBarNotificationItem = {
+  id: string;
+  title: string;
+  detail: string;
+  kind: "notification" | "alert" | "task";
+  occurredAt: string;
+  isUnread: boolean;
+  communicationId?: string;
+};
+
+export function sortTopBarNotificationItems(a: TopBarNotificationItem, b: TopBarNotificationItem) {
+  if (a.isUnread !== b.isUnread) return a.isUnread ? -1 : 1;
+  return b.occurredAt.localeCompare(a.occurredAt);
+}
+
 function TopBarInner() {
   const pathname = usePathname() ?? "";
   const organizations = useRuntimeOrganizations();
@@ -83,7 +98,7 @@ function TopBarInner() {
         isUnread: false,
         communicationId: undefined
       }));
-    return [...messages, ...openAlerts, ...openTasks].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+    return [...messages, ...openAlerts, ...openTasks].sort(sortTopBarNotificationItems);
   }, [communications, operationsAlerts, operationsTasks]);
   const unreadNotificationCount = communications.filter(
     (entry) => ["system_notification", "in_app_notification"].includes(entry.channel) && entry.deliveryStatus !== "read"
@@ -163,7 +178,12 @@ function TopBarInner() {
                 ) : null}
               </div>
               <div className="space-y-2">
-                {notificationItems.length === 0 ? <p className="text-sm text-muted-foreground">No notifications.</p> : null}
+                {notificationItems.length === 0 ? (
+                  <div className="rounded-lg border bg-muted/20 p-3">
+                    <p className="text-sm font-semibold">You're all caught up.</p>
+                    <p className="text-sm text-muted-foreground">New notifications will appear here when they need your attention.</p>
+                  </div>
+                ) : null}
                 {notificationItems.map((item) => (
                   <div
                     key={item.id}

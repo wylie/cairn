@@ -19,6 +19,7 @@ import StaffPage from "@/app/(app)/staff/page";
 import SettingsPage from "@/app/(app)/settings/page";
 import WaiversPage from "@/app/(app)/waivers/page";
 import ReleaseNotesPage from "@/app/(app)/release-notes/page";
+import RoadmapPage from "@/app/(app)/roadmap/page";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/dashboard",
@@ -46,6 +47,7 @@ describe("Primary routes smoke", () => {
     StaffPage,
     SettingsPage,
     ReleaseNotesPage,
+    RoadmapPage,
     WaiversPage
   ];
 

@@ -17,11 +17,11 @@ All application version displays should read from `CAIRN_VERSION` and `CAIRN_REL
 
 Planned release window: Sunday evening.
 
-Cairn uses weekly planned releases. Release notes are updated before every planned release, and testers or facilities should expect visible product changes after the Sunday evening release window. Urgent fixes may ship outside the normal release window when needed.
+Cairn uses weekly planned releases. Release notes are updated before every planned release, and testers or facilities should expect visible product changes after the Sunday evening release window. The roadmap is reviewed weekly before release. Urgent fixes may ship outside the normal release window when needed.
 
 ## Build and Deployment Discipline
 
-Development work can continue during the week, but normal weekday work should be committed locally or merged to a non-production branch instead of being pushed or deployed to production immediately.
+Development work can continue during the week, but normal weekday work should remain on the release branch until release day or be merged to a non-production branch instead of being pushed or deployed to production immediately.
 
 Production deploys should be reserved for the Sunday evening release window unless the change is an urgent fix. Release notes should be updated before any production deployment so facilities can see what changed.
 
@@ -41,6 +41,17 @@ To add a release:
 
 The newest release appears first on the staff Release Notes page.
 
+## Roadmap Workflow
+
+The roadmap is version-based and maintained in `lib/releases/roadmap.ts` for the in-app staff view and `docs/roadmap.md` for documentation.
+
+To update the roadmap:
+
+1. Review roadmap status before the Sunday evening release window.
+2. Update version targets, focus areas, status, or production-readiness criteria.
+3. Keep roadmap language facility-facing and clear that dates are targets, not guarantees.
+4. Keep the in-app roadmap and documentation roadmap aligned.
+
 ## Notification Workflow
 
 Update notifications are generated from release note data by `lib/releases/notifications.ts`.
@@ -55,6 +66,6 @@ The notification uses the existing communications notification center, counts to
 
 Current version: `v0.1.0`
 
-Release date: `2026-06-17`
+Release date: `2026-06-22`
 
 Title: Pilot Readiness Release

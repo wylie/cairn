@@ -78,6 +78,7 @@ Use these docs when you need a stable reference instead of a workflow guide.
 - [Known Issues](./docs/reference/known-issues.md)
 - [Business Model](./docs/business-model.md)
 - [Releases](./docs/releases.md)
+- [Roadmap](./docs/roadmap.md)
 
 ## Local Development
 ```bash

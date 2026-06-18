@@ -22,27 +22,31 @@ export const releaseNotes: ReleaseNote[] = [
         "Pricing and support model",
         "Feedback and support entry points",
         "Documentation improvements",
-        "Social sharing metadata and icons"
+        "Social sharing metadata and icons",
+        "Versioning and release process foundations"
       ],
       improved: [
         "Navigation organization",
         "Sidebar scrolling",
         "Notification experience",
         "Demo environment readiness",
-        "Visual consistency"
+        "Visual consistency",
+        "Staff login experience"
       ],
       fixed: [
         "Facility-specific staff login behavior",
         "Hydration mismatch issues",
         "Marketing page favicon issues",
         "Navigation highlighting issues",
-        "Sidebar overflow"
+        "Sidebar overflow",
+        "Notification ordering issues"
       ],
       knownIssues: [
         "Customer import tools not yet available",
         "Apple Wallet integration planned",
         "Demo data may feel artificial",
-        "Payment processing not connected"
+        "Payment processing not connected",
+        "Some workflows may continue to evolve during pilot testing"
       ]
     }
   }

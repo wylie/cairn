@@ -108,6 +108,7 @@ import { getCurrentOrgSlugClient } from "@/lib/tenant/client";
 import { parseOrgSlugFromPathname } from "@/lib/tenant/path";
 import { useSettingsState } from "@/lib/state/settings-state";
 import { shouldRefreshDemoSeed } from "@/lib/demo/seed";
+import { buildReleaseNotification } from "@/lib/releases/notifications";
 
 const BASE_DATE = toDateKey(new Date());
 
@@ -2314,7 +2315,20 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       });
     });
 
-    return [...generated, ...manualCommunications].sort((a, b) => {
+    const releaseNotification = buildReleaseNotification(undefined, {
+      organizationId: activeOrgId,
+      locationId: activeLocationId
+    });
+    const releaseNotificationReadState = manualCommunications.find((entry) => entry.id === releaseNotification.id);
+    generated.push({
+      ...releaseNotification,
+      deliveryStatus: releaseNotificationReadState?.deliveryStatus ?? releaseNotification.deliveryStatus,
+      readAt: releaseNotificationReadState?.readAt,
+      sentAt: releaseNotificationReadState?.sentAt ?? releaseNotification.sentAt,
+      createdAt: releaseNotificationReadState?.createdAt ?? releaseNotification.createdAt
+    });
+
+    return [...generated, ...manualCommunications.filter((entry) => entry.id !== releaseNotification.id)].sort((a, b) => {
       const aDate = a.sentAt ?? a.scheduledFor ?? a.createdAt;
       const bDate = b.sentAt ?? b.scheduledFor ?? b.createdAt;
       return bDate.localeCompare(aDate);
@@ -6823,11 +6837,30 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     return { ok: found, message: found ? "Communication updated." : "Communication not found." };
   };
 
-  const markCommunicationRead: CustomerStateContextValue["markCommunicationRead"] = (communicationId) =>
-    updateCommunication(communicationId, {
+  const markCommunicationRead: CustomerStateContextValue["markCommunicationRead"] = (communicationId) => {
+    const readAt = new Date().toISOString();
+    const updated = updateCommunication(communicationId, {
       deliveryStatus: "read",
-      readAt: new Date().toISOString()
+      readAt
     });
+    if (updated.ok || !communicationId.startsWith("comm_release_")) return updated;
+
+    const releaseNotification = buildReleaseNotification(undefined, {
+      organizationId: activeOrgId,
+      locationId: activeLocationId
+    });
+    if (releaseNotification.id !== communicationId) return updated;
+
+    setManualCommunications((prev) => [
+      {
+        ...releaseNotification,
+        deliveryStatus: "read",
+        readAt
+      },
+      ...prev
+    ]);
+    return { ok: true, message: "Communication updated." };
+  };
 
   const getSignedWaiverRecordsForCustomer = (customerId: string) => {
     return signedWaiverRecords

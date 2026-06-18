@@ -22,6 +22,7 @@ type TopBarNotificationItem = {
   occurredAt: string;
   isUnread: boolean;
   communicationId?: string;
+  actionHref?: string;
 };
 
 export function sortTopBarNotificationItems(a: TopBarNotificationItem, b: TopBarNotificationItem) {
@@ -72,7 +73,8 @@ function TopBarInner() {
         kind: "notification" as const,
         occurredAt: entry.sentAt ?? entry.createdAt,
         isUnread: entry.deliveryStatus !== "read",
-        communicationId: entry.id
+        communicationId: entry.id,
+        actionHref: entry.actionHref
       }));
     const openAlerts = operationsAlerts
       .filter((entry) => entry.status === "open")
@@ -84,7 +86,8 @@ function TopBarInner() {
         kind: "alert" as const,
         occurredAt: entry.createdAt,
         isUnread: false,
-        communicationId: undefined
+        communicationId: undefined,
+        actionHref: undefined
       }));
     const openTasks = operationsTasks
       .filter((entry) => entry.status === "open" || entry.status === "in_progress")
@@ -96,7 +99,8 @@ function TopBarInner() {
         kind: "task" as const,
         occurredAt: entry.createdAt,
         isUnread: false,
-        communicationId: undefined
+        communicationId: undefined,
+        actionHref: undefined
       }));
     return [...messages, ...openAlerts, ...openTasks].sort(sortTopBarNotificationItems);
   }, [communications, operationsAlerts, operationsTasks]);
@@ -184,7 +188,21 @@ function TopBarInner() {
                     <p className="text-sm text-muted-foreground">New notifications will appear here when they need your attention.</p>
                   </div>
                 ) : null}
-                {notificationItems.map((item) => (
+                {notificationItems.map((item) => {
+                  const actionHref = item.actionHref?.startsWith("/")
+                    ? `/o/${currentSlug}${item.actionHref}`
+                    : item.actionHref;
+                  const content = (
+                    <>
+                      <div className="flex min-w-0 items-center gap-2">
+                        {item.isUnread ? <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-label="Unread" /> : null}
+                        <p className={cn("truncate", item.isUnread ? "font-semibold text-foreground" : "font-medium")}>{item.title}</p>
+                      </div>
+                      <p className="text-muted-foreground">{item.detail}</p>
+                      {actionHref ? <p className="mt-1 text-xs font-semibold text-primary">View what's new →</p> : null}
+                    </>
+                  );
+                  return (
                   <div
                     key={item.id}
                     data-read-state={item.isUnread ? "unread" : "read"}
@@ -194,10 +212,20 @@ function TopBarInner() {
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex min-w-0 items-center gap-2">
-                        {item.isUnread ? <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-label="Unread" /> : null}
-                        <p className={cn("truncate", item.isUnread ? "font-semibold text-foreground" : "font-medium")}>{item.title}</p>
-                      </div>
+                      {actionHref ? (
+                        <Link
+                          href={actionHref}
+                          className="min-w-0 flex-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          onClick={() => {
+                            if (item.isUnread && item.communicationId) markCommunicationRead(item.communicationId);
+                            setNotificationsOpen(false);
+                          }}
+                        >
+                          {content}
+                        </Link>
+                      ) : (
+                        <div className="min-w-0 flex-1">{content}</div>
+                      )}
                       {item.isUnread && item.communicationId ? (
                         <Button
                           type="button"
@@ -211,9 +239,9 @@ function TopBarInner() {
                         </Button>
                       ) : null}
                     </div>
-                    <p className="text-muted-foreground">{item.detail}</p>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ) : null}

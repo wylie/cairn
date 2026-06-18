@@ -23,28 +23,48 @@ describe("TopBar notifications", () => {
     );
 
     const trigger = screen.getByRole("button", { name: "Open notifications" });
-    expect(trigger).toHaveTextContent("1");
+    expect(trigger).toHaveTextContent("2");
     expect(screen.queryByText("Riverstone Nature Center")).not.toBeInTheDocument();
 
     await user.click(trigger);
-    expect(screen.getByText("1 unread")).toBeInTheDocument();
-    expect(trigger).toHaveTextContent("1");
+    expect(screen.getByText("2 unread")).toBeInTheDocument();
+    expect(trigger).toHaveTextContent("2");
+    expect(screen.getByText("Cairn Updated")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Cairn Updated/i })).toHaveAttribute("href", "/o/summit/release-notes#release-0-1-0");
 
     const notificationTitle = screen.getByText("Registration confirmation");
     expect(notificationTitle.closest("[data-read-state]")).toHaveAttribute("data-read-state", "unread");
-    expect(screen.getByLabelText("Unread")).toBeInTheDocument();
+    expect(screen.getAllByLabelText("Unread")).toHaveLength(2);
     expect(
       notificationTitle.compareDocumentPosition(screen.getByText("Waitlist exists")) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Mark Registration confirmation as read" }));
 
-    await waitFor(() => expect(screen.getByText("0 unread")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("1 unread")).toBeInTheDocument());
     expect(screen.getByText("Registration confirmation").closest("[data-read-state]")).toHaveAttribute("data-read-state", "read");
     expect(
       screen.getByText("Waitlist exists").compareDocumentPosition(screen.getByText("Registration confirmation")) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
-    expect(trigger).not.toHaveTextContent("1");
+    expect(trigger).toHaveTextContent("1");
+  });
+
+  it("renders release update notifications with a release notes link and read control", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+      </TestProviders>
+    );
+
+    await user.click(screen.getByRole("button", { name: "Open notifications" }));
+
+    const releaseLink = screen.getByRole("link", { name: /Cairn Updated/i });
+    expect(releaseLink).toHaveAttribute("href", "/o/summit/release-notes#release-0-1-0");
+    await user.click(screen.getByRole("button", { name: "Mark Cairn Updated as read" }));
+
+    await waitFor(() => expect(screen.getByText("1 unread")).toBeInTheDocument());
+    expect(screen.getByText("Cairn Updated").closest("[data-read-state]")).toHaveAttribute("data-read-state", "read");
   });
 
   it("sorts unread notifications before read items and newest-first within each group", () => {

@@ -14,6 +14,9 @@ Demo data is representative and may reset during testing. Roadmap dates are targ
 - Customer portal flows for memberships, digital membership card, household visibility, waivers, registrations, billing, purchases, and receipts.
 - Demo organizations with living date-relative activity so dashboards, reports, sessions, check-ins, and receipts stay current.
 - Release notes, roadmap, version display, update notifications, feedback entry points, and support request foundation.
+- Floating **Send Feedback** entry point for bug reports, feature requests, confusing workflows, questions, and general feedback.
+- Support Console review workflow with search, category filtering, status filtering, organization context, reporter context, submission date, and lifecycle status.
+- Lightweight feedback lifecycle statuses: New, In Review, Planned, and Resolved.
 
 ## Needs Feedback
 
@@ -24,6 +27,8 @@ Demo data is representative and may reset during testing. Roadmap dates are targ
 - Whether demo data feels realistic enough for evaluating workflows.
 - Whether staff roles and permission boundaries match how pilot facilities divide daily work.
 - Whether empty states and guidance help testers understand what to do next.
+- Whether the five feedback categories are enough for external testers without making the form feel heavy.
+- Whether support staff need additional triage metadata before feedback is connected to release notes.
 
 ## Planned
 
@@ -34,6 +39,32 @@ Demo data is representative and may reset during testing. Roadmap dates are targ
 - Production data persistence, audit history, and deployment operations beyond the mock-first demo environment.
 - Guided onboarding and migration documentation for real facility launches.
 - More facility-specific demo datasets as pilot customer profiles become clearer.
+- Feedback-to-release-note linkage for resolved issues and improvements.
+- Attachment upload persistence for screenshots and screen recordings.
+- Assignee, comment, and internal-note workflows if pilot volume requires more than lightweight triage.
+
+## Tester Feedback Workflow
+
+Testers can submit feedback from the floating **Send Feedback** button throughout Cairn. The form is intentionally short: name and email are optional, description is required, and Cairn automatically captures current page, organization, facility, and role context when available.
+
+Supported categories:
+
+- Bug Report
+- Feature Request
+- Confusing Workflow
+- Question
+- General Feedback
+
+Support staff review feedback in the Support Console. The console supports global search plus category and status filters, and each feedback item shows category, status, priority, submission date, organization, facility, reporter, workflow, and impact when provided.
+
+Feedback statuses:
+
+- New: received and waiting for review.
+- In Review: support or product staff are investigating.
+- Planned: likely to be addressed in an upcoming release.
+- Resolved: handled or intentionally closed.
+
+Future release notes can reference resolved feedback under Fixed or Improved once release-note linking is added.
 
 ## Demo Entry Points
 

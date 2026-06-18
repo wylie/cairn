@@ -59,7 +59,7 @@ This guide is the entry point for facility administrators and staff. It explains
 - Use dashboard widgets and quick actions first. They already deep-link into the main workflows.
 - Keep households accurate. Household scope affects memberships, portal visibility, waivers, purchases, and registrations.
 - Use alerts to surface issues instead of relying on memory.
-- Use the floating **Need Help?** button to report bugs, suggest improvements, ask questions, request training, or contact support during pilot testing.
+- Use the floating **Send Feedback** button to report bugs, request features, flag confusing workflows, ask questions, or share general feedback during pilot testing.
 
 ## Related Features
 - [Settings](./settings.md)

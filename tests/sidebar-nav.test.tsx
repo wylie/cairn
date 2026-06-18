@@ -15,9 +15,10 @@ describe("SidebarNav", () => {
   it("renders grouped navigation headings", () => {
     render(<SidebarNav pathname="/dashboard" />);
 
-    expect(screen.getByText("Operations")).toBeInTheDocument();
-    expect(screen.getByText("Management")).toBeInTheDocument();
-    ["Dashboard", "Alerts", "Customers", "Households", "Communications", "Memberships", "Billing", "Check-in", "Calendar", "Rentals", "Registrations", "Programs", "Products", "Waivers", "Integrations", "POS", "Reports & Analytics", "Staff", "Settings"].forEach((label) => {
+    ["Dashboard", "Customers", "Programs", "Operations", "Management"].forEach((label) => {
+      expect(screen.getByRole("heading", { name: label })).toBeInTheDocument();
+    });
+    ["Dashboard", "Alerts", "Customers", "Households", "Communications", "Memberships", "Billing", "Check-In", "Calendar", "Rentals", "Registrations", "Programs", "Products", "Waivers", "Integrations", "POS", "Reports & Analytics", "Staff", "Settings"].forEach((label) => {
       expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
     });
   });
@@ -56,7 +57,7 @@ describe("SidebarNav", () => {
       />
     );
 
-    ["Dashboard", "Alerts", "Check-in", "Customers", "Households", "Communications", "Memberships", "Calendar", "Rentals", "Registrations", "POS"].forEach((label) => {
+    ["Dashboard", "Alerts", "Check-In", "Customers", "Households", "Communications", "Memberships", "Calendar", "Rentals", "Registrations", "POS"].forEach((label) => {
       expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
     });
     ["Products", "Waivers", "Staff", "Settings", "Programs", "Billing", "Integrations"].forEach((label) => {
@@ -112,7 +113,7 @@ describe("SidebarNav", () => {
         hasPermission={hasPermission}
       />
     );
-    ["Dashboard", "Alerts", "Check-in", "Customers", "Households", "Communications", "Memberships", "Billing", "Calendar", "Rentals", "Registrations", "POS", "Programs", "Products", "Waivers", "Integrations", "Reports & Analytics", "Staff", "Settings"].forEach((label) => {
+    ["Dashboard", "Alerts", "Check-In", "Customers", "Households", "Communications", "Memberships", "Billing", "Calendar", "Rentals", "Registrations", "POS", "Programs", "Products", "Waivers", "Integrations", "Reports & Analytics", "Staff", "Settings"].forEach((label) => {
       expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
     });
   });

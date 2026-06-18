@@ -5,7 +5,7 @@ import { getActiveRouteHref } from "@/lib/navigation/route-matching";
 import { cn } from "@/lib/utils";
 import type { StaffPermission } from "@/types/domain";
 
-type NavSection = "operations" | "management";
+type NavSection = "dashboard" | "customers" | "programs" | "operations" | "management";
 type NavItem = {
   href: string;
   label: string;
@@ -21,15 +21,17 @@ type NavItem = {
 const operationalPermissions: StaffPermission[] = ["checkInCustomer", "checkOutCustomer", "viewCustomers", "usePOS", "rosterAccess", "editPrograms"];
 
 export const navItems: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, section: "operations", permissions: operationalPermissions },
-  { href: "/alerts", label: "Alerts", icon: Bell, section: "operations", permissions: operationalPermissions },
-  { href: "/customers", label: "Customers", icon: Users, section: "operations", permissions: ["viewCustomers"] },
-  { href: "/households", label: "Households", icon: Home, section: "operations", permissions: ["viewCustomers"] },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, section: "dashboard", permissions: operationalPermissions },
+  { href: "/alerts", label: "Alerts", icon: Bell, section: "dashboard", permissions: operationalPermissions },
+  { href: "/customers", label: "Customers", icon: Users, section: "customers", permissions: ["viewCustomers"] },
+  { href: "/households", label: "Households", icon: Home, section: "customers", permissions: ["viewCustomers"] },
+  { href: "/memberships", label: "Memberships", icon: ShieldCheck, section: "customers", permissions: ["viewCustomers", "viewMembershipReports"] },
+  { href: "/check-in", label: "Check-In", icon: ScanLine, section: "customers", permissions: ["checkInCustomer", "checkOutCustomer"] },
   {
     href: "/communications",
     label: "Communications",
     icon: MessagesSquare,
-    section: "operations",
+    section: "customers",
     permissions: ["manageCommunications", "sendTransactionalMessages", "messageAssignedParticipants"],
     isVisible: ({ hasPermission, canAccessPermissions }) =>
       (!hasPermission && !canAccessPermissions) ||
@@ -40,18 +42,15 @@ export const navItems: NavItem[] = [
           canAccessPermissions?.(["manageCommunications", "sendTransactionalMessages", "messageAssignedParticipants"])
       )
   },
-  { href: "/memberships", label: "Memberships", icon: ShieldCheck, section: "operations", permissions: ["viewCustomers", "viewMembershipReports"] },
-  { href: "/billing", label: "Billing", icon: CreditCard, section: "management", permissions: ["manageBillingSettings", "viewFinancialReports"] },
-  { href: "/check-in", label: "Check-in", icon: ScanLine, section: "operations", permissions: ["checkInCustomer", "checkOutCustomer"] },
-  { href: "/calendar", label: "Calendar", icon: Calendar, section: "operations", permissions: ["rosterAccess", "editPrograms", "checkInCustomer"] },
-  { href: "/rentals", label: "Rentals", icon: TentTree, section: "operations", permissions: ["manageRentals"] },
-  { href: "/registrations", label: "Registrations", icon: ClipboardList, section: "operations", permissions: ["rosterAccess", "editPrograms"] },
+  { href: "/calendar", label: "Calendar", icon: Calendar, section: "programs", permissions: ["rosterAccess", "editPrograms", "checkInCustomer"] },
+  { href: "/registrations", label: "Registrations", icon: ClipboardList, section: "programs", permissions: ["rosterAccess", "editPrograms"] },
+  { href: "/rentals", label: "Rentals", icon: TentTree, section: "programs", permissions: ["manageRentals"] },
   { href: "/pos", label: "POS", icon: CreditCard, section: "operations", permissions: ["usePOS"] },
   {
     href: "/programs",
     label: "Programs",
     icon: Boxes,
-    section: "management",
+    section: "programs",
     permissions: ["editPrograms"],
     // Front desk often has limited roster permissions; keep program setup scoped to instructor/manager-level capabilities.
     isVisible: ({ hasPermission, canAccessPermissions }) => {
@@ -68,12 +67,21 @@ export const navItems: NavItem[] = [
       return canEditPrograms && !isFrontDeskOnly;
     }
   },
-  { href: "/products", label: "Products", icon: Tags, section: "management", permissions: ["manageProducts"] },
-  { href: "/waivers", label: "Waivers", icon: FileCheck2, section: "management", permissions: ["manageWaivers"] },
-  { href: "/integrations", label: "Integrations", icon: PlugZap, section: "management", permissions: ["managePlatformSettings"] },
-  { href: "/reports", label: "Reports & Analytics", icon: BarChart3, section: "management", permissions: ["viewReports", "viewAttendanceReports", "viewFinancialReports"] },
+  { href: "/products", label: "Products", icon: Tags, section: "operations", permissions: ["manageProducts"] },
+  { href: "/waivers", label: "Waivers", icon: FileCheck2, section: "operations", permissions: ["manageWaivers"] },
+  { href: "/billing", label: "Billing", icon: CreditCard, section: "operations", permissions: ["manageBillingSettings", "viewFinancialReports"] },
   { href: "/staff", label: "Staff", icon: UserCog, section: "management", permissions: ["manageStaff", "inviteStaff", "manageRoles"] },
+  { href: "/reports", label: "Reports & Analytics", icon: BarChart3, section: "management", permissions: ["viewReports", "viewAttendanceReports", "viewFinancialReports"] },
+  { href: "/integrations", label: "Integrations", icon: PlugZap, section: "management", permissions: ["managePlatformSettings"] },
   { href: "/settings", label: "Settings", icon: Settings, section: "management", permissions: ["manageSettings", "manageStaff", "manageProducts"] }
+];
+
+const navSections: { id: NavSection; label: string }[] = [
+  { id: "dashboard", label: "Dashboard" },
+  { id: "customers", label: "Customers" },
+  { id: "programs", label: "Programs" },
+  { id: "operations", label: "Operations" },
+  { id: "management", label: "Management" }
 ];
 
 export function buildOrgHref(pathname: string, href: string) {
@@ -109,18 +117,21 @@ function SidebarNavInner({
   hasPermission?: (permission: StaffPermission) => boolean;
 }) {
   const visibleItems = getVisibleNavItems({ canAccessPermissions, hasPermission });
-  const operations = visibleItems.filter((item) => item.section === "operations");
-  const management = visibleItems.filter((item) => item.section === "management");
+  const activeHref = getActiveRouteHref(
+    pathname,
+    visibleItems.map((item) => ({ href: currentOrgSlug ? `/o/${currentOrgSlug}${item.href}` : buildOrgHref(pathname, item.href) }))
+  );
 
-  const renderGroup = (heading: string, items: NavItem[]) => {
+  const renderGroup = (section: { id: NavSection; label: string }) => {
+    const items = visibleItems.filter((item) => item.section === section.id);
     if (items.length === 0) return null;
-    const activeHref = getActiveRouteHref(
-      pathname,
-      visibleItems.map((item) => ({ href: currentOrgSlug ? `/o/${currentOrgSlug}${item.href}` : buildOrgHref(pathname, item.href) }))
-    );
+    const headingId = `sidebar-nav-${section.id}`;
+
     return (
-      <div className="space-y-1">
-        <p className="px-2 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{heading}</p>
+      <section key={section.id} aria-labelledby={headingId} className="space-y-1.5">
+        <h2 id={headingId} className="px-3 text-xs font-semibold text-foreground/75">
+          {section.label}
+        </h2>
         {items.map((item) => {
           const orgHref = currentOrgSlug ? `/o/${currentOrgSlug}${item.href}` : buildOrgHref(pathname, item.href);
           const isActive = activeHref === orgHref;
@@ -129,24 +140,26 @@ function SidebarNavInner({
               key={item.href}
               href={orgHref}
               prefetch
+              aria-current={isActive ? "page" : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                "flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                isActive
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
               )}
             >
-              <item.icon className="h-4 w-4" aria-hidden="true" />
-              {item.label}
+              <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="truncate">{item.label}</span>
             </Link>
           );
         })}
-      </div>
+      </section>
     );
   };
 
   return (
-    <nav className="space-y-1">
-      {renderGroup("Operations", operations)}
-      {renderGroup("Management", management)}
+    <nav className="space-y-5" aria-label="Primary navigation">
+      {navSections.map((section) => renderGroup(section))}
     </nav>
   );
 }

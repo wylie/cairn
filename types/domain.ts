@@ -546,6 +546,7 @@ export interface CommunicationRecord {
   deliveryStatus?: "queued" | "delivered" | "unread" | "read" | "failed";
   readAt?: string;
   attachmentsPlaceholder?: string[];
+  actionHref?: string;
 }
 
 export interface OperationsAlertRecord {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CairnBrand } from "@/components/brand/cairn-brand";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
@@ -16,6 +17,7 @@ import { useWorkstationState } from "@/lib/state/workstation-state";
 import type { StaffPermission } from "@/types/domain";
 import { getCurrentOrgSlugClient } from "@/lib/tenant/client";
 import { parseOrgSlugFromPathname } from "@/lib/tenant/path";
+import { CAIRN_VERSION } from "@/lib/version";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
@@ -133,6 +135,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               canAccessPermissions={canAccessPermissions}
               hasPermission={hasPermission}
             />
+          </div>
+          <div className="mt-4 shrink-0 border-t pt-3 text-xs text-muted-foreground">
+            <Link href={`/o/${currentSlug}/release-notes`} className="font-medium text-foreground hover:text-primary">
+              What's New
+            </Link>
+            <span className="mx-2">·</span>
+            <span>Cairn v{CAIRN_VERSION}</span>
           </div>
         </aside>
         <main className="space-y-4">

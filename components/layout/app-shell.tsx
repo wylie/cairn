@@ -115,16 +115,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background">
       <DevPerfMonitor />
       <div className="mx-auto grid w-full max-w-[1680px] grid-cols-1 gap-6 px-4 py-4 pb-32 lg:grid-cols-[272px_minmax(0,1fr)] lg:px-6 lg:py-6 lg:pb-6">
-        <aside className="hidden rounded-xl border bg-card p-4 lg:sticky lg:top-6 lg:block lg:h-[calc(100vh-3rem)]">
-          <div className="flex items-center gap-3">
-            <CairnBrand className="h-10 w-10" />
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Facility Ops</p>
-              <h1 className="text-lg font-semibold">{currentOrganization?.name}</h1>
+        <aside className="hidden rounded-xl border bg-card p-4 lg:sticky lg:top-6 lg:flex lg:h-[calc(100vh-3rem)] lg:min-h-0 lg:flex-col lg:overflow-hidden">
+          <div className="shrink-0">
+            <div className="flex items-center gap-3">
+              <CairnBrand className="h-10 w-10" />
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Facility Ops</p>
+                <h1 className="text-lg font-semibold">{currentOrganization?.name}</h1>
+              </div>
             </div>
+            <p className="mt-2 text-xs text-muted-foreground">{currentOrganization?.facilityType.replace("_", " ")}</p>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">{currentOrganization?.facilityType.replace("_", " ")}</p>
-          <div className="mt-5">
+          <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1">
             <SidebarNav
               pathname={pathname}
               currentOrgSlug={currentSlug}

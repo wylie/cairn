@@ -39,20 +39,22 @@ export function PlatformAdminShell({ children }: { children: React.ReactNode }) 
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto grid w-full max-w-[1680px] grid-cols-1 gap-6 px-4 py-4 lg:grid-cols-[296px_minmax(0,1fr)] lg:px-6 lg:py-6">
-        <aside className="rounded-xl border bg-card p-4 lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)]">
-          <div className="flex items-center gap-3">
-            <CairnBrand className="h-10 w-10" />
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">{isSupportStaff ? "Support Staff" : "Platform Admin"}</p>
-              <h1 className="text-lg font-semibold">{isSupportStaff ? "Cairn Support Console" : "Cairn Control Plane"}</h1>
+        <aside className="rounded-xl border bg-card p-4 lg:sticky lg:top-6 lg:flex lg:h-[calc(100vh-3rem)] lg:min-h-0 lg:flex-col lg:overflow-hidden">
+          <div className="shrink-0">
+            <div className="flex items-center gap-3">
+              <CairnBrand className="h-10 w-10" />
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{isSupportStaff ? "Support Staff" : "Platform Admin"}</p>
+                <h1 className="text-lg font-semibold">{isSupportStaff ? "Cairn Support Console" : "Cairn Control Plane"}</h1>
+              </div>
             </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {isSupportStaff
+                ? "Assist facilities through explicit, logged support workflows."
+                : "Organization provisioning, templates, demos, and platform controls."}
+            </p>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {isSupportStaff
-              ? "Assist facilities through explicit, logged support workflows."
-              : "Organization provisioning, templates, demos, and platform controls."}
-          </p>
-          <nav className="mt-5 space-y-1">
+          <nav className="mt-5 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1" aria-label="Platform navigation">
             {visibleNavItems.map((item) => {
               const active = activeHref === item.href;
               return (

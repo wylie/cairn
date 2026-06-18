@@ -44,6 +44,7 @@ describe("AppShell", () => {
 
     expect(screen.getByText("Facility Ops")).toBeInTheDocument();
     expect(screen.getByText("Page Content")).toBeInTheDocument();
+    expect(screen.queryByText("hybrid")).not.toBeInTheDocument();
     expect(container.querySelector(".max-w-\\[1680px\\]")).not.toBeNull();
   });
 

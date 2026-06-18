@@ -35,16 +35,18 @@ describe("TopBar notifications", () => {
     const notificationTitle = screen.getByText("Registration confirmation");
     expect(notificationTitle.closest("[data-read-state]")).toHaveAttribute("data-read-state", "unread");
     expect(screen.getAllByLabelText("Unread")).toHaveLength(2);
+    const waitlistTitle = screen.getAllByText("Waitlist exists")[0];
     expect(
-      notificationTitle.compareDocumentPosition(screen.getByText("Waitlist exists")) & Node.DOCUMENT_POSITION_FOLLOWING
+      notificationTitle.compareDocumentPosition(waitlistTitle) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Mark Registration confirmation as read" }));
 
     await waitFor(() => expect(screen.getByText("1 unread")).toBeInTheDocument());
     expect(screen.getByText("Registration confirmation").closest("[data-read-state]")).toHaveAttribute("data-read-state", "read");
+    const updatedWaitlistTitle = screen.getAllByText("Waitlist exists")[0];
     expect(
-      screen.getByText("Waitlist exists").compareDocumentPosition(screen.getByText("Registration confirmation")) & Node.DOCUMENT_POSITION_FOLLOWING
+      updatedWaitlistTitle.compareDocumentPosition(screen.getByText("Registration confirmation")) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
     expect(trigger).toHaveTextContent("1");
   });
@@ -67,12 +69,38 @@ describe("TopBar notifications", () => {
     expect(screen.getByText("Cairn Updated").closest("[data-read-state]")).toHaveAttribute("data-read-state", "read");
   });
 
+  it("closes the notification dropdown on outside click and Escape", async () => {
+    const user = userEvent.setup();
+    render(
+      <TestProviders>
+        <TopBar />
+        <button type="button">Outside target</button>
+      </TestProviders>
+    );
+
+    const trigger = screen.getByRole("button", { name: "Open notifications" });
+    await user.click(trigger);
+    expect(screen.getByText("Notifications")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Outside target" }));
+    expect(screen.queryByText("Notifications")).not.toBeInTheDocument();
+
+    await user.click(trigger);
+    expect(screen.getByText("Notifications")).toBeInTheDocument();
+
+    await user.click(screen.getAllByText("Registration confirmation")[0]);
+    expect(screen.getByText("Notifications")).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByText("Notifications")).not.toBeInTheDocument();
+  });
+
   it("sorts unread notifications before read items and newest-first within each group", () => {
     const sortedTitles = [
-      { id: "older-unread", title: "Older unread", detail: "", kind: "notification" as const, occurredAt: "2026-06-10T09:00:00Z", isUnread: true, communicationId: "older-unread" },
-      { id: "newest-read", title: "Newest read", detail: "", kind: "alert" as const, occurredAt: "2026-06-16T09:00:00Z", isUnread: false },
-      { id: "newest-unread", title: "Newest unread", detail: "", kind: "notification" as const, occurredAt: "2026-06-15T09:00:00Z", isUnread: true, communicationId: "newest-unread" },
-      { id: "older-read", title: "Older read", detail: "", kind: "task" as const, occurredAt: "2026-06-09T09:00:00Z", isUnread: false }
+      { id: "older-unread", title: "Older unread", detail: "", kind: "notification" as const, createdAt: "2026-06-10T09:00:00Z", isUnread: true, communicationId: "older-unread" },
+      { id: "newest-read", title: "Newest read", detail: "", kind: "alert" as const, createdAt: "2026-06-16T09:00:00Z", isUnread: false },
+      { id: "newest-unread", title: "Newest unread", detail: "", kind: "notification" as const, createdAt: "2026-06-15T09:00:00Z", isUnread: true, communicationId: "newest-unread" },
+      { id: "older-read", title: "Older read", detail: "", kind: "task" as const, createdAt: "2026-06-09T09:00:00Z", isUnread: false }
     ].sort(sortTopBarNotificationItems).map((item) => item.title);
 
     expect(sortedTitles).toEqual(["Newest unread", "Older unread", "Newest read", "Older read"]);

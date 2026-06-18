@@ -17,7 +17,15 @@ All application version displays should read from `CAIRN_VERSION` and `CAIRN_REL
 
 Planned release window: Sunday evening.
 
-Release notes are updated for every planned release. Urgent fixes may ship outside the Sunday evening window when needed.
+Cairn uses weekly planned releases. Release notes are updated before every planned release, and testers or facilities should expect visible product changes after the Sunday evening release window. Urgent fixes may ship outside the normal release window when needed.
+
+## Build and Deployment Discipline
+
+Development work can continue during the week, but normal weekday work should be committed locally or merged to a non-production branch instead of being pushed or deployed to production immediately.
+
+Production deploys should be reserved for the Sunday evening release window unless the change is an urgent fix. Release notes should be updated before any production deployment so facilities can see what changed.
+
+This is intentionally lightweight for pilot testing. Cairn does not need complex release automation yet.
 
 ## Release Note Workflow
 

@@ -1,10 +1,16 @@
 export type RoadmapStatus = "In Progress" | "Planned" | "Future";
 
+export type RoadmapCategory = {
+  title: string;
+  focus: string[];
+};
+
 export type RoadmapRelease = {
   version: string;
   title: string;
   target: string;
-  focus: string[];
+  focus?: string[];
+  categories?: RoadmapCategory[];
   status: RoadmapStatus;
   criteria?: string[];
 };
@@ -12,16 +18,90 @@ export type RoadmapRelease = {
 export const roadmapReleases: RoadmapRelease[] = [
   {
     version: "0.1.0",
-    title: "Pilot Readiness",
+    title: "Pilot Readiness & External Testing",
     target: "June 22, 2026",
-    focus: [
-      "Branding",
-      "Documentation",
-      "Release Notes",
-      "Versioning",
-      "Support infrastructure",
-      "Navigation improvements",
-      "Demo readiness"
+    categories: [
+      {
+        title: "Platform Foundation",
+        focus: [
+          "Release Notes",
+          "Product Roadmap",
+          "Versioning",
+          "Weekly Release Process",
+          "Update Notifications",
+          "Support Console Foundation"
+        ]
+      },
+      {
+        title: "Branding & Marketing",
+        focus: [
+          "Stone Cairn branding",
+          "Logo system",
+          "Favicon support",
+          "OG/social sharing metadata",
+          "Marketing site improvements",
+          "Pricing model",
+          "Support model"
+        ]
+      },
+      {
+        title: "Facility Operations",
+        focus: [
+          "Customer management",
+          "Household management",
+          "Membership management",
+          "Check-in workflows",
+          "POS workflows",
+          "Programs",
+          "Registrations",
+          "Rentals",
+          "Reporting dashboards"
+        ]
+      },
+      {
+        title: "Demo & Testing Readiness",
+        focus: [
+          "Demo organizations",
+          "Demo staff accounts",
+          "Demo customer accounts",
+          "Documentation improvements",
+          "Tester onboarding materials",
+          "Facility-specific login experience"
+        ]
+      },
+      {
+        title: "UX Improvements",
+        focus: [
+          "Navigation organization",
+          "Sidebar scrolling fixes",
+          "Notification improvements",
+          "Read/unread notification states",
+          "Notification ordering",
+          "Active navigation fixes",
+          "Dropdown usability improvements",
+          "Loading-state improvements"
+        ]
+      },
+      {
+        title: "Reliability & Quality",
+        focus: [
+          "Hydration fixes",
+          "Route cleanup",
+          "Permission cleanup",
+          "Support access model",
+          "Documentation restructuring"
+        ]
+      },
+      {
+        title: "Pilot Program",
+        focus: [
+          "External tester onboarding",
+          "Feedback collection",
+          "In-app support requests",
+          "Bug reporting workflow",
+          "Weekly release cadence"
+        ]
+      }
     ],
     status: "In Progress"
   },
@@ -34,7 +114,6 @@ export const roadmapReleases: RoadmapRelease[] = [
       "Workflow refinement",
       "UI consistency",
       "Accessibility improvements",
-      "Notification improvements",
       "Demo environment improvements"
     ],
     status: "Planned"

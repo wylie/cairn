@@ -1,24 +1,81 @@
 # Roadmap
 
-Cairn's roadmap is version-based so testers and future customers can understand the direction of the product as it moves through pilot testing.
+Cairn's roadmap is version-based so testers and future customers can understand what has already been accomplished, what is currently being refined, and what is planned next.
 
-Targets are planning targets, not guarantees. The roadmap should be reviewed weekly before the Sunday evening release window.
+Targets are planning targets, not guarantees. Dates may change based on tester feedback and pilot customer needs. The roadmap should be reviewed weekly before the Sunday evening release window.
 
-## v0.1.0 — Pilot Readiness
+## v0.1.0 — Pilot Readiness & External Testing
 
 Target: June 22, 2026
 
 Status: In Progress
 
-Focus:
+### Platform Foundation
 
-- Branding
-- Documentation
 - Release Notes
+- Product Roadmap
 - Versioning
-- Support infrastructure
-- Navigation improvements
-- Demo readiness
+- Weekly Release Process
+- Update Notifications
+- Support Console Foundation
+
+### Branding & Marketing
+
+- Stone Cairn branding
+- Logo system
+- Favicon support
+- OG/social sharing metadata
+- Marketing site improvements
+- Pricing model
+- Support model
+
+### Facility Operations
+
+- Customer management
+- Household management
+- Membership management
+- Check-in workflows
+- POS workflows
+- Programs
+- Registrations
+- Rentals
+- Reporting dashboards
+
+### Demo & Testing Readiness
+
+- Demo organizations
+- Demo staff accounts
+- Demo customer accounts
+- Documentation improvements
+- Tester onboarding materials
+- Facility-specific login experience
+
+### UX Improvements
+
+- Navigation organization
+- Sidebar scrolling fixes
+- Notification improvements
+- Read/unread notification states
+- Notification ordering
+- Active navigation fixes
+- Dropdown usability improvements
+- Loading-state improvements
+
+### Reliability & Quality
+
+- Hydration fixes
+- Route cleanup
+- Permission cleanup
+- Support access model
+- Documentation restructuring
+
+### Pilot Program
+
+- External tester onboarding
+- Feedback collection
+- In-app support requests
+- Bug reporting workflow
+- Weekly release cadence
 
 ## v0.2.0 — Feedback & Usability
 
@@ -32,7 +89,6 @@ Focus:
 - Workflow refinement
 - UI consistency
 - Accessibility improvements
-- Notification improvements
 - Demo environment improvements
 
 ## v0.3.0 — Customer Migration & Onboarding

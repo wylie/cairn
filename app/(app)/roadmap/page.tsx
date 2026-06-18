@@ -53,14 +53,34 @@ export default function RoadmapPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ul className="grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
-                {(release.criteria ?? release.focus).map((item) => (
-                  <li key={item} className="flex gap-2">
-                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
+              {release.categories ? (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {release.categories.map((category) => (
+                    <section key={category.title} className="rounded-lg border bg-muted/10 p-4" aria-labelledby={`roadmap-${release.version}-${category.title.replaceAll(" ", "-").toLowerCase()}`}>
+                      <h3 id={`roadmap-${release.version}-${category.title.replaceAll(" ", "-").toLowerCase()}`} className="text-sm font-semibold">
+                        {category.title}
+                      </h3>
+                      <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+                        {category.focus.map((item) => (
+                          <li key={item} className="flex gap-2">
+                            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  ))}
+                </div>
+              ) : (
+                <ul className="grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
+                  {(release.criteria ?? release.focus ?? []).map((item) => (
+                    <li key={item} className="flex gap-2">
+                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </CardContent>
           </Card>
         ))}

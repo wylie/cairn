@@ -31,7 +31,7 @@ describe("Receipt detail", () => {
           organizationId: "org_summit",
           locationId: "loc_001",
           customerId: "cust_004",
-          customerName: "Sam Noaccess",
+          customerName: "Oslo Fisher",
           soldByStaffId: "staff_002",
           soldByStaffName: "Maya Lopez",
           transactionType: "sale",
@@ -87,7 +87,7 @@ describe("Receipt detail", () => {
           organizationId: "org_summit",
           locationId: "loc_001",
           customerId: "cust_004",
-          customerName: "Sam Noaccess",
+          customerName: "Oslo Fisher",
           transactionType: "sale",
           returnStatus: "none",
           items: [

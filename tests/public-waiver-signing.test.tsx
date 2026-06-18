@@ -86,9 +86,9 @@ describe("online waiver signing", () => {
 
     expect(screen.getByText("Who is this waiver for?")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Alex Rivera/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Sam Noaccess/i })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Dana Daypass/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Jimbo James/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Oslo Fisher/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Dana Brooks/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Miles James/i })).not.toBeInTheDocument();
   });
 
   it("customer can sign for self from the portal without exposing a broader selector", async () => {
@@ -139,7 +139,7 @@ describe("online waiver signing", () => {
     await user.click(screen.getByRole("button", { name: "Submit Waiver" }));
     expect(await screen.findByRole("status")).toHaveTextContent(/signed/i);
     expect(screen.getByText((content) => content.includes("Signing for:"))).toBeInTheDocument();
-    expect(screen.getAllByText("Sam Noaccess").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Oslo Fisher").length).toBeGreaterThan(0);
   });
 
   it("rejects an unrelated customer id in customer portal signing", () => {
@@ -155,7 +155,7 @@ describe("online waiver signing", () => {
     );
 
     expect(screen.getByRole("alert")).toHaveTextContent("You can only sign waivers for yourself or household members you manage.");
-    expect(screen.queryByText("Dana Daypass")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dana Brooks")).not.toBeInTheDocument();
   });
 
   it("only allows broad kiosk customer lookup in staff-authorized context", async () => {
@@ -184,7 +184,7 @@ describe("online waiver signing", () => {
 
     const search = screen.getByPlaceholderText("Search by name, email, phone, or member ID");
     await user.type(search, "Dana");
-    expect(screen.getByRole("button", { name: /Dana Daypass/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Dana Brooks/i })).toBeInTheDocument();
   });
 
   it("registration flow surfaces waiver signing action when waiver is missing", async () => {

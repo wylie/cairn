@@ -328,7 +328,7 @@ describe("Workstation staff mode", () => {
     );
 
     await activateStaff(user, "3333");
-    await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Sam Noaccess");
+    await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Oslo Fisher");
     await user.keyboard("{Enter}");
     expect(screen.getByRole("button", { name: "Cannot Check In" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Sell Access" })).toBeInTheDocument();
@@ -349,7 +349,7 @@ describe("CheckIn access methods", () => {
     await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Alex");
     await user.keyboard("{Enter}");
     expect(screen.getByText("Checking in for household")).toBeInTheDocument();
-    await user.click(screen.getByLabelText("Sam Noaccess"));
+    await user.click(screen.getByLabelText("Oslo Fisher"));
     await user.click(screen.getByRole("button", { name: "Check In Selected" }));
     expect(screen.getByText(/Checked in 1 household member/i)).toBeInTheDocument();
   });
@@ -430,7 +430,7 @@ describe("CheckIn access methods", () => {
     await user.type(search, "Dana");
     await user.keyboard("{Enter}");
     await user.click(screen.getByRole("button", { name: "Check In" }));
-    await user.click(screen.getByRole("button", { name: "Check Out Dana Daypass" }));
+    await user.click(screen.getByRole("button", { name: "Check Out Dana Brooks" }));
     await user.clear(search);
     await user.type(search, "Dana");
     await user.keyboard("{Enter}");
@@ -448,7 +448,7 @@ describe("CheckIn access methods", () => {
     );
 
     await activateStaff(user, "3333");
-    await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Sam");
+    await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Oslo");
     await user.keyboard("{Enter}");
     await user.click(screen.getByRole("button", { name: "Cannot Check In" }));
 
@@ -513,7 +513,7 @@ describe("Check-in desk workflow", () => {
       </TestProviders>
     );
     await activateStaff(user, "2222");
-    await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Sam");
+    await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Oslo");
     await user.keyboard("{Enter}");
     expect(screen.getByRole("button", { name: "Manager Override + Check In" })).toBeInTheDocument();
     expect(screen.getByLabelText("Override reason")).toBeInTheDocument();
@@ -543,7 +543,7 @@ describe("Check-in desk workflow", () => {
       </TestProviders>
     );
     await activateStaff(user, "3333");
-    await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Sam");
+    await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Oslo");
     await user.keyboard("{Enter}");
     expect(screen.getByText("Cannot check in")).toBeInTheDocument();
     expect(screen.getAllByText(/Waiver missing/i).length).toBeGreaterThan(0);
@@ -611,7 +611,7 @@ describe("Check-in desk workflow", () => {
       </TestProviders>
     );
     await activateStaff(user, "3333");
-    await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Sam");
+    await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Oslo");
     await user.keyboard("{Enter}");
     expect(screen.getByText(/Minor requires guardian/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cannot Check In" })).toBeDisabled();

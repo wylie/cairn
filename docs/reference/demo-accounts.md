@@ -20,6 +20,7 @@ These organizations use living demo data generated relative to the current date.
 | Role | Email | Password |
 | --- | --- | --- |
 | Platform Administrator | `platform@cairn.app` | `dev1234` |
+| Cairn Support Staff | `support@cairn.app` | `dev1234` |
 
 ## Staff Accounts
 

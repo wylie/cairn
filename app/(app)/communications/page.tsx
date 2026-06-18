@@ -582,7 +582,12 @@ export default function CommunicationsPage() {
                 </button>
               );
             })}
-            {filteredCommunications.length === 0 ? <div className="rounded-xl border border-dashed bg-card p-6 text-sm text-muted-foreground">No communications match the current filters.</div> : null}
+            {filteredCommunications.length === 0 ? (
+              <div className="rounded-xl border border-dashed bg-card p-6 text-sm text-muted-foreground">
+                <p className="font-medium text-foreground">No communications match these filters.</p>
+                <p className="mt-1">Clear filters or use the composer to send a customer, household, program, or staff message.</p>
+              </div>
+            ) : null}
           </section>
         </div>
 
@@ -676,7 +681,7 @@ export default function CommunicationsPage() {
                           {selectedRecipientId === entry.id ? <Badge tone="success">Selected</Badge> : null}
                         </button>
                       ))}
-                      {filteredRecipientOptions.length === 0 ? <p className="px-3 py-3 text-sm text-muted-foreground">No recipients found.</p> : null}
+                      {filteredRecipientOptions.length === 0 ? <p className="px-3 py-3 text-sm text-muted-foreground">No recipients found. Try a customer name, household, program roster, or membership group.</p> : null}
                     </div>
                   </div>
                 </Field>

@@ -459,7 +459,7 @@ export function HouseholdsWorkspace({
                   </div>
                 </button>
               ))}
-              {filteredHouseholds.length === 0 ? <p className="text-sm text-muted-foreground">No households match this search.</p> : null}
+              {filteredHouseholds.length === 0 ? <p className="text-sm text-muted-foreground">No households match this search. Try a household name, primary contact, phone, or email.</p> : null}
             </div>
           </CardContent>
         </Card>
@@ -721,7 +721,7 @@ export function HouseholdsWorkspace({
                 <div className="mb-4 break-inside-avoid">
                 <SectionCard title="Household Memberships" ariaLabel="household-memberships-section" id="household-memberships-section">
                   <div className="space-y-3">
-                    {selected.activeMemberships.length === 0 ? <p className="text-sm text-muted-foreground">No household memberships found.</p> : null}
+                    {selected.activeMemberships.length === 0 ? <p className="text-sm text-muted-foreground">No household memberships found. Sell or renew access from the household access section when this household is ready to join.</p> : null}
                     {selected.activeMemberships.map((membership) => (
                       <div key={membership.id} className="rounded-lg border p-3">
                         <div className="flex items-center justify-between gap-2">

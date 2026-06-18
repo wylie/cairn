@@ -40,7 +40,7 @@ export default function RentalsPage() {
   const [selectedResourceId, setSelectedResourceId] = useState(rentableResources[0]?.id ?? "");
   const [selectedCustomerId, setSelectedCustomerId] = useState(customers[0]?.id ?? "");
   const [selectedReservationId, setSelectedReservationId] = useState(reservations[0]?.id ?? "");
-  const [reservationDate, setReservationDate] = useState("2026-05-21");
+  const [reservationDate, setReservationDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [startTime, setStartTime] = useState("13:00");
   const [endTime, setEndTime] = useState("15:00");
   const [feedback, setFeedback] = useState("");

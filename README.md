@@ -79,6 +79,7 @@ Use these docs when you need a stable reference instead of a workflow guide.
 - [Business Model](./docs/business-model.md)
 - [Releases](./docs/releases.md)
 - [Roadmap](./docs/roadmap.md)
+- [Pilot Readiness](./docs/pilot-readiness.md)
 
 ## Local Development
 ```bash

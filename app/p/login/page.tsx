@@ -7,6 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+const demoCustomerAccounts = [
+  { name: "Maya Patel", email: "maya.patel@example.com" },
+  { name: "Alex Rivera", email: "alex.rivera@example.com" },
+  { name: "Oslo Fisher", email: "oslo.fisher@example.com" }
+];
+
 export default function CustomerLoginPage() {
   const router = useRouter();
   const next = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("next") : null;
@@ -49,7 +55,19 @@ export default function CustomerLoginPage() {
           <CardDescription>Access memberships, programs, waivers, and household details.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-xs text-muted-foreground">Mock customer login for local development.</p>
+          <p className="text-xs text-muted-foreground">Use a customer account to view memberships, household details, waivers, and receipts.</p>
+          {process.env.NODE_ENV !== "production" ? (
+            <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
+              <p className="font-medium">Demo customer accounts</p>
+              <ul className="mt-2 space-y-1">
+                {demoCustomerAccounts.map((account) => (
+                  <li key={account.email}>
+                    <span className="font-medium">{account.name}:</span> {account.email} / dev1234
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <form className="space-y-3" onSubmit={onSubmit}>
             <label className="block space-y-1 text-sm">
               <span>Email</span>

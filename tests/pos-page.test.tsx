@@ -154,7 +154,7 @@ describe("POS page", () => {
     );
     await activateStaff(user, "2222");
 
-    await user.type(screen.getByLabelText("Search customer"), "Sam");
+    await user.type(screen.getByLabelText("Search customer"), "Oslo");
     await user.keyboard("{ArrowDown}{Enter}");
     await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
     await user.click(screen.getByRole("button", { name: "Complete" }));
@@ -163,7 +163,7 @@ describe("POS page", () => {
     expect(screen.getByText(/Assign Check-ins|Check In Now/i)).toBeInTheDocument();
     expect(screen.getByText(/1 eligible check-in/i)).toBeInTheDocument();
     expect(screen.getByText(/Slot 1: Day Pass/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Sam Noaccess/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Oslo Fisher/i).length).toBeGreaterThan(0);
   });
 
   it("selling two day passes creates two slots and extra slot requires assignment", async () => {
@@ -226,13 +226,13 @@ describe("POS page", () => {
     );
     await activateStaff(user, "3333");
 
-    await user.type(screen.getByLabelText("Search customer"), "Sam");
+    await user.type(screen.getByLabelText("Search customer"), "Oslo");
     await user.keyboard("{ArrowDown}{Enter}");
     expect(screen.getByText(/Waiver missing or expired/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
     await user.click(screen.getByRole("button", { name: "Complete" }));
-    expect(screen.getByText(/Sale completed for Sam Noaccess/i)).toBeInTheDocument();
+    expect(screen.getByText(/Sale completed for Oslo Fisher/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Manager Required" })).toBeDisabled();
     expect(screen.getByText(/Waiver required before check-in/i)).toBeInTheDocument();
     expect(screen.getByText(/Missing or expired waiver/i)).toBeInTheDocument();
@@ -248,7 +248,7 @@ describe("POS page", () => {
     );
     await activateStaff(user, "2222");
 
-    await user.type(screen.getByLabelText("Search customer"), "Sam");
+    await user.type(screen.getByLabelText("Search customer"), "Oslo");
     await user.keyboard("{ArrowDown}{Enter}");
     await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
     await user.click(screen.getByRole("button", { name: "Complete" }));
@@ -269,7 +269,7 @@ describe("POS page", () => {
     );
     await activateStaff(user, "2222");
 
-    await user.type(screen.getByLabelText("Search customer"), "Sam");
+    await user.type(screen.getByLabelText("Search customer"), "Oslo");
     await user.keyboard("{ArrowDown}{Enter}");
     await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
     await user.click(screen.getByRole("button", { name: "Complete" }));
@@ -278,7 +278,7 @@ describe("POS page", () => {
     expect(overrideButton).toBeEnabled();
     expect(overrideButton.className).toContain("amber");
     await user.click(overrideButton);
-    expect(screen.getAllByText(/Check-in recorded for Sam Noaccess/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Check-in recorded for Oslo Fisher/i).length).toBeGreaterThan(0);
   });
 
   it("post-sale modal can be closed without losing transaction history", async () => {
@@ -343,7 +343,7 @@ describe("POS page", () => {
       </TestProviders>
     );
     await activateStaff(user, "2222");
-    await user.type(screen.getByLabelText("Search customer"), "Sam");
+    await user.type(screen.getByLabelText("Search customer"), "Oslo");
     await user.keyboard("{ArrowDown}{Enter}");
     await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
     expect(screen.getByText("Subtotal")).toBeInTheDocument();
@@ -393,7 +393,7 @@ describe("POS page", () => {
       </TestProviders>
     );
     await activateStaff(user, "2222");
-    await user.type(screen.getByLabelText("Search customer"), "Sam");
+    await user.type(screen.getByLabelText("Search customer"), "Oslo");
     await user.keyboard("{ArrowDown}{Enter}");
 
     expect(screen.getByRole("button", { name: "Complete" })).toBeDisabled();
@@ -437,16 +437,16 @@ describe("POS page", () => {
     );
 
     await activateStaff(user, "2222");
-    await user.type(screen.getByLabelText("Search customer"), "Sam");
+    await user.type(screen.getByLabelText("Search customer"), "Oslo");
     await user.keyboard("{ArrowDown}{Enter}");
-    expect(screen.getByText("Sam Noaccess")).toBeInTheDocument();
+    expect(screen.getByText("Oslo Fisher")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
     expect(screen.getAllByText("$28.00").length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole("button", { name: "Complete + Check In" }));
 
-    expect(screen.getAllByText(/Sale completed for Sam Noaccess/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Sale completed for Oslo Fisher/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Check-in blocked:/i).length).toBeGreaterThan(0);
     expect(screen.getByTestId("header-occupancy")).toHaveTextContent("1 currently in");
     expect(screen.queryByTestId("checkin-row-cust_004")).not.toBeInTheDocument();
@@ -635,8 +635,8 @@ describe("POS page", () => {
     );
     await activateStaff(user, "2222");
 
-    await user.type(screen.getByLabelText("Search customer"), "Sam");
-    await user.click(screen.getByRole("option", { name: /Sam Noaccess/i }));
+    await user.type(screen.getByLabelText("Search customer"), "Oslo");
+    await user.click(screen.getByRole("option", { name: /Oslo Fisher/i }));
     expect(screen.queryByRole("listbox", { name: "Customer search results" })).not.toBeInTheDocument();
   });
 
@@ -693,12 +693,12 @@ describe("Customer integrations", () => {
 
     await activateStaff(user, "2222");
 
-    const samCard = screen.getByText("Sam Noaccess").closest("div[class*='p-4']") as HTMLElement;
+    const samCard = screen.getByText("Oslo Fisher").closest("div[class*='p-4']") as HTMLElement;
     await user.click(within(samCard).getByRole("button", { name: "Sell Access" }));
     await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
     await user.click(screen.getByRole("button", { name: "Complete" }));
 
-    expect(screen.getAllByText(/Sale completed for Sam Noaccess/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Sale completed for Oslo Fisher/i).length).toBeGreaterThan(0);
   });
 
   it("blocked check-in state can sell access", async () => {
@@ -711,7 +711,7 @@ describe("Customer integrations", () => {
     );
 
     await activateStaff(user, "2222");
-    await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Sam");
+    await user.type(screen.getByLabelText("Scan barcode, member ID, phone, email, or search name"), "Oslo");
     await user.keyboard("{Enter}");
 
     expect(screen.getAllByRole("button", { name: "Sell Access" }).length).toBeGreaterThan(0);
@@ -719,7 +719,7 @@ describe("Customer integrations", () => {
     await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
     await user.click(screen.getByRole("button", { name: "Complete + Check In" }));
 
-    expect(screen.getAllByText(/Sale completed for Sam Noaccess/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Sale completed for Oslo Fisher/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Check-in blocked:/i).length).toBeGreaterThan(0);
     expect(screen.queryByTestId("checkin-row-cust_004")).not.toBeInTheDocument();
   });

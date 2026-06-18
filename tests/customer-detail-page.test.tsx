@@ -911,7 +911,7 @@ describe("CustomerDetailPage", () => {
     const search = within(householdSection).getByLabelText("Search household members");
     await user.type(search, "Dana");
     await user.keyboard("{ArrowDown}{Enter}");
-    expect(householdSection).toHaveTextContent("Dana Daypass");
+    expect(householdSection).toHaveTextContent("Dana Brooks");
 
     first.unmount();
     const secondPage = await CustomerDetailPage({ params: Promise.resolve({ id: "cust_001" }) });
@@ -921,7 +921,7 @@ describe("CustomerDetailPage", () => {
         {secondPage}
       </TestProviders>
     );
-    expect(screen.getByLabelText("detail-household")).toHaveTextContent("Dana Daypass");
+    expect(screen.getByLabelText("detail-household")).toHaveTextContent("Dana Brooks");
     storage.restore();
   });
 

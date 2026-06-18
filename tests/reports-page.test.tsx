@@ -341,7 +341,7 @@ describe("Reports dashboards", () => {
           organizationId: "org_summit",
           locationId: "loc_001",
           customerId: "cust_004",
-          customerName: "Sam Noaccess",
+          customerName: "Oslo Fisher",
           transactionType: "sale",
           returnStatus: "none",
           soldByStaffId: "staff_002",

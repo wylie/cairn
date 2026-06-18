@@ -7,6 +7,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+const facilityNamesByOrg: Record<string, string> = {
+  summit: "Summit Rec Collective",
+  riverbend: "Riverstone Nature Center",
+  "western-carolina-ymca": "Western Carolina YMCA Association"
+};
+
+const demoCustomerAccountsByOrg: Record<string, Array<{ name: string; email: string }>> = {
+  summit: [
+    { name: "Maya Patel", email: "maya.patel@example.com" },
+    { name: "Alex Rivera", email: "alex.rivera@example.com" },
+    { name: "Oslo Fisher", email: "oslo.fisher@example.com" }
+  ]
+};
+
 function CustomerOrgLoginContent({
   params
 }: {
@@ -16,6 +30,9 @@ function CustomerOrgLoginContent({
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams?.get?.("next");
+  const isDevelopment = process.env.NODE_ENV !== "production";
+  const facilityName = facilityNamesByOrg[orgSlug] ?? orgSlug;
+  const demoAccounts = demoCustomerAccountsByOrg[orgSlug] ?? [];
   const [email, setEmail] = useState("maya.patel@example.com");
   const [password, setPassword] = useState("dev1234");
   const [error, setError] = useState("");
@@ -59,10 +76,22 @@ function CustomerOrgLoginContent({
         <CardHeader>
           <CairnBrand className="mb-3 h-11 w-11" />
           <CardTitle>Customer Portal Login</CardTitle>
-          <CardDescription>{orgSlug} customer portal</CardDescription>
+          <CardDescription>{facilityName} customer portal</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-xs text-muted-foreground">Mock customer login for local development.</p>
+          <p className="text-xs text-muted-foreground">Use a customer account to view memberships, household details, waivers, and receipts.</p>
+          {isDevelopment && demoAccounts.length > 0 ? (
+            <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
+              <p className="font-medium">Demo customer accounts</p>
+              <ul className="mt-2 space-y-1">
+                {demoAccounts.map((account) => (
+                  <li key={account.email}>
+                    <span className="font-medium">{account.name}:</span> {account.email} / dev1234
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <form className="space-y-3" onSubmit={onSubmit}>
             <label className="block space-y-1 text-sm">
               <span>Email</span>

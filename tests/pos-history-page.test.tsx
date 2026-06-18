@@ -67,14 +67,14 @@ describe("POS sales history", () => {
     );
 
     await activateStaff(user, "2222");
-    await user.type(screen.getByLabelText("Search customer"), "Sam");
+    await user.type(screen.getByLabelText("Search customer"), "Oslo");
     await user.keyboard("{ArrowDown}{Enter}");
 
     await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
     await user.click(screen.getByRole("button", { name: "Complete" }));
 
     expect(screen.getAllByText(/Receipt #/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Customer: Sam Noaccess/i)).toBeInTheDocument();
+    expect(screen.getByText(/Customer: Oslo Fisher/i)).toBeInTheDocument();
     expect(screen.getByText(/Sold by: Maya Lopez/i)).toBeInTheDocument();
     expect(screen.getByText(/Day Pass x1/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Total: \$28.00/i).length).toBeGreaterThan(0);
@@ -92,7 +92,7 @@ describe("POS sales history", () => {
     );
 
     await activateStaff(user, "2222");
-    await user.type(screen.getByLabelText("Search customer"), "Sam");
+    await user.type(screen.getByLabelText("Search customer"), "Oslo");
     await user.keyboard("{ArrowDown}{Enter}");
     await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
     await user.click(screen.getByRole("button", { name: "Complete" }));
@@ -100,8 +100,8 @@ describe("POS sales history", () => {
     const txKey = buildScopedMockKey("org_summit", "loc_001", "transactions");
     const stored = JSON.parse(window.localStorage.getItem(txKey) ?? "[]");
     expect(stored[0].customerId).toBe("cust_004");
-    expect(stored[0].customerName).toBe("Sam Noaccess");
-    expect(stored[0].customerEmail).toBe("sam.noaccess@example.com");
+    expect(stored[0].customerName).toBe("Oslo Fisher");
+    expect(stored[0].customerEmail).toBe("oslo.fisher@example.com");
     expect(stored[0].customerMemberId).toBe("M-1004");
     expect(stored[0].purchaserCustomerId).toBe("cust_004");
     expect(stored[0].purchasedForCustomerIds).toContain("cust_004");
@@ -124,18 +124,18 @@ describe("POS sales history", () => {
     );
 
     await activateStaff(user, "2222");
-    await user.type(screen.getByLabelText("Search customer"), "Sam");
+    await user.type(screen.getByLabelText("Search customer"), "Oslo");
     await user.keyboard("{ArrowDown}{Enter}");
     await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
     await user.click(screen.getByRole("button", { name: "Complete" }));
 
-    expect(screen.getAllByText(/Sam Noaccess/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Oslo Fisher/i).length).toBeGreaterThan(0);
 
     await user.type(screen.getByLabelText("Search sales history"), "day pass");
     expect(screen.getAllByText(/Day Pass/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText("$28.00").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Sold by Maya Lopez/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Sam Noaccess/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Oslo Fisher/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Day Pass x1 — \$28.00 \(\$28.00\)/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Total: \$28.00/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Check-in fulfillment/i).length).toBeGreaterThan(0);
@@ -152,7 +152,7 @@ describe("POS sales history", () => {
     );
 
     await activateStaff(user, "2222");
-    await user.type(screen.getByLabelText("Search customer"), "Sam");
+    await user.type(screen.getByLabelText("Search customer"), "Oslo");
     await user.keyboard("{ArrowDown}{Enter}");
     await user.type(screen.getByLabelText("Search products"), "staff comp");
     await user.click(screen.getByRole("button", { name: "Add Staff Comp" }));
@@ -174,7 +174,7 @@ describe("POS sales history", () => {
     );
 
     await activateStaff(user, "2222");
-    await user.type(screen.getByLabelText("Search customer"), "Sam");
+    await user.type(screen.getByLabelText("Search customer"), "Oslo");
     await user.keyboard("{ArrowDown}{Enter}");
     await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
     await user.click(screen.getByRole("button", { name: "Complete" }));
@@ -188,7 +188,7 @@ describe("POS sales history", () => {
       </TestProviders>
     );
 
-    expect(screen.getAllByText(/Sam Noaccess/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Oslo Fisher/i).length).toBeGreaterThan(0);
     storage.restore();
   });
 
@@ -221,7 +221,7 @@ describe("POS sales history", () => {
       </TestProviders>
     );
 
-    expect(screen.getByText("Sam Noaccess")).toBeInTheDocument();
+    expect(screen.getByText("Oslo Fisher")).toBeInTheDocument();
     storage.restore();
   });
 
@@ -343,7 +343,7 @@ describe("POS sales history", () => {
     );
 
     await activateStaff(user, "2222");
-    await user.type(screen.getByLabelText("Search customer"), "Sam");
+    await user.type(screen.getByLabelText("Search customer"), "Oslo");
     await user.keyboard("{ArrowDown}{Enter}");
     await user.click(screen.getByRole("button", { name: "Add Day Pass" }));
     await user.click(screen.getByRole("button", { name: "Complete" }));
@@ -383,7 +383,7 @@ describe("POS sales history", () => {
           organizationId: "org_summit",
           locationId: "loc_001",
           customerId: "cust_005",
-          customerName: "Dana Daypass",
+          customerName: "Dana Brooks",
           soldByStaffId: "staff_003",
           soldByStaffName: "Sam Rivera",
           items: [{ productId: "prd_004", productName: "Class Drop-In", quantity: 1, unitPrice: 0, lineTotal: 0 }],

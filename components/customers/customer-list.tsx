@@ -115,7 +115,7 @@ export function CustomerList() {
       ) : null}
       {filtered.length === 0 ? (
         <div className="space-y-2">
-          <EmptyState title="No customers found" description="Try a different name, email, phone, or member ID." />
+          <EmptyState title="No customers found" description="Try a different name, email, phone, or member ID, or add a walk-in customer to continue." />
           <Button className="min-h-11" variant="outline" onClick={() => setShowAddCustomer(true)}>Add Customer</Button>
         </div>
       ) : (

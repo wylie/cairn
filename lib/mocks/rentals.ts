@@ -165,7 +165,7 @@ export const reservations: ReservationRecord[] = [
     householdId: "hh_001",
     participants: [
       { customerId: "cust_003", householdId: "hh_001", displayName: "Alex Rivera" },
-      { customerId: "cust_004", householdId: "hh_001", displayName: "Sam Noaccess" }
+      { customerId: "cust_004", householdId: "hh_001", displayName: "Oslo Fisher" }
     ],
     startsAt: isoAtOffset(3, 17, 0),
     endsAt: isoAtOffset(3, 19, 0),
@@ -189,7 +189,7 @@ export const reservations: ReservationRecord[] = [
     status: "checked_out",
     title: "Overdue Bike Rental",
     customerId: "cust_006",
-    participants: [{ customerId: "cust_006", displayName: "Jimbo James" }],
+    participants: [{ customerId: "cust_006", displayName: "Miles James" }],
     startsAt: isoAtOffset(-1, 9, 0),
     endsAt: isoAtOffset(-1, 12, 0),
     unavailableStartsAt: isoAtOffset(-1, 9, 0),

@@ -34,10 +34,10 @@ export const posTransactions: PosTransaction[] = [
     organizationId: "org_summit",
     locationId: "loc_001",
     customerId: "cust_005",
-    customerName: "Dana Daypass",
+    customerName: "Dana Brooks",
     householdId: "hh_002",
     purchaserCustomerId: "cust_005",
-    purchaserCustomerName: "Dana Daypass",
+    purchaserCustomerName: "Dana Brooks",
     transactionType: "sale",
     returnStatus: "none",
     items: [

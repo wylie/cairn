@@ -73,7 +73,7 @@ export default function PosHistoryPage() {
             placeholder="Search customer, staff, product, or receipt"
           />
         </FormField>
-        <FormField label="Date filter (placeholder)">
+        <FormField label="Date filter">
           <select aria-label="Date filter" className="flex h-11 w-full rounded-md border border-input bg-white px-3 py-2 text-sm">
             <option>All dates</option>
             <option>Today</option>

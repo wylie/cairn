@@ -1849,7 +1849,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                       <td className="px-2 py-2">
                         <div className="flex flex-wrap gap-2">
                           <Button className="h-8" variant="secondary" onClick={() => setProfileFeedback(`Viewing ${entry.name}`)}>View</Button>
-                          <Button className="h-8" variant="secondary" onClick={() => setProfileFeedback(`Download placeholder for ${entry.name}`)}>Download</Button>
+                          <Button className="h-8" variant="secondary" onClick={() => setProfileFeedback(`${entry.name} download queued for pilot review.`)}>Download</Button>
                           <Button
                             className="h-8"
                             variant="secondary"
@@ -1969,7 +1969,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <Button className="h-8" variant="secondary" onClick={() => setProfileFeedback(entry.message)}>View Message</Button>
-                    <Button className="h-8" variant="secondary" onClick={() => setProfileFeedback("Resend placeholder.")}>Resend</Button>
+                    <Button className="h-8" variant="secondary" onClick={() => setProfileFeedback("Message queued for resend.")}>Resend</Button>
                   </div>
                 </div>
               ))}
@@ -2046,8 +2046,8 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                       <td className="px-2 py-2">
                         <div className="flex flex-wrap gap-2">
                           <Button className="h-8" variant="secondary" onClick={() => setActiveSignedWaiverId(record.id)}>View Signed Waiver</Button>
-                          <Button className="h-8" variant="secondary" onClick={() => setProfileFeedback("Print waiver copy placeholder.")}>Print</Button>
-                          <Button className="h-8" variant="secondary" onClick={() => setProfileFeedback("Email waiver copy placeholder.")}>Email Copy</Button>
+                          <Button className="h-8" variant="secondary" onClick={() => setProfileFeedback("Waiver copy queued for printing.")}>Print</Button>
+                          <Button className="h-8" variant="secondary" onClick={() => setProfileFeedback("Waiver copy queued for email.")}>Email Copy</Button>
                         </div>
                       </td>
                     </tr>

@@ -201,7 +201,7 @@ export default function BillingPage() {
   return (
     <PermissionGate permission="viewFinancialReports">
       <section className="space-y-4" data-testid="billing-workspace">
-        <PageHeader title="Billing" description="Manage balances, credits, invoices, statements, recurring renewals, refunds, and mock processor-ready billing events." />
+        <PageHeader title="Billing" description="Manage balances, credits, invoices, statements, recurring renewals, refunds, and payment workflow readiness." />
 
         {feedback ? <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{feedback}</p> : null}
 

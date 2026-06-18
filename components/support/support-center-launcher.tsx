@@ -235,7 +235,7 @@ export function SupportCenterLauncher() {
                   accept="image/png,image/jpeg,image/webp"
                   onChange={(event) => setScreenshotName(event.target.files?.[0]?.name ?? "")}
                 />
-                <span className="text-xs text-muted-foreground">Optional placeholder for future attachment handling.</span>
+                <span className="text-xs text-muted-foreground">Optional. Attachment storage is planned for a future release.</span>
               </label>
               <div className="rounded-xl border bg-muted/30 p-4 text-sm">
                 <p className="font-medium">What happens next</p>

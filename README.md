@@ -24,15 +24,7 @@ This repository README is the front door for the Cairn documentation system. Use
 - Analytics, reports, organization provisioning, and integrations foundation
 
 ## Screenshots
-Screenshots belong in [`docs/images/`](./docs/images/).
-
-Current documentation placeholders:
-- Facility landing page
-- Staff dashboard
-- Check-In workspace
-- Customer profile
-- POS checkout
-- Customer portal dashboard
+Screenshots and launch review assets belong in [`docs/images/`](./docs/images/). The pilot documentation currently prioritizes route walkthroughs, demo credentials, and readiness notes over static screenshots so testers can evaluate the live product directly.
 
 ## Documentation Paths
 
@@ -80,6 +72,7 @@ Use these docs when you need a stable reference instead of a workflow guide.
 - [Releases](./docs/releases.md)
 - [Roadmap](./docs/roadmap.md)
 - [Pilot Readiness](./docs/pilot-readiness.md)
+- [v0.1.0 Pilot Launch Review](./docs/pilot-launch-review.md)
 
 ## Local Development
 ```bash
@@ -161,7 +154,7 @@ Cairn is in an actively evolving product-build stage.
 Current implementation status:
 - major staff, customer, public, and platform-admin experiences are present
 - most workflows are mock-data and local-state driven
-- provider integrations, payments, and external services are represented by abstractions and placeholders
+- provider integrations, payments, and external services use pilot adapter boundaries until production providers are connected
 - some repository test suites still reflect older UI assumptions and require ongoing cleanup
 
 ## Existing Notes

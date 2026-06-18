@@ -16,7 +16,7 @@ export default function RequestDemoPage() {
           Share your details and we will schedule a live walkthrough of Cairn for your facility team.
         </p>
 
-        <form className="mt-6 grid gap-4 md:grid-cols-2">
+        <form className="mt-6 grid gap-4 md:grid-cols-2" action="mailto:hello@stonecairn.app" method="post" encType="text/plain">
           <label className="space-y-1">
             <span className="text-sm font-medium">Name</span>
             <input className="h-11 w-full rounded-md border border-input bg-white px-3 text-sm" name="name" type="text" />
@@ -39,7 +39,7 @@ export default function RequestDemoPage() {
               <option value="adventure">Adventure Facility</option>
               <option value="camp">Camp</option>
               <option value="fitness">Fitness Center</option>
-              <option value="hybrid">Hybrid</option>
+              <option value="hybrid">Multi-use Facility</option>
             </select>
           </label>
           <label className="space-y-1 md:col-span-2">
@@ -48,13 +48,13 @@ export default function RequestDemoPage() {
           </label>
           <div className="md:col-span-2">
             <button
-              type="button"
+              type="submit"
               className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:opacity-90"
             >
-              Submit Request
+              Request Demo
             </button>
             <p className="mt-2 text-xs text-muted-foreground">
-              Placeholder submission flow for MVP. Live scheduling integrations are planned.
+              This opens an email to Stone Cairn so we can schedule a live walkthrough.
             </p>
           </div>
         </form>

@@ -413,7 +413,7 @@ export function ProductFormModal({
 
           {isMembership ? (
             <label className="space-y-1 text-sm">
-              <span>Expiration days (placeholder)</span>
+              <span>Expiration days</span>
               <Input aria-label="Expiration days" type="number" min="1" value={form.expirationDays ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, expirationDays: event.target.value ? Number(event.target.value) : undefined }))} />
             </label>
           ) : null}

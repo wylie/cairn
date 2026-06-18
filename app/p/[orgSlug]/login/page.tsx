@@ -102,7 +102,7 @@ function CustomerOrgLoginContent({
               <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
             </label>
             <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-              Password reset placeholder. Magic links, Google, and Apple login are planned next phases.
+              Need access help? Contact facility staff during the pilot. Magic links, Google, and Apple login are planned next phases.
             </div>
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
             <Button className="w-full" type="submit" disabled={pending}>

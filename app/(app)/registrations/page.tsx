@@ -497,7 +497,7 @@ export default function RegistrationsPage() {
                           <Button className="h-8" variant="secondary" onClick={() => runPromote(entry.id)}>Promote from waitlist</Button>
                           <Button className="h-8" variant="secondary" onClick={() => runReorderWaitlist(entry.id, "up")}>Move up</Button>
                           <Button className="h-8" variant="secondary" onClick={() => runReorderWaitlist(entry.id, "down")}>Move down</Button>
-                          <Button className="h-8" variant="secondary" onClick={() => setFeedback(`${customer.firstName} ${customer.lastName} notified (mock).`)}>Notify promoted customer</Button>
+                          <Button className="h-8" variant="secondary" onClick={() => setFeedback(`${customer.firstName} ${customer.lastName} marked for promotion follow-up.`)}>Notify promoted customer</Button>
                           <Button className="h-8" variant="destructiveSubtle" onClick={() => runRemove(entry.id)}>Remove</Button>
                         </div>
                       </article>

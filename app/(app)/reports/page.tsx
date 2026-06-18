@@ -191,7 +191,7 @@ export default function ReportsPage() {
     } catch {
       return {
         report: getEmptyReportModel(),
-        reportError: "Some older local mock data could not be parsed. Reports are showing a safe fallback."
+        reportError: "Some older local demo data could not be parsed. Reports are showing a safe fallback."
       };
     }
   }, [activeStaff?.id, activeStaff?.role, filters, customers, checkInRecords, transactions, programs, sessions, registrations, memberships, accessProducts, productCategories, households, householdMembers]);
@@ -560,7 +560,7 @@ export default function ReportsPage() {
               onClick={() =>
                 downloadFile(
                   "cairn-analytics-export.pdf.txt",
-                  "PDF export placeholder\n\nThis placeholder respects current analytics filters and date range.",
+                  "PDF export preview\n\nThis preview respects current analytics filters and date range.",
                   "text/plain;charset=utf-8"
                 )
               }
@@ -703,11 +703,11 @@ export default function ReportsPage() {
           </section>
           <section className="rounded-xl border bg-card p-4">
             <h3 className="text-base font-semibold">Scheduled Reports</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Architecture placeholder for weekly executive digests, monthly board packets, and quarterly summaries.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Planned scheduled delivery for weekly executive digests, monthly board packets, and quarterly summaries.</p>
             <div className="mt-3 grid gap-2 text-sm">
-              <div className="rounded-md bg-muted/30 px-3 py-2">Weekly Email Reports · Placeholder</div>
-              <div className="rounded-md bg-muted/30 px-3 py-2">Monthly Board Reports · Placeholder</div>
-              <div className="rounded-md bg-muted/30 px-3 py-2">Quarterly Summaries · Placeholder</div>
+              <div className="rounded-md bg-muted/30 px-3 py-2">Weekly Email Reports · Planned</div>
+              <div className="rounded-md bg-muted/30 px-3 py-2">Monthly Board Reports · Planned</div>
+              <div className="rounded-md bg-muted/30 px-3 py-2">Quarterly Summaries · Planned</div>
             </div>
           </section>
         </div>

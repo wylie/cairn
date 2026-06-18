@@ -38,8 +38,8 @@ export function PublicRegistrationPanel({
         <p className="font-medium">{program.title}</p>
         <p className="text-muted-foreground">{formatDateTime(session.startsAt)} · {getLocationName(session.locationId)}</p>
         <p className="mt-2">{stats.registered}/{session.capacity} registered{stats.waitlisted > 0 ? ` · ${stats.waitlisted} waitlisted` : ""}</p>
-        <p>Member price: {pricing.memberCents !== null ? formatCents(pricing.memberCents) : "TBD"}</p>
-        <p>Non-member price: {pricing.nonMemberCents !== null ? formatCents(pricing.nonMemberCents) : "TBD"}</p>
+        <p>Member price: {pricing.memberCents !== null ? formatCents(pricing.memberCents) : "Pricing pending"}</p>
+        <p>Non-member price: {pricing.nonMemberCents !== null ? formatCents(pricing.nonMemberCents) : "Pricing pending"}</p>
       </div>
 
       {duplicate ? (

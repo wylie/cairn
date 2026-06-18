@@ -267,7 +267,7 @@ export default function IntegrationsPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold">Organization Integrations</h2>
-                <p className="text-sm text-muted-foreground">Enable or disable provider placeholders for {organizationName}. Configuration, health, and activity are tracked per organization.</p>
+                <p className="text-sm text-muted-foreground">Enable or disable provider connections for {organizationName}. Configuration, health, and activity are tracked per organization.</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 {CATEGORY_LABELS.map((entry) => (
@@ -301,7 +301,7 @@ export default function IntegrationsPage() {
                     </div>
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Configuration</p>
-                      <p className="mt-1 text-sm">{connection.configurationSummary ?? "Configuration placeholder"}</p>
+                      <p className="mt-1 text-sm">{connection.configurationSummary ?? "Configuration pending"}</p>
                     </div>
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Health</p>
@@ -320,7 +320,7 @@ export default function IntegrationsPage() {
           <section className="space-y-4 rounded-xl border bg-card p-4">
             <div>
               <h2 className="text-lg font-semibold">Provider Abstractions</h2>
-              <p className="text-sm text-muted-foreground">Calendar, communication, payment, identity, and accounting providers are mocked behind stable boundaries so external vendors can be swapped in later.</p>
+              <p className="text-sm text-muted-foreground">Calendar, communication, payment, identity, and accounting providers use stable adapter boundaries so external vendors can be connected later.</p>
             </div>
             <div className="grid gap-2 text-sm">
               <div className="rounded-lg border p-3">calendarProvider.createEvent / updateEvent</div>

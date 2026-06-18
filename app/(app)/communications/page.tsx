@@ -460,7 +460,7 @@ export default function CommunicationsPage() {
       createdByStaffId: activeStaff?.id,
       createdByStaffName: activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : "Staff"
     });
-    setFeedback(result.message === "Message sent." ? "Resend placeholder completed." : result.message);
+    setFeedback(result.message === "Message sent." ? "Message queued for delivery." : result.message);
   };
 
   const cancelSelected = () => {
@@ -690,7 +690,7 @@ export default function CommunicationsPage() {
                 ) : null}
                 <Field label="Subject"><input aria-label="Subject" value={subject} onChange={(event) => setSubject(event.target.value)} className="h-11 w-full rounded-md border border-input bg-white px-3 text-sm" /></Field>
                 <Field label="Message"><textarea aria-label="Message" value={message} onChange={(event) => setMessage(event.target.value)} className="min-h-32 w-full rounded-md border border-input bg-white px-3 py-2 text-sm" /></Field>
-                <Field label="Attachments"><div className="rounded-md border border-dashed px-3 py-3 text-sm text-muted-foreground">Attachments placeholder</div></Field>
+                <Field label="Attachments"><div className="rounded-md border border-dashed px-3 py-3 text-sm text-muted-foreground">Attachment support is planned for a future release.</div></Field>
                 <div className="flex flex-wrap gap-2">
                   <Button onClick={() => submitCommunication("sent")} disabled={!canSendTransactional && !canManage && !canMessageParticipants}>Send Now</Button>
                   <Button variant="secondary" onClick={() => submitCommunication("scheduled")} disabled={!canSendTransactional && !canManage && !canMessageParticipants}>Schedule</Button>

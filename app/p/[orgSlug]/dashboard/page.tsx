@@ -253,9 +253,9 @@ export default function CustomerPortalDashboardPage() {
               >
                 <p className="font-medium">{entry.program?.title ?? "Program Session"}</p>
                 <p className="text-muted-foreground">
-                  {entry.session ? formatDateSafe(entry.session.startsAt) : "Date pending"} · {entry.session?.instructorName ?? "Instructor TBD"}
+                  {entry.session ? formatDateSafe(entry.session.startsAt) : "Date pending"} · {entry.session?.instructorName ?? "Instructor to be assigned"}
                 </p>
-                <p className="text-muted-foreground">{entry.session?.locationId ? getLocationName(entry.session.locationId) : "Location TBD"} · {entry.registration.status}</p>
+                <p className="text-muted-foreground">{entry.session?.locationId ? getLocationName(entry.session.locationId) : "Location pending"} · {entry.registration.status}</p>
               </Link>
             ))}
           </CardContent>

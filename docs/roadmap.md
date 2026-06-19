@@ -77,7 +77,7 @@ Status: In Progress
 - Bug reporting workflow
 - Weekly release cadence
 
-## v0.2.0 — Feedback & Usability
+## v0.2.x — Real Data Foundation
 
 Target: June 29, 2026
 
@@ -85,13 +85,16 @@ Status: Planned
 
 Focus:
 
-- Tester feedback
-- Workflow refinement
-- UI consistency
-- Accessibility improvements
-- Demo environment improvements
+- Data architecture
+- Multi-tenant model
+- Neon database integration
+- Drizzle ORM
+- Authentication foundation
+- Organization management
+- Staff accounts
+- Role management
 
-## v0.3.0 — Customer Migration & Onboarding
+## v0.3.x — Feedback & Usability
 
 Target: July 6, 2026
 
@@ -99,16 +102,29 @@ Status: Planned
 
 Focus:
 
-- Customer import
-- Household import
-- Membership import
-- Import validation
-- Guided onboarding
-- Migration documentation
+- Tester feedback
+- Workflow refinements
+- UI consistency
+- Accessibility improvements
+- Demo environment improvements
 
-## v0.4.0 — Operations & Staff Experience
+## v0.4.x — Customer Import & Onboarding
 
 Target: July 13, 2026
+
+Status: Planned
+
+Focus:
+
+- Customer imports
+- Household imports
+- Membership imports
+- Validation workflows
+- Guided onboarding
+
+## v0.5.x — Operations & Staff Experience
+
+Target: July 20, 2026
 
 Status: Planned
 
@@ -119,9 +135,9 @@ Focus:
 - Reporting enhancements
 - Staff productivity tools
 
-## v0.5.0 — Pilot Customer Release
+## v0.6.x — Pilot Customer Release
 
-Target: July 20, 2026
+Target: July 27, 2026
 
 Status: Planned
 
@@ -132,9 +148,9 @@ Focus:
 - Billing readiness
 - Remaining operational gaps
 
-## v0.6.0 — Mobile & Member Experience
+## v0.7.x — Mobile & Member Experience
 
-Target: July 27, 2026
+Target: TBD
 
 Status: Planned
 

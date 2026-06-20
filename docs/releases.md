@@ -11,18 +11,18 @@ Version metadata is centralized in `lib/version.ts`.
 - Patch releases, such as `v0.1.1`, are small fixes.
 - Minor releases, such as `v0.2.0`, add meaningful product capability.
 
-Active development version displays should read from the `cairnVersion` object in `lib/version.ts`. Compatibility exports may exist for older components, but they must derive from `cairnVersion`.
+Cairn currently uses release branches for versioning, not CI/CD-generated versions. The active release branch version is the current application version.
 
 Current branch metadata:
 
-- `currentVersion`: `0.2.0`
-- `currentReleaseName`: `Real Data Foundation`
-- `currentReleaseStatus`: `in_progress`
-- `latestReleasedVersion`: `0.1.0`
-- `latestReleasedName`: `Pilot Readiness Release`
-- `nextReleaseTargetDate`: `June 29, 2026`
+- `version`: `0.2.0`
+- `releaseName`: `Real Data Foundation`
+- `status`: `in_progress`
+- `targetDate`: `June 29, 2026`
 
-Historical release entries should use the historical fields from `cairnVersion` so past release notes do not change when the active branch version advances.
+All active application version displays should read from the `cairnVersion` object in `lib/version.ts`. Compatibility exports may exist for older components, but they must derive from `cairnVersion`.
+
+Historical release entries stay in release-note and roadmap data. They should not be maintained as separate active metadata fields.
 
 ## Release Cadence
 
@@ -56,14 +56,16 @@ Upcoming active releases may also be shown on the Release Notes page before they
 
 ## Branch and Version Workflow
 
-Release branches should identify themselves with `cairnVersion.currentVersion`. On the `june-28-2026` branch, app chrome and active-development pages show `v0.2.0`.
+Release branches identify themselves with `cairnVersion.version`. On the `june-28-2026` branch, app chrome, Release Notes, Roadmap, admin pages, and settings show `v0.2.0`.
 
-The Release Notes page must distinguish:
+Current workflow:
 
-- current released version: `v0.1.0`
-- active development version: `v0.2.0`
+- `main` represents the last released production branch, currently `v0.1.0`.
+- `june-28-2026` represents the active release branch, currently `v0.2.0`.
+- The active branch version is treated as the current version throughout the application.
+- Historical `v0.1.0` release notes remain visible below the active release notes.
 
-Do not rewrite historical release content when advancing the active development version.
+Cairn may later move to CI/CD versioning or automated release metadata, but that is not the workflow today. Until then, changing release branches should require updating `lib/version.ts` and the release/roadmap historical data only.
 
 ## Demo Data Visibility
 
@@ -95,17 +97,7 @@ When a release entry becomes the latest release, Cairn can generate a system not
 
 The notification uses the existing communications notification center, counts toward unread totals, can be marked read, and links directly to the matching release note anchor.
 
-## Current Release
-
-Current released version: `v0.1.0`
-
-Release date: `2026-06-22`
-
-Title: Pilot Readiness Release
-
-Status: Released
-
-## Active Development Release
+## Current Release Branch
 
 Version: `v0.2.0`
 

@@ -75,14 +75,16 @@ localStorage should remain limited to non-authoritative UI preferences and draft
 
 ## Version Metadata
 
-`lib/version.ts` is the source of truth for branch and release metadata through the `cairnVersion` object.
+`lib/version.ts` is the source of truth for the active release branch metadata through the `cairnVersion` object.
 
-- `currentVersion` identifies the active development branch version shown in app chrome.
-- `currentReleaseName` and `currentReleaseStatus` describe the active release.
-- `latestReleasedVersion` and `latestReleasedName` preserve historical released-version displays.
-- `nextReleaseTargetDate` is the facility-facing target date for the active release.
+- `version` identifies the active release branch version shown in app chrome.
+- `releaseName` describes the active release.
+- `status` describes the active branch status.
+- `targetDate` is the facility-facing target date for the active release.
 
-The footer, Release Notes page, Roadmap page, admin version displays, version chips, and "What's New" surfaces should read from this metadata rather than hardcoding active version strings. Historical release notes should keep their original content while reading released-version metadata from the historical fields.
+The footer, Release Notes page, Roadmap page, admin version displays, version chips, and "What's New" surfaces should read from this metadata rather than hardcoding active version strings. Historical release notes keep their own version data in release-note and roadmap entries.
+
+Cairn is not using CI/CD-generated versioning today. `main` represents the last released branch, and the current release branch, such as `june-28-2026`, is treated as the current application version. Cairn may move to CI/CD versioning later, but that workflow is not active now.
 
 ## Database Foundation
 

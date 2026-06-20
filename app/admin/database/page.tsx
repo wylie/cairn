@@ -66,7 +66,7 @@ export default async function AdminDatabasePage() {
     <section className="space-y-4">
       <PageHeader
         title="Database"
-        description={`Internal status for the v${cairnVersion.currentVersion} Neon and Drizzle foundation.`}
+        description={`Internal status for the v${cairnVersion.version} Neon and Drizzle foundation.`}
         actions={<Badge tone={connected ? "success" : "warning"}>{status.status}</Badge>}
       />
 

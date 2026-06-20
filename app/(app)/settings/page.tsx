@@ -439,7 +439,7 @@ export default function SettingsPage() {
           <div>
             <h2 className="text-2xl font-semibold">Settings</h2>
             <p className="text-sm text-muted-foreground">Facility administration for operations, staff, access, and payments.</p>
-            <p className="mt-1 text-xs text-muted-foreground">Cairn v{cairnVersion.currentVersion} · {formatVersionStatus(cairnVersion.currentReleaseStatus)} · Target {cairnVersion.nextReleaseTargetDate}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Cairn v{cairnVersion.version} · {formatVersionStatus(cairnVersion.status)} · Target {cairnVersion.targetDate}</p>
           </div>
           <div className="rounded-md bg-secondary px-3 py-2 text-sm text-muted-foreground">
             {hasUnsavedChanges ? "Unsaved changes" : "All changes saved"}

@@ -19,9 +19,9 @@ export type RoadmapRelease = {
 
 export const roadmapReleases: RoadmapRelease[] = [
   {
-    version: cairnVersion.currentVersion,
-    title: cairnVersion.currentReleaseName,
-    target: cairnVersion.nextReleaseTargetDate,
+    version: cairnVersion.version,
+    title: cairnVersion.releaseName,
+    target: cairnVersion.targetDate,
     focus: [
       "Real Data Foundation Planning complete",
       "Database Foundation complete",
@@ -45,8 +45,8 @@ export const roadmapReleases: RoadmapRelease[] = [
     status: "In Progress"
   },
   {
-    version: cairnVersion.latestReleasedVersion,
-    title: cairnVersion.latestReleasedName,
+    version: "0.1.0",
+    title: "Pilot Readiness Release",
     target: "June 22, 2026",
     categories: [
       {

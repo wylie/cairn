@@ -17,7 +17,7 @@ export default function RoadmapPage() {
       <PageHeader
         title="Roadmap"
         description="Version-based direction for pilot testing and future customer onboarding. Targets are directional, not guarantees."
-        actions={<Badge tone="warning">Active development v{cairnVersion.currentVersion}</Badge>}
+        actions={<Badge tone="warning">Current Release v{cairnVersion.version}</Badge>}
       />
 
       <Card>
@@ -32,7 +32,7 @@ export default function RoadmapPage() {
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Pilot status</p>
-            <p className="font-semibold">v{cairnVersion.currentVersion} active development</p>
+            <p className="font-semibold">Current Release v{cairnVersion.version}</p>
           </div>
         </CardContent>
       </Card>
@@ -42,7 +42,7 @@ export default function RoadmapPage() {
           <Card key={release.version}>
             <CardHeader>
               <div className="flex flex-wrap items-center gap-2">
-                <Badge tone={release.status === "In Progress" ? "warning" : release.version === cairnVersion.latestReleasedVersion ? "success" : "muted"}>v{release.version}</Badge>
+                <Badge tone={release.status === "In Progress" ? "warning" : release.status === "Released" ? "success" : "muted"}>v{release.version}</Badge>
                 <Badge tone={statusTone[release.status]}>{release.status}</Badge>
                 <p className="text-sm text-muted-foreground">
                   {release.status === "Released" ? "Released" : release.status === "Future" ? "Criteria" : "Target"}: {release.target}

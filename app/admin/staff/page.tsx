@@ -13,7 +13,7 @@ export default async function AdminStaffPage() {
     <section className="space-y-4">
       <PageHeader
         title="Staff Directory"
-        description={`Read-only database-backed staff account foundation for v${cairnVersion.currentVersion}.`}
+        description={`Read-only database-backed staff account foundation for v${cairnVersion.version}.`}
         actions={<Badge tone="muted">{staffUsers.length} staff users</Badge>}
       />
 

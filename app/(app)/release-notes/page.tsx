@@ -28,26 +28,22 @@ export default function ReleaseNotesPage() {
       <PageHeader
         title="Release Notes"
         description="Product updates, fixes, known issues, and what is planned as Cairn moves through pilot testing."
-        actions={<Badge tone="muted">Released v{cairnVersion.latestReleasedVersion}</Badge>}
+        actions={<Badge tone="warning">v{cairnVersion.version} · {activeRelease.status}</Badge>}
       />
 
       <Card>
-        <CardContent className="grid gap-3 p-4 text-sm md:grid-cols-4">
+        <CardContent className="grid gap-3 p-4 text-sm md:grid-cols-3">
           <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Released version</p>
-            <p className="font-semibold">v{cairnVersion.latestReleasedVersion}</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Version</p>
+            <p className="font-semibold">v{cairnVersion.version}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Development version</p>
-            <p className="font-semibold">v{cairnVersion.currentVersion}</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Status</p>
+            <p className="font-semibold">{activeRelease.status}</p>
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Target release date</p>
-            <p className="font-semibold">{cairnVersion.nextReleaseTargetDate}</p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Development status</p>
-            <p className="font-semibold">{activeRelease.status}</p>
+            <p className="font-semibold">{cairnVersion.targetDate}</p>
           </div>
         </CardContent>
       </Card>

@@ -23,10 +23,10 @@ export type ActiveRelease = {
 };
 
 export const activeRelease: ActiveRelease = {
-  version: cairnVersion.currentVersion,
-  title: cairnVersion.currentReleaseName,
-  targetDate: cairnVersion.nextReleaseTargetDateIso,
-  status: formatVersionStatus(cairnVersion.currentReleaseStatus) as ActiveRelease["status"],
+  version: cairnVersion.version,
+  title: cairnVersion.releaseName,
+  targetDate: cairnVersion.targetDateIso,
+  status: formatVersionStatus(cairnVersion.status) as ActiveRelease["status"],
   focus: [
     "Neon database foundation",
     "Drizzle ORM",
@@ -98,9 +98,9 @@ export function compareReleaseNotesNewestFirst(a: ReleaseNote, b: ReleaseNote) {
 
 const releaseNoteEntries: ReleaseNote[] = [
   {
-    version: cairnVersion.latestReleasedVersion,
-    date: cairnVersion.latestReleasedDate,
-    title: cairnVersion.latestReleasedName,
+    version: "0.1.0",
+    date: "2026-06-22",
+    title: "Pilot Readiness Release",
     summary: "Initial external testing release for facility pilots.",
     status: "Released",
     sections: {

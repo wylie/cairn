@@ -175,7 +175,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               What's New
             </Link>
             <span className="mx-2">·</span>
-            <span>Cairn v{cairnVersion.currentVersion}</span>
+            <span>Cairn v{cairnVersion.version}</span>
           </div>
         </aside>
         <main className="space-y-4">

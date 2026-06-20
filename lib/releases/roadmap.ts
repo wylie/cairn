@@ -29,6 +29,8 @@ export const roadmapReleases: RoadmapRelease[] = [
       "Facility Persistence complete",
       "Data Classification Layer complete",
       "Staff Accounts Foundation in progress",
+      "Customer Foundation complete",
+      "Customer Read Operations in progress",
       "Customer & Household Foundation in progress",
       "Neon PostgreSQL",
       "Drizzle ORM",

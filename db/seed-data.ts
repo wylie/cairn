@@ -159,3 +159,314 @@ export const seedStaffFacilityAccess = [
   { staffUserId: "staff_wcymca_chris_miller", facilityId: "loc_201" },
   { staffUserId: "staff_wcymca_chris_miller", facilityId: "loc_203" }
 ] as const;
+
+export const seedCustomers = [
+  {
+    id: "cust_001",
+    organizationId: "org_summit",
+    firstName: "Maya",
+    lastName: "Patel",
+    preferredName: "Maya",
+    email: "maya.patel@example.com",
+    phone: "(212) 555-0112",
+    birthDate: "1993-04-18",
+    active: true
+  },
+  {
+    id: "cust_002",
+    organizationId: "org_summit",
+    firstName: "Jordan",
+    lastName: "Kim",
+    preferredName: "Jordy",
+    email: "jordan.kim@example.com",
+    phone: "(917) 555-0180",
+    birthDate: "1996-08-09",
+    active: true
+  },
+  {
+    id: "cust_003",
+    organizationId: "org_summit",
+    firstName: "Alex",
+    lastName: "Rivera",
+    preferredName: "Alex",
+    email: "alex.rivera@example.com",
+    phone: "(646) 555-0144",
+    birthDate: "1989-02-02",
+    active: true
+  },
+  {
+    id: "cust_004",
+    organizationId: "org_summit",
+    firstName: "Oslo",
+    lastName: "Fisher",
+    preferredName: "Oslo",
+    email: "oslo.fisher@example.com",
+    phone: "(212) 555-0199",
+    birthDate: "2014-11-21",
+    active: true
+  },
+  {
+    id: "cust_005",
+    organizationId: "org_summit",
+    firstName: "Dana",
+    lastName: "Brooks",
+    preferredName: "Dana",
+    email: "dana.brooks@example.com",
+    phone: "(212) 555-0177",
+    birthDate: "1998-05-12",
+    active: true
+  },
+  {
+    id: "cust_006",
+    organizationId: "org_summit",
+    firstName: "Miles",
+    lastName: "James",
+    preferredName: "Miles",
+    email: "miles.james@example.com",
+    phone: "(828) 555-0106",
+    birthDate: "1992-09-14",
+    active: true
+  },
+  {
+    id: "cust_007",
+    organizationId: "org_summit",
+    firstName: "Riley",
+    lastName: "Morgan",
+    preferredName: "Riley",
+    email: "riley.morgan@example.com",
+    phone: "(718) 555-0165",
+    birthDate: "1991-06-20",
+    active: true
+  },
+  {
+    id: "cust_staff_001",
+    organizationId: "org_summit",
+    firstName: "Taylor",
+    lastName: "Nguyen",
+    preferredName: "Taylor",
+    email: "taylor.nguyen@example.com",
+    phone: "(212) 555-3001",
+    birthDate: "1988-03-14",
+    active: true
+  },
+  {
+    id: "cust_staff_002",
+    organizationId: "org_summit",
+    firstName: "Maya",
+    lastName: "Lopez",
+    preferredName: "Maya",
+    email: "maya.lopez@example.com",
+    phone: "(212) 555-3002",
+    birthDate: "1991-07-29",
+    active: true
+  },
+  {
+    id: "cust_staff_003",
+    organizationId: "org_summit",
+    firstName: "Sam",
+    lastName: "Rivera",
+    preferredName: "Sam",
+    email: "sam.rivera@example.com",
+    phone: "(212) 555-3003",
+    birthDate: "1995-10-02",
+    active: true
+  },
+  {
+    id: "cust_staff_004",
+    organizationId: "org_summit",
+    firstName: "Jordan",
+    lastName: "Kim",
+    preferredName: "Jordan",
+    email: "jordan.kim.staff@example.com",
+    phone: "(212) 555-3004",
+    birthDate: "1994-01-12",
+    active: true
+  },
+  {
+    id: "cust_staff_008",
+    organizationId: "org_summit",
+    firstName: "Iris",
+    lastName: "Chen",
+    preferredName: "Iris",
+    email: "iris.chen@example.com",
+    phone: "(212) 555-3008",
+    birthDate: "1994-06-12",
+    active: false
+  },
+  {
+    id: "cust_rb_001",
+    organizationId: "org_riverbend",
+    firstName: "Avery",
+    lastName: "Morgan",
+    preferredName: "Avery",
+    email: "avery.morgan@example.com",
+    phone: "(828) 555-4201",
+    birthDate: "1987-05-06",
+    active: true
+  },
+  {
+    id: "cust_rb_002",
+    organizationId: "org_riverbend",
+    firstName: "Luca",
+    lastName: "Bennett",
+    preferredName: "Luca",
+    email: "luca.bennett@example.com",
+    phone: "(828) 555-4202",
+    birthDate: "2012-07-19",
+    active: true
+  },
+  {
+    id: "cust_rb_003",
+    organizationId: "org_riverbend",
+    firstName: "Nora",
+    lastName: "Fields",
+    preferredName: "Nora",
+    email: "nora.fields@example.com",
+    phone: "(828) 555-4213",
+    birthDate: "1979-12-03",
+    active: true
+  },
+  {
+    id: "cust_rb_004",
+    organizationId: "org_riverbend",
+    firstName: "Eli",
+    lastName: "Hart",
+    preferredName: "Eli",
+    email: "eli.hart@example.com",
+    phone: "(828) 555-4214",
+    birthDate: "2009-04-27",
+    active: true
+  },
+  {
+    id: "cust_rb_005",
+    organizationId: "org_riverbend",
+    firstName: "Camila",
+    lastName: "Reed",
+    preferredName: "Cami",
+    email: "camila.reed@example.com",
+    phone: "(828) 555-4215",
+    birthDate: "1990-09-08",
+    active: true
+  },
+  {
+    id: "cust_rb_006",
+    organizationId: "org_riverbend",
+    firstName: "Theo",
+    lastName: "Parker",
+    preferredName: "Theo",
+    email: "theo.parker@example.com",
+    phone: "(828) 555-4216",
+    birthDate: "1984-02-22",
+    active: false
+  },
+  {
+    id: "cust_wcymca_001",
+    organizationId: "org_western_carolina_ymca",
+    firstName: "Harper",
+    lastName: "Lewis",
+    preferredName: "Harper",
+    email: "harper.lewis@example.com",
+    phone: "(828) 555-5101",
+    birthDate: "1985-01-18",
+    active: true
+  },
+  {
+    id: "cust_wcymca_002",
+    organizationId: "org_western_carolina_ymca",
+    firstName: "Malik",
+    lastName: "Carter",
+    preferredName: "Malik",
+    email: "malik.carter@example.com",
+    phone: "(828) 555-5102",
+    birthDate: "1992-11-04",
+    active: true
+  },
+  {
+    id: "cust_wcymca_003",
+    organizationId: "org_western_carolina_ymca",
+    firstName: "Sofia",
+    lastName: "Ramirez",
+    preferredName: "Sofia",
+    email: "sofia.ramirez@example.com",
+    phone: "(828) 555-5103",
+    birthDate: "1976-07-15",
+    active: true
+  },
+  {
+    id: "cust_wcymca_004",
+    organizationId: "org_western_carolina_ymca",
+    firstName: "Owen",
+    lastName: "Price",
+    preferredName: "Owen",
+    email: "owen.price@example.com",
+    phone: "(828) 555-5104",
+    birthDate: "2010-05-30",
+    active: true
+  },
+  {
+    id: "cust_wcymca_005",
+    organizationId: "org_western_carolina_ymca",
+    firstName: "Grace",
+    lastName: "Thompson",
+    preferredName: "Grace",
+    email: "grace.thompson@example.com",
+    phone: "(828) 555-5105",
+    birthDate: "1949-10-11",
+    active: true
+  },
+  {
+    id: "cust_wcymca_006",
+    organizationId: "org_western_carolina_ymca",
+    firstName: "Jonah",
+    lastName: "Brooks",
+    preferredName: "Jonah",
+    email: "jonah.brooks@example.com",
+    phone: "(828) 555-5106",
+    birthDate: "2008-08-23",
+    active: true
+  },
+  {
+    id: "cust_wcymca_007",
+    organizationId: "org_western_carolina_ymca",
+    firstName: "Priya",
+    lastName: "Shah",
+    preferredName: "Priya",
+    email: "priya.shah@example.com",
+    phone: "(828) 555-5107",
+    birthDate: "1988-03-09",
+    active: true
+  },
+  {
+    id: "cust_wcymca_008",
+    organizationId: "org_western_carolina_ymca",
+    firstName: "Caleb",
+    lastName: "Morris",
+    preferredName: "Caleb",
+    email: "caleb.morris@example.com",
+    phone: "(828) 555-5108",
+    birthDate: "1999-06-02",
+    active: false
+  },
+  {
+    id: "cust_wcymca_009",
+    organizationId: "org_western_carolina_ymca",
+    firstName: "Elena",
+    lastName: "Foster",
+    preferredName: "Elena",
+    email: "elena.foster@example.com",
+    phone: "(828) 555-5109",
+    birthDate: "1968-12-28",
+    active: true
+  },
+  {
+    id: "cust_wcymca_010",
+    organizationId: "org_western_carolina_ymca",
+    firstName: "Micah",
+    lastName: "Turner",
+    preferredName: "Micah",
+    email: "micah.turner@example.com",
+    phone: "(828) 555-5110",
+    birthDate: "2016-02-16",
+    active: true
+  }
+] as const;

@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
-import { facilities, getDatabase, getSqlClient, organizations, staffFacilityAccess, staffRoles, staffUsers } from "./index";
-import { seedFacilities, seedOrganizations, seedStaffFacilityAccess, seedStaffRoles, seedStaffUsers } from "./seed-data";
+import { customers, facilities, getDatabase, getSqlClient, organizations, staffFacilityAccess, staffRoles, staffUsers } from "./index";
+import { seedCustomers, seedFacilities, seedOrganizations, seedStaffFacilityAccess, seedStaffRoles, seedStaffUsers } from "./seed-data";
 
 async function main() {
   const database = getDatabase();
@@ -70,9 +70,27 @@ async function main() {
       target: [staffFacilityAccess.staffUserId, staffFacilityAccess.facilityId]
     });
 
+  await database
+    .insert(customers)
+    .values([...seedCustomers])
+    .onConflictDoUpdate({
+      target: customers.id,
+      set: {
+        organizationId: sql`excluded.organization_id`,
+        firstName: sql`excluded.first_name`,
+        lastName: sql`excluded.last_name`,
+        preferredName: sql`excluded.preferred_name`,
+        email: sql`excluded.email`,
+        phone: sql`excluded.phone`,
+        birthDate: sql`excluded.birth_date`,
+        active: sql`excluded.active`,
+        updatedAt: sql`now()`
+      }
+    });
+
   await sqlClient.end();
   console.log(
-    `Seeded ${seedOrganizations.length} organizations, ${seedFacilities.length} facilities, ${seedStaffRoles.length} staff roles, and ${seedStaffUsers.length} staff users.`
+    `Seeded ${seedOrganizations.length} organizations, ${seedFacilities.length} facilities, ${seedStaffRoles.length} staff roles, ${seedStaffUsers.length} staff users, and ${seedCustomers.length} customers.`
   );
 }
 

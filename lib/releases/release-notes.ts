@@ -62,7 +62,11 @@ export const activeRelease: ActiveRelease = {
       "Customer repository layer",
       "Household repository layer",
       "Customer migration planning",
-      "Household migration planning"
+      "Household migration planning",
+      "Customer seed data",
+      "Customer repository expansion",
+      "Customer list backed by Neon",
+      "Customer counts"
     ]
   }
 };

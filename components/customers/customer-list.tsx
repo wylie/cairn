@@ -15,8 +15,9 @@ import { getMembershipForCustomer, getPassForCustomer, getWaiverForCustomer } fr
 import { buildCustomerDetailHref } from "@/lib/navigation/detail-navigation";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
+import type { Customer } from "@/types/domain";
 
-export function CustomerList() {
+export function CustomerList({ persistedCustomers = [] }: { persistedCustomers?: Customer[] }) {
   const pathname = usePathname() ?? "";
   const searchParams = useSearchParams();
   const currentSearch = searchParams?.toString?.() ?? "";
@@ -31,10 +32,12 @@ export function CustomerList() {
   const [showSwitchPrompt, setShowSwitchPrompt] = useState(false);
   const [sellCustomerId, setSellCustomerId] = useState<string | null>(null);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const displayedCustomers = persistedCustomers;
+  const hasCustomerRecords = displayedCustomers.length > 0;
 
   const filtered = useMemo(
     () =>
-      filterCustomers(customers, query, { households, householdMembers }).filter((customer) => {
+      filterCustomers(displayedCustomers, query, { households, householdMembers }).filter((customer) => {
         if (waiverFilter === "missing") {
           const decision = evaluateCustomerEntry(customer.id);
           const hasWaiverIssue =
@@ -53,7 +56,7 @@ export function CustomerList() {
 
         return true;
       }),
-    [customers, query, households, householdMembers, waiverFilter, birthdayFilter, evaluateCustomerEntry]
+    [displayedCustomers, query, households, householdMembers, waiverFilter, birthdayFilter, evaluateCustomerEntry]
   );
   const sellCustomer = useMemo(() => customers.find((entry) => entry.id === sellCustomerId) ?? null, [customers, sellCustomerId]);
 
@@ -115,7 +118,10 @@ export function CustomerList() {
       ) : null}
       {filtered.length === 0 ? (
         <div className="space-y-2">
-          <EmptyState title="No customers found" description="Try a different name, email, phone, or member ID, or add a walk-in customer to continue." />
+          <EmptyState
+            title={hasCustomerRecords ? "No customers found" : "No customers have been added yet."}
+            description={hasCustomerRecords ? "Try a different name, email, phone, or member ID, or add a walk-in customer to continue." : "Customer records will appear here once they are seeded or migrated into the database."}
+          />
           <Button className="min-h-11" variant="outline" onClick={() => setShowAddCustomer(true)}>Add Customer</Button>
         </div>
       ) : (

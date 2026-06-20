@@ -154,5 +154,9 @@ Focus:
 - Household repository layer
 - Customer migration planning
 - Household migration planning
+- Customer seed data
+- Customer repository expansion
+- Customer list backed by Neon
+- Customer counts
 
 v0.2.0 starts the transition from demo/localStorage persistence toward real server-backed persistence. It is active development work and has not been released yet.

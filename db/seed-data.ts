@@ -26,31 +26,31 @@ export const seedFacilities = [
   {
     id: "loc_002",
     organizationId: "org_summit",
-    name: "Summit Uptown",
-    slug: "uptown"
+    name: "Summit West",
+    slug: "west"
   },
   {
     id: "loc_101",
     organizationId: "org_riverbend",
-    name: "Riverstone Main",
-    slug: "main"
-  },
-  {
-    id: "loc_102",
-    organizationId: "org_riverbend",
-    name: "Riverstone Trail Center",
-    slug: "trail-center"
+    name: "Riverbend Campus",
+    slug: "riverbend-campus"
   },
   {
     id: "loc_201",
     organizationId: "org_western_carolina_ymca",
-    name: "Western Carolina YMCA Main Branch",
-    slug: "main-branch"
+    name: "Hendersonville Family YMCA",
+    slug: "hendersonville-family-ymca"
   },
   {
     id: "loc_202",
     organizationId: "org_western_carolina_ymca",
-    name: "Western Carolina YMCA Aquatics Center",
-    slug: "aquatics-center"
+    name: "Reuter Family YMCA",
+    slug: "reuter-family-ymca"
+  },
+  {
+    id: "loc_203",
+    organizationId: "org_western_carolina_ymca",
+    name: "Asheville YMCA",
+    slug: "asheville-ymca"
   }
 ] as const;

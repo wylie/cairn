@@ -103,5 +103,10 @@ Focus:
 - Initial database schema
 - Migration infrastructure
 - Database health monitoring
+- Organization schema
+- Facility schema
+- Seed data
+- Repository layer
+- Database status page
 
 v0.2.0 starts the transition from demo/localStorage persistence toward real server-backed persistence. It is active development work and has not been released yet.

@@ -42,7 +42,12 @@ export const activeRelease: ActiveRelease = {
       "Drizzle ORM foundation",
       "Initial database schema",
       "Migration infrastructure",
-      "Database health monitoring"
+      "Database health monitoring",
+      "Organization schema",
+      "Facility schema",
+      "Seed data",
+      "Repository layer",
+      "Database status page"
     ]
   }
 };

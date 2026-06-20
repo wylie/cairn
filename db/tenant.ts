@@ -1,11 +1,16 @@
 import "server-only";
 
-import { and, eq } from "drizzle-orm";
-import { facilities, getDatabase, organizations } from "./index";
+import { getDatabase } from "./index";
+import {
+  getFacilitiesForOrganization,
+  getFacilityBySlug as getPersistedFacilityBySlug,
+  type FacilityRecord
+} from "./repositories/facility-repository";
+import {
+  getOrganizationBySlug as getPersistedOrganizationBySlug,
+  type OrganizationRecord
+} from "./repositories/organization-repository";
 import { seedFacilities, seedOrganizations } from "./seed-data";
-
-export type OrganizationRecord = typeof organizations.$inferSelect;
-export type FacilityRecord = typeof facilities.$inferSelect;
 
 export interface ActiveFacilityContext {
   organization: OrganizationRecord;
@@ -42,11 +47,8 @@ function fallbackFacilitiesByOrganization(organizationId: string) {
 }
 
 export async function getOrganizationBySlug(slug: string): Promise<OrganizationRecord | null> {
-  const database = getDatabase();
-  if (!database) return fallbackOrganizationBySlug(slug);
-
   try {
-    const [organization] = await database.select().from(organizations).where(eq(organizations.slug, slug)).limit(1);
+    const organization = await getPersistedOrganizationBySlug(slug);
     return organization ?? fallbackOrganizationBySlug(slug);
   } catch {
     return fallbackOrganizationBySlug(slug);
@@ -54,11 +56,8 @@ export async function getOrganizationBySlug(slug: string): Promise<OrganizationR
 }
 
 export async function getFacilitiesByOrganization(organizationId: string): Promise<FacilityRecord[]> {
-  const database = getDatabase();
-  if (!database) return fallbackFacilitiesByOrganization(organizationId);
-
   try {
-    const rows = await database.select().from(facilities).where(eq(facilities.organizationId, organizationId));
+    const rows = await getFacilitiesForOrganization(organizationId);
     return rows.length > 0 ? rows : fallbackFacilitiesByOrganization(organizationId);
   } catch {
     return fallbackFacilitiesByOrganization(organizationId);
@@ -69,17 +68,8 @@ export async function getFacilityBySlug(organizationSlug: string, facilitySlug: 
   const organization = await getOrganizationBySlug(organizationSlug);
   if (!organization) return null;
 
-  const database = getDatabase();
-  if (!database) {
-    return fallbackFacilitiesByOrganization(organization.id).find((entry) => entry.slug === facilitySlug) ?? null;
-  }
-
   try {
-    const [facility] = await database
-      .select()
-      .from(facilities)
-      .where(and(eq(facilities.organizationId, organization.id), eq(facilities.slug, facilitySlug)))
-      .limit(1);
+    const facility = await getPersistedFacilityBySlug(organization.id, facilitySlug);
     return facility ?? fallbackFacilitiesByOrganization(organization.id).find((entry) => entry.slug === facilitySlug) ?? null;
   } catch {
     return fallbackFacilitiesByOrganization(organization.id).find((entry) => entry.slug === facilitySlug) ?? null;

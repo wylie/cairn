@@ -103,7 +103,7 @@ Database changes are managed through Drizzle Kit.
 - `npm run db:studio` opens Drizzle Studio against the configured database for local inspection.
 - `npm run db:seed` seeds the initial organization and facility records after migrations have been applied.
 
-`DATABASE_URL` must remain server-only. Do not expose it through browser code, `NEXT_PUBLIC_*` variables, or client components.
+Local database tooling loads `DATABASE_URL` from `.env.local`. `DATABASE_URL` must remain server-only. Do not expose it through browser code, `NEXT_PUBLIC_*` variables, or client components.
 
 ### First Database-Backed Area
 
@@ -111,6 +111,8 @@ Organizations and facilities are the first Cairn data area to read from the prod
 
 - The database owns seeded organization and facility identities when `DATABASE_URL` is configured and migrations have run.
 - Public facility landing metadata and display context can load organization and facility records through the server data layer.
+- `db/repositories` contains the first explicit repository layer for organization and facility reads.
+- `/admin/database` provides a read-only internal connection and record-count status page.
 - Existing demo seed data remains as a fallback so local review environments do not require a live database.
 - Tenant helpers require organization context for facility reads. Facility slugs are not treated as globally authoritative.
 - Platform-wide organization views are still mock/localStorage-backed until a dedicated platform admin migration replaces the current registry.

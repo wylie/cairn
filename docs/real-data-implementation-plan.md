@@ -46,6 +46,7 @@ v0.2.x now includes the first production data foundation pieces.
 - `db/index.ts` exposes the typed database client.
 - `/api/internal/database-health` verifies whether the configured database connection is reachable without exposing credentials or connection details.
 - `npm run db:generate`, `npm run db:migrate`, and `npm run db:studio` provide the migration and inspection workflow.
+- Local tooling loads `DATABASE_URL` from `.env.local`.
 
 This foundation does not change existing application behavior. Current workflows still use the mock/localStorage implementation until future migration work replaces each domain intentionally.
 
@@ -56,9 +57,11 @@ Organizations and facilities are the first data area wired toward the production
 - `npm run db:seed` seeds the initial tenant foundation into the configured database.
 - Seeded organizations: Summit Rec Collective, Riverstone Nature Center, and Western Carolina YMCA Association.
 - Seeded facilities include each organization's initial facility records and slugs.
-- `db/tenant.ts` provides server-side Drizzle helpers for organization lookup, facility lookup, organization-scoped facility lists, and active facility context.
+- `db/repositories` provides server-only repository functions for organization lookup, facility lookup, organization-scoped facility lists, and counts.
+- `db/tenant.ts` provides fallback-aware active facility context on top of the repository layer.
 - Facility lookup requires organization scope so facility slugs do not become global tenant bypasses.
 - The public facility landing page can read organization and facility display data from the database when available.
+- `/admin/database` shows connection status, organization count, and facility count for internal review.
 - If `DATABASE_URL` is missing or the database query fails, the same helpers fall back to canonical demo seed data so local demo mode remains stable.
 
 This does not migrate customers, households, memberships, programs, registrations, POS, waivers, notifications, support requests, or authentication. Those areas still use the existing mock/localStorage implementation until their planned migration phases.

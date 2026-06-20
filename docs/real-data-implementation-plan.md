@@ -34,6 +34,15 @@ Neon PostgreSQL should become the durable system of record for production data. 
 
 The Next.js server layer should own all production reads and writes. Browser code should call server actions or route handlers instead of reading or writing authoritative records directly.
 
+## Global Version Metadata
+
+`lib/version.ts` owns the active branch and release metadata through the `cairnVersion` object.
+
+- Active development displays read `currentVersion`, `currentReleaseName`, `currentReleaseStatus`, and `nextReleaseTargetDate`.
+- Released-version displays read `latestReleasedVersion` and `latestReleasedName`.
+- On the `june-28-2026` branch, Cairn identifies itself as `v0.2.0` while keeping `v0.1.0` as the latest released version.
+- Release Notes and Roadmap should use this metadata instead of hardcoded active version strings.
+
 ## New State: Database Foundation Established
 
 v0.2.x now includes the first production data foundation pieces.
@@ -96,6 +105,14 @@ Rules before customer migration:
 - Production organizations must only contain production data.
 - Never import or create production customers inside a demo organization.
 - Future import tooling must choose or create the production organization before migrating customers, households, memberships, registrations, waivers, or transactions.
+
+Visibility:
+
+- Demo organizations show a `Demo` badge in staff/facility app chrome.
+- Demo organizations show a subtle dismissible banner that says the organization contains demonstration data for evaluation purposes.
+- Sandbox organizations show a `Sandbox` badge in staff/facility app chrome.
+- Production organizations are not prominently labeled in normal facility workflows.
+- Platform Admin views may show `Demo`, `Sandbox`, and `Production` badges for all organizations.
 
 ## Staff Accounts Foundation Started
 

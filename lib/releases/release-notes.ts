@@ -1,4 +1,4 @@
-import { CAIRN_CURRENT_RELEASED_DATE, CAIRN_CURRENT_RELEASED_VERSION, CAIRN_RELEASE_DATE, CAIRN_VERSION } from "@/lib/version";
+import { cairnVersion } from "@/lib/version";
 
 export type ReleaseNoteSection = "new" | "improved" | "fixed" | "knownIssues";
 
@@ -23,9 +23,9 @@ export type ActiveRelease = {
 };
 
 export const activeRelease: ActiveRelease = {
-  version: CAIRN_VERSION,
-  title: "Real Data Foundation",
-  targetDate: CAIRN_RELEASE_DATE,
+  version: cairnVersion.currentVersion,
+  title: cairnVersion.currentReleaseName,
+  targetDate: cairnVersion.nextReleaseTargetDateIso,
   status: "In Progress",
   focus: [
     "Neon database foundation",
@@ -94,9 +94,9 @@ export function compareReleaseNotesNewestFirst(a: ReleaseNote, b: ReleaseNote) {
 
 const releaseNoteEntries: ReleaseNote[] = [
   {
-    version: CAIRN_CURRENT_RELEASED_VERSION,
-    date: CAIRN_CURRENT_RELEASED_DATE,
-    title: "Pilot Readiness Release",
+    version: cairnVersion.latestReleasedVersion,
+    date: cairnVersion.latestReleasedDate,
+    title: cairnVersion.latestReleasedName,
     summary: "Initial external testing release for facility pilots.",
     status: "Released",
     sections: {

@@ -8,6 +8,7 @@ import { getFacilityCount } from "@/db/repositories/facility-repository";
 import { getHouseholdCount } from "@/db/repositories/household-repository";
 import { getOrganizationCount } from "@/db/repositories/organization-repository";
 import { getStaffUserCount } from "@/db/repositories/staff-repository";
+import { cairnVersion } from "@/lib/version";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +66,7 @@ export default async function AdminDatabasePage() {
     <section className="space-y-4">
       <PageHeader
         title="Database"
-        description="Internal status for the v0.2.0 Neon and Drizzle foundation."
+        description={`Internal status for the v${cairnVersion.currentVersion} Neon and Drizzle foundation.`}
         actions={<Badge tone={connected ? "success" : "warning"}>{status.status}</Badge>}
       />
 

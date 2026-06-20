@@ -12,6 +12,10 @@ Status: In Progress
 
 v0.2.0 starts Cairn's transition from demo/localStorage persistence toward real server-backed persistence. The release establishes the foundation for future workflow migrations without moving customer, membership, program, registration, notification, or UI workflows yet.
 
+The `june-28-2026` branch identifies itself as `v0.2.0` through the centralized `cairnVersion` metadata in `lib/version.ts`. Release Notes continue to show `v0.1.0` as the latest released version while `v0.2.0` remains active development.
+
+Data-mode visibility is part of this release foundation: demo and sandbox organizations are labeled in normal staff workflows, demo organizations show a subtle demonstration-data banner, and Platform Admin views show Demo, Sandbox, and Production badges.
+
 Focus:
 
 - Real Data Foundation Planning - complete

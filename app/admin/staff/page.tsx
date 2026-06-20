@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/page-header";
 import { getStaffUsers } from "@/db/repositories/staff-repository";
+import { cairnVersion } from "@/lib/version";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,7 @@ export default async function AdminStaffPage() {
     <section className="space-y-4">
       <PageHeader
         title="Staff Directory"
-        description="Read-only database-backed staff account foundation for v0.2.0."
+        description={`Read-only database-backed staff account foundation for v${cairnVersion.currentVersion}.`}
         actions={<Badge tone="muted">{staffUsers.length} staff users</Badge>}
       />
 

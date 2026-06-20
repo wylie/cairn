@@ -73,6 +73,17 @@ Drizzle should define the schema and typed query layer. Next.js Route Handlers a
 
 localStorage should remain limited to non-authoritative UI preferences and drafts such as calendar view preference, report filter session state, and pre-checkout cart drafts.
 
+## Version Metadata
+
+`lib/version.ts` is the source of truth for branch and release metadata through the `cairnVersion` object.
+
+- `currentVersion` identifies the active development branch version shown in app chrome.
+- `currentReleaseName` and `currentReleaseStatus` describe the active release.
+- `latestReleasedVersion` and `latestReleasedName` preserve historical released-version displays.
+- `nextReleaseTargetDate` is the facility-facing target date for the active release.
+
+The footer, Release Notes page, Roadmap page, admin version displays, version chips, and "What's New" surfaces should read from this metadata rather than hardcoding active version strings. Historical release notes should keep their original content while reading released-version metadata from the historical fields.
+
 ## Database Foundation
 
 v0.2.x establishes the production database foundation without migrating application workflows yet.
@@ -147,6 +158,13 @@ Rules:
 - Production organizations contain only production data.
 - Never mix demo and production data in the same organization.
 - Customer and household migration work must create or target the correct organization before importing records.
+
+Visibility:
+
+- Normal staff and facility workflows show a subtle `Demo` badge for demo organizations and a `Sandbox` badge for sandbox organizations.
+- Demo organizations also show a dismissible banner explaining that the organization contains demonstration data for evaluation purposes.
+- Production organizations are not prominently labeled in normal facility workflows.
+- Platform Admin organization lists and details show all data modes, including `Production`.
 
 ### Staff Account Foundation
 

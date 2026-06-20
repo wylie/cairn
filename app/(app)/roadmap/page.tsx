@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/page-header";
 import { roadmapReleases, type RoadmapStatus } from "@/lib/releases/roadmap";
-import { CAIRN_VERSION } from "@/lib/version";
+import { cairnVersion } from "@/lib/version";
 
 const statusTone: Record<RoadmapStatus, "default" | "success" | "warning" | "danger" | "muted"> = {
   Released: "success",
@@ -17,7 +17,7 @@ export default function RoadmapPage() {
       <PageHeader
         title="Roadmap"
         description="Version-based direction for pilot testing and future customer onboarding. Targets are directional, not guarantees."
-        actions={<Badge tone="warning">Active development v{CAIRN_VERSION}</Badge>}
+        actions={<Badge tone="warning">Active development v{cairnVersion.currentVersion}</Badge>}
       />
 
       <Card>
@@ -32,7 +32,7 @@ export default function RoadmapPage() {
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Pilot status</p>
-            <p className="font-semibold">v0.2.0 active development</p>
+            <p className="font-semibold">v{cairnVersion.currentVersion} active development</p>
           </div>
         </CardContent>
       </Card>
@@ -42,7 +42,7 @@ export default function RoadmapPage() {
           <Card key={release.version}>
             <CardHeader>
               <div className="flex flex-wrap items-center gap-2">
-                <Badge tone={release.status === "In Progress" ? "warning" : release.version === CAIRN_VERSION ? "success" : "muted"}>v{release.version}</Badge>
+                <Badge tone={release.status === "In Progress" ? "warning" : release.version === cairnVersion.latestReleasedVersion ? "success" : "muted"}>v{release.version}</Badge>
                 <Badge tone={statusTone[release.status]}>{release.status}</Badge>
                 <p className="text-sm text-muted-foreground">
                   {release.status === "Released" ? "Released" : release.status === "Future" ? "Criteria" : "Target"}: {release.target}

@@ -4,14 +4,25 @@ Cairn uses lightweight semantic-style versioning during pilot testing.
 
 ## Versioning
 
-Versions are stored in `lib/version.ts`.
+Version metadata is centralized in `lib/version.ts`.
 
 - `v0.x.x` means pilot or pre-production.
 - `v1.0.0` means the first stable customer-ready release.
 - Patch releases, such as `v0.1.1`, are small fixes.
 - Minor releases, such as `v0.2.0`, add meaningful product capability.
 
-Active development version displays should read from `CAIRN_VERSION` and `CAIRN_RELEASE_DATE`. Historical release entries should use separate release metadata so past release notes do not change when the active branch version advances.
+Active development version displays should read from the `cairnVersion` object in `lib/version.ts`. Compatibility exports may exist for older components, but they must derive from `cairnVersion`.
+
+Current branch metadata:
+
+- `currentVersion`: `0.2.0`
+- `currentReleaseName`: `Real Data Foundation`
+- `currentReleaseStatus`: `in_progress`
+- `latestReleasedVersion`: `0.1.0`
+- `latestReleasedName`: `Pilot Readiness Release`
+- `nextReleaseTargetDate`: `June 29, 2026`
+
+Historical release entries should use the historical fields from `cairnVersion` so past release notes do not change when the active branch version advances.
 
 ## Release Cadence
 
@@ -33,7 +44,7 @@ Release notes are file-based in `lib/releases/release-notes.ts`.
 
 To add a release:
 
-1. Update `CAIRN_VERSION` and `CAIRN_RELEASE_DATE` in `lib/version.ts`.
+1. Update `cairnVersion` in `lib/version.ts`.
 2. Add a new release entry to `releaseNotes`.
 3. Include sections for `new`, `improved`, `fixed`, and `knownIssues`.
 4. Keep facility-facing notes clear and avoid platform-only implementation details.
@@ -42,6 +53,26 @@ To add a release:
 The newest release appears first on the staff Release Notes page.
 
 Upcoming active releases may also be shown on the Release Notes page before they are released. These are planning/status sections, not completed release notes.
+
+## Branch and Version Workflow
+
+Release branches should identify themselves with `cairnVersion.currentVersion`. On the `june-28-2026` branch, app chrome and active-development pages show `v0.2.0`.
+
+The Release Notes page must distinguish:
+
+- current released version: `v0.1.0`
+- active development version: `v0.2.0`
+
+Do not rewrite historical release content when advancing the active development version.
+
+## Demo Data Visibility
+
+Organizations carry a `dataMode` of `demo`, `sandbox`, or `production`.
+
+- Demo organizations show a `Demo` badge and a subtle staff-workflow banner: "This organization contains demonstration data for evaluation purposes."
+- Sandbox organizations show a `Sandbox` badge in normal facility workflows.
+- Production organizations are not prominently labeled in normal facility workflows.
+- Platform Admin may show all modes, including `Production`, for operational clarity.
 
 ## Roadmap Workflow
 

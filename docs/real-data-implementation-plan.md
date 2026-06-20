@@ -238,7 +238,7 @@ Deliverables:
 
 - Persist organizations and facilities in the database. Initial organization and facility seed/read support is now in place.
 - Persist staff users, roles, permissions, and facility assignments. Staff users, roles, and facility assignments are now seeded for the foundation; permissions remain future work.
-- Persist customer and household foundations. Schema and read repositories are now in place; seed data, workflow reads, and workflow writes remain future work.
+- Persist customer and household foundations. Schema, read repositories, demo seed data, and low-risk list reads are now in place; workflow writes remain future work.
 - Replace browser organization registry persistence with server-backed organization data.
 - Preserve existing demo login and seeded workflows until the authentication foundation replaces them.
 
@@ -266,7 +266,7 @@ Deliverables:
 
 ## Non-Goals For This Foundation
 
-- Do not migrate data yet.
+- Do not migrate additional workflow data yet.
 - Do not add production authentication yet.
 - Do not change application workflows.
 - Do not remove mock persistence until replacement server-backed domains exist.

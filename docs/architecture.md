@@ -103,7 +103,7 @@ v0.2.x is limited to the Real Data Foundation: organizations, facilities, staff,
 - `DATABASE_URL` is the documented connection string for Neon PostgreSQL.
 - `db/index.ts` exposes a typed Drizzle database client without requiring application workflows to use it yet.
 - `db/schema` contains the initial tenant, staff, customer, and household foundation: organizations, organization data classification, facilities, staff users, staff roles, staff role assignment, staff facility access, customers, and households.
-- `db/seed.ts` seeds the initial organizations and facilities for Summit Rec Collective, Riverstone Nature Center, and Western Carolina YMCA Association.
+- `db/seed.ts` seeds the initial organizations, facilities, staff, customers, and households for Summit Rec Collective, Riverstone Nature Center, and Western Carolina YMCA Association.
 - `db/tenant.ts` provides server-side Drizzle reads for organization and facility context, with demo seed fallback when the database is unavailable.
 - `/api/internal/database-health` checks whether the configured database connection is available and returns only `connected` or `disconnected` status.
 

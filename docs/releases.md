@@ -159,3 +159,8 @@ Scope:
 - Household reads
 
 v0.2.0 starts the transition from demo/localStorage persistence toward real server-backed persistence. It is active development work and has not been released yet.
+
+Release readiness references:
+
+- [v0.2.0 Release Checklist](./releases/v0.2.0-release-checklist.md)
+- [Technical Debt Log](./technical-debt.md)

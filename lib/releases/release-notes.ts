@@ -10,7 +10,32 @@ export type ReleaseNote = {
   sections: Record<ReleaseNoteSection, string[]>;
 };
 
-export const releaseNotes: ReleaseNote[] = [
+function parseVersion(version: string) {
+  return version
+    .replace(/^v/i, "")
+    .split(".")
+    .map((part) => {
+      const value = Number.parseInt(part, 10);
+      return Number.isFinite(value) ? value : 0;
+    });
+}
+
+export function compareReleaseNotesNewestFirst(a: ReleaseNote, b: ReleaseNote) {
+  const aParts = parseVersion(a.version);
+  const bParts = parseVersion(b.version);
+  const length = Math.max(aParts.length, bParts.length);
+  for (let index = 0; index < length; index += 1) {
+    const difference = (bParts[index] ?? 0) - (aParts[index] ?? 0);
+    if (difference !== 0) return difference;
+  }
+
+  const dateComparison = b.date.localeCompare(a.date);
+  if (dateComparison !== 0) return dateComparison;
+
+  return b.version.localeCompare(a.version);
+}
+
+const releaseNoteEntries: ReleaseNote[] = [
   {
     version: CAIRN_VERSION,
     date: CAIRN_RELEASE_DATE,
@@ -50,7 +75,9 @@ export const releaseNotes: ReleaseNote[] = [
       ]
     }
   }
-].sort((a, b) => b.date.localeCompare(a.date) || b.version.localeCompare(a.version));
+];
+
+export const releaseNotes = [...releaseNoteEntries].sort(compareReleaseNotesNewestFirst);
 
 export const latestRelease = releaseNotes[0];
 

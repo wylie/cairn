@@ -115,7 +115,7 @@ The data migration should be phased:
 - Phase 4: check-ins, POS transactions, products, rentals, and waivers
 - Phase 5: notifications, support requests, release notifications, and audit logs
 
-See [Data Migration Plan](./data-migration-plan.md) for the detailed audit and migration roadmap.
+See [Data Migration Plan](./data-migration-plan.md) for the detailed audit and migration roadmap, and [Real Data Implementation Plan](./real-data-implementation-plan.md) for the v0.2.x implementation sequence.
 
 ## Integration Readiness
 

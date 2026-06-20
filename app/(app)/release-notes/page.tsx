@@ -2,7 +2,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/page-header";
 import { getReleaseAnchor, latestRelease, releaseNotes, type ReleaseNoteSection } from "@/lib/releases/release-notes";
-import { CAIRN_VERSION } from "@/lib/version";
 
 const sectionLabels: Record<ReleaseNoteSection, string> = {
   new: "New",
@@ -28,14 +27,14 @@ export default function ReleaseNotesPage() {
       <PageHeader
         title="Release Notes"
         description="Product updates, fixes, known issues, and what is planned as Cairn moves through pilot testing."
-        actions={<Badge tone="muted">Cairn v{CAIRN_VERSION}</Badge>}
+        actions={<Badge tone="muted">Cairn v{latestRelease.version}</Badge>}
       />
 
       <Card>
         <CardContent className="grid gap-3 p-4 text-sm md:grid-cols-3">
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Current version</p>
-            <p className="font-semibold">v{CAIRN_VERSION}</p>
+            <p className="font-semibold">v{latestRelease.version}</p>
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Latest release</p>

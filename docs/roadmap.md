@@ -4,7 +4,7 @@ Cairn's roadmap is version-based so testers and future customers can understand 
 
 Targets are planning targets, not guarantees. Dates may change based on tester feedback and pilot customer needs. The roadmap should be reviewed weekly before the Sunday evening release window.
 
-## v0.1.0 — Pilot Readiness & External Testing
+## v0.1.x — Pilot Launch / External Testing
 
 Target: June 22, 2026
 
@@ -108,7 +108,7 @@ Focus:
 - Accessibility improvements
 - Demo environment improvements
 
-## v0.4.x — Customer Import & Onboarding
+## v0.4.x — Customer Migration & Onboarding
 
 Target: July 13, 2026
 
@@ -116,9 +116,9 @@ Status: Planned
 
 Focus:
 
-- Customer imports
-- Household imports
-- Membership imports
+- Customer imports and migration mapping
+- Household imports and relationship validation
+- Membership imports and status validation
 - Validation workflows
 - Guided onboarding
 

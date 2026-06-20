@@ -89,7 +89,7 @@ v0.2.x establishes the production database foundation without migrating applicat
 - `drizzle.config.ts` points Drizzle at the schema in `db/schema` and migrations in `db/migrations`.
 - `DATABASE_URL` is the documented connection string for Neon PostgreSQL.
 - `db/index.ts` exposes a typed Drizzle database client without requiring application workflows to use it yet.
-- `db/schema` contains the initial tenant and staff foundation: organizations, organization data classification, facilities, staff users, staff roles, staff role assignment, and staff facility access.
+- `db/schema` contains the initial tenant, staff, customer, and household foundation: organizations, organization data classification, facilities, staff users, staff roles, staff role assignment, staff facility access, customers, and households.
 - `db/seed.ts` seeds the initial organizations and facilities for Summit Rec Collective, Riverstone Nature Center, and Western Carolina YMCA Association.
 - `db/tenant.ts` provides server-side Drizzle reads for organization and facility context, with demo seed fallback when the database is unavailable.
 - `/api/internal/database-health` checks whether the configured database connection is available and returns only `connected` or `disconnected` status.
@@ -159,6 +159,45 @@ Staff accounts are now represented in Neon as production data foundations, but p
 - `/admin/staff` displays a read-only database-backed staff directory for internal validation.
 
 Future authentication work should authenticate staff through a production provider, resolve the staff user from the database, then derive organization, role, permission, and facility scope server-side before any protected read or write.
+
+### Customer & Household Foundation
+
+Customers and households now have database foundations, but customer-facing workflows still use the existing demo persistence.
+
+- `customers.organization_id` requires every customer to belong to one organization.
+- `customers.household_id` is nullable so individual customers can exist before household relationships are assigned.
+- `households.organization_id` requires every household to belong to one organization.
+- `households.primary_contact_id` is nullable so household records can be created before a primary contact is selected.
+- `db/repositories/customer-repository.ts` and `db/repositories/household-repository.ts` provide server-only read helpers and counts.
+- `/admin/database` reports customer and household counts from Neon for internal visibility.
+
+Customer ownership rules:
+
+- A customer inherits data mode from the owning organization.
+- Customer search must remain organization-scoped.
+- Customer portal access should eventually resolve to the authenticated customer and authorized household members before reading records.
+- Production customer records should enter through import/onboarding or server-authorized create workflows, not demo seed scripts.
+
+Household ownership rules:
+
+- A household inherits data mode from the owning organization.
+- Household membership should be derived from organization-owned customers.
+- Future memberships can attach to either a household or customer depending on the product model, but the owning organization must remain explicit.
+- Household billing, emergency contacts, and primary contact behavior should be modeled in later migrations after the customer foundation is validated.
+
+Target ownership model:
+
+```text
+Organization
+  ├─ Facilities
+  ├─ Staff
+  ├─ Customers
+  ├─ Households
+  ├─ Memberships
+  ├─ Programs
+  ├─ Registrations
+  └─ Reporting
+```
 
 ### Future State
 

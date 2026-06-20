@@ -17,7 +17,7 @@ export default function RoadmapPage() {
       <PageHeader
         title="Roadmap"
         description="Version-based direction for pilot testing and future customer onboarding. Targets are directional, not guarantees."
-        actions={<Badge tone="muted">Current released v{CAIRN_VERSION}</Badge>}
+        actions={<Badge tone="warning">Active development v{CAIRN_VERSION}</Badge>}
       />
 
       <Card>

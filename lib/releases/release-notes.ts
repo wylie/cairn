@@ -1,4 +1,4 @@
-import { CAIRN_RELEASE_DATE, CAIRN_VERSION } from "@/lib/version";
+import { CAIRN_CURRENT_RELEASED_DATE, CAIRN_CURRENT_RELEASED_VERSION, CAIRN_RELEASE_DATE, CAIRN_VERSION } from "@/lib/version";
 
 export type ReleaseNoteSection = "new" | "improved" | "fixed" | "knownIssues";
 
@@ -23,9 +23,9 @@ export type ActiveRelease = {
 };
 
 export const activeRelease: ActiveRelease = {
-  version: "0.2.0",
+  version: CAIRN_VERSION,
   title: "Real Data Foundation",
-  targetDate: "2026-06-29",
+  targetDate: CAIRN_RELEASE_DATE,
   status: "In Progress",
   focus: [
     "Neon database foundation",
@@ -56,7 +56,13 @@ export const activeRelease: ActiveRelease = {
       "Organization data classification",
       "Demo / Sandbox / Production modes",
       "Tenant data boundary rules",
-      "Data ownership documentation"
+      "Data ownership documentation",
+      "Customer schema",
+      "Household schema",
+      "Customer repository layer",
+      "Household repository layer",
+      "Customer migration planning",
+      "Household migration planning"
     ]
   }
 };
@@ -88,8 +94,8 @@ export function compareReleaseNotesNewestFirst(a: ReleaseNote, b: ReleaseNote) {
 
 const releaseNoteEntries: ReleaseNote[] = [
   {
-    version: CAIRN_VERSION,
-    date: CAIRN_RELEASE_DATE,
+    version: CAIRN_CURRENT_RELEASED_VERSION,
+    date: CAIRN_CURRENT_RELEASED_DATE,
     title: "Pilot Readiness Release",
     summary: "Initial external testing release for facility pilots.",
     status: "Released",

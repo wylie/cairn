@@ -11,7 +11,7 @@ Versions are stored in `lib/version.ts`.
 - Patch releases, such as `v0.1.1`, are small fixes.
 - Minor releases, such as `v0.2.0`, add meaningful product capability.
 
-All application version displays should read from `CAIRN_VERSION` and `CAIRN_RELEASE_DATE`.
+Active development version displays should read from `CAIRN_VERSION` and `CAIRN_RELEASE_DATE`. Historical release entries should use separate release metadata so past release notes do not change when the active branch version advances.
 
 ## Release Cadence
 
@@ -117,5 +117,11 @@ Focus:
 - Demo / Sandbox / Production modes
 - Tenant data boundary rules
 - Data ownership documentation
+- Customer schema
+- Household schema
+- Customer repository layer
+- Household repository layer
+- Customer migration planning
+- Household migration planning
 
 v0.2.0 starts the transition from demo/localStorage persistence toward real server-backed persistence. It is active development work and has not been released yet.

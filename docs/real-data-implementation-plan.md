@@ -41,7 +41,7 @@ v0.2.x now includes the first production data foundation pieces.
 - Drizzle ORM, Drizzle Kit, and the `postgres` client are installed.
 - `DATABASE_URL` is documented in `.env.example` for Neon PostgreSQL connections.
 - `drizzle.config.ts` defines schema and migration paths.
-- `db/schema` contains intentionally minimal tables for organizations, organization data classification, facilities, staff users, staff roles, staff role assignment, and staff facility access.
+- `db/schema` contains intentionally minimal tables for organizations, organization data classification, facilities, staff users, staff roles, staff role assignment, staff facility access, customers, and households.
 - `db/migrations` contains the initial SQL migration generated from the schema.
 - `db/index.ts` exposes the typed database client.
 - `/api/internal/database-health` verifies whether the configured database connection is reachable without exposing credentials or connection details.
@@ -118,6 +118,41 @@ Organization boundary audit:
 - Staff users require `organization_id`, so staff records cannot float outside a tenant.
 - Future customer, household, membership, registration, POS, waiver, notification, and support records should include `organization_id`; facility-scoped records should also include `facility_id`.
 
+## Customer & Household Foundation Started
+
+Customer and household database foundations now exist, but customer workflows have not moved to Neon yet.
+
+- `customers` stores organization-owned customer identity fields: name, preferred name, contact details, birth date, household link, active status, and timestamps.
+- `households` stores organization-owned household records with an optional primary contact reference.
+- `db/repositories/customer-repository.ts` exposes server-only reads for one customer, all customers, customers by organization, organization-scoped customer search, and counts.
+- `db/repositories/household-repository.ts` exposes server-only reads for one household, all households, households by organization, and counts.
+- `/admin/database` now reports customer and household counts from Neon for internal validation.
+
+Customer and household records are not seeded yet. The current demo customer and household workflows continue to use localStorage-backed mock data until the model, import path, and write semantics are finalized.
+
+Seed strategy:
+
+- Demo customers should be seeded only after household structure, membership ownership, and emergency-contact relationships are stable.
+- Demo households should be small, realistic, and explicitly tied to demo organizations with `data_mode = demo`.
+- Sandbox customer seeds should be generated only for client-owned training environments.
+- Production customer data should enter through import/onboarding workflows, not through demo seed scripts.
+- Future seed scripts must be idempotent and must never create production records inside demo organizations.
+
+Customer Migration Plan:
+
+Current: localStorage-backed customer and household records remain the demo source for customer workflows.
+
+Future: Neon PostgreSQL becomes the durable source of truth through the Next.js server/data layer.
+
+Phases:
+
+1. Schema - create minimal organization-owned `customers` and `households` tables. Complete.
+2. Repositories - add server-only customer and household read helpers. Complete.
+3. Seed/demo data - design and add a limited demo seed set after relationships stabilize.
+4. Read operations - move low-risk customer and household views to server-backed reads with demo fallback.
+5. Write operations - move customer and household creates, updates, and merges behind server actions or route handlers.
+6. Full migration - retire localStorage customer and household persistence after imports, permissions, tests, and rollback paths exist.
+
 ## localStorage Policy
 
 Going forward, localStorage should only hold harmless local UI preferences and short-lived drafts.
@@ -158,6 +193,7 @@ Deliverables:
 
 - Add Neon PostgreSQL connection configuration through `DATABASE_URL`. Complete.
 - Add Drizzle schema for organizations, facilities, staff users, staff roles, and staff facility access. Complete.
+- Add Drizzle schema for customers and households. Complete.
 - Define IDs, tenant keys, timestamps, and initial relational constraints. Complete.
 - Define seed strategy for existing demo organizations in future work.
 
@@ -180,6 +216,7 @@ Deliverables:
 
 - Persist organizations and facilities in the database. Initial organization and facility seed/read support is now in place.
 - Persist staff users, roles, permissions, and facility assignments. Staff users, roles, and facility assignments are now seeded for the foundation; permissions remain future work.
+- Persist customer and household foundations. Schema and read repositories are now in place; seed data, workflow reads, and workflow writes remain future work.
 - Replace browser organization registry persistence with server-backed organization data.
 - Preserve existing demo login and seeded workflows until the authentication foundation replaces them.
 

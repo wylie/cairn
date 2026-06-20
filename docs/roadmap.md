@@ -20,11 +20,14 @@ Focus:
 - Facility Persistence - complete
 - Data Classification Layer - complete
 - Staff Accounts Foundation - in progress
+- Customer & Household Foundation - in progress
 - Neon PostgreSQL
 - Drizzle ORM
 - Organization data model
 - Facility data model
 - Staff data model
+- Customer data model
+- Household data model
 - Tenant boundary rules
 - localStorage-to-database migration path
 

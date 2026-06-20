@@ -23,24 +23,13 @@ export const roadmapReleases: RoadmapRelease[] = [
     title: cairnVersion.releaseName,
     target: cairnVersion.targetDate,
     focus: [
-      "Real Data Foundation Planning complete",
-      "Database Foundation complete",
-      "Organization Persistence complete",
-      "Facility Persistence complete",
-      "Data Classification Layer complete",
-      "Staff Accounts Foundation in progress",
-      "Customer Foundation complete",
-      "Customer Read Operations in progress",
-      "Customer & Household Foundation in progress",
-      "Neon PostgreSQL",
-      "Drizzle ORM",
-      "Organization data model",
-      "Facility data model",
-      "Staff data model",
-      "Customer data model",
-      "Household data model",
-      "Tenant boundary rules",
-      "localStorage-to-database migration path"
+      "Organizations",
+      "Facilities",
+      "Staff",
+      "Customers",
+      "Households",
+      "Demo / Production separation",
+      "Versioning"
     ],
     status: "In Progress"
   },
@@ -142,7 +131,9 @@ export const roadmapReleases: RoadmapRelease[] = [
       "Workflow refinements",
       "UI consistency",
       "Accessibility improvements",
-      "Demo environment improvements"
+      "Demo environment improvements",
+      "Customer editing planning",
+      "Authentication planning"
     ],
     status: "Planned"
   },
@@ -155,7 +146,8 @@ export const roadmapReleases: RoadmapRelease[] = [
       "Household imports",
       "Membership imports",
       "Validation workflows",
-      "Guided onboarding"
+      "Guided onboarding",
+      "Customer editing migration"
     ],
     status: "Planned"
   },
@@ -165,6 +157,10 @@ export const roadmapReleases: RoadmapRelease[] = [
     target: "July 20, 2026",
     focus: [
       "Staff workflow improvements",
+      "Membership workflows",
+      "Check-in workflows",
+      "Programs",
+      "POS workflows",
       "Operational alerts",
       "Reporting enhancements",
       "Staff productivity tools"

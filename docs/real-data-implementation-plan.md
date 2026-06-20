@@ -138,17 +138,18 @@ Organization boundary audit:
 
 ## Customer & Household Foundation Started
 
-Customer and household database foundations now exist. Customer list read operations have started moving to Neon, but customer writes and operational workflows have not moved yet.
+Customer and household database foundations now exist. Customer and household list read operations have started moving to Neon, but customer writes, household editing, and operational workflows have not moved yet.
 
 - `customers` stores organization-owned customer identity fields: name, preferred name, contact details, birth date, household link, active status, and timestamps.
 - `households` stores organization-owned household records with an optional primary contact reference.
 - `db/repositories/customer-repository.ts` exposes server-only reads for one customer, all customers, customers by organization, organization-scoped customer search, and counts.
 - `db/repositories/household-repository.ts` exposes server-only reads for one household, all households, households by organization, and counts.
 - `/admin/database` now reports customer and household counts from Neon for internal validation.
-- `npm run db:seed` now seeds a small fictional customer set for Summit Rec Collective, Riverstone Nature Center, and Western Carolina YMCA Association.
+- `npm run db:seed` now seeds small fictional customer and household sets for Summit Rec Collective, Riverstone Nature Center, and Western Carolina YMCA Association.
 - The staff customer list page reads organization-scoped customers from Neon through the repository layer and maps them into the existing customer card UI.
+- The staff household list page reads organization-scoped households from Neon through the repository layer and maps them into the existing household workspace UI.
 
-Customer write operations are not migrated yet. The current demo customer creation/editing, memberships, check-ins, registrations, waivers, POS, and household workflows continue to use localStorage-backed mock data until the model, import path, and write semantics are finalized.
+Customer write operations and household editing are not migrated yet. The current demo customer creation/editing, memberships, check-ins, registrations, waivers, POS, and household management workflows continue to use localStorage-backed mock data until the model, import path, and write semantics are finalized.
 
 Seed strategy:
 
@@ -168,8 +169,8 @@ Phases:
 
 1. Schema - create minimal organization-owned `customers` and `households` tables. Complete.
 2. Repositories - add server-only customer and household read helpers. Complete.
-3. Seed/demo data - design and add a limited demo seed set after relationships stabilize. Initial customer seeds are complete; household seeds remain future work.
-4. Read operations - move low-risk customer and household views to server-backed reads with demo fallback. Customer list reads are in progress.
+3. Seed/demo data - design and add a limited demo seed set after relationships stabilize. Initial customer and household seeds are complete.
+4. Read operations - move low-risk customer and household views to server-backed reads with demo fallback. Customer and household list reads are in progress.
 5. Write operations - move customer and household creates, updates, and merges behind server actions or route handlers.
 6. Full migration - retire localStorage customer and household persistence after imports, permissions, tests, and rollback paths exist.
 

@@ -160,10 +160,62 @@ export const seedStaffFacilityAccess = [
   { staffUserId: "staff_wcymca_chris_miller", facilityId: "loc_203" }
 ] as const;
 
+export const seedHouseholds = [
+  {
+    id: "hh_001",
+    organizationId: "org_summit",
+    name: "Fisher Household",
+    primaryContactId: "cust_003"
+  },
+  {
+    id: "hh_002",
+    organizationId: "org_summit",
+    name: "Brooks Household",
+    primaryContactId: "cust_005"
+  },
+  {
+    id: "hh_003",
+    organizationId: "org_summit",
+    name: "Patel-James Household",
+    primaryContactId: "cust_001"
+  },
+  {
+    id: "hh_summit_nguyen",
+    organizationId: "org_summit",
+    name: "Nguyen Household",
+    primaryContactId: "cust_staff_001"
+  },
+  {
+    id: "hh_riverbend_001",
+    organizationId: "org_riverbend",
+    name: "Bennett Household",
+    primaryContactId: "cust_rb_001"
+  },
+  {
+    id: "hh_riverbend_002",
+    organizationId: "org_riverbend",
+    name: "Parker Household",
+    primaryContactId: "cust_rb_006"
+  },
+  {
+    id: "hh_wcymca_001",
+    organizationId: "org_western_carolina_ymca",
+    name: "Johnson Household",
+    primaryContactId: "cust_wcymca_001"
+  },
+  {
+    id: "hh_wcymca_002",
+    organizationId: "org_western_carolina_ymca",
+    name: "Martinez Household",
+    primaryContactId: "cust_wcymca_003"
+  }
+] as const;
+
 export const seedCustomers = [
   {
     id: "cust_001",
     organizationId: "org_summit",
+    householdId: "hh_003",
     firstName: "Maya",
     lastName: "Patel",
     preferredName: "Maya",
@@ -175,6 +227,7 @@ export const seedCustomers = [
   {
     id: "cust_002",
     organizationId: "org_summit",
+    householdId: "hh_001",
     firstName: "Jordan",
     lastName: "Kim",
     preferredName: "Jordy",
@@ -186,6 +239,7 @@ export const seedCustomers = [
   {
     id: "cust_003",
     organizationId: "org_summit",
+    householdId: "hh_001",
     firstName: "Alex",
     lastName: "Rivera",
     preferredName: "Alex",
@@ -197,6 +251,7 @@ export const seedCustomers = [
   {
     id: "cust_004",
     organizationId: "org_summit",
+    householdId: "hh_001",
     firstName: "Oslo",
     lastName: "Fisher",
     preferredName: "Oslo",
@@ -208,6 +263,7 @@ export const seedCustomers = [
   {
     id: "cust_005",
     organizationId: "org_summit",
+    householdId: "hh_002",
     firstName: "Dana",
     lastName: "Brooks",
     preferredName: "Dana",
@@ -219,6 +275,7 @@ export const seedCustomers = [
   {
     id: "cust_006",
     organizationId: "org_summit",
+    householdId: "hh_003",
     firstName: "Miles",
     lastName: "James",
     preferredName: "Miles",
@@ -230,6 +287,7 @@ export const seedCustomers = [
   {
     id: "cust_007",
     organizationId: "org_summit",
+    householdId: null,
     firstName: "Riley",
     lastName: "Morgan",
     preferredName: "Riley",
@@ -241,6 +299,7 @@ export const seedCustomers = [
   {
     id: "cust_staff_001",
     organizationId: "org_summit",
+    householdId: "hh_summit_nguyen",
     firstName: "Taylor",
     lastName: "Nguyen",
     preferredName: "Taylor",
@@ -252,6 +311,7 @@ export const seedCustomers = [
   {
     id: "cust_staff_002",
     organizationId: "org_summit",
+    householdId: null,
     firstName: "Maya",
     lastName: "Lopez",
     preferredName: "Maya",
@@ -263,6 +323,7 @@ export const seedCustomers = [
   {
     id: "cust_staff_003",
     organizationId: "org_summit",
+    householdId: null,
     firstName: "Sam",
     lastName: "Rivera",
     preferredName: "Sam",
@@ -274,6 +335,7 @@ export const seedCustomers = [
   {
     id: "cust_staff_004",
     organizationId: "org_summit",
+    householdId: null,
     firstName: "Jordan",
     lastName: "Kim",
     preferredName: "Jordan",
@@ -285,6 +347,7 @@ export const seedCustomers = [
   {
     id: "cust_staff_008",
     organizationId: "org_summit",
+    householdId: null,
     firstName: "Iris",
     lastName: "Chen",
     preferredName: "Iris",
@@ -296,6 +359,7 @@ export const seedCustomers = [
   {
     id: "cust_rb_001",
     organizationId: "org_riverbend",
+    householdId: "hh_riverbend_001",
     firstName: "Avery",
     lastName: "Morgan",
     preferredName: "Avery",
@@ -307,6 +371,7 @@ export const seedCustomers = [
   {
     id: "cust_rb_002",
     organizationId: "org_riverbend",
+    householdId: "hh_riverbend_001",
     firstName: "Luca",
     lastName: "Bennett",
     preferredName: "Luca",
@@ -318,6 +383,7 @@ export const seedCustomers = [
   {
     id: "cust_rb_003",
     organizationId: "org_riverbend",
+    householdId: null,
     firstName: "Nora",
     lastName: "Fields",
     preferredName: "Nora",
@@ -329,6 +395,7 @@ export const seedCustomers = [
   {
     id: "cust_rb_004",
     organizationId: "org_riverbend",
+    householdId: null,
     firstName: "Eli",
     lastName: "Hart",
     preferredName: "Eli",
@@ -340,6 +407,7 @@ export const seedCustomers = [
   {
     id: "cust_rb_005",
     organizationId: "org_riverbend",
+    householdId: null,
     firstName: "Camila",
     lastName: "Reed",
     preferredName: "Cami",
@@ -351,6 +419,7 @@ export const seedCustomers = [
   {
     id: "cust_rb_006",
     organizationId: "org_riverbend",
+    householdId: "hh_riverbend_002",
     firstName: "Theo",
     lastName: "Parker",
     preferredName: "Theo",
@@ -362,6 +431,7 @@ export const seedCustomers = [
   {
     id: "cust_wcymca_001",
     organizationId: "org_western_carolina_ymca",
+    householdId: "hh_wcymca_001",
     firstName: "Harper",
     lastName: "Lewis",
     preferredName: "Harper",
@@ -373,6 +443,7 @@ export const seedCustomers = [
   {
     id: "cust_wcymca_002",
     organizationId: "org_western_carolina_ymca",
+    householdId: "hh_wcymca_001",
     firstName: "Malik",
     lastName: "Carter",
     preferredName: "Malik",
@@ -384,6 +455,7 @@ export const seedCustomers = [
   {
     id: "cust_wcymca_003",
     organizationId: "org_western_carolina_ymca",
+    householdId: "hh_wcymca_002",
     firstName: "Sofia",
     lastName: "Ramirez",
     preferredName: "Sofia",
@@ -395,6 +467,7 @@ export const seedCustomers = [
   {
     id: "cust_wcymca_004",
     organizationId: "org_western_carolina_ymca",
+    householdId: "hh_wcymca_002",
     firstName: "Owen",
     lastName: "Price",
     preferredName: "Owen",
@@ -406,6 +479,7 @@ export const seedCustomers = [
   {
     id: "cust_wcymca_005",
     organizationId: "org_western_carolina_ymca",
+    householdId: null,
     firstName: "Grace",
     lastName: "Thompson",
     preferredName: "Grace",
@@ -417,6 +491,7 @@ export const seedCustomers = [
   {
     id: "cust_wcymca_006",
     organizationId: "org_western_carolina_ymca",
+    householdId: null,
     firstName: "Jonah",
     lastName: "Brooks",
     preferredName: "Jonah",
@@ -428,6 +503,7 @@ export const seedCustomers = [
   {
     id: "cust_wcymca_007",
     organizationId: "org_western_carolina_ymca",
+    householdId: null,
     firstName: "Priya",
     lastName: "Shah",
     preferredName: "Priya",
@@ -439,6 +515,7 @@ export const seedCustomers = [
   {
     id: "cust_wcymca_008",
     organizationId: "org_western_carolina_ymca",
+    householdId: null,
     firstName: "Caleb",
     lastName: "Morris",
     preferredName: "Caleb",
@@ -450,6 +527,7 @@ export const seedCustomers = [
   {
     id: "cust_wcymca_009",
     organizationId: "org_western_carolina_ymca",
+    householdId: null,
     firstName: "Elena",
     lastName: "Foster",
     preferredName: "Elena",
@@ -461,6 +539,7 @@ export const seedCustomers = [
   {
     id: "cust_wcymca_010",
     organizationId: "org_western_carolina_ymca",
+    householdId: null,
     firstName: "Micah",
     lastName: "Turner",
     preferredName: "Micah",

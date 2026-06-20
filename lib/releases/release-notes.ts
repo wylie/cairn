@@ -28,13 +28,13 @@ export const activeRelease: ActiveRelease = {
   targetDate: cairnVersion.targetDateIso,
   status: formatVersionStatus(cairnVersion.status) as ActiveRelease["status"],
   focus: [
-    "Neon database foundation",
-    "Drizzle ORM",
-    "Organization persistence",
-    "Facility persistence",
-    "Staff accounts",
-    "Multi-tenant architecture",
-    "localStorage migration planning"
+    "Organizations",
+    "Facilities",
+    "Staff",
+    "Customers",
+    "Households",
+    "Demo / Production separation",
+    "Versioning"
   ],
   sections: {
     added: [
@@ -66,7 +66,11 @@ export const activeRelease: ActiveRelease = {
       "Customer seed data",
       "Customer repository expansion",
       "Customer list backed by Neon",
-      "Customer counts"
+      "Customer counts",
+      "Household persistence",
+      "Household seed data",
+      "Household repository",
+      "Household reads"
     ]
   }
 };

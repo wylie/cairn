@@ -182,7 +182,7 @@ Future authentication work should authenticate staff through a production provid
 
 ### Customer & Household Foundation
 
-Customers and households now have database foundations. Customer list read operations have started moving to Neon, while customer write workflows and operational workflows still use the existing demo persistence.
+Customers and households now have database foundations. Customer and household list read operations have started moving to Neon, while customer write workflows, household editing, and operational workflows still use the existing demo persistence.
 
 - `customers.organization_id` requires every customer to belong to one organization.
 - `customers.household_id` is nullable so individual customers can exist before household relationships are assigned.
@@ -190,7 +190,7 @@ Customers and households now have database foundations. Customer list read opera
 - `households.primary_contact_id` is nullable so household records can be created before a primary contact is selected.
 - `db/repositories/customer-repository.ts` and `db/repositories/household-repository.ts` provide server-only read helpers and counts.
 - `/admin/database` reports customer and household counts from Neon for internal visibility.
-- `npm run db:seed` seeds a small fictional customer set for each demo organization.
+- `npm run db:seed` seeds a small fictional customer and household set for each demo organization.
 
 Customer read path:
 
@@ -199,10 +199,18 @@ Customer read path:
 - Customer reads are organization-scoped before rows are mapped into the existing customer card UI.
 - If no customer rows exist, the list shows a friendly empty state instead of surfacing a database error.
 
+Household read path:
+
+- The staff household list page resolves the active organization from the server-side organization context.
+- The page reads households through `db/repositories/household-repository.ts`.
+- Household reads are organization-scoped before rows are mapped into the existing household workspace UI.
+- Primary-contact metadata is derived from organization-scoped customer reads where available.
+
 Current migration status:
 
 - Customer list reads are backed by Neon.
-- Customer create, edit, delete, merge, membership, check-in, waiver, registration, POS, and household workflows are not migrated yet.
+- Household list reads are backed by Neon.
+- Customer create, edit, delete, merge, membership, check-in, waiver, registration, POS, and household editing workflows are not migrated yet.
 - The existing client state provider remains in place for operational actions until server-backed write paths exist.
 
 Customer ownership rules:

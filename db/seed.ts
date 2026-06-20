@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
-import { customers, facilities, getDatabase, getSqlClient, organizations, staffFacilityAccess, staffRoles, staffUsers } from "./index";
-import { seedCustomers, seedFacilities, seedOrganizations, seedStaffFacilityAccess, seedStaffRoles, seedStaffUsers } from "./seed-data";
+import { customers, facilities, getDatabase, getSqlClient, households, organizations, staffFacilityAccess, staffRoles, staffUsers } from "./index";
+import { seedCustomers, seedFacilities, seedHouseholds, seedOrganizations, seedStaffFacilityAccess, seedStaffRoles, seedStaffUsers } from "./seed-data";
 
 async function main() {
   const database = getDatabase();
@@ -71,12 +71,26 @@ async function main() {
     });
 
   await database
+    .insert(households)
+    .values([...seedHouseholds])
+    .onConflictDoUpdate({
+      target: households.id,
+      set: {
+        organizationId: sql`excluded.organization_id`,
+        name: sql`excluded.name`,
+        primaryContactId: sql`excluded.primary_contact_id`,
+        updatedAt: sql`now()`
+      }
+    });
+
+  await database
     .insert(customers)
     .values([...seedCustomers])
     .onConflictDoUpdate({
       target: customers.id,
       set: {
         organizationId: sql`excluded.organization_id`,
+        householdId: sql`excluded.household_id`,
         firstName: sql`excluded.first_name`,
         lastName: sql`excluded.last_name`,
         preferredName: sql`excluded.preferred_name`,
@@ -90,7 +104,7 @@ async function main() {
 
   await sqlClient.end();
   console.log(
-    `Seeded ${seedOrganizations.length} organizations, ${seedFacilities.length} facilities, ${seedStaffRoles.length} staff roles, ${seedStaffUsers.length} staff users, and ${seedCustomers.length} customers.`
+    `Seeded ${seedOrganizations.length} organizations, ${seedFacilities.length} facilities, ${seedStaffRoles.length} staff roles, ${seedStaffUsers.length} staff users, ${seedCustomers.length} customers, and ${seedHouseholds.length} households.`
   );
 }
 

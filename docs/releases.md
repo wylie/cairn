@@ -109,13 +109,13 @@ Status: In Progress
 
 Focus:
 
-- Neon database foundation
-- Drizzle ORM
-- Organization persistence
-- Facility persistence
-- Staff accounts
-- Multi-tenant architecture
-- localStorage migration planning
+- Organizations
+- Facilities
+- Staff
+- Customers
+- Households
+- Demo / Production separation
+- Versioning
 
 ### Unreleased v0.2.0 Notes
 
@@ -150,5 +150,9 @@ Focus:
 - Customer repository expansion
 - Customer list backed by Neon
 - Customer counts
+- Household persistence
+- Household seed data
+- Household repository
+- Household reads
 
 v0.2.0 starts the transition from demo/localStorage persistence toward real server-backed persistence. It is active development work and has not been released yet.

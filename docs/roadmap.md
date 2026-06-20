@@ -10,7 +10,7 @@ Target: June 29, 2026
 
 Status: In Progress
 
-v0.2.0 starts Cairn's transition from demo/localStorage persistence toward real server-backed persistence. The release establishes the foundation for future workflow migrations without moving customer, membership, program, registration, notification, or UI workflows yet.
+v0.2.0 starts Cairn's transition from demo/localStorage persistence toward real server-backed persistence. The release establishes the foundation for future workflow migrations without moving customer editing, membership, check-in, program, registration, notification, POS, or authentication workflows yet.
 
 The `june-28-2026` branch identifies itself as the current release, `v0.2.0`, through the centralized `cairnVersion` metadata in `lib/version.ts`. `main` remains the prior released branch at `v0.1.0`, and historical v0.1.0 notes remain below the active release. Cairn may later move to CI/CD-generated versioning, but release branches are the workflow today.
 
@@ -18,24 +18,22 @@ Data-mode visibility is part of this release foundation: demo and sandbox organi
 
 Focus:
 
-- Real Data Foundation Planning - complete
-- Database Foundation - complete
-- Organization Persistence - complete
-- Facility Persistence - complete
-- Data Classification Layer - complete
-- Staff Accounts Foundation - in progress
-- Customer Foundation - complete
-- Customer Read Operations - in progress
-- Customer & Household Foundation - in progress
-- Neon PostgreSQL
-- Drizzle ORM
-- Organization data model
-- Facility data model
-- Staff data model
-- Customer data model
-- Household data model
-- Tenant boundary rules
-- localStorage-to-database migration path
+- Organizations
+- Facilities
+- Staff
+- Customers
+- Households
+- Demo / Production separation
+- Versioning
+
+Deferred to future releases:
+
+- Customer editing
+- Memberships
+- Check-ins
+- Programs
+- POS
+- Production authentication
 
 ## v0.1.0 - Pilot Readiness Release
 
@@ -123,6 +121,8 @@ Focus:
 - UI consistency
 - Accessibility improvements
 - Demo environment improvements
+- Customer editing planning
+- Authentication planning
 
 ## v0.4.0 - Customer Migration & Onboarding
 
@@ -137,6 +137,7 @@ Focus:
 - Membership imports
 - Validation workflows
 - Guided onboarding
+- Customer editing migration
 
 ## v0.5.0 - Operations & Staff Experience
 
@@ -147,6 +148,10 @@ Status: Planned
 Focus:
 
 - Staff workflow improvements
+- Membership workflows
+- Check-in workflows
+- Programs
+- POS workflows
 - Operational alerts
 - Reporting enhancements
 - Staff productivity tools

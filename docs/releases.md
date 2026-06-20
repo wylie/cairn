@@ -1,71 +1,80 @@
 # Releases
 
-Cairn uses lightweight semantic-style versioning during pilot testing.
+Cairn uses CI/CD release discipline with Semantic Versioning 2.0.0.
 
-## Versioning
+## Versioning & Release Process
+
+`main` is always expected to be deployable. Releases happen continuously as changes are merged, verified, and deployed. Version numbers track shipped software, not branches.
 
 Version metadata is centralized in `lib/version.ts`.
 
-- `v0.x.x` means pilot or pre-production.
-- `v1.0.0` means the first stable customer-ready release.
-- Patch releases, such as `v0.1.1`, are small fixes.
-- Minor releases, such as `v0.2.0`, add meaningful product capability.
+Current shipped version metadata:
 
-Cairn currently uses release branches for versioning, not CI/CD-generated versions. The active release branch version is the current application version.
-
-Current branch metadata:
-
-- `version`: `0.2.0`
+- `currentVersion`: `0.2.0`
 - `releaseName`: `Real Data Foundation`
-- `status`: `in_progress`
-- `targetDate`: `June 29, 2026`
+- `releaseDate`: `2026-06-29`
+- `releaseType`: `minor`
+- `summary`: `Initial real database foundation using Neon.`
 
-All active application version displays should read from the `cairnVersion` object in `lib/version.ts`. Compatibility exports may exist for older components, but they must derive from `cairnVersion`.
+All active application version displays should read from the `version` object in `lib/version.ts`. Compatibility exports may exist for older components, but they must derive from `version`.
 
-Historical release entries stay in release-note and roadmap data. They should not be maintained as separate active metadata fields.
+## Semantic Versioning
 
-## Release Cadence
+Cairn follows SemVer-style increments during pilot and production work.
 
-Planned release window: Sunday evening.
+### PATCH
 
-Cairn uses weekly planned releases. Release notes are updated before every planned release, and testers or facilities should expect visible product changes after the Sunday evening release window. The roadmap is reviewed weekly before release. Urgent fixes may ship outside the normal release window when needed.
+Use PATCH versions for bug fixes, UI polish, documentation, refactors, and internal improvements.
 
-## Build and Deployment Discipline
+Examples:
 
-Development work can continue during the week, but normal weekday work should remain on the release branch until release day or be merged to a non-production branch instead of being pushed or deployed to production immediately.
+- `0.2.1`
+- `0.2.2`
+- `0.2.3`
 
-Production deploys should be reserved for the Sunday evening release window unless the change is an urgent fix. Release notes should be updated before any production deployment so facilities can see what changed.
+### MINOR
 
-This is intentionally lightweight for pilot testing. Cairn does not need complex release automation yet.
+Use MINOR versions for new user-visible capability such as customer workflows, memberships, check-in persistence, reporting features, or operational modules.
+
+Examples:
+
+- `0.3.0`
+- `0.4.0`
+- `0.5.0`
+
+### MAJOR
+
+Use MAJOR versions for breaking schema changes, API breaking changes, or major architectural shifts.
+
+Examples:
+
+- `1.0.0`
+- `2.0.0`
+
+Every commit should increment the product version before deployment. For now:
+
+- Feature commits increment MINOR when user-visible.
+- Fixes, refactors, documentation, and internal improvements increment PATCH.
 
 ## Release Note Workflow
 
 Release notes are file-based in `lib/releases/release-notes.ts`.
 
-To add a release:
+To ship a version:
 
-1. Update `cairnVersion` in `lib/version.ts`.
-2. Add a new release entry to `releaseNotes`.
-3. Include sections for `new`, `improved`, `fixed`, and `knownIssues`.
-4. Keep facility-facing notes clear and avoid platform-only implementation details.
+1. Update `version` in `lib/version.ts`.
+2. Add or update the shipped release entry in `releaseNotes`.
+3. Include sections for `added`, `improved`, `fixed`, `changed`, and `knownIssues`.
+4. Keep facility-facing notes clear and avoid platform-only implementation details when possible.
 5. Run the build before committing.
 
-The newest release appears first on the staff Release Notes page.
+The newest release appears first on the staff Release Notes page. Release Notes document shipped versions only.
 
-Upcoming active releases may also be shown on the Release Notes page before they are released. These are planning/status sections, not completed release notes.
+## Build and Deployment Discipline
 
-## Branch and Version Workflow
+Development work should keep `main` deployable. A change is ready to merge when it is scoped, reviewed, documented when needed, and verified with the relevant build or tests.
 
-Release branches identify themselves with `cairnVersion.version`. On the `june-28-2026` branch, app chrome, Release Notes, Roadmap, admin pages, and settings show `v0.2.0`.
-
-Current workflow:
-
-- `main` represents the last released production branch, currently `v0.1.0`.
-- `june-28-2026` represents the active release branch, currently `v0.2.0`.
-- The active branch version is treated as the current version throughout the application.
-- Historical `v0.1.0` release notes remain visible below the active release notes.
-
-Cairn may later move to CI/CD versioning or automated release metadata, but that is not the workflow today. Until then, changing release branches should require updating `lib/version.ts` and the release/roadmap historical data only.
+Production deploys may happen continuously after verification. Release notes should be updated with the same change when a shipped version changes user-visible behavior or operational expectations.
 
 ## Demo Data Visibility
 
@@ -78,13 +87,13 @@ Organizations carry a `dataMode` of `demo`, `sandbox`, or `production`.
 
 ## Roadmap Workflow
 
-The roadmap is version-based and maintained in `lib/releases/roadmap.ts` for the in-app staff view and `docs/roadmap.md` for documentation.
+The roadmap is milestone-based and maintained in `lib/releases/roadmap.ts` for the in-app staff view and `docs/roadmap.md` for documentation.
 
 To update the roadmap:
 
-1. Review roadmap status before the Sunday evening release window.
-2. Update version targets, focus areas, status, or production-readiness criteria.
-3. Keep roadmap language facility-facing and clear that dates are targets, not guarantees.
+1. Review future milestones after shipped releases change product direction.
+2. Update version ranges, focus areas, status, or production-readiness criteria.
+3. Keep roadmap language directional.
 4. Keep the in-app roadmap and documentation roadmap aligned.
 
 ## Notification Workflow
@@ -97,29 +106,19 @@ When a release entry becomes the latest release, Cairn can generate a system not
 
 The notification uses the existing communications notification center, counts toward unread totals, can be marked read, and links directly to the matching release note anchor.
 
-## Current Release Branch
+## Current Shipped Version
 
 Version: `v0.2.0`
 
-Target date: `2026-06-29`
+Released: `2026-06-29`
 
 Title: Real Data Foundation
 
-Status: In Progress
+Release type: Minor
 
-Focus: Real Data Foundation.
+Summary: Initial real database foundation using Neon.
 
-Scope:
-
-- Organizations
-- Facilities
-- Staff
-- Customers
-- Households
-- Demo / Production separation
-- Versioning
-
-### Unreleased v0.2.0 Notes
+### v0.2.0 Notes
 
 #### Added
 
@@ -130,35 +129,30 @@ Scope:
 - Database health monitoring
 - Organization schema
 - Facility schema
-- Seed data
-- Repository layer
-- Database status page
 - Staff database model
-- Staff seed data
-- Staff repositories
-- Staff directory
-- Organization boundary validation
-- Organization data classification
-- Demo / Sandbox / Production modes
-- Tenant data boundary rules
-- Data ownership documentation
 - Customer schema
 - Household schema
-- Customer repository layer
-- Household repository layer
-- Customer migration planning
-- Household migration planning
-- Customer seed data
-- Customer repository expansion
+- Seed data for organizations, facilities, staff, customers, and households
+- Repository layer for server-side reads
+- Database status page
+- Staff directory
+- Organization data classification
+- Demo / Sandbox / Production modes
 - Customer read operations
 - Customer list backed by Neon
-- Customer counts
 - Household persistence
-- Household seed data
-- Household repository
 - Household reads
 
-v0.2.0 starts the transition from demo/localStorage persistence toward real server-backed persistence. It is active development work and has not been released yet.
+#### Improved
+
+- Release Notes use shipped-version metadata.
+- Roadmap is organized around future milestones.
+- Demo data visibility appears in staff and platform admin views.
+
+#### Changed
+
+- Versioning now follows CI/CD Semantic Versioning instead of branch metadata.
+- localStorage is documented as non-authoritative for production data.
 
 Release readiness references:
 

@@ -2,25 +2,21 @@ import { render, screen } from "@testing-library/react";
 import RoadmapPage from "@/app/(app)/roadmap/page";
 
 describe("RoadmapPage", () => {
-  it("renders the version-based pilot roadmap", () => {
+  it("renders the milestone-based roadmap", () => {
     render(<RoadmapPage />);
 
     expect(screen.getByRole("heading", { name: "Roadmap" })).toBeInTheDocument();
-    expect(screen.getByText("v0.2.0 active development")).toBeInTheDocument();
+    expect(screen.getByText("Current v0.2.0")).toBeInTheDocument();
+    expect(screen.getByText("CI/CD")).toBeInTheDocument();
+    expect(screen.getByText("Semantic Versioning")).toBeInTheDocument();
+    expect(screen.getByText("v0.2.x")).toBeInTheDocument();
     expect(screen.getByText("Real Data Foundation")).toBeInTheDocument();
-    expect(screen.getByText("Database foundation")).toBeInTheDocument();
-    expect(screen.getByText("Tenant boundary rules")).toBeInTheDocument();
-    expect(screen.getByText("v0.1.0")).toBeInTheDocument();
-    expect(screen.getByText("Pilot Readiness Release")).toBeInTheDocument();
-    expect(screen.getByText("Released")).toBeInTheDocument();
-    expect(screen.getByText("Platform Foundation")).toBeInTheDocument();
-    expect(screen.getByText("Facility Operations")).toBeInTheDocument();
-    expect(screen.getByText("Weekly Release Process")).toBeInTheDocument();
-    expect(screen.getByText("Reporting dashboards")).toBeInTheDocument();
-    expect(screen.getByText("Feedback & Usability")).toBeInTheDocument();
-    expect(screen.getByText("Customer Migration & Onboarding")).toBeInTheDocument();
+    expect(screen.getByText("Data classification")).toBeInTheDocument();
+    expect(screen.getByText("Customer Operations")).toBeInTheDocument();
+    expect(screen.getByText("Memberships & Check-In")).toBeInTheDocument();
+    expect(screen.getByText("Programs & Registrations")).toBeInTheDocument();
+    expect(screen.getByText("Pilot Readiness")).toBeInTheDocument();
     expect(screen.getByText("Production Ready")).toBeInTheDocument();
-    expect(screen.getByText("Criteria: Criteria-driven")).toBeInTheDocument();
-    expect(screen.getByText("Stable imports")).toBeInTheDocument();
+    expect(screen.getByText("Operational readiness")).toBeInTheDocument();
   });
 });

@@ -1,41 +1,22 @@
-import { cairnVersion, formatVersionStatus } from "@/lib/version";
+import { version } from "@/lib/version";
 
-export type ReleaseNoteSection = "new" | "improved" | "fixed" | "knownIssues";
+export type ReleaseNoteSection = "added" | "improved" | "fixed" | "changed" | "knownIssues";
 
 export type ReleaseNote = {
   version: string;
-  date: string;
-  title: string;
+  releaseName: string;
+  releaseDate: string;
+  releaseType: "patch" | "minor" | "major";
   summary: string;
-  status: "Released";
   sections: Record<ReleaseNoteSection, string[]>;
 };
 
-export type ActiveRelease = {
-  version: string;
-  title: string;
-  targetDate: string;
-  status: "In Progress";
-  focus: string[];
-  sections: {
-    added: string[];
-  };
-};
-
-export const activeRelease: ActiveRelease = {
-  version: cairnVersion.version,
-  title: cairnVersion.releaseName,
-  targetDate: cairnVersion.targetDateIso,
-  status: formatVersionStatus(cairnVersion.status) as ActiveRelease["status"],
-  focus: [
-    "Organizations",
-    "Facilities",
-    "Staff",
-    "Customers",
-    "Households",
-    "Demo / Production separation",
-    "Versioning"
-  ],
+const realDataFoundationRelease: ReleaseNote = {
+  version: version.currentVersion,
+  releaseName: version.releaseName,
+  releaseDate: version.releaseDate,
+  releaseType: version.releaseType,
+  summary: version.summary,
   sections: {
     added: [
       "Neon database integration",
@@ -45,44 +26,44 @@ export const activeRelease: ActiveRelease = {
       "Database health monitoring",
       "Organization schema",
       "Facility schema",
-      "Seed data",
-      "Repository layer",
-      "Database status page",
       "Staff database model",
-      "Staff seed data",
-      "Staff repositories",
-      "Staff directory",
-      "Organization boundary validation",
-      "Organization data classification",
-      "Demo / Sandbox / Production modes",
-      "Tenant data boundary rules",
-      "Data ownership documentation",
       "Customer schema",
       "Household schema",
-      "Customer repository layer",
-      "Household repository layer",
-      "Customer migration planning",
-      "Household migration planning",
-      "Customer seed data",
-      "Customer repository expansion",
+      "Seed data for organizations, facilities, staff, customers, and households",
+      "Repository layer for server-side reads",
+      "Database status page",
+      "Staff directory",
+      "Organization data classification",
+      "Demo / Sandbox / Production modes",
       "Customer read operations",
       "Customer list backed by Neon",
-      "Customer counts",
       "Household persistence",
-      "Household seed data",
-      "Household repository",
       "Household reads"
+    ],
+    improved: [
+      "Release Notes use shipped-version metadata",
+      "Roadmap is organized around future milestones",
+      "Demo data visibility in staff and platform admin views"
+    ],
+    fixed: [],
+    changed: [
+      "Versioning now follows CI/CD Semantic Versioning metadata",
+      "localStorage is documented as non-authoritative for production data"
+    ],
+    knownIssues: [
+      "Customer create, edit, and delete workflows still use demo persistence",
+      "Memberships, check-ins, programs, registrations, POS, and authentication are not migrated yet"
     ]
   }
 };
 
-function parseVersion(version: string) {
-  return version
+function parseVersion(value: string) {
+  return value
     .replace(/^v/i, "")
     .split(".")
     .map((part) => {
-      const value = Number.parseInt(part, 10);
-      return Number.isFinite(value) ? value : 0;
+      const parsed = Number.parseInt(part, 10);
+      return Number.isFinite(parsed) ? parsed : 0;
     });
 }
 
@@ -95,21 +76,22 @@ export function compareReleaseNotesNewestFirst(a: ReleaseNote, b: ReleaseNote) {
     if (difference !== 0) return difference;
   }
 
-  const dateComparison = b.date.localeCompare(a.date);
+  const dateComparison = b.releaseDate.localeCompare(a.releaseDate);
   if (dateComparison !== 0) return dateComparison;
 
   return b.version.localeCompare(a.version);
 }
 
 const releaseNoteEntries: ReleaseNote[] = [
+  realDataFoundationRelease,
   {
     version: "0.1.0",
-    date: "2026-06-22",
-    title: "Pilot Readiness Release",
+    releaseDate: "2026-06-22",
+    releaseName: "Pilot Readiness Release",
+    releaseType: "minor",
     summary: "Initial external testing release for facility pilots.",
-    status: "Released",
     sections: {
-      new: [
+      added: [
         "Stone Cairn branding",
         "Pricing and support model",
         "Feedback and support entry points",
@@ -133,6 +115,7 @@ const releaseNoteEntries: ReleaseNote[] = [
         "Sidebar overflow",
         "Notification ordering issues"
       ],
+      changed: [],
       knownIssues: [
         "Customer import tools not yet available",
         "Apple Wallet integration planned",
@@ -148,10 +131,10 @@ export const releaseNotes = [...releaseNoteEntries].sort(compareReleaseNotesNewe
 
 export const latestRelease = releaseNotes[0];
 
-export function getReleaseAnchor(version: string) {
-  return `release-${version.replace(/^v/, "").replaceAll(".", "-")}`;
+export function getReleaseAnchor(value: string) {
+  return `release-${value.replace(/^v/, "").replaceAll(".", "-")}`;
 }
 
-export function getReleaseNotesHref(version: string) {
-  return `/release-notes#${getReleaseAnchor(version)}`;
+export function getReleaseNotesHref(value: string) {
+  return `/release-notes#${getReleaseAnchor(value)}`;
 }

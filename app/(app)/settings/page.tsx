@@ -13,7 +13,7 @@ import { useSettingsState } from "@/lib/state/settings-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import { formatFacilitiesIncluded, getPlanName, getSupportTierName } from "@/lib/business-model";
 import { PERMISSION_DESCRIPTIONS, PERMISSION_LABELS } from "@/lib/staff/permissions";
-import { cairnVersion, formatVersionStatus } from "@/lib/version";
+import { formatReleaseType, version } from "@/lib/version";
 import type { Location, StaffPermission, StaffRole, StaffRoleDefinition } from "@/types/domain";
 
 type SettingsSection =
@@ -439,7 +439,7 @@ export default function SettingsPage() {
           <div>
             <h2 className="text-2xl font-semibold">Settings</h2>
             <p className="text-sm text-muted-foreground">Facility administration for operations, staff, access, and payments.</p>
-            <p className="mt-1 text-xs text-muted-foreground">Cairn v{cairnVersion.version} · {formatVersionStatus(cairnVersion.status)} · Target {cairnVersion.targetDate}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Cairn v{version.currentVersion} · {formatReleaseType(version.releaseType)} · Released {version.releaseDate}</p>
           </div>
           <div className="rounded-md bg-secondary px-3 py-2 text-sm text-muted-foreground">
             {hasUnsavedChanges ? "Unsaved changes" : "All changes saved"}

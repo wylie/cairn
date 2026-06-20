@@ -20,8 +20,8 @@ export function buildReleaseNotification(
     source: "system_alert",
     isTransactional: true,
     sender: { kind: "system", name: "Cairn" },
-    sentAt: `${release.date}T18:00:00Z`,
-    createdAt: `${release.date}T18:00:00Z`,
+    sentAt: `${release.releaseDate}T18:00:00Z`,
+    createdAt: `${release.releaseDate}T18:00:00Z`,
     createdByStaffName: "Cairn",
     deliveryStatus: "unread",
     actionHref: getReleaseNotesHref(release.version)

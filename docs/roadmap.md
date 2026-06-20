@@ -1,147 +1,43 @@
 # Roadmap
 
-Cairn's roadmap is version-based so testers and future customers can understand what has already been released, what is currently in active development, and what is planned next.
+Cairn's roadmap is milestone-based. It describes product direction, not deployment windows.
 
-Targets are planning targets, not guarantees. Dates may change based on tester feedback and pilot customer needs. The roadmap should be reviewed weekly before the Sunday evening release window.
+Version ranges are directional. Shipped versions are documented in Release Notes, while this roadmap describes the next capability areas expected to follow the current product foundation.
 
-## v0.2.0 - Real Data Foundation
+## v0.2.x - Real Data Foundation
 
-Target: June 29, 2026
+Status: Shipped
 
-Status: In Progress
-
-v0.2.0 starts Cairn's transition from demo/localStorage persistence toward real server-backed persistence. The release establishes the foundation for future workflow migrations without moving customer editing, membership, check-in, program, registration, notification, POS, or authentication workflows yet.
-
-The `june-28-2026` branch identifies itself as the current release, `v0.2.0`, through the centralized `cairnVersion` metadata in `lib/version.ts`. `main` remains the prior released branch at `v0.1.0`, and historical v0.1.0 notes remain below the active release. Cairn may later move to CI/CD-generated versioning, but release branches are the workflow today.
-
-Data-mode visibility is part of this release foundation: demo and sandbox organizations are labeled in normal staff workflows, demo organizations show a subtle demonstration-data banner, and Platform Admin views show Demo, Sandbox, and Production badges.
-
-Focus: Real Data Foundation.
-
-Scope:
+Focus:
 
 - Organizations
 - Facilities
 - Staff
 - Customers
 - Households
-- Demo / Production separation
-- Versioning
+- Data classification
 
-Deferred to future releases:
-
-- Customer editing
-- Memberships
-- Check-ins
-- Programs
-- POS
-- Production authentication
-
-## v0.1.0 - Pilot Readiness Release
-
-Date: June 22, 2026
-
-Status: Released
-
-### Platform Foundation
-
-- Release Notes
-- Product Roadmap
-- Versioning
-- Weekly Release Process
-- Update Notifications
-- Support Console Foundation
-
-### Branding & Marketing
-
-- Stone Cairn branding
-- Logo system
-- Favicon support
-- OG/social sharing metadata
-- Marketing site improvements
-- Pricing model
-- Support model
-
-### Facility Operations
-
-- Customer management
-- Household management
-- Membership management
-- Check-in workflows
-- POS workflows
-- Programs
-- Registrations
-- Rentals
-- Reporting dashboards
-
-### Demo & Testing Readiness
-
-- Demo organizations
-- Demo staff accounts
-- Demo customer accounts
-- Documentation improvements
-- Tester onboarding materials
-- Facility-specific login experience
-
-### UX Improvements
-
-- Navigation organization
-- Sidebar scrolling fixes
-- Notification improvements
-- Read/unread notification states
-- Notification ordering
-- Active navigation fixes
-- Dropdown usability improvements
-- Loading-state improvements
-
-### Reliability & Quality
-
-- Hydration fixes
-- Route cleanup
-- Permission cleanup
-- Support access model
-- Documentation restructuring
-
-### Pilot Program
-
-- External tester onboarding
-- Feedback collection
-- In-app support requests
-- Bug reporting workflow
-- Weekly release cadence
-
-## v0.3.0 - Customer Operations
-
-Target: July 6, 2026
+## v0.3.x - Customer Operations
 
 Status: Planned
 
 Focus:
 
-- Customer editing
-- Customer creation workflows
-- Customer profile updates
-- Household management workflows
-- Customer operations permissions
-- Tester feedback on customer workflows
+- Customer create/edit
+- Household management
+- Imports
 
-## v0.4.0 - Memberships & Check-In
-
-Target: July 13, 2026
+## v0.4.x - Memberships & Check-In
 
 Status: Planned
 
 Focus:
 
 - Membership persistence
-- Membership imports
-- Check-in persistence
-- Waiver readiness for check-in
-- Front desk validation workflows
+- Check-ins
+- Attendance
 
-## v0.5.0 - Programs & Registrations
-
-Target: July 20, 2026
+## v0.5.x - Programs & Registrations
 
 Status: Planned
 
@@ -150,37 +46,17 @@ Focus:
 - Programs
 - Sessions
 - Registrations
-- Attendance
 - Waitlists
-- Operational alerts
-- Staff workflow refinements
 
-## v0.6.0 - Pilot Customer Release
-
-Target: July 27, 2026
+## v0.6.x - Pilot Readiness
 
 Status: Planned
 
 Focus:
 
-- Real facility onboarding
-- Support workflow maturity
-- Billing readiness
-- Remaining operational gaps
-
-## v0.7.0 - Mobile & Member Experience
-
-Target: TBD
-
-Status: Planned
-
-Focus:
-
-- Digital membership cards
-- Apple Wallet research
-- Google Wallet research
-- Customer portal enhancements
-- Mobile experience improvements
+- Multi-facility testing
+- Data validation
+- Performance
 
 ## v1.0.0 - Production Ready
 
@@ -188,9 +64,7 @@ Status: Future
 
 Criteria:
 
-- Successful pilot facility
-- Stable onboarding
-- Stable imports
-- Stable billing
-- Stable support process
-- No critical workflow gaps
+- Real customer deployments
+- Documentation
+- Stability
+- Operational readiness

@@ -36,14 +36,14 @@ The Next.js server layer should own all production reads and writes. Browser cod
 
 ## Global Version Metadata
 
-`lib/version.ts` owns the active release branch metadata through the `cairnVersion` object.
+`lib/version.ts` owns shipped version metadata through the `version` object.
 
-- Current release displays read `version`, `releaseName`, `status`, and `targetDate`.
-- On the `june-28-2026` branch, Cairn identifies itself as `v0.2.0`.
-- Historical release entries, such as `v0.1.0`, stay in Release Notes and Roadmap data below the active release.
-- Release Notes and Roadmap should use `cairnVersion` for the active branch instead of hardcoded active version strings.
-- Cairn may later move to CI/CD-generated version metadata, but release branches are the workflow today.
-- Release Notes show the active branch as Version, Status, and Target Release Date rather than splitting released and development versions.
+- Current version displays read `currentVersion`, `releaseName`, `releaseDate`, `releaseType`, and `summary`.
+- Cairn identifies the shipped product as `v0.2.0`.
+- Historical release entries, such as `v0.1.0`, stay in Release Notes below the current shipped version.
+- Release Notes and Roadmap should use `version` for current version display instead of hardcoded strings.
+- Cairn uses CI/CD release discipline with Semantic Versioning.
+- Release Notes show shipped versions only.
 
 ## New State: Database Foundation Established
 

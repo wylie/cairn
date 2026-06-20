@@ -148,7 +148,7 @@ All other documentation assumes you are working in your Cairn instance.
 
 See [Contributing](./docs/developer/contributing.md) for the expected workflow.
 
-## Current Development Status
+## Current Product Status
 Cairn is in an actively evolving product-build stage.
 
 Current implementation status:
@@ -156,6 +156,17 @@ Current implementation status:
 - most workflows are mock-data and local-state driven
 - provider integrations, payments, and external services use pilot adapter boundaries until production providers are connected
 - some repository test suites still reflect older UI assumptions and require ongoing cleanup
+
+## Versioning & Releases
+Cairn uses CI/CD release discipline with Semantic Versioning.
+
+- `main` is expected to stay deployable.
+- Version metadata lives in `lib/version.ts`.
+- Release Notes document shipped versions.
+- The Roadmap documents future milestones.
+- PATCH versions cover fixes, polish, documentation, refactors, and internal improvements.
+- MINOR versions cover new user-visible capability.
+- MAJOR versions cover breaking schema, API, or architectural changes.
 
 ## Existing Notes
 The earlier planning and engineering notes remain available and are not removed:

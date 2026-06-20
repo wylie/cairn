@@ -18,7 +18,7 @@ import { useWorkstationState } from "@/lib/state/workstation-state";
 import type { StaffPermission } from "@/types/domain";
 import { getCurrentOrgSlugClient } from "@/lib/tenant/client";
 import { parseOrgSlugFromPathname } from "@/lib/tenant/path";
-import { cairnVersion } from "@/lib/version";
+import { version } from "@/lib/version";
 
 function dataModeLabel(dataMode: string) {
   return dataMode.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
@@ -175,7 +175,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               What's New
             </Link>
             <span className="mx-2">·</span>
-            <span>Cairn v{cairnVersion.version}</span>
+            <span>Cairn v{version.currentVersion}</span>
           </div>
         </aside>
         <main className="space-y-4">

@@ -75,16 +75,17 @@ localStorage should remain limited to non-authoritative UI preferences and draft
 
 ## Version Metadata
 
-`lib/version.ts` is the source of truth for the active release branch metadata through the `cairnVersion` object.
+`lib/version.ts` is the source of truth for shipped version metadata through the `version` object.
 
-- `version` identifies the active release branch version shown in app chrome.
-- `releaseName` describes the active release.
-- `status` describes the active branch status.
-- `targetDate` is the facility-facing target date for the active release.
+- `currentVersion` identifies the shipped application version shown in app chrome.
+- `releaseName` describes the shipped release.
+- `releaseDate` records the date the version shipped.
+- `releaseType` records the SemVer increment type.
+- `summary` provides the short release summary.
 
-The footer, Release Notes page, Roadmap page, admin version displays, version chips, and "What's New" surfaces should read from this metadata rather than hardcoding active version strings. Historical release notes keep their own version data in release-note and roadmap entries.
+The footer, Release Notes page, Roadmap page, admin version displays, version chips, and "What's New" surfaces should read from this metadata rather than hardcoding active version strings. Historical release notes keep their own shipped version data in release-note entries.
 
-Cairn is not using CI/CD-generated versioning today. `main` represents the last released branch, and the current release branch, such as `june-28-2026`, is treated as the current application version. Release Notes show Version, Status, and Target Release Date for that active branch; historical releases remain below. Cairn may move to CI/CD versioning later, but that workflow is not active now.
+Cairn uses CI/CD release discipline with Semantic Versioning. `main` should remain deployable, version numbers track shipped software, Release Notes document shipped versions, and the Roadmap documents future milestones.
 
 ## Database Foundation
 

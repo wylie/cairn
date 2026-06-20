@@ -73,6 +73,31 @@ Drizzle should define the schema and typed query layer. Next.js Route Handlers a
 
 localStorage should remain limited to non-authoritative UI preferences and drafts such as calendar view preference, report filter session state, and pre-checkout cart drafts.
 
+## Database Foundation
+
+v0.2.x establishes the production database foundation without migrating application workflows yet.
+
+### Current State
+
+- Staff, customer, facility, and platform workflows still run on seeded mocks and localStorage-backed demo persistence.
+- Existing UI behavior is unchanged while the database foundation is introduced.
+- localStorage remains acceptable only for harmless UI preferences and short-lived drafts going forward.
+
+### New State
+
+- `drizzle-orm`, `drizzle-kit`, and `postgres` are installed for the production data layer.
+- `drizzle.config.ts` points Drizzle at the schema in `db/schema` and migrations in `db/migrations`.
+- `DATABASE_URL` is the documented connection string for Neon PostgreSQL.
+- `db/index.ts` exposes a typed Drizzle database client without requiring application workflows to use it yet.
+- `db/schema` contains the initial tenant and staff foundation: organizations, facilities, staff users, staff roles, and staff facility access.
+- `/api/internal/database-health` checks whether the configured database connection is available and returns only `connected` or `disconnected` status.
+
+### Future State
+
+- Future releases will move workflow domains behind the Next.js server/data layer incrementally.
+- Customer, household, membership, program, registration, waiver, POS, rental, notification, and support records remain unmigrated until their planned phases.
+- Existing localStorage-backed flows should be retired only after replacement server-backed reads and writes exist for the relevant domain.
+
 ### Multi-Tenant SaaS Model
 
 Target hierarchy:

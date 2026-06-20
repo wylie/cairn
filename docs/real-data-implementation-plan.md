@@ -34,6 +34,20 @@ Neon PostgreSQL should become the durable system of record for production data. 
 
 The Next.js server layer should own all production reads and writes. Browser code should call server actions or route handlers instead of reading or writing authoritative records directly.
 
+## New State: Database Foundation Established
+
+v0.2.x now includes the first production data foundation pieces.
+
+- Drizzle ORM, Drizzle Kit, and the `postgres` client are installed.
+- `DATABASE_URL` is documented in `.env.example` for Neon PostgreSQL connections.
+- `drizzle.config.ts` defines schema and migration paths.
+- `db/schema` contains intentionally minimal tables for organizations, facilities, staff users, staff roles, and staff facility access.
+- `db/migrations` contains the initial SQL migration generated from the schema.
+- `db/index.ts` exposes the typed database client.
+- `/api/internal/database-health` verifies whether the configured database connection is reachable without exposing credentials or connection details.
+
+This foundation does not change existing application behavior. Current workflows still use the mock/localStorage implementation until future migration work replaces each domain intentionally.
+
 ## localStorage Policy
 
 Going forward, localStorage should only hold harmless local UI preferences and short-lived drafts.
@@ -72,10 +86,10 @@ Goal: define the first durable database model without changing workflows yet.
 
 Deliverables:
 
-- Add Neon PostgreSQL connection planning.
-- Add Drizzle schema planning for organizations, facilities, staff users, roles, and permissions.
-- Define IDs, tenant keys, timestamps, audit fields, and soft-delete/archive conventions.
-- Define seed strategy for existing demo organizations.
+- Add Neon PostgreSQL connection configuration through `DATABASE_URL`.
+- Add Drizzle schema for organizations, facilities, staff users, staff roles, and staff facility access.
+- Define IDs, tenant keys, timestamps, and initial relational constraints.
+- Define seed strategy for existing demo organizations in future work.
 
 ### 3. Server Access Layer
 
@@ -121,10 +135,9 @@ Deliverables:
 - v0.7.x: Mobile & Member Experience
 - v1.0.0: Production Ready
 
-## Non-Goals For This Planning Cleanup
+## Non-Goals For This Foundation
 
 - Do not migrate data yet.
-- Do not add Neon or Drizzle code yet.
 - Do not add production authentication yet.
 - Do not change application workflows.
 - Do not remove mock persistence until replacement server-backed domains exist.

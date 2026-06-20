@@ -9,10 +9,29 @@
 npm install
 ```
 
+## Environment
+Create a local `.env` file when database connectivity is needed:
+
+```bash
+DATABASE_URL="postgresql://user:password@host/database?sslmode=require"
+```
+
+Use `.env.example` as the placeholder template. Do not commit real database credentials.
+
 ## Run the app
 ```bash
 npm run dev
 ```
+
+## Database Foundation
+The v0.2.x database foundation uses Drizzle with Neon PostgreSQL.
+
+```bash
+npm run db:generate
+npm run db:migrate
+```
+
+The internal health route is available at `/api/internal/database-health`. It returns `connected` when `DATABASE_URL` is configured and reachable, otherwise `disconnected`.
 
 ## Core local URLs
 - Marketing site: `/`

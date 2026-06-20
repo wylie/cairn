@@ -14,7 +14,8 @@ v0.2.0 starts Cairn's transition from demo/localStorage persistence toward real 
 
 Focus:
 
-- Database foundation
+- Real Data Foundation Planning - complete
+- Database Foundation - in progress
 - Neon PostgreSQL
 - Drizzle ORM
 - Organization data model

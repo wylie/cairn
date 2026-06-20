@@ -59,15 +59,35 @@ export default function ReleaseNotesPage() {
             v{activeRelease.version} starts the transition from demo/localStorage persistence toward real server-backed persistence. This release is being worked on and has not been released yet.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <ul className="grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
-            {activeRelease.focus.map((item) => (
-              <li key={item} className="flex gap-2">
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <section className="rounded-lg border bg-muted/10 p-4" aria-labelledby="active-release-focus">
+            <div className="mb-3 flex items-center gap-2">
+              <Badge tone="default">Focus</Badge>
+              <h3 id="active-release-focus" className="text-sm font-semibold">Focus</h3>
+            </div>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              {activeRelease.focus.map((item) => (
+                <li key={item} className="flex gap-2">
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+          <section className="rounded-lg border bg-muted/10 p-4" aria-labelledby="active-release-added">
+            <div className="mb-3 flex items-center gap-2">
+              <Badge tone="success">Added</Badge>
+              <h3 id="active-release-added" className="text-sm font-semibold">Added</h3>
+            </div>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              {activeRelease.sections.added.map((item) => (
+                <li key={item} className="flex gap-2">
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
         </CardContent>
       </Card>
 

@@ -21,7 +21,8 @@ export const roadmapReleases: RoadmapRelease[] = [
     title: "Real Data Foundation",
     target: "June 29, 2026",
     focus: [
-      "Database foundation",
+      "Real Data Foundation Planning complete",
+      "Database Foundation in progress",
       "Neon PostgreSQL",
       "Drizzle ORM",
       "Organization data model",

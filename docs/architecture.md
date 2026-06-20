@@ -94,6 +94,17 @@ v0.2.x establishes the production database foundation without migrating applicat
 - `db/tenant.ts` provides server-side Drizzle reads for organization and facility context, with demo seed fallback when the database is unavailable.
 - `/api/internal/database-health` checks whether the configured database connection is available and returns only `connected` or `disconnected` status.
 
+### Migration Workflow
+
+Database changes are managed through Drizzle Kit.
+
+- `npm run db:generate` generates SQL migrations from `db/schema`.
+- `npm run db:migrate` applies pending migrations to the database identified by `DATABASE_URL`.
+- `npm run db:studio` opens Drizzle Studio against the configured database for local inspection.
+- `npm run db:seed` seeds the initial organization and facility records after migrations have been applied.
+
+`DATABASE_URL` must remain server-only. Do not expose it through browser code, `NEXT_PUBLIC_*` variables, or client components.
+
 ### First Database-Backed Area
 
 Organizations and facilities are the first Cairn data area to read from the production database where safe.

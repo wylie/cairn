@@ -94,4 +94,14 @@ Focus:
 - Multi-tenant architecture
 - localStorage migration planning
 
+### Unreleased v0.2.0 Notes
+
+#### Added
+
+- Neon database integration
+- Drizzle ORM foundation
+- Initial database schema
+- Migration infrastructure
+- Database health monitoring
+
 v0.2.0 starts the transition from demo/localStorage persistence toward real server-backed persistence. It is active development work and has not been released yet.

@@ -17,6 +17,9 @@ export type ActiveRelease = {
   targetDate: string;
   status: "In Progress";
   focus: string[];
+  sections: {
+    added: string[];
+  };
 };
 
 export const activeRelease: ActiveRelease = {
@@ -32,7 +35,16 @@ export const activeRelease: ActiveRelease = {
     "Staff accounts",
     "Multi-tenant architecture",
     "localStorage migration planning"
-  ]
+  ],
+  sections: {
+    added: [
+      "Neon database integration",
+      "Drizzle ORM foundation",
+      "Initial database schema",
+      "Migration infrastructure",
+      "Database health monitoring"
+    ]
+  }
 };
 
 function parseVersion(version: string) {

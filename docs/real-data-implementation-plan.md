@@ -45,6 +45,7 @@ v0.2.x now includes the first production data foundation pieces.
 - `db/migrations` contains the initial SQL migration generated from the schema.
 - `db/index.ts` exposes the typed database client.
 - `/api/internal/database-health` verifies whether the configured database connection is reachable without exposing credentials or connection details.
+- `npm run db:generate`, `npm run db:migrate`, and `npm run db:studio` provide the migration and inspection workflow.
 
 This foundation does not change existing application behavior. Current workflows still use the mock/localStorage implementation until future migration work replaces each domain intentionally.
 
@@ -100,9 +101,9 @@ Goal: define the first durable database model without changing workflows yet.
 
 Deliverables:
 
-- Add Neon PostgreSQL connection configuration through `DATABASE_URL`.
-- Add Drizzle schema for organizations, facilities, staff users, staff roles, and staff facility access.
-- Define IDs, tenant keys, timestamps, and initial relational constraints.
+- Add Neon PostgreSQL connection configuration through `DATABASE_URL`. Complete.
+- Add Drizzle schema for organizations, facilities, staff users, staff roles, and staff facility access. Complete.
+- Define IDs, tenant keys, timestamps, and initial relational constraints. Complete.
 - Define seed strategy for existing demo organizations in future work.
 
 ### 3. Server Access Layer

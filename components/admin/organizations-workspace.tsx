@@ -69,6 +69,7 @@ export function OrganizationsWorkspace() {
         entry.facilityType,
         entry.ownerEmail,
         entry.primaryLocationName,
+        entry.dataMode,
         entry.status
       ]
         .join(" ")

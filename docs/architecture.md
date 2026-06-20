@@ -84,11 +84,11 @@ localStorage should remain limited to non-authoritative UI preferences and draft
 
 The footer, Release Notes page, Roadmap page, admin version displays, version chips, and "What's New" surfaces should read from this metadata rather than hardcoding active version strings. Historical release notes keep their own version data in release-note and roadmap entries.
 
-Cairn is not using CI/CD-generated versioning today. `main` represents the last released branch, and the current release branch, such as `june-28-2026`, is treated as the current application version. Cairn may move to CI/CD versioning later, but that workflow is not active now.
+Cairn is not using CI/CD-generated versioning today. `main` represents the last released branch, and the current release branch, such as `june-28-2026`, is treated as the current application version. Release Notes show Version, Status, and Target Release Date for that active branch; historical releases remain below. Cairn may move to CI/CD versioning later, but that workflow is not active now.
 
 ## Database Foundation
 
-v0.2.x establishes the production database foundation without migrating application workflows yet.
+v0.2.x is limited to the Real Data Foundation: organizations, facilities, staff, customers, households, demo/production separation, and versioning. Customer editing, memberships, check-ins, programs, POS, and production authentication move to later releases.
 
 ### Current State
 

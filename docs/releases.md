@@ -107,7 +107,9 @@ Title: Real Data Foundation
 
 Status: In Progress
 
-Focus:
+Focus: Real Data Foundation.
+
+Scope:
 
 - Organizations
 - Facilities

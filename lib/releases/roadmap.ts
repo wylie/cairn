@@ -124,46 +124,43 @@ export const roadmapReleases: RoadmapRelease[] = [
   },
   {
     version: "0.3.0",
-    title: "Feedback & Usability",
+    title: "Customer Operations",
     target: "July 6, 2026",
     focus: [
-      "Tester feedback",
-      "Workflow refinements",
-      "UI consistency",
-      "Accessibility improvements",
-      "Demo environment improvements",
-      "Customer editing planning",
-      "Authentication planning"
+      "Customer editing",
+      "Customer creation workflows",
+      "Customer profile updates",
+      "Household management workflows",
+      "Customer operations permissions",
+      "Tester feedback on customer workflows"
     ],
     status: "Planned"
   },
   {
     version: "0.4.0",
-    title: "Customer Migration & Onboarding",
+    title: "Memberships & Check-In",
     target: "July 13, 2026",
     focus: [
-      "Customer imports",
-      "Household imports",
+      "Membership persistence",
       "Membership imports",
-      "Validation workflows",
-      "Guided onboarding",
-      "Customer editing migration"
+      "Check-in persistence",
+      "Waiver readiness for check-in",
+      "Front desk validation workflows"
     ],
     status: "Planned"
   },
   {
     version: "0.5.0",
-    title: "Operations & Staff Experience",
+    title: "Programs & Registrations",
     target: "July 20, 2026",
     focus: [
-      "Staff workflow improvements",
-      "Membership workflows",
-      "Check-in workflows",
       "Programs",
-      "POS workflows",
+      "Sessions",
+      "Registrations",
+      "Attendance",
+      "Waitlists",
       "Operational alerts",
-      "Reporting enhancements",
-      "Staff productivity tools"
+      "Staff workflow refinements"
     ],
     status: "Planned"
   },

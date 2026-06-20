@@ -43,6 +43,7 @@ The Next.js server layer should own all production reads and writes. Browser cod
 - Historical release entries, such as `v0.1.0`, stay in Release Notes and Roadmap data below the active release.
 - Release Notes and Roadmap should use `cairnVersion` for the active branch instead of hardcoded active version strings.
 - Cairn may later move to CI/CD-generated version metadata, but release branches are the workflow today.
+- Release Notes show the active branch as Version, Status, and Target Release Date rather than splitting released and development versions.
 
 ## New State: Database Foundation Established
 
@@ -256,9 +257,9 @@ Deliverables:
 
 - v0.1.x: Pilot Launch / External Testing
 - v0.2.x: Real Data Foundation
-- v0.3.x: Feedback & Usability
-- v0.4.x: Customer Migration & Onboarding
-- v0.5.x: Operations & Staff Experience
+- v0.3.x: Customer Operations
+- v0.4.x: Memberships & Check-In
+- v0.5.x: Programs & Registrations
 - v0.6.x: Pilot Customer Release
 - v0.7.x: Mobile & Member Experience
 - v1.0.0: Production Ready

@@ -16,7 +16,9 @@ The `june-28-2026` branch identifies itself as the current release, `v0.2.0`, th
 
 Data-mode visibility is part of this release foundation: demo and sandbox organizations are labeled in normal staff workflows, demo organizations show a subtle demonstration-data banner, and Platform Admin views show Demo, Sandbox, and Production badges.
 
-Focus:
+Focus: Real Data Foundation.
+
+Scope:
 
 - Organizations
 - Facilities
@@ -108,7 +110,7 @@ Status: Released
 - Bug reporting workflow
 - Weekly release cadence
 
-## v0.3.0 - Feedback & Usability
+## v0.3.0 - Customer Operations
 
 Target: July 6, 2026
 
@@ -116,15 +118,14 @@ Status: Planned
 
 Focus:
 
-- Tester feedback
-- Workflow refinements
-- UI consistency
-- Accessibility improvements
-- Demo environment improvements
-- Customer editing planning
-- Authentication planning
+- Customer editing
+- Customer creation workflows
+- Customer profile updates
+- Household management workflows
+- Customer operations permissions
+- Tester feedback on customer workflows
 
-## v0.4.0 - Customer Migration & Onboarding
+## v0.4.0 - Memberships & Check-In
 
 Target: July 13, 2026
 
@@ -132,14 +133,13 @@ Status: Planned
 
 Focus:
 
-- Customer imports
-- Household imports
+- Membership persistence
 - Membership imports
-- Validation workflows
-- Guided onboarding
-- Customer editing migration
+- Check-in persistence
+- Waiver readiness for check-in
+- Front desk validation workflows
 
-## v0.5.0 - Operations & Staff Experience
+## v0.5.0 - Programs & Registrations
 
 Target: July 20, 2026
 
@@ -147,14 +147,13 @@ Status: Planned
 
 Focus:
 
-- Staff workflow improvements
-- Membership workflows
-- Check-in workflows
 - Programs
-- POS workflows
+- Sessions
+- Registrations
+- Attendance
+- Waitlists
 - Operational alerts
-- Reporting enhancements
-- Staff productivity tools
+- Staff workflow refinements
 
 ## v0.6.0 - Pilot Customer Release
 

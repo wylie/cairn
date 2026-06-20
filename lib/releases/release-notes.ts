@@ -7,7 +7,32 @@ export type ReleaseNote = {
   date: string;
   title: string;
   summary: string;
+  status: "Released";
   sections: Record<ReleaseNoteSection, string[]>;
+};
+
+export type ActiveRelease = {
+  version: string;
+  title: string;
+  targetDate: string;
+  status: "In Progress";
+  focus: string[];
+};
+
+export const activeRelease: ActiveRelease = {
+  version: "0.2.0",
+  title: "Real Data Foundation",
+  targetDate: "2026-06-29",
+  status: "In Progress",
+  focus: [
+    "Neon database foundation",
+    "Drizzle ORM",
+    "Organization persistence",
+    "Facility persistence",
+    "Staff accounts",
+    "Multi-tenant architecture",
+    "localStorage migration planning"
+  ]
 };
 
 function parseVersion(version: string) {
@@ -41,6 +66,7 @@ const releaseNoteEntries: ReleaseNote[] = [
     date: CAIRN_RELEASE_DATE,
     title: "Pilot Readiness Release",
     summary: "Initial external testing release for facility pilots.",
+    status: "Released",
     sections: {
       new: [
         "Stone Cairn branding",

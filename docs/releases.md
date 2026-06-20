@@ -41,6 +41,8 @@ To add a release:
 
 The newest release appears first on the staff Release Notes page.
 
+Upcoming active releases may also be shown on the Release Notes page before they are released. These are planning/status sections, not completed release notes.
+
 ## Roadmap Workflow
 
 The roadmap is version-based and maintained in `lib/releases/roadmap.ts` for the in-app staff view and `docs/roadmap.md` for documentation.
@@ -64,8 +66,32 @@ The notification uses the existing communications notification center, counts to
 
 ## Current Release
 
-Current version: `v0.1.0`
+Current released version: `v0.1.0`
 
 Release date: `2026-06-22`
 
 Title: Pilot Readiness Release
+
+Status: Released
+
+## Active Development Release
+
+Version: `v0.2.0`
+
+Target date: `2026-06-29`
+
+Title: Real Data Foundation
+
+Status: In Progress
+
+Focus:
+
+- Neon database foundation
+- Drizzle ORM
+- Organization persistence
+- Facility persistence
+- Staff accounts
+- Multi-tenant architecture
+- localStorage migration planning
+
+v0.2.0 starts the transition from demo/localStorage persistence toward real server-backed persistence. It is active development work and has not been released yet.

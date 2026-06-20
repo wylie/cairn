@@ -1,4 +1,4 @@
-export type RoadmapStatus = "In Progress" | "Planned" | "Future";
+export type RoadmapStatus = "Released" | "In Progress" | "Planned" | "Future";
 
 export type RoadmapCategory = {
   title: string;
@@ -17,8 +17,24 @@ export type RoadmapRelease = {
 
 export const roadmapReleases: RoadmapRelease[] = [
   {
+    version: "0.2.0",
+    title: "Real Data Foundation",
+    target: "June 29, 2026",
+    focus: [
+      "Database foundation",
+      "Neon PostgreSQL",
+      "Drizzle ORM",
+      "Organization data model",
+      "Facility data model",
+      "Staff data model",
+      "Tenant boundary rules",
+      "localStorage-to-database migration path"
+    ],
+    status: "In Progress"
+  },
+  {
     version: "0.1.0",
-    title: "Pilot Readiness & External Testing",
+    title: "Pilot Readiness Release",
     target: "June 22, 2026",
     categories: [
       {
@@ -103,15 +119,15 @@ export const roadmapReleases: RoadmapRelease[] = [
         ]
       }
     ],
-    status: "In Progress"
+    status: "Released"
   },
   {
-    version: "0.2.0",
+    version: "0.3.0",
     title: "Feedback & Usability",
-    target: "June 29, 2026",
+    target: "July 6, 2026",
     focus: [
       "Tester feedback",
-      "Workflow refinement",
+      "Workflow refinements",
       "UI consistency",
       "Accessibility improvements",
       "Demo environment improvements"
@@ -119,23 +135,22 @@ export const roadmapReleases: RoadmapRelease[] = [
     status: "Planned"
   },
   {
-    version: "0.3.0",
+    version: "0.4.0",
     title: "Customer Migration & Onboarding",
-    target: "July 6, 2026",
+    target: "July 13, 2026",
     focus: [
-      "Customer import",
-      "Household import",
-      "Membership import",
-      "Import validation",
-      "Guided onboarding",
-      "Migration documentation"
+      "Customer imports",
+      "Household imports",
+      "Membership imports",
+      "Validation workflows",
+      "Guided onboarding"
     ],
     status: "Planned"
   },
   {
-    version: "0.4.0",
+    version: "0.5.0",
     title: "Operations & Staff Experience",
-    target: "July 13, 2026",
+    target: "July 20, 2026",
     focus: [
       "Staff workflow improvements",
       "Operational alerts",
@@ -145,9 +160,9 @@ export const roadmapReleases: RoadmapRelease[] = [
     status: "Planned"
   },
   {
-    version: "0.5.0",
+    version: "0.6.0",
     title: "Pilot Customer Release",
-    target: "July 20, 2026",
+    target: "July 27, 2026",
     focus: [
       "Real facility onboarding",
       "Support workflow maturity",
@@ -157,9 +172,9 @@ export const roadmapReleases: RoadmapRelease[] = [
     status: "Planned"
   },
   {
-    version: "0.6.0",
+    version: "0.7.0",
     title: "Mobile & Member Experience",
-    target: "July 27, 2026",
+    target: "TBD",
     focus: [
       "Digital membership cards",
       "Apple Wallet research",
@@ -172,7 +187,7 @@ export const roadmapReleases: RoadmapRelease[] = [
   {
     version: "1.0.0",
     title: "Production Ready",
-    target: "TBD",
+    target: "Criteria-driven",
     focus: [],
     criteria: [
       "Successful pilot facility",

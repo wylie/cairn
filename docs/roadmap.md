@@ -1,14 +1,33 @@
 # Roadmap
 
-Cairn's roadmap is version-based so testers and future customers can understand what has already been accomplished, what is currently being refined, and what is planned next.
+Cairn's roadmap is version-based so testers and future customers can understand what has already been released, what is currently in active development, and what is planned next.
 
 Targets are planning targets, not guarantees. Dates may change based on tester feedback and pilot customer needs. The roadmap should be reviewed weekly before the Sunday evening release window.
 
-## v0.1.x — Pilot Launch / External Testing
+## v0.2.0 - Real Data Foundation
 
-Target: June 22, 2026
+Target: June 29, 2026
 
 Status: In Progress
+
+v0.2.0 starts Cairn's transition from demo/localStorage persistence toward real server-backed persistence. The release establishes the foundation for future workflow migrations without moving customer, membership, program, registration, notification, or UI workflows yet.
+
+Focus:
+
+- Database foundation
+- Neon PostgreSQL
+- Drizzle ORM
+- Organization data model
+- Facility data model
+- Staff data model
+- Tenant boundary rules
+- localStorage-to-database migration path
+
+## v0.1.0 - Pilot Readiness Release
+
+Date: June 22, 2026
+
+Status: Released
 
 ### Platform Foundation
 
@@ -77,24 +96,7 @@ Status: In Progress
 - Bug reporting workflow
 - Weekly release cadence
 
-## v0.2.x — Real Data Foundation
-
-Target: June 29, 2026
-
-Status: Planned
-
-Focus:
-
-- Data architecture
-- Multi-tenant model
-- Neon database integration
-- Drizzle ORM
-- Authentication foundation
-- Organization management
-- Staff accounts
-- Role management
-
-## v0.3.x — Feedback & Usability
+## v0.3.0 - Feedback & Usability
 
 Target: July 6, 2026
 
@@ -108,7 +110,7 @@ Focus:
 - Accessibility improvements
 - Demo environment improvements
 
-## v0.4.x — Customer Migration & Onboarding
+## v0.4.0 - Customer Migration & Onboarding
 
 Target: July 13, 2026
 
@@ -116,13 +118,13 @@ Status: Planned
 
 Focus:
 
-- Customer imports and migration mapping
-- Household imports and relationship validation
-- Membership imports and status validation
+- Customer imports
+- Household imports
+- Membership imports
 - Validation workflows
 - Guided onboarding
 
-## v0.5.x — Operations & Staff Experience
+## v0.5.0 - Operations & Staff Experience
 
 Target: July 20, 2026
 
@@ -135,7 +137,7 @@ Focus:
 - Reporting enhancements
 - Staff productivity tools
 
-## v0.6.x — Pilot Customer Release
+## v0.6.0 - Pilot Customer Release
 
 Target: July 27, 2026
 
@@ -148,7 +150,7 @@ Focus:
 - Billing readiness
 - Remaining operational gaps
 
-## v0.7.x — Mobile & Member Experience
+## v0.7.0 - Mobile & Member Experience
 
 Target: TBD
 
@@ -162,9 +164,7 @@ Focus:
 - Customer portal enhancements
 - Mobile experience improvements
 
-## v1.0.0 — Production Ready
-
-Target: TBD
+## v1.0.0 - Production Ready
 
 Status: Future
 

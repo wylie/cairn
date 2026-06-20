@@ -76,7 +76,7 @@ Organizations and facilities are the first data area wired toward the production
 - `/admin/database` shows connection status, organization count, and facility count for internal review.
 - If `DATABASE_URL` is missing or the database query fails, the same helpers fall back to canonical demo seed data so local demo mode remains stable.
 
-This does not migrate customers, households, memberships, programs, registrations, POS, waivers, notifications, support requests, or authentication. Those areas still use the existing mock/localStorage implementation until their planned migration phases.
+This does not migrate customer or household write operations, memberships, programs, registrations, POS, waivers, notifications, support requests, or authentication. Those areas still use the existing mock/localStorage implementation until their planned migration phases. Customer and household read operations are the first low-risk server-backed workflow reads.
 
 ## Data Classification Layer
 

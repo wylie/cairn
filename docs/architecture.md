@@ -197,6 +197,7 @@ Customer read path:
 - The staff customer list page resolves the active organization from the server-side organization context.
 - The page reads customers through `db/repositories/customer-repository.ts`.
 - Customer reads are organization-scoped before rows are mapped into the existing customer card UI.
+- If the database path is unavailable, the client list falls back to existing demo state for local demo stability.
 - If no customer rows exist, the list shows a friendly empty state instead of surfacing a database error.
 
 Household read path:

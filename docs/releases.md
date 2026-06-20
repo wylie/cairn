@@ -150,6 +150,7 @@ Scope:
 - Household migration planning
 - Customer seed data
 - Customer repository expansion
+- Customer read operations
 - Customer list backed by Neon
 - Customer counts
 - Household persistence

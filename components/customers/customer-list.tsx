@@ -17,7 +17,7 @@ import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import type { Customer } from "@/types/domain";
 
-export function CustomerList({ persistedCustomers = [] }: { persistedCustomers?: Customer[] }) {
+export function CustomerList({ persistedCustomers }: { persistedCustomers?: Customer[] }) {
   const pathname = usePathname() ?? "";
   const searchParams = useSearchParams();
   const currentSearch = searchParams?.toString?.() ?? "";
@@ -32,7 +32,7 @@ export function CustomerList({ persistedCustomers = [] }: { persistedCustomers?:
   const [showSwitchPrompt, setShowSwitchPrompt] = useState(false);
   const [sellCustomerId, setSellCustomerId] = useState<string | null>(null);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
-  const displayedCustomers = persistedCustomers;
+  const displayedCustomers = persistedCustomers ?? customers;
   const hasCustomerRecords = displayedCustomers.length > 0;
 
   const filtered = useMemo(

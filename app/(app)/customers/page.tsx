@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { CustomerList } from "@/components/customers/customer-list";
 import { PageHeader } from "@/components/shared/page-header";
+import { getDatabase } from "@/db";
 import { getActiveFacilityContext } from "@/db/tenant";
 import { getCustomersByOrganization, type CustomerRecord } from "@/db/repositories/customer-repository";
 import type { Customer } from "@/types/domain";
@@ -32,10 +33,12 @@ function mapCustomerRecordToDisplayCustomer(customer: CustomerRecord, index: num
 }
 
 async function getDatabaseCustomersForActiveOrganization() {
+  if (!getDatabase()) return undefined;
+
   const store = await cookies();
   const orgSlug = store.get("cairn_org_slug")?.value ?? "summit";
   const context = await getActiveFacilityContext(orgSlug);
-  if (!context) return [];
+  if (!context) return undefined;
 
   try {
     const customers = await getCustomersByOrganization(context.organization.id);
@@ -43,7 +46,7 @@ async function getDatabaseCustomersForActiveOrganization() {
       mapCustomerRecordToDisplayCustomer(customer, index, context.activeFacility?.id ?? context.facilities[0]?.id ?? "")
     );
   } catch {
-    return [];
+    return undefined;
   }
 }
 

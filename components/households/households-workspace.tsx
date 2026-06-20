@@ -17,6 +17,7 @@ import { useWorkstationState } from "@/lib/state/workstation-state";
 import { formatDate, formatDateTime } from "@/lib/format/date";
 import { formatCurrency } from "@/lib/transactions";
 import { buildCustomerDetailHref, buildDetailHref } from "@/lib/navigation/detail-navigation";
+import type { Household } from "@/types/domain";
 import {
   formatHouseholdRelationship,
   formatHouseholdRole,
@@ -56,11 +57,13 @@ function buildHouseholdWorkspaceHref(focus?: HouseholdFocusFilter) {
 export function HouseholdsWorkspace({
   initialHouseholdId,
   pathname = "/households",
-  currentSearch = ""
+  currentSearch = "",
+  persistedHouseholds
 }: {
   initialHouseholdId?: string;
   pathname?: string;
   currentSearch?: string;
+  persistedHouseholds?: Household[];
 }) {
   const {
     households,
@@ -88,13 +91,14 @@ export function HouseholdsWorkspace({
   const focusFilter = (queryParams.get("focus") as HouseholdFocusFilter | null) ?? null;
   const [query, setQuery] = useState("");
   const [feedback, setFeedback] = useState("");
-  const [selectedHouseholdId, setSelectedHouseholdId] = useState(initialHouseholdId ?? households[0]?.id ?? "");
+  const displayHouseholds = persistedHouseholds ?? households;
+  const [selectedHouseholdId, setSelectedHouseholdId] = useState(initialHouseholdId ?? displayHouseholds[0]?.id ?? "");
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const householdPhotoInputRef = useRef<HTMLInputElement | null>(null);
 
   const householdRows = useMemo(() => {
     const todayKey = new Date().toISOString().slice(0, 10);
-    return households.map((household) => {
+    return displayHouseholds.map((household) => {
       const members = householdMembers
         .filter((entry) => entry.householdId === household.id)
         .map((entry) => ({
@@ -264,8 +268,8 @@ export function HouseholdsWorkspace({
     checkInRecords,
     customerAccessRecords,
     customers,
+    displayHouseholds,
     householdMembers,
-    households,
     operationsAlerts,
     operationsTasks,
     registrations,

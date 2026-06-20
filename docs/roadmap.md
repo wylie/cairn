@@ -1,14 +1,47 @@
 # Roadmap
 
-Cairn's roadmap is version-based so testers and future customers can understand what has already been accomplished, what is currently being refined, and what is planned next.
+Cairn's roadmap is version-based so testers and future customers can understand what has already been released, what is currently in active development, and what is planned next.
 
 Targets are planning targets, not guarantees. Dates may change based on tester feedback and pilot customer needs. The roadmap should be reviewed weekly before the Sunday evening release window.
 
-## v0.1.0 — Pilot Readiness & External Testing
+## v0.2.0 - Real Data Foundation
 
-Target: June 22, 2026
+Target: June 29, 2026
 
 Status: In Progress
+
+v0.2.0 starts Cairn's transition from demo/localStorage persistence toward real server-backed persistence. The release establishes the foundation for future workflow migrations without moving customer editing, membership, check-in, program, registration, notification, POS, or authentication workflows yet.
+
+The `june-28-2026` branch identifies itself as the current release, `v0.2.0`, through the centralized `cairnVersion` metadata in `lib/version.ts`. `main` remains the prior released branch at `v0.1.0`, and historical v0.1.0 notes remain below the active release. Cairn may later move to CI/CD-generated versioning, but release branches are the workflow today.
+
+Data-mode visibility is part of this release foundation: demo and sandbox organizations are labeled in normal staff workflows, demo organizations show a subtle demonstration-data banner, and Platform Admin views show Demo, Sandbox, and Production badges.
+
+Focus: Real Data Foundation.
+
+Scope:
+
+- Organizations
+- Facilities
+- Staff
+- Customers
+- Households
+- Demo / Production separation
+- Versioning
+
+Deferred to future releases:
+
+- Customer editing
+- Memberships
+- Check-ins
+- Programs
+- POS
+- Production authentication
+
+## v0.1.0 - Pilot Readiness Release
+
+Date: June 22, 2026
+
+Status: Released
 
 ### Platform Foundation
 
@@ -77,21 +110,7 @@ Status: In Progress
 - Bug reporting workflow
 - Weekly release cadence
 
-## v0.2.0 — Feedback & Usability
-
-Target: June 29, 2026
-
-Status: Planned
-
-Focus:
-
-- Tester feedback
-- Workflow refinement
-- UI consistency
-- Accessibility improvements
-- Demo environment improvements
-
-## v0.3.0 — Customer Migration & Onboarding
+## v0.3.0 - Customer Operations
 
 Target: July 6, 2026
 
@@ -99,14 +118,14 @@ Status: Planned
 
 Focus:
 
-- Customer import
-- Household import
-- Membership import
-- Import validation
-- Guided onboarding
-- Migration documentation
+- Customer editing
+- Customer creation workflows
+- Customer profile updates
+- Household management workflows
+- Customer operations permissions
+- Tester feedback on customer workflows
 
-## v0.4.0 — Operations & Staff Experience
+## v0.4.0 - Memberships & Check-In
 
 Target: July 13, 2026
 
@@ -114,14 +133,31 @@ Status: Planned
 
 Focus:
 
-- Staff workflow improvements
-- Operational alerts
-- Reporting enhancements
-- Staff productivity tools
+- Membership persistence
+- Membership imports
+- Check-in persistence
+- Waiver readiness for check-in
+- Front desk validation workflows
 
-## v0.5.0 — Pilot Customer Release
+## v0.5.0 - Programs & Registrations
 
 Target: July 20, 2026
+
+Status: Planned
+
+Focus:
+
+- Programs
+- Sessions
+- Registrations
+- Attendance
+- Waitlists
+- Operational alerts
+- Staff workflow refinements
+
+## v0.6.0 - Pilot Customer Release
+
+Target: July 27, 2026
 
 Status: Planned
 
@@ -132,9 +168,9 @@ Focus:
 - Billing readiness
 - Remaining operational gaps
 
-## v0.6.0 — Mobile & Member Experience
+## v0.7.0 - Mobile & Member Experience
 
-Target: July 27, 2026
+Target: TBD
 
 Status: Planned
 
@@ -146,9 +182,7 @@ Focus:
 - Customer portal enhancements
 - Mobile experience improvements
 
-## v1.0.0 — Production Ready
-
-Target: TBD
+## v1.0.0 - Production Ready
 
 Status: Future
 

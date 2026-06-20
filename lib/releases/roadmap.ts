@@ -1,4 +1,6 @@
-export type RoadmapStatus = "In Progress" | "Planned" | "Future";
+import { cairnVersion } from "@/lib/version";
+
+export type RoadmapStatus = "Released" | "In Progress" | "Planned" | "Future";
 
 export type RoadmapCategory = {
   title: string;
@@ -17,8 +19,23 @@ export type RoadmapRelease = {
 
 export const roadmapReleases: RoadmapRelease[] = [
   {
+    version: cairnVersion.version,
+    title: cairnVersion.releaseName,
+    target: cairnVersion.targetDate,
+    focus: [
+      "Organizations",
+      "Facilities",
+      "Staff",
+      "Customers",
+      "Households",
+      "Demo / Production separation",
+      "Versioning"
+    ],
+    status: "In Progress"
+  },
+  {
     version: "0.1.0",
-    title: "Pilot Readiness & External Testing",
+    title: "Pilot Readiness Release",
     target: "June 22, 2026",
     categories: [
       {
@@ -103,51 +120,54 @@ export const roadmapReleases: RoadmapRelease[] = [
         ]
       }
     ],
-    status: "In Progress"
-  },
-  {
-    version: "0.2.0",
-    title: "Feedback & Usability",
-    target: "June 29, 2026",
-    focus: [
-      "Tester feedback",
-      "Workflow refinement",
-      "UI consistency",
-      "Accessibility improvements",
-      "Demo environment improvements"
-    ],
-    status: "Planned"
+    status: "Released"
   },
   {
     version: "0.3.0",
-    title: "Customer Migration & Onboarding",
+    title: "Customer Operations",
     target: "July 6, 2026",
     focus: [
-      "Customer import",
-      "Household import",
-      "Membership import",
-      "Import validation",
-      "Guided onboarding",
-      "Migration documentation"
+      "Customer editing",
+      "Customer creation workflows",
+      "Customer profile updates",
+      "Household management workflows",
+      "Customer operations permissions",
+      "Tester feedback on customer workflows"
     ],
     status: "Planned"
   },
   {
     version: "0.4.0",
-    title: "Operations & Staff Experience",
+    title: "Memberships & Check-In",
     target: "July 13, 2026",
     focus: [
-      "Staff workflow improvements",
-      "Operational alerts",
-      "Reporting enhancements",
-      "Staff productivity tools"
+      "Membership persistence",
+      "Membership imports",
+      "Check-in persistence",
+      "Waiver readiness for check-in",
+      "Front desk validation workflows"
     ],
     status: "Planned"
   },
   {
     version: "0.5.0",
-    title: "Pilot Customer Release",
+    title: "Programs & Registrations",
     target: "July 20, 2026",
+    focus: [
+      "Programs",
+      "Sessions",
+      "Registrations",
+      "Attendance",
+      "Waitlists",
+      "Operational alerts",
+      "Staff workflow refinements"
+    ],
+    status: "Planned"
+  },
+  {
+    version: "0.6.0",
+    title: "Pilot Customer Release",
+    target: "July 27, 2026",
     focus: [
       "Real facility onboarding",
       "Support workflow maturity",
@@ -157,9 +177,9 @@ export const roadmapReleases: RoadmapRelease[] = [
     status: "Planned"
   },
   {
-    version: "0.6.0",
+    version: "0.7.0",
     title: "Mobile & Member Experience",
-    target: "July 27, 2026",
+    target: "TBD",
     focus: [
       "Digital membership cards",
       "Apple Wallet research",
@@ -172,7 +192,7 @@ export const roadmapReleases: RoadmapRelease[] = [
   {
     version: "1.0.0",
     title: "Production Ready",
-    target: "TBD",
+    target: "Criteria-driven",
     focus: [],
     criteria: [
       "Successful pilot facility",

@@ -4,14 +4,25 @@ Cairn uses lightweight semantic-style versioning during pilot testing.
 
 ## Versioning
 
-Versions are stored in `lib/version.ts`.
+Version metadata is centralized in `lib/version.ts`.
 
 - `v0.x.x` means pilot or pre-production.
 - `v1.0.0` means the first stable customer-ready release.
 - Patch releases, such as `v0.1.1`, are small fixes.
 - Minor releases, such as `v0.2.0`, add meaningful product capability.
 
-All application version displays should read from `CAIRN_VERSION` and `CAIRN_RELEASE_DATE`.
+Cairn currently uses release branches for versioning, not CI/CD-generated versions. The active release branch version is the current application version.
+
+Current branch metadata:
+
+- `version`: `0.2.0`
+- `releaseName`: `Real Data Foundation`
+- `status`: `in_progress`
+- `targetDate`: `June 29, 2026`
+
+All active application version displays should read from the `cairnVersion` object in `lib/version.ts`. Compatibility exports may exist for older components, but they must derive from `cairnVersion`.
+
+Historical release entries stay in release-note and roadmap data. They should not be maintained as separate active metadata fields.
 
 ## Release Cadence
 
@@ -33,13 +44,37 @@ Release notes are file-based in `lib/releases/release-notes.ts`.
 
 To add a release:
 
-1. Update `CAIRN_VERSION` and `CAIRN_RELEASE_DATE` in `lib/version.ts`.
+1. Update `cairnVersion` in `lib/version.ts`.
 2. Add a new release entry to `releaseNotes`.
 3. Include sections for `new`, `improved`, `fixed`, and `knownIssues`.
 4. Keep facility-facing notes clear and avoid platform-only implementation details.
 5. Run the build before committing.
 
 The newest release appears first on the staff Release Notes page.
+
+Upcoming active releases may also be shown on the Release Notes page before they are released. These are planning/status sections, not completed release notes.
+
+## Branch and Version Workflow
+
+Release branches identify themselves with `cairnVersion.version`. On the `june-28-2026` branch, app chrome, Release Notes, Roadmap, admin pages, and settings show `v0.2.0`.
+
+Current workflow:
+
+- `main` represents the last released production branch, currently `v0.1.0`.
+- `june-28-2026` represents the active release branch, currently `v0.2.0`.
+- The active branch version is treated as the current version throughout the application.
+- Historical `v0.1.0` release notes remain visible below the active release notes.
+
+Cairn may later move to CI/CD versioning or automated release metadata, but that is not the workflow today. Until then, changing release branches should require updating `lib/version.ts` and the release/roadmap historical data only.
+
+## Demo Data Visibility
+
+Organizations carry a `dataMode` of `demo`, `sandbox`, or `production`.
+
+- Demo organizations show a `Demo` badge and a subtle staff-workflow banner: "This organization contains demonstration data for evaluation purposes."
+- Sandbox organizations show a `Sandbox` badge in normal facility workflows.
+- Production organizations are not prominently labeled in normal facility workflows.
+- Platform Admin may show all modes, including `Production`, for operational clarity.
 
 ## Roadmap Workflow
 
@@ -62,10 +97,70 @@ When a release entry becomes the latest release, Cairn can generate a system not
 
 The notification uses the existing communications notification center, counts toward unread totals, can be marked read, and links directly to the matching release note anchor.
 
-## Current Release
+## Current Release Branch
 
-Current version: `v0.1.0`
+Version: `v0.2.0`
 
-Release date: `2026-06-22`
+Target date: `2026-06-29`
 
-Title: Pilot Readiness Release
+Title: Real Data Foundation
+
+Status: In Progress
+
+Focus: Real Data Foundation.
+
+Scope:
+
+- Organizations
+- Facilities
+- Staff
+- Customers
+- Households
+- Demo / Production separation
+- Versioning
+
+### Unreleased v0.2.0 Notes
+
+#### Added
+
+- Neon database integration
+- Drizzle ORM foundation
+- Initial database schema
+- Migration infrastructure
+- Database health monitoring
+- Organization schema
+- Facility schema
+- Seed data
+- Repository layer
+- Database status page
+- Staff database model
+- Staff seed data
+- Staff repositories
+- Staff directory
+- Organization boundary validation
+- Organization data classification
+- Demo / Sandbox / Production modes
+- Tenant data boundary rules
+- Data ownership documentation
+- Customer schema
+- Household schema
+- Customer repository layer
+- Household repository layer
+- Customer migration planning
+- Household migration planning
+- Customer seed data
+- Customer repository expansion
+- Customer read operations
+- Customer list backed by Neon
+- Customer counts
+- Household persistence
+- Household seed data
+- Household repository
+- Household reads
+
+v0.2.0 starts the transition from demo/localStorage persistence toward real server-backed persistence. It is active development work and has not been released yet.
+
+Release readiness references:
+
+- [v0.2.0 Release Checklist](./releases/v0.2.0-release-checklist.md)
+- [Technical Debt Log](./technical-debt.md)

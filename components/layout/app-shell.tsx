@@ -8,6 +8,7 @@ import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { MobileStaffNavigation } from "@/components/layout/mobile-staff-navigation";
 import { TopBar } from "@/components/layout/top-bar";
 import { DevPerfMonitor } from "@/components/dev/dev-perf-monitor";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useRuntimeOrganizations } from "@/lib/platform-admin/use-runtime-organizations";
 import { useIsMobileStaffLayout } from "@/lib/responsive/use-mobile";
@@ -17,7 +18,15 @@ import { useWorkstationState } from "@/lib/state/workstation-state";
 import type { StaffPermission } from "@/types/domain";
 import { getCurrentOrgSlugClient } from "@/lib/tenant/client";
 import { parseOrgSlugFromPathname } from "@/lib/tenant/path";
-import { CAIRN_VERSION } from "@/lib/version";
+import { cairnVersion } from "@/lib/version";
+
+function dataModeLabel(dataMode: string) {
+  return dataMode.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function shouldShowNormalWorkflowDataModeBadge(dataMode: string | undefined) {
+  return dataMode === "demo" || dataMode === "sandbox";
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
@@ -25,6 +34,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const routeSlug = parseOrgSlugFromPathname(pathname);
   const fallbackSlug = routeSlug ?? organizations[0]?.slug ?? "summit";
   const [currentSlug, setCurrentSlug] = useState(fallbackSlug);
+  const [demoBannerDismissed, setDemoBannerDismissed] = useState(false);
   useEffect(() => {
     const slugFromCookie = routeSlug ?? getCurrentOrgSlugClient(fallbackSlug);
     if (slugFromCookie !== currentSlug) setCurrentSlug(slugFromCookie);
@@ -33,6 +43,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     () => organizations.find((entry) => entry.slug === currentSlug) ?? organizations[0],
     [organizations, currentSlug]
   );
+  const currentDataMode = currentOrganization?.dataMode;
+  const showDataModeBadge = shouldShowNormalWorkflowDataModeBadge(currentDataMode);
+  const showDemoBanner = currentDataMode === "demo" && !demoBannerDismissed;
   const { hasAnyPermission, hasPermission, activeStaff, staffUsers } = useWorkstationState();
   const { createCommunication } = useCustomerState();
   const { activeImpersonationSession, endImpersonation, logSupportEvent, markImpersonationNotified, impersonationSessions } = useSupportState();
@@ -113,6 +126,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     });
   }, [currentSupportSession, logSupportEvent, pathname]);
 
+  useEffect(() => {
+    if (currentDataMode !== "demo") {
+      setDemoBannerDismissed(false);
+      return;
+    }
+    const key = `cairn_demo_data_banner_dismissed_${currentSlug}`;
+    setDemoBannerDismissed(typeof window !== "undefined" && window.localStorage.getItem(key) === "true");
+  }, [currentDataMode, currentSlug]);
+
+  const dismissDemoBanner = useCallback(() => {
+    const key = `cairn_demo_data_banner_dismissed_${currentSlug}`;
+    if (typeof window !== "undefined") window.localStorage.setItem(key, "true");
+    setDemoBannerDismissed(true);
+  }, [currentSlug]);
+
   return (
     <div className="min-h-screen bg-background">
       <DevPerfMonitor />
@@ -123,7 +151,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <CairnBrand className="h-10 w-10" />
               <div>
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Facility Ops</p>
-                <h1 className="text-lg font-semibold">{currentOrganization?.name}</h1>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-lg font-semibold">{currentOrganization?.name}</h1>
+                  {showDataModeBadge && currentDataMode ? (
+                    <Badge tone={currentDataMode === "sandbox" ? "warning" : "muted"} className="min-h-6 px-2 py-0.5">
+                      {dataModeLabel(currentDataMode)}
+                    </Badge>
+                  ) : null}
+                </div>
               </div>
             </div>
           </div>
@@ -140,7 +175,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               What's New
             </Link>
             <span className="mx-2">·</span>
-            <span>Cairn v{CAIRN_VERSION}</span>
+            <span>Cairn v{cairnVersion.version}</span>
           </div>
         </aside>
         <main className="space-y-4">
@@ -161,6 +196,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   }}
                 >
                   End Session
+                </Button>
+              </div>
+            </div>
+          ) : null}
+          {showDemoBanner ? (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Badge tone="muted" className="min-h-6 px-2 py-0.5">Demo</Badge>
+                  <p className="text-sm">This organization contains demonstration data for evaluation purposes.</p>
+                </div>
+                <Button type="button" variant="ghost" onClick={dismissDemoBanner}>
+                  Dismiss
                 </Button>
               </div>
             </div>

@@ -1,4 +1,4 @@
-import { CAIRN_RELEASE_DATE, CAIRN_VERSION } from "@/lib/version";
+import { cairnVersion, formatVersionStatus } from "@/lib/version";
 
 export type ReleaseNoteSection = "new" | "improved" | "fixed" | "knownIssues";
 
@@ -7,15 +7,107 @@ export type ReleaseNote = {
   date: string;
   title: string;
   summary: string;
+  status: "Released";
   sections: Record<ReleaseNoteSection, string[]>;
 };
 
-export const releaseNotes: ReleaseNote[] = [
+export type ActiveRelease = {
+  version: string;
+  title: string;
+  targetDate: string;
+  status: "In Progress";
+  focus: string[];
+  sections: {
+    added: string[];
+  };
+};
+
+export const activeRelease: ActiveRelease = {
+  version: cairnVersion.version,
+  title: cairnVersion.releaseName,
+  targetDate: cairnVersion.targetDateIso,
+  status: formatVersionStatus(cairnVersion.status) as ActiveRelease["status"],
+  focus: [
+    "Organizations",
+    "Facilities",
+    "Staff",
+    "Customers",
+    "Households",
+    "Demo / Production separation",
+    "Versioning"
+  ],
+  sections: {
+    added: [
+      "Neon database integration",
+      "Drizzle ORM foundation",
+      "Initial database schema",
+      "Migration infrastructure",
+      "Database health monitoring",
+      "Organization schema",
+      "Facility schema",
+      "Seed data",
+      "Repository layer",
+      "Database status page",
+      "Staff database model",
+      "Staff seed data",
+      "Staff repositories",
+      "Staff directory",
+      "Organization boundary validation",
+      "Organization data classification",
+      "Demo / Sandbox / Production modes",
+      "Tenant data boundary rules",
+      "Data ownership documentation",
+      "Customer schema",
+      "Household schema",
+      "Customer repository layer",
+      "Household repository layer",
+      "Customer migration planning",
+      "Household migration planning",
+      "Customer seed data",
+      "Customer repository expansion",
+      "Customer read operations",
+      "Customer list backed by Neon",
+      "Customer counts",
+      "Household persistence",
+      "Household seed data",
+      "Household repository",
+      "Household reads"
+    ]
+  }
+};
+
+function parseVersion(version: string) {
+  return version
+    .replace(/^v/i, "")
+    .split(".")
+    .map((part) => {
+      const value = Number.parseInt(part, 10);
+      return Number.isFinite(value) ? value : 0;
+    });
+}
+
+export function compareReleaseNotesNewestFirst(a: ReleaseNote, b: ReleaseNote) {
+  const aParts = parseVersion(a.version);
+  const bParts = parseVersion(b.version);
+  const length = Math.max(aParts.length, bParts.length);
+  for (let index = 0; index < length; index += 1) {
+    const difference = (bParts[index] ?? 0) - (aParts[index] ?? 0);
+    if (difference !== 0) return difference;
+  }
+
+  const dateComparison = b.date.localeCompare(a.date);
+  if (dateComparison !== 0) return dateComparison;
+
+  return b.version.localeCompare(a.version);
+}
+
+const releaseNoteEntries: ReleaseNote[] = [
   {
-    version: CAIRN_VERSION,
-    date: CAIRN_RELEASE_DATE,
+    version: "0.1.0",
+    date: "2026-06-22",
     title: "Pilot Readiness Release",
     summary: "Initial external testing release for facility pilots.",
+    status: "Released",
     sections: {
       new: [
         "Stone Cairn branding",
@@ -50,7 +142,9 @@ export const releaseNotes: ReleaseNote[] = [
       ]
     }
   }
-].sort((a, b) => b.date.localeCompare(a.date) || b.version.localeCompare(a.version));
+];
+
+export const releaseNotes = [...releaseNoteEntries].sort(compareReleaseNotesNewestFirst);
 
 export const latestRelease = releaseNotes[0];
 

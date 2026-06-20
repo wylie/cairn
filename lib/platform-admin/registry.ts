@@ -9,6 +9,7 @@ export const ORG_REGISTRY_COOKIE = "cairn_org_registry";
 export const ORG_REGISTRY_STORAGE_KEY = "cairn_platform_org_registry";
 
 export type PlatformOrganizationStatus = "active" | "trial" | "suspended" | "archived";
+export type OrganizationDataMode = "demo" | "sandbox" | "production";
 export type ProvisioningFacilityType =
   | "Recreation Center"
   | "YMCA"
@@ -22,6 +23,7 @@ export type ProvisioningFacilityType =
   | "Custom";
 
 export interface RuntimeOrganizationRecord extends Organization {
+  dataMode: OrganizationDataMode;
   status: PlatformOrganizationStatus;
   createdAt: string;
   lastActivityAt?: string;
@@ -202,6 +204,7 @@ export function buildSeedProvisionedOrganizations(): ProvisionedOrganizationReco
     return {
       ...organization,
       name: displayName,
+      dataMode: "demo" as const,
       status: "active" as const,
       createdAt: organization.slug === "riverbend" ? "2026-05-10T09:00:00Z" : "2026-04-01T09:00:00Z",
       lastActivityAt: organization.slug === "riverbend" ? "2026-06-06T16:45:00Z" : "2026-06-07T14:10:00Z",
@@ -260,6 +263,7 @@ export function buildSeedProvisionedOrganizations(): ProvisionedOrganizationReco
       id: "org_western_carolina_ymca",
       slug: "western-carolina-ymca",
       name: "Western Carolina YMCA Association",
+      dataMode: "demo",
       facilityType: "hybrid",
       timezone: "America/New_York",
       status: "active" as const,
@@ -324,6 +328,7 @@ export function buildProvisionedOrganization(input: {
     id,
     slug: input.slug,
     name: input.name,
+    dataMode: "sandbox",
     facilityType: mapProvisioningFacilityType(input.facilityType),
     timezone: "America/New_York",
     status: "trial" as const,
@@ -376,7 +381,12 @@ export function parseProvisionedOrganizations(raw: string | undefined | null) {
   try {
     const parsed = JSON.parse(raw) as ProvisionedOrganizationRecord[];
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((entry) => Boolean(entry?.id && entry?.slug && entry?.name));
+    return parsed
+      .filter((entry) => Boolean(entry?.id && entry?.slug && entry?.name))
+      .map((entry) => ({
+        ...entry,
+        dataMode: entry.dataMode ?? (entry.isDemo ? "demo" : "sandbox")
+      }));
   } catch {
     return [];
   }

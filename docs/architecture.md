@@ -89,7 +89,7 @@ v0.2.x establishes the production database foundation without migrating applicat
 - `drizzle.config.ts` points Drizzle at the schema in `db/schema` and migrations in `db/migrations`.
 - `DATABASE_URL` is the documented connection string for Neon PostgreSQL.
 - `db/index.ts` exposes a typed Drizzle database client without requiring application workflows to use it yet.
-- `db/schema` contains the initial tenant and staff foundation: organizations, facilities, staff users, staff roles, staff role assignment, and staff facility access.
+- `db/schema` contains the initial tenant and staff foundation: organizations, organization data classification, facilities, staff users, staff roles, staff role assignment, and staff facility access.
 - `db/seed.ts` seeds the initial organizations and facilities for Summit Rec Collective, Riverstone Nature Center, and Western Carolina YMCA Association.
 - `db/tenant.ts` provides server-side Drizzle reads for organization and facility context, with demo seed fallback when the database is unavailable.
 - `/api/internal/database-health` checks whether the configured database connection is available and returns only `connected` or `disconnected` status.
@@ -110,12 +110,43 @@ Local database tooling loads `DATABASE_URL` from `.env.local`. `DATABASE_URL` mu
 Organizations and facilities are the first Cairn data area to read from the production database where safe.
 
 - The database owns seeded organization and facility identities when `DATABASE_URL` is configured and migrations have run.
+- `organizations.data_mode` classifies each tenant as `demo`, `sandbox`, or `production`.
 - Public facility landing metadata and display context can load organization and facility records through the server data layer.
 - `db/repositories` contains the first explicit repository layer for organization and facility reads.
 - `/admin/database` provides a read-only internal connection and record-count status page.
 - Existing demo seed data remains as a fallback so local review environments do not require a live database.
 - Tenant helpers require organization context for facility reads. Facility slugs are not treated as globally authoritative.
 - Platform-wide organization views are still mock/localStorage-backed until a dedicated platform admin migration replaces the current registry.
+
+### Data Classification
+
+Organization is the primary data boundary in Cairn. Every durable record beneath an organization inherits that organization's data mode.
+
+```text
+Organization
+  ├─ Facilities
+  ├─ Staff
+  ├─ Customers
+  ├─ Households
+  ├─ Memberships
+  ├─ Programs
+  ├─ Registrations
+  └─ Reporting
+```
+
+Data modes:
+
+- `demo`: Cairn-owned sample organizations used for demos, screenshots, testing, documentation, and sales presentations.
+- `sandbox`: client-owned testing environments used for onboarding, training, and experimentation.
+- `production`: real operational customer data used for live facilities, memberships, check-ins, waivers, registrations, and reporting.
+
+Rules:
+
+- Demo organizations contain only demo data.
+- Sandbox organizations contain only sandbox data.
+- Production organizations contain only production data.
+- Never mix demo and production data in the same organization.
+- Customer and household migration work must create or target the correct organization before importing records.
 
 ### Staff Account Foundation
 
@@ -151,6 +182,7 @@ Tenant expectations:
 
 - Every durable domain record must include an `organizationId`.
 - Facility-scoped records must include a `facilityId` or location equivalent.
+- All organization-owned records inherit the parent organization's `data_mode`.
 - Staff access must be filtered by allowed organizations and facilities.
 - Staff users belong to one organization; cross-organization staff access should be modeled explicitly rather than inferred from email.
 - Facilities belong to one organization, which gives future customer, household, membership, and transaction records a clear tenant boundary.

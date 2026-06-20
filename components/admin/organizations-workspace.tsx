@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PLATFORM_TEMPLATES } from "@/lib/platform-admin/registry";
@@ -26,6 +27,17 @@ const FACILITY_TYPES: ProvisioningFacilityType[] = [
 
 function titleCase(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function dataModeTone(dataMode: string): "default" | "success" | "warning" | "muted" {
+  if (dataMode === "production") return "success";
+  if (dataMode === "sandbox") return "warning";
+  if (dataMode === "demo") return "muted";
+  return "default";
+}
+
+function DataModeBadge({ dataMode }: { dataMode: string }) {
+  return <Badge tone={dataModeTone(dataMode)}>{titleCase(dataMode)}</Badge>;
 }
 
 export function OrganizationsWorkspace() {
@@ -227,7 +239,10 @@ export function OrganizationsWorkspace() {
                       <p className="font-medium">{organization.name}</p>
                       <p className="text-xs text-muted-foreground">/{organization.slug} · {titleCase(organization.facilityType)}</p>
                     </div>
-                    <span className="rounded-full border px-2 py-0.5 text-xs">{titleCase(organization.status)}</span>
+                    <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                      <DataModeBadge dataMode={organization.dataMode} />
+                      <span className="rounded-full border px-2 py-0.5 text-xs">{titleCase(organization.status)}</span>
+                    </div>
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">
                     {organization.stats.locations} locations · {organization.stats.members} members · {organization.stats.staff} staff
@@ -247,6 +262,10 @@ export function OrganizationsWorkspace() {
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                 <MetricCard label="Slug" value={selected.slug} />
                 <MetricCard label="Facility Type" value={titleCase(selected.facilityType)} />
+                <div className="rounded-md border bg-card p-3">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Data Mode</p>
+                  <div className="mt-1"><DataModeBadge dataMode={selected.dataMode} /></div>
+                </div>
                 <MetricCard label="Status" value={titleCase(selected.status)} />
                 <MetricCard label="Created Date" value={formatDate(selected.createdAt)} />
                 <MetricCard label="Current Plan" value={getPlanName(selected.subscriptionPlan ?? "single_facility")} />

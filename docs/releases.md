@@ -113,5 +113,9 @@ Focus:
 - Staff repositories
 - Staff directory
 - Organization boundary validation
+- Organization data classification
+- Demo / Sandbox / Production modes
+- Tenant data boundary rules
+- Data ownership documentation
 
 v0.2.0 starts the transition from demo/localStorage persistence toward real server-backed persistence. It is active development work and has not been released yet.

@@ -52,7 +52,11 @@ export const activeRelease: ActiveRelease = {
       "Staff seed data",
       "Staff repositories",
       "Staff directory",
-      "Organization boundary validation"
+      "Organization boundary validation",
+      "Organization data classification",
+      "Demo / Sandbox / Production modes",
+      "Tenant data boundary rules",
+      "Data ownership documentation"
     ]
   }
 };

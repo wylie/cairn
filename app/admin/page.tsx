@@ -2,8 +2,20 @@
 
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePlatformAdminState } from "@/lib/state/platform-admin-state";
+
+function titleCase(value: string) {
+  return value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function dataModeTone(dataMode: string): "default" | "success" | "warning" | "muted" {
+  if (dataMode === "production") return "success";
+  if (dataMode === "sandbox") return "warning";
+  if (dataMode === "demo") return "muted";
+  return "default";
+}
 
 export default function PlatformAdminDashboardPage() {
   const { organizations, demoFacilities, templates } = usePlatformAdminState();
@@ -43,7 +55,10 @@ export default function PlatformAdminDashboardPage() {
           <CardContent className="space-y-3 text-sm">
             {organizations.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5).map((entry) => (
               <div key={entry.id} className="rounded-lg border p-3">
-                <p className="font-medium">{entry.name}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-medium">{entry.name}</p>
+                  <Badge tone={dataModeTone(entry.dataMode)}>{titleCase(entry.dataMode)}</Badge>
+                </div>
                 <p className="text-muted-foreground">/{entry.slug} · {entry.primaryLocationName}</p>
               </div>
             ))}

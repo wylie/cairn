@@ -4,6 +4,19 @@ import { count, eq } from "drizzle-orm";
 import { getDatabase, organizations } from "@/db";
 
 export type OrganizationRecord = typeof organizations.$inferSelect;
+export type OrganizationDataMode = OrganizationRecord["dataMode"];
+
+export function isDemoOrganization(organization: Pick<OrganizationRecord, "dataMode"> | null | undefined) {
+  return organization?.dataMode === "demo";
+}
+
+export function isSandboxOrganization(organization: Pick<OrganizationRecord, "dataMode"> | null | undefined) {
+  return organization?.dataMode === "sandbox";
+}
+
+export function isProductionOrganization(organization: Pick<OrganizationRecord, "dataMode"> | null | undefined) {
+  return organization?.dataMode === "production";
+}
 
 export async function getOrganizationBySlug(slug: string): Promise<OrganizationRecord | null> {
   const database = getDatabase();

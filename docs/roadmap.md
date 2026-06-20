@@ -18,6 +18,7 @@ Focus:
 - Database Foundation - complete
 - Organization Persistence - complete
 - Facility Persistence - complete
+- Data Classification Layer - complete
 - Staff Accounts Foundation - in progress
 - Neon PostgreSQL
 - Drizzle ORM

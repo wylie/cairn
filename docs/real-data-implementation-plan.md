@@ -41,7 +41,7 @@ v0.2.x now includes the first production data foundation pieces.
 - Drizzle ORM, Drizzle Kit, and the `postgres` client are installed.
 - `DATABASE_URL` is documented in `.env.example` for Neon PostgreSQL connections.
 - `drizzle.config.ts` defines schema and migration paths.
-- `db/schema` contains intentionally minimal tables for organizations, facilities, staff users, staff roles, staff role assignment, and staff facility access.
+- `db/schema` contains intentionally minimal tables for organizations, organization data classification, facilities, staff users, staff roles, staff role assignment, and staff facility access.
 - `db/migrations` contains the initial SQL migration generated from the schema.
 - `db/index.ts` exposes the typed database client.
 - `/api/internal/database-health` verifies whether the configured database connection is reachable without exposing credentials or connection details.
@@ -56,6 +56,7 @@ Organizations and facilities are the first data area wired toward the production
 
 - `npm run db:seed` seeds the initial tenant foundation into the configured database.
 - Seeded organizations: Summit Rec Collective, Riverstone Nature Center, and Western Carolina YMCA Association.
+- Seeded demo organizations are classified with `data_mode = demo`.
 - Seeded facilities include each organization's initial facility records and slugs.
 - `db/repositories` provides server-only repository functions for organization lookup, facility lookup, organization-scoped facility lists, and counts.
 - `db/tenant.ts` provides fallback-aware active facility context on top of the repository layer.
@@ -65,6 +66,36 @@ Organizations and facilities are the first data area wired toward the production
 - If `DATABASE_URL` is missing or the database query fails, the same helpers fall back to canonical demo seed data so local demo mode remains stable.
 
 This does not migrate customers, households, memberships, programs, registrations, POS, waivers, notifications, support requests, or authentication. Those areas still use the existing mock/localStorage implementation until their planned migration phases.
+
+## Data Classification Layer
+
+The organization record now owns a `data_mode` classification.
+
+- `demo`: Cairn-owned sample data for demos, screenshots, testing, documentation, and sales presentations.
+- `sandbox`: client-owned testing data for onboarding, training, and experimentation.
+- `production`: real operational customer data for live facilities and reporting.
+
+All records beneath an organization inherit that mode:
+
+```text
+Organization
+  ├─ Facilities
+  ├─ Staff
+  ├─ Customers
+  ├─ Households
+  ├─ Memberships
+  ├─ Programs
+  ├─ Registrations
+  └─ Reporting
+```
+
+Rules before customer migration:
+
+- Demo organizations must only contain demo data.
+- Sandbox organizations must only contain sandbox data.
+- Production organizations must only contain production data.
+- Never import or create production customers inside a demo organization.
+- Future import tooling must choose or create the production organization before migrating customers, households, memberships, registrations, waivers, or transactions.
 
 ## Staff Accounts Foundation Started
 
@@ -82,6 +113,7 @@ This is not production authentication. Existing login flows still use mock authe
 Organization boundary audit:
 
 - Organizations are root tenants and own facilities, staff roles, and staff users.
+- Organization `data_mode` is inherited by facilities, staff, future customers, households, memberships, programs, registrations, and reports.
 - Facilities require `organization_id`, so future facility-scoped records can inherit organization scope from their facility.
 - Staff users require `organization_id`, so staff records cannot float outside a tenant.
 - Future customer, household, membership, registration, POS, waiver, notification, and support records should include `organization_id`; facility-scoped records should also include `facility_id`.

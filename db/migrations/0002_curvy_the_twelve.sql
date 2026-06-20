@@ -1,0 +1,2 @@
+CREATE TYPE "public"."organization_data_mode" AS ENUM('demo', 'sandbox', 'production');--> statement-breakpoint
+ALTER TABLE "organizations" ADD COLUMN "data_mode" "organization_data_mode" DEFAULT 'demo' NOT NULL;

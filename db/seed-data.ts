@@ -2,17 +2,20 @@ export const seedOrganizations = [
   {
     id: "org_summit",
     name: "Summit Rec Collective",
-    slug: "summit"
+    slug: "summit",
+    dataMode: "demo"
   },
   {
     id: "org_riverbend",
     name: "Riverstone Nature Center",
-    slug: "riverbend"
+    slug: "riverbend",
+    dataMode: "demo"
   },
   {
     id: "org_western_carolina_ymca",
     name: "Western Carolina YMCA Association",
-    slug: "western-carolina-ymca"
+    slug: "western-carolina-ymca",
+    dataMode: "demo"
   }
 ] as const;
 

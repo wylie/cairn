@@ -18,6 +18,7 @@ async function main() {
       set: {
         name: sql`excluded.name`,
         slug: sql`excluded.slug`,
+        dataMode: sql`excluded.data_mode`,
         updatedAt: sql`now()`
       }
     });

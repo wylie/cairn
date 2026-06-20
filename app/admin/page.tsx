@@ -16,6 +16,7 @@ export default function PlatformAdminDashboardPage() {
   const cards = [
     { label: "Organizations", value: String(organizations.length), href: "/admin/organizations" },
     { label: "Database", value: "Status", href: "/admin/database" },
+    { label: "Staff", value: "Directory", href: "/admin/staff" },
     { label: "Active", value: String(active), href: "/admin/organizations" },
     { label: "Trial", value: String(trial), href: "/admin/organizations" },
     { label: "Suspended", value: String(suspended), href: "/admin/organizations" },

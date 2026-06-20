@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { getDatabase } from "@/db";
 import { getFacilityCount } from "@/db/repositories/facility-repository";
 import { getOrganizationCount } from "@/db/repositories/organization-repository";
+import { getStaffUserCount } from "@/db/repositories/staff-repository";
 
 export const dynamic = "force-dynamic";
 
@@ -14,27 +15,34 @@ async function getDatabaseStatus() {
     return {
       status: "disconnected" as const,
       organizationCount: 0,
-      facilityCount: 0
+      facilityCount: 0,
+      staffUserCount: 0,
+      checkedAt: new Date().toISOString()
     };
   }
 
   try {
     await database.execute(sql`select 1`);
-    const [organizationCount, facilityCount] = await Promise.all([
+    const [organizationCount, facilityCount, staffUserCount] = await Promise.all([
       getOrganizationCount(),
-      getFacilityCount()
+      getFacilityCount(),
+      getStaffUserCount()
     ]);
 
     return {
       status: "connected" as const,
       organizationCount,
-      facilityCount
+      facilityCount,
+      staffUserCount,
+      checkedAt: new Date().toISOString()
     };
   } catch {
     return {
       status: "disconnected" as const,
       organizationCount: 0,
-      facilityCount: 0
+      facilityCount: 0,
+      staffUserCount: 0,
+      checkedAt: new Date().toISOString()
     };
   }
 }
@@ -51,7 +59,9 @@ export default async function AdminDatabasePage() {
         actions={<Badge tone={connected ? "success" : "warning"}>{status.status}</Badge>}
       />
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <p className="text-sm text-muted-foreground">Last updated: {new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(status.checkedAt))}</p>
+
+      <div className="grid gap-3 md:grid-cols-4">
         <Card>
           <CardHeader>
             <CardTitle>Connection</CardTitle>
@@ -79,6 +89,15 @@ export default async function AdminDatabasePage() {
           <CardContent>
             <p className="text-2xl font-semibold">{status.facilityCount}</p>
             <p className="mt-2 text-sm text-muted-foreground">Facility records associated with seeded organizations.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Staff Users</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.staffUserCount}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Database-backed staff account records.</p>
           </CardContent>
         </Card>
       </div>

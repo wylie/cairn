@@ -108,5 +108,10 @@ Focus:
 - Seed data
 - Repository layer
 - Database status page
+- Staff database model
+- Staff seed data
+- Staff repositories
+- Staff directory
+- Organization boundary validation
 
 v0.2.0 starts the transition from demo/localStorage persistence toward real server-backed persistence. It is active development work and has not been released yet.

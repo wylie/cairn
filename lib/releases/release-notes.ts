@@ -47,7 +47,12 @@ export const activeRelease: ActiveRelease = {
       "Facility schema",
       "Seed data",
       "Repository layer",
-      "Database status page"
+      "Database status page",
+      "Staff database model",
+      "Staff seed data",
+      "Staff repositories",
+      "Staff directory",
+      "Organization boundary validation"
     ]
   }
 };

@@ -16,7 +16,9 @@ Focus:
 
 - Real Data Foundation Planning - complete
 - Database Foundation - complete
-- Organization Persistence - in progress
+- Organization Persistence - complete
+- Facility Persistence - complete
+- Staff Accounts Foundation - in progress
 - Neon PostgreSQL
 - Drizzle ORM
 - Organization data model

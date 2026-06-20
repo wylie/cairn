@@ -89,7 +89,7 @@ v0.2.x establishes the production database foundation without migrating applicat
 - `drizzle.config.ts` points Drizzle at the schema in `db/schema` and migrations in `db/migrations`.
 - `DATABASE_URL` is the documented connection string for Neon PostgreSQL.
 - `db/index.ts` exposes a typed Drizzle database client without requiring application workflows to use it yet.
-- `db/schema` contains the initial tenant and staff foundation: organizations, facilities, staff users, staff roles, and staff facility access.
+- `db/schema` contains the initial tenant and staff foundation: organizations, facilities, staff users, staff roles, staff role assignment, and staff facility access.
 - `db/seed.ts` seeds the initial organizations and facilities for Summit Rec Collective, Riverstone Nature Center, and Western Carolina YMCA Association.
 - `db/tenant.ts` provides server-side Drizzle reads for organization and facility context, with demo seed fallback when the database is unavailable.
 - `/api/internal/database-health` checks whether the configured database connection is available and returns only `connected` or `disconnected` status.
@@ -117,6 +117,18 @@ Organizations and facilities are the first Cairn data area to read from the prod
 - Tenant helpers require organization context for facility reads. Facility slugs are not treated as globally authoritative.
 - Platform-wide organization views are still mock/localStorage-backed until a dedicated platform admin migration replaces the current registry.
 
+### Staff Account Foundation
+
+Staff accounts are now represented in Neon as production data foundations, but production login remains out of scope.
+
+- `staff_users.organization_id` requires every staff account to belong to exactly one organization.
+- `staff_users.role_id` links a staff user to an organization-owned staff role when available.
+- `staff_facility_access` maps staff users to the facilities they can access.
+- `db/repositories/staff-repository.ts` provides server-only reads for all staff users, one staff user, staff by organization, and staff by facility.
+- `/admin/staff` displays a read-only database-backed staff directory for internal validation.
+
+Future authentication work should authenticate staff through a production provider, resolve the staff user from the database, then derive organization, role, permission, and facility scope server-side before any protected read or write.
+
 ### Future State
 
 - Future releases will move workflow domains behind the Next.js server/data layer incrementally.
@@ -140,6 +152,8 @@ Tenant expectations:
 - Every durable domain record must include an `organizationId`.
 - Facility-scoped records must include a `facilityId` or location equivalent.
 - Staff access must be filtered by allowed organizations and facilities.
+- Staff users belong to one organization; cross-organization staff access should be modeled explicitly rather than inferred from email.
+- Facilities belong to one organization, which gives future customer, household, membership, and transaction records a clear tenant boundary.
 - Customer portal access must be limited to the authenticated customer and authorized household members.
 - Platform admin access must remain separate from organization staff access.
 - Cross-tenant reads must only exist in explicit platform admin or support contexts.

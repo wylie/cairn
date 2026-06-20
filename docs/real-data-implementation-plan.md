@@ -41,7 +41,7 @@ v0.2.x now includes the first production data foundation pieces.
 - Drizzle ORM, Drizzle Kit, and the `postgres` client are installed.
 - `DATABASE_URL` is documented in `.env.example` for Neon PostgreSQL connections.
 - `drizzle.config.ts` defines schema and migration paths.
-- `db/schema` contains intentionally minimal tables for organizations, facilities, staff users, staff roles, and staff facility access.
+- `db/schema` contains intentionally minimal tables for organizations, facilities, staff users, staff roles, staff role assignment, and staff facility access.
 - `db/migrations` contains the initial SQL migration generated from the schema.
 - `db/index.ts` exposes the typed database client.
 - `/api/internal/database-health` verifies whether the configured database connection is reachable without exposing credentials or connection details.
@@ -65,6 +65,26 @@ Organizations and facilities are the first data area wired toward the production
 - If `DATABASE_URL` is missing or the database query fails, the same helpers fall back to canonical demo seed data so local demo mode remains stable.
 
 This does not migrate customers, households, memberships, programs, registrations, POS, waivers, notifications, support requests, or authentication. Those areas still use the existing mock/localStorage implementation until their planned migration phases.
+
+## Staff Accounts Foundation Started
+
+Staff account records are now seeded into Neon for the first tenant foundation.
+
+- Seeded staff users belong to one organization through `staff_users.organization_id`.
+- Staff roles are organization-owned records and staff users can reference a role through `staff_users.role_id`.
+- Facility access is modeled through `staff_facility_access`, keeping facility permissions separate from the staff identity record.
+- `db/repositories/staff-repository.ts` exposes server-only staff reads for one staff user, all staff users, staff by organization, and staff by facility.
+- `/admin/staff` provides a read-only internal staff directory backed by Neon.
+- `/admin/database` includes staff user counts and a last-updated timestamp.
+
+This is not production authentication. Existing login flows still use mock authentication. Future authentication should verify identity with a production auth provider, match the authenticated principal to a database staff user, and then enforce organization, role, permission, and facility boundaries on the server.
+
+Organization boundary audit:
+
+- Organizations are root tenants and own facilities, staff roles, and staff users.
+- Facilities require `organization_id`, so future facility-scoped records can inherit organization scope from their facility.
+- Staff users require `organization_id`, so staff records cannot float outside a tenant.
+- Future customer, household, membership, registration, POS, waiver, notification, and support records should include `organization_id`; facility-scoped records should also include `facility_id`.
 
 ## localStorage Policy
 
@@ -127,7 +147,7 @@ Goal: make organization and staff access durable before migrating operational re
 Deliverables:
 
 - Persist organizations and facilities in the database. Initial organization and facility seed/read support is now in place.
-- Persist staff users, roles, permissions, and facility assignments.
+- Persist staff users, roles, permissions, and facility assignments. Staff users, roles, and facility assignments are now seeded for the foundation; permissions remain future work.
 - Replace browser organization registry persistence with server-backed organization data.
 - Preserve existing demo login and seeded workflows until the authentication foundation replaces them.
 

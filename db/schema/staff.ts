@@ -3,6 +3,14 @@ import { boolean, pgTable, primaryKey, text, timestamp, uniqueIndex } from "driz
 import { facilities } from "./facilities";
 import { organizations } from "./organizations";
 
+export const staffRoles = pgTable("staff_roles", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+  name: text("name").notNull()
+});
+
 export const staffUsers = pgTable(
   "staff_users",
   {
@@ -13,6 +21,7 @@ export const staffUsers = pgTable(
     email: text("email").notNull(),
     firstName: text("first_name").notNull(),
     lastName: text("last_name").notNull(),
+    roleId: text("role_id").references(() => staffRoles.id, { onDelete: "set null" }),
     active: boolean("active").default(true).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
@@ -21,14 +30,6 @@ export const staffUsers = pgTable(
     organizationEmailUnique: uniqueIndex("staff_users_organization_email_unique").on(table.organizationId, table.email)
   })
 );
-
-export const staffRoles = pgTable("staff_roles", {
-  id: text("id").primaryKey(),
-  organizationId: text("organization_id")
-    .notNull()
-    .references(() => organizations.id, { onDelete: "cascade" }),
-  name: text("name").notNull()
-});
 
 export const staffFacilityAccess = pgTable(
   "staff_facility_access",
@@ -49,6 +50,10 @@ export const staffUsersRelations = relations(staffUsers, ({ one, many }) => ({
   organization: one(organizations, {
     fields: [staffUsers.organizationId],
     references: [organizations.id]
+  }),
+  role: one(staffRoles, {
+    fields: [staffUsers.roleId],
+    references: [staffRoles.id]
   }),
   facilityAccess: many(staffFacilityAccess)
 }));

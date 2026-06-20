@@ -1,4 +1,4 @@
-import { cairnVersion } from "@/lib/version";
+import { cairnVersion, formatVersionStatus } from "@/lib/version";
 
 export type ReleaseNoteSection = "new" | "improved" | "fixed" | "knownIssues";
 
@@ -26,7 +26,7 @@ export const activeRelease: ActiveRelease = {
   version: cairnVersion.currentVersion,
   title: cairnVersion.currentReleaseName,
   targetDate: cairnVersion.nextReleaseTargetDateIso,
-  status: "In Progress",
+  status: formatVersionStatus(cairnVersion.currentReleaseStatus) as ActiveRelease["status"],
   focus: [
     "Neon database foundation",
     "Drizzle ORM",

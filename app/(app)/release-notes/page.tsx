@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/page-header";
 import { activeRelease, getReleaseAnchor, latestRelease, releaseNotes, type ReleaseNoteSection } from "@/lib/releases/release-notes";
+import { cairnVersion } from "@/lib/version";
 
 const sectionLabels: Record<ReleaseNoteSection, string> = {
   new: "New",
@@ -27,22 +28,26 @@ export default function ReleaseNotesPage() {
       <PageHeader
         title="Release Notes"
         description="Product updates, fixes, known issues, and what is planned as Cairn moves through pilot testing."
-        actions={<Badge tone="muted">Current released v{latestRelease.version}</Badge>}
+        actions={<Badge tone="muted">Released v{cairnVersion.latestReleasedVersion}</Badge>}
       />
 
       <Card>
-        <CardContent className="grid gap-3 p-4 text-sm md:grid-cols-3">
+        <CardContent className="grid gap-3 p-4 text-sm md:grid-cols-4">
           <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Current released version</p>
-            <p className="font-semibold">v{latestRelease.version}</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Released version</p>
+            <p className="font-semibold">v{cairnVersion.latestReleasedVersion}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Released</p>
-            <p className="font-semibold">{formatReleaseDate(latestRelease.date)}</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Development version</p>
+            <p className="font-semibold">v{cairnVersion.currentVersion}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Status</p>
-            <p className="font-semibold">{latestRelease.status}</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Target release date</p>
+            <p className="font-semibold">{cairnVersion.nextReleaseTargetDate}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Development status</p>
+            <p className="font-semibold">{activeRelease.status}</p>
           </div>
         </CardContent>
       </Card>

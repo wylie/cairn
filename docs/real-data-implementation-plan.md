@@ -48,6 +48,20 @@ v0.2.x now includes the first production data foundation pieces.
 
 This foundation does not change existing application behavior. Current workflows still use the mock/localStorage implementation until future migration work replaces each domain intentionally.
 
+## Organization & Facility Persistence Started
+
+Organizations and facilities are the first data area wired toward the production database.
+
+- `npm run db:seed` seeds the initial tenant foundation into the configured database.
+- Seeded organizations: Summit Rec Collective, Riverstone Nature Center, and Western Carolina YMCA Association.
+- Seeded facilities include each organization's initial facility records and slugs.
+- `db/tenant.ts` provides server-side Drizzle helpers for organization lookup, facility lookup, organization-scoped facility lists, and active facility context.
+- Facility lookup requires organization scope so facility slugs do not become global tenant bypasses.
+- The public facility landing page can read organization and facility display data from the database when available.
+- If `DATABASE_URL` is missing or the database query fails, the same helpers fall back to canonical demo seed data so local demo mode remains stable.
+
+This does not migrate customers, households, memberships, programs, registrations, POS, waivers, notifications, support requests, or authentication. Those areas still use the existing mock/localStorage implementation until their planned migration phases.
+
 ## localStorage Policy
 
 Going forward, localStorage should only hold harmless local UI preferences and short-lived drafts.
@@ -108,7 +122,7 @@ Goal: make organization and staff access durable before migrating operational re
 
 Deliverables:
 
-- Persist organizations and facilities in the database.
+- Persist organizations and facilities in the database. Initial organization and facility seed/read support is now in place.
 - Persist staff users, roles, permissions, and facility assignments.
 - Replace browser organization registry persistence with server-backed organization data.
 - Preserve existing demo login and seeded workflows until the authentication foundation replaces them.

@@ -5,6 +5,7 @@ import { getOrganizationForPublic, getPublicPrograms } from "@/lib/public-progra
 import { RuntimeFacilityLanding } from "@/components/public/runtime-facility-landing";
 import { data } from "@/lib/data";
 import { buildSocialMetadata } from "@/lib/metadata";
+import { getActiveFacilityContext } from "@/db/tenant";
 
 export async function generateMetadata({
   params
@@ -12,7 +13,8 @@ export async function generateMetadata({
   params: Promise<{ orgSlug: string }>;
 }): Promise<Metadata> {
   const { orgSlug } = await params;
-  const org = getOrganizationForPublic(orgSlug);
+  const context = await getActiveFacilityContext(orgSlug);
+  const org = context?.organization ?? getOrganizationForPublic(orgSlug);
   const orgName = org?.name ?? "Cairn Facility";
   const title = `${orgName} | Facility Portal`;
   const description = `Explore ${orgName} programs, memberships, and customer portal access.`;
@@ -32,16 +34,32 @@ export default async function FacilityLandingPage({
   params: Promise<{ orgSlug: string }>;
 }) {
   const { orgSlug } = await params;
-  const org = getOrganizationForPublic(orgSlug);
+  const context = await getActiveFacilityContext(orgSlug);
+  const org = context?.organization ?? getOrganizationForPublic(orgSlug);
 
   if (!org) {
     return <RuntimeFacilityLanding orgSlug={orgSlug} />;
   }
 
-  const orgLocations = (data.locations ?? []).filter((entry) => entry.organizationId === org.id && entry.active !== false);
+  const tenantFacilities = context?.facilities ?? [];
+  const orgLocations =
+    tenantFacilities.length > 0
+      ? tenantFacilities.map((facility) => ({
+          ...data.locations.find((entry) => entry.id === facility.id),
+          id: facility.id,
+          organizationId: facility.organizationId,
+          name: facility.name,
+          active: true
+        }))
+      : (data.locations ?? []).filter((entry) => entry.organizationId === org.id && entry.active !== false);
   const featuredPrograms = getPublicPrograms(orgSlug).slice(0, 3);
   const primaryLocation = orgLocations[0];
-  const contactEmail = org.slug === "summit" ? "ops@summitrec.co" : "hello@riverbendrec.co";
+  const contactEmail =
+    org.slug === "summit"
+      ? "ops@summitrec.co"
+      : org.slug === "riverbend"
+        ? "hello@riverbendrec.co"
+        : "hello@westerncarolinaymca.example";
   const contactPhone = primaryLocation?.phone ?? "(212) 555-1000";
   const brandPrimary = org.slug === "summit" ? "#0E9AC8" : "#2563EB";
   const brandSecondary = org.slug === "summit" ? "#1F2937" : "#1E3A8A";

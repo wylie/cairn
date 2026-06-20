@@ -90,7 +90,19 @@ v0.2.x establishes the production database foundation without migrating applicat
 - `DATABASE_URL` is the documented connection string for Neon PostgreSQL.
 - `db/index.ts` exposes a typed Drizzle database client without requiring application workflows to use it yet.
 - `db/schema` contains the initial tenant and staff foundation: organizations, facilities, staff users, staff roles, and staff facility access.
+- `db/seed.ts` seeds the initial organizations and facilities for Summit Rec Collective, Riverstone Nature Center, and Western Carolina YMCA Association.
+- `db/tenant.ts` provides server-side Drizzle reads for organization and facility context, with demo seed fallback when the database is unavailable.
 - `/api/internal/database-health` checks whether the configured database connection is available and returns only `connected` or `disconnected` status.
+
+### First Database-Backed Area
+
+Organizations and facilities are the first Cairn data area to read from the production database where safe.
+
+- The database owns seeded organization and facility identities when `DATABASE_URL` is configured and migrations have run.
+- Public facility landing metadata and display context can load organization and facility records through the server data layer.
+- Existing demo seed data remains as a fallback so local review environments do not require a live database.
+- Tenant helpers require organization context for facility reads. Facility slugs are not treated as globally authoritative.
+- Platform-wide organization views are still mock/localStorage-backed until a dedicated platform admin migration replaces the current registry.
 
 ### Future State
 

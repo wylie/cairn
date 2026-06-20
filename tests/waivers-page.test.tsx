@@ -56,7 +56,7 @@ describe("Waivers platform v1", () => {
 
     await user.selectOptions(screen.getByLabelText("Customer"), "cust_004");
     await user.selectOptions(screen.getByLabelText("Waiver Template"), "wtpl_general");
-    await user.type(screen.getByLabelText("Typed Name"), "Sam Noaccess");
+    await user.type(screen.getByLabelText("Typed Name"), "Oslo Fisher");
     await user.click(screen.getByRole("button", { name: "Mark Waiver Signed" }));
     expect(screen.getByRole("status")).toHaveTextContent(/General Facility Waiver signed/i);
   });

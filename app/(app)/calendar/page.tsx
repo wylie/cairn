@@ -1227,11 +1227,11 @@ export default function CalendarPage() {
             </label>
             <label className="flex items-center gap-2 opacity-60">
               <input type="radio" name="move-scope" disabled />
-              <span>This and future sessions (coming soon)</span>
+              <span>This and future sessions (planned)</span>
             </label>
             <label className="flex items-center gap-2 opacity-60">
               <input type="radio" name="move-scope" disabled />
-              <span>Entire series (coming soon)</span>
+              <span>Entire series (planned)</span>
             </label>
           </div>
           {moveDraftConflicts.length > 0 ? (

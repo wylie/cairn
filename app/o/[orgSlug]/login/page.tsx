@@ -19,6 +19,12 @@ const demoAccountsByOrg: Record<string, Array<{ label: string; email: string; pi
   ]
 };
 
+const facilityNamesByOrg: Record<string, string> = {
+  summit: "Summit Rec Collective",
+  riverbend: "Riverstone Nature Center",
+  "western-carolina-ymca": "Western Carolina YMCA Association"
+};
+
 function StaffOrgLoginContent({
   params
 }: {
@@ -30,6 +36,7 @@ function StaffOrgLoginContent({
   const next = searchParams?.get?.("next");
   const isDevelopment = process.env.NODE_ENV !== "production";
   const demoAccounts = demoAccountsByOrg[orgSlug] ?? [];
+  const facilityName = facilityNamesByOrg[orgSlug] ?? orgSlug;
   const [email, setEmail] = useState(demoAccounts[0]?.email ?? "");
   const [password, setPassword] = useState("dev1234");
   const [error, setError] = useState("");
@@ -69,10 +76,10 @@ function StaffOrgLoginContent({
         <CardHeader>
           <CairnBrand className="mb-3 h-11 w-11" />
           <CardTitle>Staff Login</CardTitle>
-          <CardDescription>{orgSlug} staff portal</CardDescription>
+          <CardDescription>{facilityName} staff portal</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-xs text-muted-foreground">Mock login for local development.</p>
+          <p className="text-xs text-muted-foreground">Use a facility staff account to enter this demo workspace.</p>
           {isDevelopment && demoAccounts.length > 0 ? (
             <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
               <p className="font-medium">Demo accounts for this facility</p>

@@ -559,7 +559,7 @@ export default function PosPage() {
                     aria-label="Promo code"
                     value={promoCode}
                     onChange={(event) => setPromoCode(event.target.value)}
-                    placeholder="Promo code (placeholder)"
+                    placeholder="Promo code"
                     className="h-11 rounded-md border border-input bg-white px-3 text-sm"
                     disabled={!canUseDiscounts}
                   />

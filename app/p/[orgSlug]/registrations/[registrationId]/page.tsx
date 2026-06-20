@@ -110,10 +110,10 @@ export default function CustomerPortalRegistrationDetailPage() {
         </CardHeader>
         <CardContent className="grid gap-2 text-sm md:grid-cols-2">
           <p><span className="text-muted-foreground">Program:</span> {program?.title ?? "Not set"}</p>
-          <p><span className="text-muted-foreground">Instructor:</span> {session?.instructorName ?? "TBD"}</p>
+          <p><span className="text-muted-foreground">Instructor:</span> {session?.instructorName ?? "To be assigned"}</p>
           <p><span className="text-muted-foreground">Location:</span> {getLocationName(session?.locationId)}</p>
           <p><span className="text-muted-foreground">Schedule:</span> {session?.startsAt ? formatDateTime(session.startsAt) : "No schedule"}</p>
-          <p><span className="text-muted-foreground">Waitlist status:</span> {registration.status === "waitlisted" ? `Position ${registration.waitlistPosition ?? "TBD"}` : "Not waitlisted"}</p>
+          <p><span className="text-muted-foreground">Waitlist status:</span> {registration.status === "waitlisted" ? `Position ${registration.waitlistPosition ?? "pending"}` : "Not waitlisted"}</p>
           <p><span className="text-muted-foreground">Waiver status:</span> {waiver?.status ?? "missing"}</p>
         </CardContent>
       </Card>

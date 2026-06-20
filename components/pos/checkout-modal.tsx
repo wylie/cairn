@@ -74,8 +74,8 @@ export function CheckoutModal({
             <option value="card">Card</option>
             <option value="cash">Cash</option>
             <option value="comp">Comp</option>
-            <option value="gift_card">Gift Card (placeholder)</option>
-            <option value="account_credit">Account Credit (placeholder)</option>
+            <option value="gift_card">Gift Card</option>
+            <option value="account_credit">Account Credit</option>
             <option value="split">Split Payment</option>
           </SelectInput>
         </FormField>
@@ -115,7 +115,7 @@ export function CheckoutModal({
         <fieldset className="space-y-2">
           <legend className="text-sm text-muted-foreground">Receipt options</legend>
           <CheckboxField label="Email receipt" checked={emailReceipt} onChange={onEmailReceiptChange} />
-          <CheckboxField label="Print receipt (placeholder)" checked={printReceipt} onChange={onPrintReceiptChange} />
+          <CheckboxField label="Print receipt" checked={printReceipt} onChange={onPrintReceiptChange} />
         </fieldset>
 
         {helperText ? <p className="text-sm text-muted-foreground">{helperText}</p> : null}

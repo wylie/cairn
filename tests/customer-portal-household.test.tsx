@@ -43,7 +43,7 @@ describe("customer portal household", () => {
     expect(screen.getByText("Preferred communication:")).toBeInTheDocument();
     expect(screen.getByText("Recent Purchases")).toBeInTheDocument();
     expect(screen.getByText("Household Activity")).toBeInTheDocument();
-    expect(screen.getAllByText("Sam Noaccess").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Oslo Fisher").length).toBeGreaterThan(0);
     expect(screen.getAllByLabelText(/(initials avatar|profile photo)/i).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: "Sign waiver" }).length).toBeGreaterThan(0);
   });
@@ -56,9 +56,9 @@ describe("customer portal household", () => {
     );
 
     expect(screen.getAllByText("Alex Rivera").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Sam Noaccess").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Oslo Fisher").length).toBeGreaterThan(0);
     expect(screen.getByText("Secondary Adult")).toBeInTheDocument();
-    expect(screen.queryByText("Jimbo James")).not.toBeInTheDocument();
+    expect(screen.queryByText("Miles James")).not.toBeInTheDocument();
   });
 
   it("customer without household membership sees safe empty state", () => {

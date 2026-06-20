@@ -278,12 +278,12 @@ export interface AuditLogEntry {
 export type SupportRequestCategory =
   | "bug_report"
   | "feature_request"
-  | "product_feedback"
-  | "training_request"
-  | "general_support";
+  | "confusing_workflow"
+  | "question"
+  | "general_feedback";
 
 export type SupportRequestPriority = "low" | "normal" | "high" | "urgent";
-export type SupportRequestStatus = "open" | "in_review" | "resolved" | "archived";
+export type SupportRequestStatus = "new" | "in_review" | "planned" | "resolved";
 
 export interface SupportStaffMember {
   id: string;

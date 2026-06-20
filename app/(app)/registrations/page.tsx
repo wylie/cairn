@@ -397,6 +397,11 @@ export default function RegistrationsPage() {
                 </button>
               );
             })}
+            {filteredSessions.length === 0 ? (
+              <p className="rounded-lg border border-dashed bg-secondary/20 px-3 py-3 text-sm text-muted-foreground">
+                No sessions match these filters. Clear filters or create a session from Calendar.
+              </p>
+            ) : null}
           </div>
         </section>
 
@@ -431,7 +436,7 @@ export default function RegistrationsPage() {
                   </div>
                 </div>
                 <div className="mt-2 space-y-2">
-                  {registered.length === 0 ? <p className="text-sm text-muted-foreground">No registered attendees.</p> : null}
+                  {registered.length === 0 ? <p className="text-sm text-muted-foreground">No registered attendees for this session and status filter.</p> : null}
                   {registered.map((entry) => {
                     const customer = customers.find((c) => c.id === entry.customerId);
                     if (!customer) return null;
@@ -477,7 +482,7 @@ export default function RegistrationsPage() {
               <div>
                 <h3 className="text-sm font-semibold">Waitlist</h3>
                 <div className="mt-2 space-y-2">
-                  {waitlisted.length === 0 ? <p className="text-sm text-muted-foreground">No waitlisted attendees.</p> : null}
+                  {waitlisted.length === 0 ? <p className="text-sm text-muted-foreground">No waitlisted attendees. Full sessions with waitlists will appear here.</p> : null}
                   {waitlisted.map((entry, index) => {
                     const customer = customers.find((c) => c.id === entry.customerId);
                     if (!customer) return null;
@@ -492,7 +497,7 @@ export default function RegistrationsPage() {
                           <Button className="h-8" variant="secondary" onClick={() => runPromote(entry.id)}>Promote from waitlist</Button>
                           <Button className="h-8" variant="secondary" onClick={() => runReorderWaitlist(entry.id, "up")}>Move up</Button>
                           <Button className="h-8" variant="secondary" onClick={() => runReorderWaitlist(entry.id, "down")}>Move down</Button>
-                          <Button className="h-8" variant="secondary" onClick={() => setFeedback(`${customer.firstName} ${customer.lastName} notified (mock).`)}>Notify promoted customer</Button>
+                          <Button className="h-8" variant="secondary" onClick={() => setFeedback(`${customer.firstName} ${customer.lastName} marked for promotion follow-up.`)}>Notify promoted customer</Button>
                           <Button className="h-8" variant="destructiveSubtle" onClick={() => runRemove(entry.id)}>Remove</Button>
                         </div>
                       </article>
@@ -508,7 +513,7 @@ export default function RegistrationsPage() {
           <h2 className="text-base font-semibold">Customer Enrollment</h2>
           <label className="text-sm"><span className="mb-1 block text-muted-foreground">Search customer</span><Input value={customerSearch} onChange={(e) => setCustomerSearch(e.target.value)} placeholder="Name, email, phone, member ID" /></label>
           <div className="space-y-2 max-h-[38vh] overflow-auto pr-1">
-            {customerResults.length === 0 ? <p className="text-sm text-muted-foreground">Search to enroll a customer.</p> : null}
+            {customerResults.length === 0 ? <p className="text-sm text-muted-foreground">Search by name, email, phone, or member ID to enroll a customer.</p> : null}
             {customerResults.map((customer) => {
               const eligibility = selectedSession
                 ? buildEligibility(customer, selectedSession, selectedProgram, registrations, activeMembershipCustomerIds, getWaiverStatusForCustomer)

@@ -179,8 +179,8 @@ describe("online checkout", () => {
       state!.signWaiverForCustomer({
         customerId: "cust_005",
         templateId: "wtpl_general",
-        typedName: "Dana Daypass",
-        signedByName: "Dana Daypass",
+        typedName: "Dana Brooks",
+        signedByName: "Dana Brooks",
         source: "online"
       });
     });

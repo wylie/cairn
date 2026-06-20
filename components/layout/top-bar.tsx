@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useSettingsState } from "@/lib/state/settings-state";
@@ -19,7 +19,7 @@ type TopBarNotificationItem = {
   title: string;
   detail: string;
   kind: "notification" | "alert" | "task";
-  occurredAt: string;
+  createdAt: string;
   isUnread: boolean;
   communicationId?: string;
   actionHref?: string;
@@ -27,7 +27,7 @@ type TopBarNotificationItem = {
 
 export function sortTopBarNotificationItems(a: TopBarNotificationItem, b: TopBarNotificationItem) {
   if (a.isUnread !== b.isUnread) return a.isUnread ? -1 : 1;
-  return b.occurredAt.localeCompare(a.occurredAt);
+  return b.createdAt.localeCompare(a.createdAt);
 }
 
 function TopBarInner() {
@@ -58,6 +58,7 @@ function TopBarInner() {
     settings.locations[0];
   const { occupancyCount, communications, operationsAlerts, operationsTasks, markCommunicationRead } = useCustomerState();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notificationsRef = useRef<HTMLDivElement>(null);
   const suffixPath = useMemo(
     () => (pathname.startsWith(`/o/${currentSlug}`) ? pathname.replace(`/o/${currentSlug}`, "") || "/dashboard" : "/dashboard"),
     [pathname, currentSlug]
@@ -65,39 +66,36 @@ function TopBarInner() {
   const notificationItems = useMemo(() => {
     const messages = communications
       .filter((entry) => ["system_notification", "in_app_notification"].includes(entry.channel))
-      .slice(0, 6)
       .map((entry) => ({
         id: entry.id,
         title: entry.subject,
         detail: entry.message,
         kind: "notification" as const,
-        occurredAt: entry.sentAt ?? entry.createdAt,
+        createdAt: entry.createdAt,
         isUnread: entry.deliveryStatus !== "read",
         communicationId: entry.id,
         actionHref: entry.actionHref
       }));
     const openAlerts = operationsAlerts
       .filter((entry) => entry.status === "open")
-      .slice(0, 3)
       .map((entry) => ({
         id: `alert-${entry.id}`,
         title: entry.title,
         detail: entry.description ?? "Operational alert",
         kind: "alert" as const,
-        occurredAt: entry.createdAt,
+        createdAt: entry.createdAt,
         isUnread: false,
         communicationId: undefined,
         actionHref: undefined
       }));
     const openTasks = operationsTasks
       .filter((entry) => entry.status === "open" || entry.status === "in_progress")
-      .slice(0, 3)
       .map((entry) => ({
         id: `task-${entry.id}`,
         title: entry.title,
         detail: entry.description ?? "Staff task",
         kind: "task" as const,
-        occurredAt: entry.createdAt,
+        createdAt: entry.createdAt,
         isUnread: false,
         communicationId: undefined,
         actionHref: undefined
@@ -112,6 +110,25 @@ function TopBarInner() {
     await fetch("/api/auth/mock-logout", { method: "POST" });
     window.location.assign(getStaffLoginPath(pathname, currentSlug));
   };
+
+  useEffect(() => {
+    if (!notificationsOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (notificationsRef.current?.contains(event.target as Node)) return;
+      setNotificationsOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setNotificationsOpen(false);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [notificationsOpen]);
 
   return (
     <header className="sticky top-3 z-20 flex flex-wrap items-center justify-between gap-4 rounded-xl border bg-card/95 p-6 backdrop-blur">
@@ -143,7 +160,7 @@ function TopBarInner() {
             ))}
           </select>
         ) : null}
-        <div className="relative">
+        <div className="relative" ref={notificationsRef}>
           <Button
             type="button"
             variant="outline"

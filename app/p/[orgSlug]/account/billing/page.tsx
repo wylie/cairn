@@ -46,7 +46,7 @@ export default function CustomerPortalBillingPage() {
       <section className="space-y-4">
         <div>
           <h2 className="text-2xl font-semibold">Billing</h2>
-          <p className="text-sm text-muted-foreground">Review balances, invoices, statements, credits, renewal history, and future payment method placeholders.</p>
+          <p className="text-sm text-muted-foreground">Review balances, invoices, statements, credits, renewal history, and planned payment method support.</p>
         </div>
 
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" data-testid="customer-portal-billing-summary">

@@ -717,7 +717,7 @@ export default function ProductsPage() {
       {activeTab === "products" && filteredProducts.length === 0 ? (
         <div className="rounded-xl border border-dashed bg-card p-6 text-center">
           <p className="font-medium">No products found.</p>
-          <p className="text-sm text-muted-foreground">Adjust filters or add a new product.</p>
+          <p className="text-sm text-muted-foreground">Clear filters, switch to all statuses, or add a product for POS, memberships, registrations, or rentals.</p>
         </div>
       ) : null}
 

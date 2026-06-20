@@ -14,11 +14,11 @@ import { cn } from "@/lib/utils";
 import type { SupportRequestCategory, SupportRequestPriority } from "@/types/domain";
 
 const categoryOptions: Array<{ value: SupportRequestCategory; label: string; description: string }> = [
-  { value: "bug_report", label: "Report a Bug", description: "Something is broken or behaving incorrectly." },
-  { value: "feature_request", label: "Suggest an Improvement", description: "A workflow gap or enhancement request." },
-  { value: "product_feedback", label: "Ask a Question", description: "General input, product fit, or usability question." },
-  { value: "training_request", label: "Request Training", description: "Request onboarding, workflow review, or best-practices help." },
-  { value: "general_support", label: "Contact Support", description: "Ask Cairn support for help or clarification." }
+  { value: "bug_report", label: "Bug Report", description: "Something is broken or behaving incorrectly." },
+  { value: "feature_request", label: "Feature Request", description: "A new capability or improvement you would like to see." },
+  { value: "confusing_workflow", label: "Confusing Workflow", description: "Something was hard to understand or took too many steps." },
+  { value: "question", label: "Question", description: "Ask Cairn support for help or clarification." },
+  { value: "general_feedback", label: "General Feedback", description: "Share general product feedback from testing." }
 ];
 
 const priorityOptions: Array<{ value: SupportRequestPriority; label: string }> = [
@@ -56,34 +56,27 @@ export function SupportCenterLauncher() {
   const [message, setMessage] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [category, setCategory] = useState<SupportRequestCategory>("general_support");
+  const [category, setCategory] = useState<SupportRequestCategory>("general_feedback");
   const [priority, setPriority] = useState<SupportRequestPriority>("normal");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [workflowAffected, setWorkflowAffected] = useState("");
   const [businessImpact, setBusinessImpact] = useState("");
-  const [requestedDate, setRequestedDate] = useState("");
-  const [estimatedAttendees, setEstimatedAttendees] = useState("6");
-  const [topicsRequested, setTopicsRequested] = useState("");
   const [screenshotName, setScreenshotName] = useState("");
   const userRole = useMemo(() => (typeof document !== "undefined" ? getCurrentRoleLabel() : "Early Tester"), []);
 
   const resetForm = () => {
-    setCategory("general_support");
+    setCategory("general_feedback");
     setPriority("normal");
     setTitle("");
     setDescription("");
     setWorkflowAffected("");
     setBusinessImpact("");
-    setRequestedDate("");
-    setEstimatedAttendees("6");
-    setTopicsRequested("");
     setScreenshotName("");
   };
 
   const categoryCopy = categoryOptions.find((option) => option.value === category);
-  const showFeatureFields = category === "feature_request" || category === "product_feedback";
-  const showTrainingFields = category === "training_request";
+  const showWorkflowFields = category === "feature_request" || category === "confusing_workflow" || category === "bug_report";
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -96,9 +89,6 @@ export function SupportCenterLauncher() {
       description,
       workflowAffected,
       businessImpact,
-      requestedDate,
-      estimatedAttendees: showTrainingFields ? Number.parseInt(estimatedAttendees || "0", 10) || undefined : undefined,
-      topicsRequested,
       screenshotName,
       pageUrl: pathname,
       organizationSlug: currentOrganization?.slug,
@@ -123,7 +113,7 @@ export function SupportCenterLauncher() {
           }}
         >
           <LifeBuoy className="mr-2 h-4 w-4" aria-hidden="true" />
-          Need Help?
+          Send Feedback
         </Button>
       </div>
 
@@ -131,8 +121,8 @@ export function SupportCenterLauncher() {
         open={open}
         onClose={() => setOpen(false)}
         ariaLabel="Support Center"
-        title="Support Center"
-        description="Ask a question, report a bug, request training, or share feedback with Cairn support."
+        title="Send Feedback"
+        description="Report a bug, request a feature, ask a question, or tell Cairn support what felt confusing."
         maxWidthClassName="max-w-4xl"
       >
         <div className="space-y-4">
@@ -153,11 +143,11 @@ export function SupportCenterLauncher() {
             <div className="grid gap-4 md:grid-cols-2">
               <label className="space-y-2 text-sm">
                 <span className="font-medium">Name</span>
-                <Input aria-label="Name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Your name" />
+                <Input aria-label="Name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Optional" />
               </label>
               <label className="space-y-2 text-sm">
                 <span className="font-medium">Email</span>
-                <Input aria-label="Email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" />
+                <Input aria-label="Email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Optional if you want follow-up" />
               </label>
             </div>
 
@@ -198,7 +188,7 @@ export function SupportCenterLauncher() {
                   aria-label="Title"
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
-                  placeholder={category === "feature_request" ? "Short feature request summary" : "Short issue or request summary"}
+                  placeholder={category === "feature_request" ? "Short feature request summary" : "Short feedback summary"}
                 />
               </label>
               <label className="space-y-2 text-sm">
@@ -211,7 +201,7 @@ export function SupportCenterLauncher() {
               </label>
             </div>
 
-            {showFeatureFields ? (
+            {showWorkflowFields ? (
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="space-y-2 text-sm">
                   <span className="font-medium">Workflow affected</span>
@@ -224,32 +214,16 @@ export function SupportCenterLauncher() {
               </div>
             ) : null}
 
-            {showTrainingFields ? (
-              <div className="grid gap-4 md:grid-cols-3">
-                <label className="space-y-2 text-sm">
-                  <span className="font-medium">Requested date</span>
-                  <Input aria-label="Requested date" type="date" value={requestedDate} onChange={(event) => setRequestedDate(event.target.value)} />
-                </label>
-                <label className="space-y-2 text-sm">
-                  <span className="font-medium">Estimated attendees</span>
-                  <Input aria-label="Estimated attendees" type="number" min="1" value={estimatedAttendees} onChange={(event) => setEstimatedAttendees(event.target.value)} />
-                </label>
-                <label className="space-y-2 text-sm md:col-span-3">
-                  <span className="font-medium">Topics requested</span>
-                  <Input aria-label="Topics requested" value={topicsRequested} onChange={(event) => setTopicsRequested(event.target.value)} placeholder="Staff onboarding, workflow review, best practices" />
-                </label>
-              </div>
-            ) : null}
-
             <label className="space-y-2 text-sm">
               <span className="font-medium">Description</span>
               <textarea
                 aria-label="Description"
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                placeholder="Describe the issue, question, or workflow in enough detail for Cairn support to help quickly."
+                placeholder="What happened, what did you expect, or what would help?"
                 className="min-h-32 w-full rounded-md border border-input bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
+              <span className="text-xs text-muted-foreground">Required. Keep it short if you are moving quickly.</span>
             </label>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -261,14 +235,14 @@ export function SupportCenterLauncher() {
                   accept="image/png,image/jpeg,image/webp"
                   onChange={(event) => setScreenshotName(event.target.files?.[0]?.name ?? "")}
                 />
-                <span className="text-xs text-muted-foreground">Optional placeholder for future attachment handling.</span>
+                <span className="text-xs text-muted-foreground">Optional. Attachment storage is planned for a future release.</span>
               </label>
               <div className="rounded-xl border bg-muted/30 p-4 text-sm">
                 <p className="font-medium">What happens next</p>
                 <ul className="mt-2 space-y-1 text-muted-foreground">
-                  <li>Support requests are logged with page context and organization context.</li>
+                  <li>Feedback is logged with page context and organization context.</li>
+                  <li>Support staff review new items from the Support Console.</li>
                   <li>Support staff can only enter a facility through an auditable support session.</li>
-                  <li>Facility administrators retain visibility into support activity.</li>
                 </ul>
               </div>
             </div>
@@ -282,11 +256,11 @@ export function SupportCenterLauncher() {
             <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <MessageSquarePlus className="h-4 w-4" aria-hidden="true" />
-                Support requests are reviewed inside the Cairn Support Console.
+                Feedback is reviewed inside the Cairn Support Console.
               </div>
               <div className="flex gap-2">
                 <Button type="button" variant="outline" onClick={() => setOpen(false)}>Close</Button>
-                <Button type="submit">Submit Request</Button>
+                <Button type="submit">Send Feedback</Button>
               </div>
             </div>
           </form>

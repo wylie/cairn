@@ -174,7 +174,7 @@ export function PostSaleCheckInPanel({
 
         {feedback ? <p role="status" className="text-sm text-emerald-800">{feedback}</p> : null}
         {warning ? <p role="alert" className="text-sm text-amber-800">{warning}</p> : null}
-        {availableSlots.length > 1 ? <p className="text-xs text-muted-foreground">Guest check-in placeholders are disabled for now.</p> : null}
+        {availableSlots.length > 1 ? <p className="text-xs text-muted-foreground">Guest check-in assignments are limited during the pilot.</p> : null}
       </div>
     </ModalShell>
   );

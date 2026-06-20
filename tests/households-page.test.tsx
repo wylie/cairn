@@ -92,8 +92,8 @@ describe("Households workspace", () => {
 
     await activateStaff(user);
 
-    await user.type(screen.getByLabelText("Search households"), "Daypass Household");
-    expect(screen.getAllByText("Daypass Household").length).toBeGreaterThan(0);
+    await user.type(screen.getByLabelText("Search households"), "Brooks Household");
+    expect(screen.getAllByText("Brooks Household").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/1 members/).length).toBeGreaterThan(0);
 
     await user.clear(screen.getByLabelText("Search households"));

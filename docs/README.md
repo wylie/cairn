@@ -41,6 +41,7 @@ Cairn documentation is organized into three tracks:
 - [Known Issues](./reference/known-issues.md)
 - [Business Model](./business-model.md)
 - [Releases](./releases.md)
+- [Roadmap](./roadmap.md)
 
 ## Legacy Documents Still Kept
 - [Architecture Notes](./architecture.md)

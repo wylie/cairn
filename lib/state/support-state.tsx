@@ -20,6 +20,36 @@ const SUPPORT_REQUESTS_STORAGE_KEY = "cairn_support_requests_v1";
 const SUPPORT_AUDIT_STORAGE_KEY = "cairn_support_audit_v1";
 const SUPPORT_IMPERSONATION_STORAGE_KEY = "cairn_support_impersonation_sessions_v1";
 
+function normalizeCategory(category: unknown): SupportRequestCategory {
+  if (
+    category === "bug_report" ||
+    category === "feature_request" ||
+    category === "confusing_workflow" ||
+    category === "question" ||
+    category === "general_feedback"
+  ) {
+    return category;
+  }
+  if (category === "product_feedback") return "general_feedback";
+  if (category === "training_request" || category === "general_support") return "question";
+  return "general_feedback";
+}
+
+function normalizeStatus(status: unknown): SupportRequestStatus {
+  if (status === "new" || status === "in_review" || status === "planned" || status === "resolved") return status;
+  if (status === "open") return "new";
+  if (status === "archived") return "resolved";
+  return "new";
+}
+
+function normalizeSupportRequests(requests: SupportRequestRecord[]): SupportRequestRecord[] {
+  return requests.map((request) => ({
+    ...request,
+    category: normalizeCategory(request.category),
+    status: normalizeStatus(request.status)
+  }));
+}
+
 function seedSupportStaffMembers(): SupportStaffMember[] {
   return mockAuthUsers
     .filter((entry) => entry.kind === "support_staff")
@@ -38,7 +68,7 @@ const seededRequests: SupportRequestRecord[] = [
     id: "support_req_001",
     createdAt: "2026-06-06T14:10:00Z",
     updatedAt: "2026-06-06T14:10:00Z",
-    status: "open",
+    status: "new",
     category: "bug_report",
     priority: "high",
     name: "Maya Lopez",
@@ -74,8 +104,8 @@ const seededRequests: SupportRequestRecord[] = [
     id: "support_req_003",
     createdAt: "2026-06-04T18:00:00Z",
     updatedAt: "2026-06-04T18:00:00Z",
-    status: "open",
-    category: "training_request",
+    status: "new",
+    category: "question",
     priority: "normal",
     name: "Taylor Nguyen",
     email: "taylor@summitrec.co",
@@ -83,6 +113,7 @@ const seededRequests: SupportRequestRecord[] = [
     organizationName: "Summit Rec Collective",
     facilityName: "Summit Downtown",
     pageUrl: "/o/summit/dashboard",
+    title: "Front desk onboarding question",
     description: "Need a workflow review for new front desk staff before summer rush.",
     requestedDate: "2026-06-14",
     estimatedAttendees: 8,
@@ -151,7 +182,7 @@ function getAuthenticatedSupportStaff(supportStaffMembers: SupportStaffMember[])
 
 export function SupportStateProvider({ children }: { children: React.ReactNode }) {
   const [supportStaffMembers] = useState<SupportStaffMember[]>(seedSupportStaffMembers());
-  const [supportRequests, setSupportRequests] = useState<SupportRequestRecord[]>(() => readStorage(SUPPORT_REQUESTS_STORAGE_KEY, seededRequests));
+  const [supportRequests, setSupportRequests] = useState<SupportRequestRecord[]>(() => normalizeSupportRequests(readStorage(SUPPORT_REQUESTS_STORAGE_KEY, seededRequests)));
   const [supportAuditLog, setSupportAuditLog] = useState<SupportAuditEvent[]>(() => readStorage(SUPPORT_AUDIT_STORAGE_KEY, []));
   const [impersonationSessions, setImpersonationSessions] = useState<SupportImpersonationSession[]>(() => readStorage(SUPPORT_IMPERSONATION_STORAGE_KEY, []));
   const [activeImpersonationSession, setActiveImpersonationSession] = useState<SupportImpersonationSession | null>(null);
@@ -185,18 +216,18 @@ export function SupportStateProvider({ children }: { children: React.ReactNode }
   };
 
   const submitSupportRequest: SupportStateContextValue["submitSupportRequest"] = (input) => {
-    const name = input.name.trim();
-    const email = input.email.trim();
+    const name = input.name.trim() || "Anonymous tester";
+    const email = input.email.trim() || "Not provided";
     const description = input.description.trim();
-    if (!name || !email || !description) {
-      return { ok: false, message: "Name, email, and description are required." };
+    if (!description) {
+      return { ok: false, message: "Description is required." };
     }
     const now = new Date().toISOString();
     const request: SupportRequestRecord = {
       id: `support_req_${Math.random().toString(36).slice(2, 9)}`,
       createdAt: now,
       updatedAt: now,
-      status: "open",
+      status: "new",
       category: input.category,
       priority: input.priority,
       name,
@@ -226,7 +257,7 @@ export function SupportStateProvider({ children }: { children: React.ReactNode }
       actionTaken: "support_request_submitted",
       reasonProvided: input.category.replaceAll("_", " ")
     });
-    return { ok: true, message: "Support request submitted. Cairn support sessions are always logged.", requestId: request.id };
+    return { ok: true, message: "Feedback submitted. Cairn support has received it.", requestId: request.id };
   };
 
   const updateSupportRequestStatus: SupportStateContextValue["updateSupportRequestStatus"] = (requestId, status) => {
@@ -376,8 +407,8 @@ export function SupportStateProvider({ children }: { children: React.ReactNode }
     supportAuditLog,
     impersonationSessions,
     activeImpersonationSession,
-    unresolvedRequests: supportRequests.filter((entry) => entry.status === "open" || entry.status === "in_review"),
-    recentProductFeedback: supportRequests.filter((entry) => entry.category === "feature_request" || entry.category === "product_feedback"),
+    unresolvedRequests: supportRequests.filter((entry) => entry.status === "new" || entry.status === "in_review" || entry.status === "planned"),
+    recentProductFeedback: supportRequests.filter((entry) => entry.category === "feature_request" || entry.category === "confusing_workflow" || entry.category === "general_feedback"),
     globalCustomers: seededCustomers,
     submitSupportRequest,
     updateSupportRequestStatus,

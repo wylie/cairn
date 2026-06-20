@@ -79,14 +79,14 @@ Seeded demo organizations use realistic subscription details:
 | Western Carolina YMCA Association | Enterprise | Annual | Concierge | Active |
 
 ## Pilot Feedback
-Pilot users can use the floating **Need Help?** button throughout Cairn.
+Pilot users can use the floating **Send Feedback** button throughout Cairn.
 
-Supported actions:
-- Report a Bug
-- Suggest an Improvement
-- Ask a Question
-- Request Training
-- Contact Support
+Supported categories:
+- Bug Report
+- Feature Request
+- Confusing Workflow
+- Question
+- General Feedback
 
 Feedback captures:
 - organization

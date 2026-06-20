@@ -15,6 +15,7 @@ These demo accounts are for local development only.
 | Role | Login Email | Password | Staff PIN | Permission Summary |
 | --- | --- | --- | --- | --- |
 | Platform Administrator | `platform@cairn.app` | `dev1234` | N/A | Global `/admin` access for organization provisioning and platform controls |
+| Cairn Support Staff | `support@cairn.app` | `dev1234` | N/A | Support console access for helping facilities during pilot testing |
 
 ## Summit Rec Collective (`summit`)
 

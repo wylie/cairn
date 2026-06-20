@@ -1,6 +1,6 @@
 import { memo } from "react";
 import Link from "next/link";
-import { LayoutDashboard, Bell, Home, Users, ScanLine, Calendar, Boxes, CreditCard, BarChart3, Settings, Tags, UserCog, ClipboardList, FileCheck2, ShieldCheck, MessagesSquare, TentTree, PlugZap, ScrollText } from "lucide-react";
+import { LayoutDashboard, Bell, Home, Users, ScanLine, Calendar, Boxes, CreditCard, BarChart3, Settings, Tags, UserCog, ClipboardList, FileCheck2, ShieldCheck, MessagesSquare, TentTree, PlugZap, ScrollText, Map } from "lucide-react";
 import { getActiveRouteHref } from "@/lib/navigation/route-matching";
 import { cn } from "@/lib/utils";
 import type { StaffPermission } from "@/types/domain";
@@ -74,6 +74,7 @@ export const navItems: NavItem[] = [
   { href: "/reports", label: "Reports & Analytics", icon: BarChart3, section: "management", permissions: ["viewReports", "viewAttendanceReports", "viewFinancialReports"] },
   { href: "/integrations", label: "Integrations", icon: PlugZap, section: "management", permissions: ["managePlatformSettings"] },
   { href: "/release-notes", label: "Release Notes", icon: ScrollText, section: "management", permissions: operationalPermissions },
+  { href: "/roadmap", label: "Roadmap", icon: Map, section: "management", permissions: operationalPermissions },
   { href: "/settings", label: "Settings", icon: Settings, section: "management", permissions: ["manageSettings", "manageStaff", "manageProducts"] }
 ];
 

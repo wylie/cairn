@@ -70,7 +70,7 @@ export default async function PublicSessionDetailPage({
           <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
             <div><dt className="text-muted-foreground">Date</dt><dd>{formatDate(session.startsAt, "-", { dateStyle: "full" })}</dd></div>
             <div><dt className="text-muted-foreground">Time</dt><dd>{formatTime(session.startsAt)} - {formatTime(session.endsAt)}</dd></div>
-            <div><dt className="text-muted-foreground">Instructor</dt><dd>{session.instructorName ?? "TBD"}</dd></div>
+            <div><dt className="text-muted-foreground">Instructor</dt><dd>{session.instructorName ?? "To be assigned"}</dd></div>
             <div><dt className="text-muted-foreground">Location</dt><dd>{getLocationName(session.locationId)}</dd></div>
             <div><dt className="text-muted-foreground">Capacity</dt><dd>{session.capacity}</dd></div>
             <div><dt className="text-muted-foreground">Spots remaining</dt><dd>{stats.spotsRemaining}</dd></div>

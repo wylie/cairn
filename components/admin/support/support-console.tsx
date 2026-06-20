@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,9 +14,61 @@ import { buildSeedProvisionedOrganizations } from "@/lib/platform-admin/registry
 import { usePlatformAdminState } from "@/lib/state/platform-admin-state";
 import { getSupportFacilityHealthSnapshot, useSupportState } from "@/lib/state/support-state";
 import { getSessionFromCookieClient } from "@/lib/tenant/client";
+import type { SupportRequestCategory, SupportRequestStatus } from "@/types/domain";
 
 function formatCount(value: number) {
   return new Intl.NumberFormat("en-US").format(value);
+}
+
+const categoryLabels: Record<SupportRequestCategory, string> = {
+  bug_report: "Bug Report",
+  feature_request: "Feature Request",
+  confusing_workflow: "Confusing Workflow",
+  question: "Question",
+  general_feedback: "General Feedback"
+};
+
+const statusLabels: Record<SupportRequestStatus, string> = {
+  new: "New",
+  in_review: "In Review",
+  planned: "Planned",
+  resolved: "Resolved"
+};
+
+const categoryOptions: Array<"all" | SupportRequestCategory> = [
+  "all",
+  "bug_report",
+  "feature_request",
+  "confusing_workflow",
+  "question",
+  "general_feedback"
+];
+
+const statusOptions: Array<"all" | SupportRequestStatus> = ["all", "new", "in_review", "planned", "resolved"];
+
+function statusTone(status: SupportRequestStatus) {
+  if (status === "new") return "warning";
+  if (status === "resolved") return "success";
+  return "default";
+}
+
+function requestMatchesQuery(request: ReturnType<typeof useSupportState>["supportRequests"][number], normalizedQuery: string) {
+  if (!normalizedQuery) return true;
+  return [
+    request.title,
+    request.description,
+    request.organizationName,
+    request.organizationSlug,
+    request.facilityName,
+    request.name,
+    request.email,
+    request.workflowAffected,
+    request.businessImpact,
+    categoryLabels[request.category],
+    statusLabels[request.status]
+  ]
+    .filter(Boolean)
+    .some((value) => value?.toLowerCase().includes(normalizedQuery));
 }
 
 export function SupportConsole() {
@@ -34,6 +87,8 @@ export function SupportConsole() {
     updateSupportRequestStatus
   } = useSupportState();
   const [query, setQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<"all" | SupportRequestCategory>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | SupportRequestStatus>("all");
   const [selectedOrgSlug, setSelectedOrgSlug] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -84,10 +139,26 @@ export function SupportConsole() {
     [globalCustomers, normalizedQuery]
   );
 
+  const filteredSupportRequests = useMemo(
+    () =>
+      supportRequests
+        .filter((request) => {
+          if (categoryFilter !== "all" && request.category !== categoryFilter) return false;
+          if (statusFilter !== "all" && request.status !== statusFilter) return false;
+          return requestMatchesQuery(request, normalizedQuery);
+        })
+        .sort((a, b) => {
+          const aResolved = a.status === "resolved";
+          const bResolved = b.status === "resolved";
+          if (aResolved !== bResolved) return aResolved ? 1 : -1;
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }),
+    [supportRequests, categoryFilter, statusFilter, normalizedQuery]
+  );
+
   const openAlerts = unresolvedRequests.length;
   const critical = unresolvedRequests.filter((request) => request.priority === "urgent" || request.priority === "high").length;
   const activeSessions = impersonationSessions.filter((entry) => entry.status === "active");
-  const facilityOpenTickets = supportRequests.filter((entry) => entry.status === "open" || entry.status === "in_review");
 
   const handleStartSupportSession = () => {
     const facility = healthSnapshot.find((entry) => entry.organizationSlug === selectedOrgSlug);
@@ -110,7 +181,7 @@ export function SupportConsole() {
     { label: "Open Tickets", value: String(openAlerts), hint: "Unresolved support requests" },
     { label: "Critical", value: String(critical), hint: "High-priority issues needing follow-up" },
     { label: "Active Support Sessions", value: String(activeSessions.length), hint: "Current assisted facility sessions" },
-    { label: "Product Feedback", value: String(recentProductFeedback.length), hint: "Feature requests and product feedback" }
+    { label: "Product Feedback", value: String(recentProductFeedback.length), hint: "Feature requests, confusing workflows, and general feedback" }
   ];
 
   return (
@@ -219,26 +290,70 @@ export function SupportConsole() {
 
         <div className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Unresolved Support Requests</CardTitle>
+            <CardHeader className="space-y-3">
+              <div>
+                <CardTitle>Feedback Inbox</CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">Review tester feedback by category, organization, reporter, and status.</p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="space-y-1 text-sm">
+                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Category</span>
+                  <select
+                    aria-label="Filter feedback category"
+                    value={categoryFilter}
+                    onChange={(event) => setCategoryFilter(event.target.value as typeof categoryFilter)}
+                    className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
+                  >
+                    {categoryOptions.map((option) => (
+                      <option key={option} value={option}>{option === "all" ? "All categories" : categoryLabels[option]}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="space-y-1 text-sm">
+                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</span>
+                  <select
+                    aria-label="Filter feedback status"
+                    value={statusFilter}
+                    onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}
+                    className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
+                  >
+                    {statusOptions.map((option) => (
+                      <option key={option} value={option}>{option === "all" ? "All statuses" : statusLabels[option]}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {facilityOpenTickets.slice(0, 6).map((request) => (
+              {filteredSupportRequests.slice(0, 8).map((request) => (
                 <div key={request.id} className="rounded-xl border p-3 text-sm">
-                  <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
-                      <p className="font-medium">{request.title ?? request.category.replaceAll("_", " ")}</p>
-                      <p className="text-muted-foreground">{request.organizationName ?? "Unscoped request"}</p>
+                      <p className="font-medium">{request.title ?? categoryLabels[request.category]}</p>
+                      <p className="text-muted-foreground">{request.organizationName ?? "Unscoped request"} · {request.facilityName ?? "No facility"} · {formatDateTime(request.createdAt)}</p>
                     </div>
-                    <span className="rounded-full border px-2 py-0.5 text-xs uppercase tracking-wide text-muted-foreground">{request.priority}</span>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Badge tone={statusTone(request.status)}>{statusLabels[request.status]}</Badge>
+                      <Badge tone={request.priority === "urgent" || request.priority === "high" ? "warning" : "muted"}>{request.priority}</Badge>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    <span>{categoryLabels[request.category]}</span>
+                    <span>Reporter: {request.name}</span>
+                    <span>{request.email}</span>
+                    {request.workflowAffected ? <span>Workflow: {request.workflowAffected}</span> : null}
                   </div>
                   <p className="mt-2 text-muted-foreground">{request.description}</p>
-                  <div className="mt-3 flex gap-2">
+                  {request.businessImpact ? <p className="mt-2 text-muted-foreground">Impact: {request.businessImpact}</p> : null}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button type="button" size="sm" variant="outline" onClick={() => updateSupportRequestStatus(request.id, "new")}>New</Button>
                     <Button type="button" size="sm" variant="outline" onClick={() => updateSupportRequestStatus(request.id, "in_review")}>In Review</Button>
-                    <Button type="button" size="sm" onClick={() => updateSupportRequestStatus(request.id, "resolved")}>Resolve</Button>
+                    <Button type="button" size="sm" variant="outline" onClick={() => updateSupportRequestStatus(request.id, "planned")}>Planned</Button>
+                    <Button type="button" size="sm" onClick={() => updateSupportRequestStatus(request.id, "resolved")}>Resolved</Button>
                   </div>
                 </div>
               ))}
+              {filteredSupportRequests.length === 0 ? <p className="text-sm text-muted-foreground">No feedback matches the current filters.</p> : null}
             </CardContent>
           </Card>
 
@@ -250,10 +365,11 @@ export function SupportConsole() {
               {recentProductFeedback.slice(0, 5).map((request) => (
                 <div key={request.id} className="rounded-xl border p-3">
                   <p className="font-medium">{request.title ?? "Product feedback"}</p>
-                  <p className="text-muted-foreground">{request.workflowAffected ?? "General workflow"}</p>
+                  <p className="text-muted-foreground">{categoryLabels[request.category]} · {request.workflowAffected ?? "General workflow"}</p>
                   {request.businessImpact ? <p className="mt-2 text-muted-foreground">Impact: {request.businessImpact}</p> : null}
                 </div>
               ))}
+              {recentProductFeedback.length === 0 ? <p className="text-muted-foreground">No product feedback has been submitted yet.</p> : null}
             </CardContent>
           </Card>
         </div>

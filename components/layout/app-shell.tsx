@@ -126,7 +126,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <h1 className="text-lg font-semibold">{currentOrganization?.name}</h1>
               </div>
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">{currentOrganization?.facilityType.replace("_", " ")}</p>
           </div>
           <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1">
             <SidebarNav

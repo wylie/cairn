@@ -96,7 +96,7 @@ describe("customer portal membership details", () => {
     );
 
     expect(screen.getByText("Associated household members")).toBeInTheDocument();
-    expect(screen.getByText("Sam Noaccess")).toBeInTheDocument();
+    expect(screen.getByText("Oslo Fisher")).toBeInTheDocument();
     expect(screen.getByText("Related Receipts")).toBeInTheDocument();
     const receiptLink = screen.getByRole("link", { name: "View Receipt" });
     expect(receiptLink).toHaveAttribute("href", "/p/summit/purchases/txn_mem_renewal");

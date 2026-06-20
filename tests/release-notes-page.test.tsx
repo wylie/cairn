@@ -9,8 +9,10 @@ describe("ReleaseNotesPage", () => {
     expect(screen.getByText("Cairn v0.1.0")).toBeInTheDocument();
     expect(screen.getByText("Pilot Readiness Release")).toBeInTheDocument();
     expect(screen.getByText("Stone Cairn branding")).toBeInTheDocument();
+    expect(screen.getByText("Versioning and release process foundations")).toBeInTheDocument();
     expect(screen.getByText("Navigation organization")).toBeInTheDocument();
     expect(screen.getByText("Sidebar overflow")).toBeInTheDocument();
+    expect(screen.getByText("Notification ordering issues")).toBeInTheDocument();
     expect(screen.getByText("Payment processing not connected")).toBeInTheDocument();
   });
 });

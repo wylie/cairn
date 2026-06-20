@@ -43,4 +43,28 @@ describe("support console", () => {
     expect(refresh).toHaveBeenCalled();
     expect(screen.getByRole("status")).toHaveTextContent("Support session started for Summit Rec Collective");
   });
+
+  it("filters feedback and updates request lifecycle status", async () => {
+    const user = userEvent.setup();
+    render(
+      <SupportStateProvider>
+        <PlatformAdminStateProvider>
+          <SupportConsolePage />
+        </PlatformAdminStateProvider>
+      </SupportStateProvider>
+    );
+
+    expect(screen.getByRole("heading", { name: "Support Console" })).toBeInTheDocument();
+    expect(screen.getByText("Feedback Inbox")).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Filter feedback category"), "feature_request");
+    expect(screen.getAllByText("Staff-friendly camp session transfer workflow").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Check-in roster needs a clearer blocked reason")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Planned" }));
+    expect(screen.getAllByText("Planned").length).toBeGreaterThan(0);
+
+    await user.selectOptions(screen.getByLabelText("Filter feedback status"), "resolved");
+    expect(screen.getByText("No feedback matches the current filters.")).toBeInTheDocument();
+  });
 });

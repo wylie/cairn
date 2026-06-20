@@ -36,7 +36,7 @@ export default function AdminIntegrationsPage() {
 
   return (
     <section className="space-y-4">
-      <PageHeader title="Integrations" description="Platform-wide view of organization integration readiness, health placeholders, webhook activity, and API adoption groundwork." />
+      <PageHeader title="Integrations" description="Platform-wide view of organization integration readiness, connection health, webhook activity, and API adoption groundwork." />
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <article className="rounded-xl border bg-card p-4"><p className="text-sm text-muted-foreground">Organizations</p><p className="mt-2 text-2xl font-semibold">{rows.length}</p></article>
         <article className="rounded-xl border bg-card p-4"><p className="text-sm text-muted-foreground">Enabled Connections</p><p className="mt-2 text-2xl font-semibold">{rows.reduce((sum, row) => sum + row.enabled, 0)}</p></article>

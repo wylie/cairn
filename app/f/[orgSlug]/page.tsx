@@ -78,7 +78,7 @@ export default async function FacilityLandingPage({
             </div>
             <div className="rounded-md border border-slate-200 p-2">
               <dt className="text-slate-500">Primary address</dt>
-              <dd className="font-medium">{primaryLocation?.addressLine1 ?? "Address coming soon"}</dd>
+              <dd className="font-medium">{primaryLocation?.addressLine1 ?? "Address not listed"}</dd>
             </div>
             <div className="rounded-md border border-slate-200 p-2">
               <dt className="text-slate-500">Main location</dt>

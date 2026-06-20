@@ -62,9 +62,9 @@ export default async function PublicProgramDetailPage({
         <div className="mt-3 flex flex-wrap gap-2 text-sm">
           <span className="rounded-full border px-2 py-1">Category: {program.category}</span>
           <span className="rounded-full border px-2 py-1">Age: {program.minimumAge ?? "All"}{program.maximumAge ? `-${program.maximumAge}` : "+"}</span>
-          <span className="rounded-full border px-2 py-1">Instructor: {sessions[0]?.instructorName ?? "TBD"}</span>
-          <span className="rounded-full border px-2 py-1">Member: {pricing.memberCents !== null ? `$${(pricing.memberCents / 100).toFixed(2)}` : "TBD"}</span>
-          <span className="rounded-full border px-2 py-1">Non-member: {pricing.nonMemberCents !== null ? `$${(pricing.nonMemberCents / 100).toFixed(2)}` : "TBD"}</span>
+          <span className="rounded-full border px-2 py-1">Instructor: {sessions[0]?.instructorName ?? "To be assigned"}</span>
+          <span className="rounded-full border px-2 py-1">Member: {pricing.memberCents !== null ? `$${(pricing.memberCents / 100).toFixed(2)}` : "Pricing pending"}</span>
+          <span className="rounded-full border px-2 py-1">Non-member: {pricing.nonMemberCents !== null ? `$${(pricing.nonMemberCents / 100).toFixed(2)}` : "Pricing pending"}</span>
         </div>
         <p className="mt-3 text-sm text-muted-foreground">Required waivers: {program.requiredWaiverTemplateIds?.length ? "Required" : "None"} • Membership requirement: {program.memberRequired ? "Member required" : "Open"}</p>
       </header>

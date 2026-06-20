@@ -119,7 +119,7 @@ export function DigitalMembershipCard({
           <MembershipScanToken token={qrToken} className="mx-auto md:mx-0" />
           <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Access Token</p>
           <p className="font-mono text-xs text-slate-700">{qrToken}</p>
-          <p className="text-[11px] text-slate-500">Visual placeholder for future QR scanning. Token lookup already works in check-in search.</p>
+          <p className="text-[11px] text-slate-500">Use this access token at check-in. QR scanning is planned for a future release.</p>
         </div>
       </div>
     </div>

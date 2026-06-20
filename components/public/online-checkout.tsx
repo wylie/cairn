@@ -1002,7 +1002,7 @@ function ConfirmationStep({
             <p className="text-muted-foreground">{entry.participant ? `${entry.participant.firstName} ${entry.participant.lastName}` : "Participant not recorded"}</p>
             <p className="text-muted-foreground">{entry.session ? `${formatDateTime(entry.session.startsAt)} · ${getLocationName(entry.session.locationId)}` : "Schedule unavailable"}</p>
             <p className="mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {entry.registration.status === "waitlisted" ? `Waitlist position ${entry.registration.waitlistPosition ?? "TBD"}` : entry.registration.status}
+              {entry.registration.status === "waitlisted" ? `Waitlist position ${entry.registration.waitlistPosition ?? "pending"}` : entry.registration.status}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <Link href={`/p/${orgSlug}/registrations/${entry.registration.id}`} className="inline-flex min-h-10 items-center rounded-md border px-3 text-sm hover:bg-secondary/40">

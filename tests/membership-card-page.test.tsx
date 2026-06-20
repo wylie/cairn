@@ -41,7 +41,7 @@ describe("membership card page", () => {
     expect(screen.getByLabelText("digital-membership-card")).toBeInTheDocument();
     expect(screen.getByText("Choose a Card")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Alex Rivera" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Sam Noaccess" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Oslo Fisher" })).toBeInTheDocument();
   });
 
   it("allows viewing a dependent card through authorized household scope", () => {
@@ -53,7 +53,7 @@ describe("membership card page", () => {
     );
 
     expect(screen.getByText("Dependent card")).toBeInTheDocument();
-    expect(screen.getByText(/Sam Noaccess/i)).toBeInTheDocument();
+    expect(screen.getByText(/Oslo Fisher/i)).toBeInTheDocument();
   });
 
   it("renders expired card state clearly", () => {

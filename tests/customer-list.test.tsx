@@ -404,10 +404,10 @@ describe("CustomerList", () => {
 
     await activateStaff(user, "2222");
 
-    const danaCard = screen.getByText("Dana Daypass").closest("div[class*='p-4']") as HTMLElement;
+    const danaCard = screen.getByText("Dana Brooks").closest("div[class*='p-4']") as HTMLElement;
     await user.click(within(danaCard).getByRole("button", { name: "Check In" }));
 
-    expect(screen.getByRole("status")).toHaveTextContent(/Check-in recorded for Dana Daypass/i);
+    expect(screen.getByRole("status")).toHaveTextContent(/Check-in recorded for Dana Brooks/i);
     expect(screen.getByTestId("header-occupancy")).toHaveTextContent("2 currently in");
     expect(within(danaCard).getByText("Checked In")).toBeInTheDocument();
   });
@@ -424,7 +424,7 @@ describe("CustomerList", () => {
 
     await activateStaff(user, "2222");
 
-    const danaCard = screen.getByText("Dana Daypass").closest("div[class*='p-4']") as HTMLElement;
+    const danaCard = screen.getByText("Dana Brooks").closest("div[class*='p-4']") as HTMLElement;
     await user.click(within(danaCard).getByRole("button", { name: "Check In" }));
 
     const row = screen.getByTestId("checkin-row-cust_005");
@@ -456,7 +456,7 @@ describe("CustomerList", () => {
       </TestProviders>
     );
 
-    const samCard = screen.getByText("Sam Noaccess").closest("div[class*='p-4']") as HTMLElement;
+    const samCard = screen.getByText("Oslo Fisher").closest("div[class*='p-4']") as HTMLElement;
     const checkIn = within(samCard).getByText("Check In").closest("button") as HTMLButtonElement;
     expect(checkIn).toBeDisabled();
     expect(within(samCard).getByText("Waiver Missing")).toBeInTheDocument();
@@ -473,7 +473,7 @@ describe("CustomerList", () => {
       </TestProviders>
     );
 
-    const danaCard = screen.getByText("Dana Daypass").closest("div[class*='p-4']") as HTMLElement;
+    const danaCard = screen.getByText("Dana Brooks").closest("div[class*='p-4']") as HTMLElement;
     await user.click(within(danaCard).getByRole("button", { name: "Check In" }));
 
     expect(screen.getByRole("dialog", { name: "Staff PIN" })).toBeInTheDocument();
@@ -490,7 +490,7 @@ describe("CustomerList", () => {
 
     await activateStaff(user, "4444");
 
-    const danaCard = screen.getByText("Dana Daypass").closest("div[class*='p-4']") as HTMLElement;
+    const danaCard = screen.getByText("Dana Brooks").closest("div[class*='p-4']") as HTMLElement;
     await user.click(within(danaCard).getByRole("button", { name: "Check In" }));
 
     expect(screen.getByRole("alert")).toHaveTextContent("You do not have permission to perform this action.");
@@ -509,7 +509,7 @@ describe("CustomerList", () => {
 
     await activateStaff(user, "2222");
 
-    const danaCard = screen.getByText("Dana Daypass").closest("div[class*='p-4']") as HTMLElement;
+    const danaCard = screen.getByText("Dana Brooks").closest("div[class*='p-4']") as HTMLElement;
     await user.click(within(danaCard).getByRole("button", { name: "Check In" }));
 
     first.unmount();
@@ -521,7 +521,7 @@ describe("CustomerList", () => {
       </TestProviders>
     );
 
-    const reloadedDana = screen.getByText("Dana Daypass").closest("div[class*='p-4']") as HTMLElement;
+    const reloadedDana = screen.getByText("Dana Brooks").closest("div[class*='p-4']") as HTMLElement;
     expect(within(reloadedDana).getByText("Checked In")).toBeInTheDocument();
     expect(screen.getByTestId("header-occupancy")).toHaveTextContent("2 currently in");
 

@@ -14,7 +14,7 @@ describe("support center launcher", () => {
     document.cookie = "cairn_support_requests_v1=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
   });
 
-  it("submits a support request with trust messaging", async () => {
+  it("submits tester feedback with trust messaging", async () => {
     const user = userEvent.setup();
     render(
       <SupportStateProvider>
@@ -22,23 +22,21 @@ describe("support center launcher", () => {
       </SupportStateProvider>
     );
 
-    await user.click(screen.getByRole("button", { name: /Need Help\?/i }));
-    expect(screen.getByRole("option", { name: "Report a Bug" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Suggest an Improvement" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Ask a Question" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Request Training" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Contact Support" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Send Feedback/i }));
+    expect(screen.getByRole("option", { name: "Bug Report" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Feature Request" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Confusing Workflow" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Question" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "General Feedback" })).toBeInTheDocument();
     expect(screen.getByText(/Role:/i)).toBeInTheDocument();
-    await user.type(screen.getByLabelText("Name"), "Morgan Hale");
-    await user.type(screen.getByLabelText("Email"), "morgan@example.com");
     await user.selectOptions(screen.getByLabelText("Category"), "feature_request");
     await user.type(screen.getByLabelText("Title"), "Family registration shortcuts");
     await user.type(screen.getByLabelText("Workflow affected"), "Registrations");
     await user.type(screen.getByLabelText("Business impact"), "Reduces staff re-entry");
     await user.type(screen.getByLabelText("Description"), "Need a faster household registration flow.");
-    await user.click(screen.getByRole("button", { name: "Submit Request" }));
+    await user.click(screen.getAllByRole("button", { name: "Send Feedback" }).at(-1)!);
 
-    expect(screen.getByRole("status")).toHaveTextContent("Support request submitted");
-    expect(screen.getByRole("status")).toHaveTextContent("support sessions are always logged");
+    expect(screen.getByRole("status")).toHaveTextContent("Feedback submitted");
+    expect(screen.getByRole("status")).toHaveTextContent("Cairn support has received it");
   });
 });

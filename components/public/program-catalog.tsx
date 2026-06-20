@@ -100,14 +100,14 @@ export function ProgramCatalog({
               <p className="text-xs uppercase tracking-wide text-muted-foreground">{program.category}</p>
               <h2 className="mt-1 text-lg font-semibold">{program.title}</h2>
               <p className="mt-1 text-sm text-muted-foreground">{program.description}</p>
-              <p className="mt-2 text-sm">Instructor: {nextSession?.instructorName ?? "TBD"}</p>
+              <p className="mt-2 text-sm">Instructor: {nextSession?.instructorName ?? "To be assigned"}</p>
               <p className="text-sm">Age range: {program.minimumAge ?? "All"}{program.maximumAge ? `-${program.maximumAge}` : "+"}</p>
               <p className="text-sm">Location: {getLocationName(nextSession?.locationId)}</p>
-              <p className="text-sm">Availability: {stats ? `${stats.spotsRemaining} spots left` : "Schedule coming soon"}</p>
+              <p className="text-sm">Availability: {stats ? `${stats.spotsRemaining} spots left` : "Schedule pending"}</p>
               <p className="mt-2 text-sm font-medium">
-                {pricing.memberCents !== null ? `Member ${formatCents(pricing.memberCents)}` : "Member pricing TBD"}
+                {pricing.memberCents !== null ? `Member ${formatCents(pricing.memberCents)}` : "Member pricing pending"}
                 {" • "}
-                {pricing.nonMemberCents !== null ? `Non-member ${formatCents(pricing.nonMemberCents)}` : "Public pricing TBD"}
+                {pricing.nonMemberCents !== null ? `Non-member ${formatCents(pricing.nonMemberCents)}` : "Public pricing pending"}
               </p>
               <div className="mt-3 flex gap-2">
                 <Link href={`/p/${orgSlug}/programs/${program.id}`} className="inline-flex h-10 items-center rounded-md border border-input px-3 text-sm font-medium hover:bg-secondary">View Program</Link>

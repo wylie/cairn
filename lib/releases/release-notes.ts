@@ -2,12 +2,16 @@ import { version } from "@/lib/version";
 
 export type ReleaseNoteSection = "added" | "improved" | "fixed" | "changed" | "knownIssues";
 
+export const GITHUB_COMMIT_BASE_URL = "https://github.com/wylie/cairn/commit/";
+
 export type ReleaseNote = {
   version: string;
   releaseName: string;
   releaseDate: string;
   releaseType: "patch" | "minor" | "major";
   summary: string;
+  commitHash?: string;
+  commitUrl?: string;
   sections: Record<ReleaseNoteSection, string[]>;
 };
 
@@ -57,12 +61,33 @@ const realDataFoundationRelease: ReleaseNote = {
   }
 };
 
-const neonReadinessAuditRelease: ReleaseNote = {
+const releaseNotesCommitLinksRelease: ReleaseNote = {
   version: version.currentVersion,
   releaseName: version.releaseName,
   releaseDate: version.releaseDate,
   releaseType: version.releaseType,
   summary: version.summary,
+  sections: {
+    added: [],
+    improved: [
+      "Release Notes now link to GitHub commits when commit metadata is available",
+      "Release Notes page is easier to scan"
+    ],
+    fixed: [],
+    changed: [
+      "Removed duplicated release summary card"
+    ],
+    knownIssues: []
+  }
+};
+
+const neonReadinessAuditRelease: ReleaseNote = {
+  version: "0.2.3",
+  releaseName: "Neon Readiness Audit",
+  releaseDate: "2026-06-21",
+  releaseType: "patch",
+  summary: "Data source inventory and database readiness visibility now clarify what is Neon-backed versus demo-backed.",
+  commitHash: "e772dd0",
   sections: {
     added: [
       "Data source inventory",
@@ -85,6 +110,7 @@ const releaseBadgeColorStandardizationRelease: ReleaseNote = {
   releaseDate: "2026-06-21",
   releaseType: "patch",
   summary: "Release badge colors now separate version labels, SemVer release types, and change categories.",
+  commitHash: "24a3bba",
   sections: {
     added: [],
     improved: [
@@ -110,6 +136,7 @@ const platformDashboardReleaseNotesPolishRelease: ReleaseNote = {
   releaseDate: "2026-06-21",
   releaseType: "patch",
   summary: "Platform dashboard metrics, KPI labels, release badges, and CI/CD release presentation are clearer.",
+  commitHash: "0d9cdce",
   sections: {
     added: [],
     improved: [
@@ -155,6 +182,7 @@ export function compareReleaseNotesNewestFirst(a: ReleaseNote, b: ReleaseNote) {
 }
 
 const releaseNoteEntries: ReleaseNote[] = [
+  releaseNotesCommitLinksRelease,
   neonReadinessAuditRelease,
   releaseBadgeColorStandardizationRelease,
   platformDashboardReleaseNotesPolishRelease,
@@ -212,4 +240,14 @@ export function getReleaseAnchor(value: string) {
 
 export function getReleaseNotesHref(value: string) {
   return `/release-notes#${getReleaseAnchor(value)}`;
+}
+
+export function getReleaseCommitUrl(release: Pick<ReleaseNote, "commitHash" | "commitUrl">) {
+  if (release.commitUrl) return release.commitUrl;
+  if (!release.commitHash) return null;
+  return `${GITHUB_COMMIT_BASE_URL}${release.commitHash}`;
+}
+
+export function getShortCommitHash(commitHash: string) {
+  return commitHash.slice(0, 7);
 }

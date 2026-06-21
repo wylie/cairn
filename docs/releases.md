@@ -10,11 +10,11 @@ Version metadata is centralized in `lib/version.ts`.
 
 Current shipped version metadata:
 
-- `currentVersion`: `0.2.3`
-- `releaseName`: `Neon Readiness Audit`
+- `currentVersion`: `0.2.4`
+- `releaseName`: `Release Notes Commit Links`
 - `releaseDate`: `2026-06-21`
 - `releaseType`: `patch`
-- `summary`: `Data source inventory and database readiness visibility now clarify what is Neon-backed versus demo-backed.`
+- `summary`: `Release Notes are simpler to scan and can link to GitHub commits when metadata is available.`
 
 All active application version displays should read from the `version` object in `lib/version.ts`. Compatibility exports may exist for older components, but they must derive from `version`.
 
@@ -67,10 +67,13 @@ To ship a version:
 1. Update `version` in `lib/version.ts`.
 2. Add or update the shipped release entry in `releaseNotes`.
 3. Include `version`, `releaseType`, `releaseDate`, `releaseName`, `summary`, `added`, `improved`, `fixed`, `changed`, and `knownIssues`.
-4. Keep facility-facing notes clear and avoid platform-only implementation details when possible.
-5. Run the build before committing.
+4. Include `commitHash` when the commit that introduced the shipped version is known.
+5. Keep facility-facing notes clear and avoid platform-only implementation details when possible.
+6. Run the build before committing.
 
 The newest release appears first on the staff Release Notes page. Release Notes document shipped versions only.
+
+Release note entries may include optional GitHub commit links. Store the commit hash in release metadata when available; the app generates links from `https://github.com/wylie/cairn/commit/`. A `commitUrl` may override the generated URL when needed. Do not invent hashes. If the commit hash is not known, leave it blank and the UI will omit the link.
 
 ## Release Badge System
 
@@ -126,21 +129,32 @@ Update notifications are generated from release note data by `lib/releases/notif
 
 When a release entry becomes the latest release, Cairn can generate a system notification such as:
 
-`Cairn has been updated to v0.2.3. View what's new.`
+`Cairn has been updated to v0.2.4. View what's new.`
 
 The notification uses the existing communications notification center, counts toward unread totals, can be marked read, and links directly to the matching release note anchor.
 
 ## Current Shipped Version
 
-Version: `v0.2.3`
+Version: `v0.2.4`
 
 Released: `2026-06-21`
 
-Title: Neon Readiness Audit
+Title: Release Notes Commit Links
 
 Release type: Patch
 
-Summary: Data source inventory and database readiness visibility now clarify what is Neon-backed versus demo-backed.
+Summary: Release Notes are simpler to scan and can link to GitHub commits when metadata is available.
+
+### v0.2.4 Notes
+
+#### Improved
+
+- Release Notes now link to GitHub commits when commit metadata is available.
+- Release Notes page is easier to scan.
+
+#### Changed
+
+- Removed duplicated release summary card.
 
 ### v0.2.3 Notes
 

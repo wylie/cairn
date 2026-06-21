@@ -1,11 +1,11 @@
 export type ReleaseType = "patch" | "minor" | "major";
 
 export const version = {
-  currentVersion: "0.2.3",
-  releaseName: "Neon Readiness Audit",
+  currentVersion: "0.2.4",
+  releaseName: "Release Notes Commit Links",
   releaseDate: "2026-06-21",
   releaseType: "patch" as ReleaseType,
-  summary: "Data source inventory and database readiness visibility now clarify what is Neon-backed versus demo-backed."
+  summary: "Release Notes are simpler to scan and can link to GitHub commits when metadata is available."
 } as const;
 
 export function formatReleaseType(type: ReleaseType) {

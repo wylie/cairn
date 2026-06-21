@@ -2,10 +2,10 @@ export type ReleaseType = "patch" | "minor" | "major";
 
 export const version = {
   currentVersion: "0.2.1",
-  releaseName: "Patch Release Notes Support",
-  releaseDate: "2026-06-29",
+  releaseName: "Platform Dashboard & Release Notes Polish",
+  releaseDate: "2026-06-21",
   releaseType: "patch" as ReleaseType,
-  summary: "Release Notes now support patch-level shipped versions."
+  summary: "Platform dashboard metrics, KPI labels, release badges, and CI/CD release presentation are clearer."
 } as const;
 
 export function formatReleaseType(type: ReleaseType) {

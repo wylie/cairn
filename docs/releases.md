@@ -11,10 +11,10 @@ Version metadata is centralized in `lib/version.ts`.
 Current shipped version metadata:
 
 - `currentVersion`: `0.2.1`
-- `releaseName`: `Patch Release Notes Support`
-- `releaseDate`: `2026-06-29`
+- `releaseName`: `Platform Dashboard & Release Notes Polish`
+- `releaseDate`: `2026-06-21`
 - `releaseType`: `patch`
-- `summary`: `Release Notes now support patch-level shipped versions.`
+- `summary`: `Platform dashboard metrics, KPI labels, release badges, and CI/CD release presentation are clearer.`
 
 All active application version displays should read from the `version` object in `lib/version.ts`. Compatibility exports may exist for older components, but they must derive from `version`.
 
@@ -72,6 +72,24 @@ To ship a version:
 
 The newest release appears first on the staff Release Notes page. Release Notes document shipped versions only.
 
+## Release Badge System
+
+Release version badges use SemVer release-type colors:
+
+- Major: red / rose
+- Minor: blue / teal
+- Patch: gray / slate
+
+Release section badges use separate semantic colors:
+
+- Added: green
+- Improved: blue
+- Changed: yellow
+- Fixed: slate / blue-gray
+- Known Issues: amber
+
+Do not use green for version badges. Shared release badge components live in `components/releases/release-badges.tsx`.
+
 ## Build and Deployment Discipline
 
 Development work should keep `main` deployable. A change is ready to merge when it is scoped, reviewed, documented when needed, and verified with the relevant build or tests.
@@ -112,32 +130,29 @@ The notification uses the existing communications notification center, counts to
 
 Version: `v0.2.1`
 
-Released: `2026-06-29`
+Released: `2026-06-21`
 
-Title: Patch Release Notes Support
+Title: Platform Dashboard & Release Notes Polish
 
 Release type: Patch
 
-Summary: Release Notes now support patch-level shipped versions.
+Summary: Platform dashboard metrics, KPI labels, release badges, and CI/CD release presentation are clearer.
 
 ### v0.2.1 Notes
 
-#### Added
-
-- Patch release notes support
-- Release type badges for Major, Minor, and Patch releases
-- Current patch release metadata
-
 #### Improved
 
-- Release Notes now document every shipped version.
-- Patch releases sort ahead of their base minor release.
-- Patch release badges use a lighter visual treatment than major and minor releases.
+- Platform dashboard metrics
+- KPI clarity
+- Release Note badge consistency
+- CI/CD release presentation
 
 #### Changed
 
-- Version metadata now identifies the current shipped patch release.
-- Release documentation clarifies that every releasable commit increments a version.
+- Locations renamed to Facilities
+- Staff Directory renamed to Staff Accounts
+- Active renamed to Active Organizations
+- Database Status renamed to Database Health
 
 ### v0.2.0 Notes
 

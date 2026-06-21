@@ -9,7 +9,7 @@ export default function AdminTemplatesPage() {
 
   return (
     <section className="space-y-4">
-      <PageHeader title="Templates" description="Starter facility presets for roles, products, waivers, dashboard widgets, reports, and settings." />
+      <PageHeader title="Facility Templates" description="Starter facility presets for roles, products, waivers, dashboard widgets, reports, and settings." />
       <div className="grid gap-4 lg:grid-cols-2">
         {templates.map((template) => (
           <Card key={template.id}>

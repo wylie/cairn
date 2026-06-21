@@ -57,27 +57,26 @@ const realDataFoundationRelease: ReleaseNote = {
   }
 };
 
-const patchReleaseNotesSupportRelease: ReleaseNote = {
+const platformDashboardReleaseNotesPolishRelease: ReleaseNote = {
   version: version.currentVersion,
   releaseName: version.releaseName,
   releaseDate: version.releaseDate,
   releaseType: version.releaseType,
   summary: version.summary,
   sections: {
-    added: [
-      "Patch release notes support",
-      "Release type badges for Major, Minor, and Patch releases",
-      "Current patch release metadata"
-    ],
+    added: [],
     improved: [
-      "Release Notes now document every shipped version",
-      "Patch releases sort ahead of their base minor release",
-      "Patch release badges use a lighter visual treatment than major and minor releases"
+      "Platform dashboard metrics",
+      "KPI clarity",
+      "Release Note badge consistency",
+      "CI/CD release presentation"
     ],
     fixed: [],
     changed: [
-      "Version metadata now identifies the current shipped patch release",
-      "Release documentation clarifies that every releasable commit increments a version"
+      "Locations renamed to Facilities",
+      "Staff Directory renamed to Staff Accounts",
+      "Active renamed to Active Organizations",
+      "Database Status renamed to Database Health"
     ],
     knownIssues: []
   }
@@ -109,7 +108,7 @@ export function compareReleaseNotesNewestFirst(a: ReleaseNote, b: ReleaseNote) {
 }
 
 const releaseNoteEntries: ReleaseNote[] = [
-  patchReleaseNotesSupportRelease,
+  platformDashboardReleaseNotesPolishRelease,
   realDataFoundationRelease,
   {
     version: "0.1.0",

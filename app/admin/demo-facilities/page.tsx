@@ -14,7 +14,7 @@ export default function DemoFacilitiesPage() {
 
   return (
     <section className="space-y-4">
-      <PageHeader title="Demo Facilities" description="Platform-managed demo organizations used for walkthroughs, testing, and repeatable environment resets." />
+      <PageHeader title="Demo Organizations" description="Platform-managed demo organizations used for walkthroughs, testing, and repeatable environment resets." />
       <div className="grid gap-4 lg:grid-cols-2">
         {demoFacilities.map((facility) => (
           <Card key={facility.id}>

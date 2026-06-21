@@ -12,7 +12,7 @@ export default async function AdminStaffPage() {
   return (
     <section className="space-y-4">
       <PageHeader
-        title="Staff Directory"
+        title="Staff Accounts"
         description={`Read-only database-backed staff account foundation for v${version.currentVersion}.`}
         actions={<Badge tone="muted">{staffUsers.length} staff users</Badge>}
       />

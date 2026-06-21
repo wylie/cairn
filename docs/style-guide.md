@@ -164,6 +164,40 @@ Why: cards should separate workflow chunks without looking like old desktop wind
 
 Why: badges are status beacons, not decorative tags.
 
+### Release badges
+Release badges have two separate color systems.
+
+Release type / version chips:
+- Major: red / rose
+- Minor: blue / teal
+- Patch: gray / slate
+
+Current patch example:
+- `v0.2.1` Platform Dashboard & Release Notes Polish uses Patch styling.
+
+Release section chips:
+- Added: green
+- Improved: blue
+- Changed: yellow
+- Fixed: slate / blue-gray
+- Known Issues: amber
+
+Rules:
+- Version chips must match the release type.
+- Do not use green for version chips.
+- Use shared release badge helpers/components instead of repeating class strings.
+
+## Dashboard KPIs
+Platform and operations KPI cards should communicate what the number means without relying on surrounding context.
+
+Rules:
+- Use specific nouns: `Active Organizations`, `Staff Accounts`, `Database Health`.
+- Prefer facility language over location language for platform-level summaries.
+- Include a short description under every KPI value.
+- Link KPI cards to the most relevant management surface when a clear destination exists.
+- Keep cards keyboard-accessible and preserve visible focus styles.
+- Avoid non-metric labels such as `Directory` or `Status` as standalone card values.
+
 ## Form Standards
 All Cairn forms use one consistent pattern across pages and modals.
 

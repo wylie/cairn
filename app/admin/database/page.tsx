@@ -1,62 +1,10 @@
-import { sql } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/page-header";
-import { getDatabase } from "@/db";
-import { getCustomerCount } from "@/db/repositories/customer-repository";
-import { getFacilityCount } from "@/db/repositories/facility-repository";
-import { getHouseholdCount } from "@/db/repositories/household-repository";
-import { getOrganizationCount } from "@/db/repositories/organization-repository";
-import { getStaffUserCount } from "@/db/repositories/staff-repository";
+import { getDatabaseStatus } from "@/lib/database-status";
 import { version } from "@/lib/version";
 
 export const dynamic = "force-dynamic";
-
-async function getDatabaseStatus() {
-  const database = getDatabase();
-  if (!database) {
-    return {
-      status: "disconnected" as const,
-      organizationCount: 0,
-      facilityCount: 0,
-      staffUserCount: 0,
-      customerCount: 0,
-      householdCount: 0,
-      checkedAt: new Date().toISOString()
-    };
-  }
-
-  try {
-    await database.execute(sql`select 1`);
-    const [organizationCount, facilityCount, staffUserCount, customerCount, householdCount] = await Promise.all([
-      getOrganizationCount(),
-      getFacilityCount(),
-      getStaffUserCount(),
-      getCustomerCount(),
-      getHouseholdCount()
-    ]);
-
-    return {
-      status: "connected" as const,
-      organizationCount,
-      facilityCount,
-      staffUserCount,
-      customerCount,
-      householdCount,
-      checkedAt: new Date().toISOString()
-    };
-  } catch {
-    return {
-      status: "disconnected" as const,
-      organizationCount: 0,
-      facilityCount: 0,
-      staffUserCount: 0,
-      customerCount: 0,
-      householdCount: 0,
-      checkedAt: new Date().toISOString()
-    };
-  }
-}
 
 export default async function AdminDatabasePage() {
   const status = await getDatabaseStatus();

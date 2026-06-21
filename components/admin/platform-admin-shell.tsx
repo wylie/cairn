@@ -15,9 +15,9 @@ const navItems = [
   { href: "/admin/support", label: "Support Console", icon: BellRing },
   { href: "/admin/organizations", label: "Organizations", icon: Building2 },
   { href: "/admin/database", label: "Database", icon: Database },
-  { href: "/admin/staff", label: "Staff", icon: Users },
-  { href: "/admin/templates", label: "Templates", icon: Layers3 },
-  { href: "/admin/demo-facilities", label: "Demo Facilities", icon: FlaskConical },
+  { href: "/admin/staff", label: "Staff Accounts", icon: Users },
+  { href: "/admin/templates", label: "Facility Templates", icon: Layers3 },
+  { href: "/admin/demo-facilities", label: "Demo Organizations", icon: FlaskConical },
   { href: "/admin/integrations", label: "Integrations", icon: PlugZap },
   { href: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard },
   { href: "/admin/platform-settings", label: "Platform Settings", icon: Settings }

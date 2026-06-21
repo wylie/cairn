@@ -275,7 +275,7 @@ export function OrganizationsWorkspace() {
                 <MetricCard label="Billing Status" value={titleCase(selected.billingStatus ?? "trialing")} />
                 <MetricCard label="Trial Status" value={titleCase(selected.trialStatus ?? "trial")} />
                 <MetricCard label="Renewal Date" value={selected.renewalDate ? formatDate(selected.renewalDate) : "Not scheduled"} />
-                <MetricCard label="Locations" value={String(selected.stats.locations)} />
+                <MetricCard label="Facilities" value={String(selected.stats.locations)} />
                 <MetricCard label="Facilities Included" value={formatFacilitiesIncluded(selected.facilitiesIncluded ?? selected.stats.locations)} />
                 <MetricCard label="Members" value={String(selected.stats.members)} />
                 <MetricCard label="Staff" value={String(selected.stats.staff)} />

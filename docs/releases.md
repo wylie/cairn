@@ -74,11 +74,15 @@ The newest release appears first on the staff Release Notes page. Release Notes 
 
 ## Release Badge System
 
-Release version badges use SemVer release-type colors:
+Release version badges use one neutral style:
+
+- Version chips: gray / slate
+
+Release type badges use SemVer release-type colors:
 
 - Major: red / rose
-- Minor: blue / teal
-- Patch: gray / slate
+- Minor: purple / indigo
+- Patch: blue / cyan
 
 Release section badges use separate semantic colors:
 
@@ -88,7 +92,7 @@ Release section badges use separate semantic colors:
 - Fixed: slate / blue-gray
 - Known Issues: amber
 
-Do not use green for version badges. Shared release badge components live in `components/releases/release-badges.tsx`.
+Do not use green for version or release type badges. Shared release badge components live in `components/releases/release-badges.tsx`.
 
 ## Build and Deployment Discipline
 

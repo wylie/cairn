@@ -167,13 +167,17 @@ Why: badges are status beacons, not decorative tags.
 ### Release badges
 Release badges have two separate color systems.
 
-Release type / version chips:
+Version chips:
+- All versions: gray / slate
+
+Release type chips:
 - Major: red / rose
-- Minor: blue / teal
-- Patch: gray / slate
+- Minor: purple / indigo
+- Patch: blue / cyan
 
 Current patch example:
-- `v0.2.1` Platform Dashboard & Release Notes Polish uses Patch styling.
+- `v0.2.1` Platform Dashboard & Release Notes Polish uses neutral version styling.
+- `Patch` uses blue / cyan release type styling.
 
 Release section chips:
 - Added: green
@@ -183,8 +187,8 @@ Release section chips:
 - Known Issues: amber
 
 Rules:
-- Version chips must match the release type.
-- Do not use green for version chips.
+- Version chips must not indicate release type.
+- Do not use green for version or release type chips.
 - Use shared release badge helpers/components instead of repeating class strings.
 
 ## Dashboard KPIs

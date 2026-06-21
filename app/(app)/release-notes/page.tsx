@@ -6,7 +6,7 @@ import {
 } from "@/components/releases/release-badges";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/page-header";
-import { getReleaseAnchor, latestRelease, releaseNotes, type ReleaseNoteSection } from "@/lib/releases/release-notes";
+import { getReleaseAnchor, releaseNotes, type ReleaseNoteSection } from "@/lib/releases/release-notes";
 import { formatReleaseType, version } from "@/lib/version";
 
 const releaseSections: ReleaseNoteSection[] = ["added", "improved", "fixed", "changed", "knownIssues"];
@@ -21,7 +21,7 @@ export default function ReleaseNotesPage() {
       <PageHeader
         title="Release Notes"
         description="Shipped product updates, fixes, known issues, and changes ordered newest first."
-        actions={<VersionBadge version={version.currentVersion} releaseType={version.releaseType} />}
+        actions={<VersionBadge version={version.currentVersion} />}
       />
 
       <Card>
@@ -50,11 +50,7 @@ export default function ReleaseNotesPage() {
           <Card key={release.version} id={getReleaseAnchor(release.version)}>
             <CardHeader>
               <div className="flex flex-wrap items-center gap-2">
-                <VersionBadge
-                  version={release.version}
-                  releaseType={release.releaseType}
-                  className={release.version === latestRelease.version ? "ring-2 ring-primary/20" : undefined}
-                />
+                <VersionBadge version={release.version} />
                 <ReleaseTypeBadge releaseType={release.releaseType} />
                 <p className="text-sm text-muted-foreground">{formatReleaseDate(release.releaseDate)}</p>
               </div>

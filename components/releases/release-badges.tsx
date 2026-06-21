@@ -7,10 +7,12 @@ type ReleaseBadgeProps = {
   className?: string;
 };
 
+const versionBadgeClass = "border-slate-300 bg-slate-100 text-slate-800";
+
 const releaseTypeClasses: Record<ReleaseType, string> = {
   major: "border-rose-200 bg-rose-100 text-rose-800",
-  minor: "border-teal-200 bg-teal-100 text-teal-800",
-  patch: "border-slate-200 bg-slate-100 text-slate-700"
+  minor: "border-indigo-200 bg-indigo-100 text-indigo-800",
+  patch: "border-cyan-200 bg-cyan-100 text-cyan-800"
 };
 
 const releaseSectionClasses: Record<ReleaseNoteSection, string> = {
@@ -29,11 +31,15 @@ const releaseSectionLabels: Record<ReleaseNoteSection, string> = {
   knownIssues: "Known Issues"
 };
 
-export function getReleaseTypeBadgeClassName(type: ReleaseType) {
+export function getVersionBadgeClass() {
+  return versionBadgeClass;
+}
+
+export function getReleaseTypeBadgeClass(type: ReleaseType) {
   return releaseTypeClasses[type];
 }
 
-export function getReleaseSectionBadgeClassName(section: ReleaseNoteSection) {
+export function getReleaseSectionBadgeClass(section: ReleaseNoteSection) {
   return releaseSectionClasses[section];
 }
 
@@ -43,15 +49,15 @@ export function getReleaseSectionLabel(section: ReleaseNoteSection) {
 
 export function ReleaseTypeBadge({ releaseType, className }: ReleaseBadgeProps & { releaseType: ReleaseType }) {
   return (
-    <Badge tone="muted" className={cn(getReleaseTypeBadgeClassName(releaseType), className)}>
+    <Badge tone="muted" className={cn(getReleaseTypeBadgeClass(releaseType), className)}>
       {formatReleaseType(releaseType)}
     </Badge>
   );
 }
 
-export function VersionBadge({ version, releaseType, className }: ReleaseBadgeProps & { version: string; releaseType: ReleaseType }) {
+export function VersionBadge({ version, className }: ReleaseBadgeProps & { version: string }) {
   return (
-    <Badge tone="muted" className={cn(getReleaseTypeBadgeClassName(releaseType), className)}>
+    <Badge tone="muted" className={cn(getVersionBadgeClass(), className)}>
       v{version.replace(/^v/i, "")}
     </Badge>
   );
@@ -59,7 +65,7 @@ export function VersionBadge({ version, releaseType, className }: ReleaseBadgePr
 
 export function ReleaseSectionBadge({ section, className }: ReleaseBadgeProps & { section: ReleaseNoteSection }) {
   return (
-    <Badge tone="muted" className={cn(getReleaseSectionBadgeClassName(section), className)}>
+    <Badge tone="muted" className={cn(getReleaseSectionBadgeClass(section), className)}>
       {getReleaseSectionLabel(section)}
     </Badge>
   );

@@ -57,12 +57,37 @@ const realDataFoundationRelease: ReleaseNote = {
   }
 };
 
-const platformDashboardReleaseNotesPolishRelease: ReleaseNote = {
+const releaseBadgeColorStandardizationRelease: ReleaseNote = {
   version: version.currentVersion,
   releaseName: version.releaseName,
   releaseDate: version.releaseDate,
   releaseType: version.releaseType,
   summary: version.summary,
+  sections: {
+    added: [],
+    improved: [
+      "Release badge color consistency",
+      "Version badge visual hierarchy",
+      "SemVer type distinction"
+    ],
+    fixed: [
+      "Inconsistent version badge styling across releases",
+      "Patch badge visual treatment"
+    ],
+    changed: [
+      "Version badges now use neutral styling",
+      "Major, Minor, and Patch badges now use distinct colors"
+    ],
+    knownIssues: []
+  }
+};
+
+const platformDashboardReleaseNotesPolishRelease: ReleaseNote = {
+  version: "0.2.1",
+  releaseName: "Platform Dashboard & Release Notes Polish",
+  releaseDate: "2026-06-21",
+  releaseType: "patch",
+  summary: "Platform dashboard metrics, KPI labels, release badges, and CI/CD release presentation are clearer.",
   sections: {
     added: [],
     improved: [
@@ -108,6 +133,7 @@ export function compareReleaseNotesNewestFirst(a: ReleaseNote, b: ReleaseNote) {
 }
 
 const releaseNoteEntries: ReleaseNote[] = [
+  releaseBadgeColorStandardizationRelease,
   platformDashboardReleaseNotesPolishRelease,
   realDataFoundationRelease,
   {

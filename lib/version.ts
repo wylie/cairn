@@ -1,11 +1,11 @@
 export type ReleaseType = "patch" | "minor" | "major";
 
 export const version = {
-  currentVersion: "0.2.1",
-  releaseName: "Platform Dashboard & Release Notes Polish",
+  currentVersion: "0.2.2",
+  releaseName: "Release Badge Color Standardization",
   releaseDate: "2026-06-21",
   releaseType: "patch" as ReleaseType,
-  summary: "Platform dashboard metrics, KPI labels, release badges, and CI/CD release presentation are clearer."
+  summary: "Release badge colors now separate version labels, SemVer release types, and change categories."
 } as const;
 
 export function formatReleaseType(type: ReleaseType) {

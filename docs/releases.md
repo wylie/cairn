@@ -10,11 +10,11 @@ Version metadata is centralized in `lib/version.ts`.
 
 Current shipped version metadata:
 
-- `currentVersion`: `0.2.1`
-- `releaseName`: `Platform Dashboard & Release Notes Polish`
+- `currentVersion`: `0.2.2`
+- `releaseName`: `Release Badge Color Standardization`
 - `releaseDate`: `2026-06-21`
 - `releaseType`: `patch`
-- `summary`: `Platform dashboard metrics, KPI labels, release badges, and CI/CD release presentation are clearer.`
+- `summary`: `Release badge colors now separate version labels, SemVer release types, and change categories.`
 
 All active application version displays should read from the `version` object in `lib/version.ts`. Compatibility exports may exist for older components, but they must derive from `version`.
 
@@ -126,21 +126,39 @@ Update notifications are generated from release note data by `lib/releases/notif
 
 When a release entry becomes the latest release, Cairn can generate a system notification such as:
 
-`Cairn has been updated to v0.2.1. View what's new.`
+`Cairn has been updated to v0.2.2. View what's new.`
 
 The notification uses the existing communications notification center, counts toward unread totals, can be marked read, and links directly to the matching release note anchor.
 
 ## Current Shipped Version
 
-Version: `v0.2.1`
+Version: `v0.2.2`
 
 Released: `2026-06-21`
 
-Title: Platform Dashboard & Release Notes Polish
+Title: Release Badge Color Standardization
 
 Release type: Patch
 
-Summary: Platform dashboard metrics, KPI labels, release badges, and CI/CD release presentation are clearer.
+Summary: Release badge colors now separate version labels, SemVer release types, and change categories.
+
+### v0.2.2 Notes
+
+#### Improved
+
+- Release badge color consistency
+- Version badge visual hierarchy
+- SemVer type distinction
+
+#### Changed
+
+- Version badges now use neutral styling
+- Major, Minor, and Patch badges now use distinct colors
+
+#### Fixed
+
+- Inconsistent version badge styling across releases
+- Patch badge visual treatment
 
 ### v0.2.1 Notes
 

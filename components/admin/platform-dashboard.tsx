@@ -12,8 +12,11 @@ type DatabaseStatus = {
   organizationCount: number;
   facilityCount: number;
   staffUserCount: number;
+  staffRoleCount: number;
+  staffFacilityAccessCount: number;
   customerCount: number;
   householdCount: number;
+  tableCounts: Array<{ table: string; records: number }>;
   checkedAt: string;
 };
 
@@ -66,12 +69,7 @@ export function PlatformDashboard({ databaseStatus }: { databaseStatus: Database
   const totalFacilities = organizations.reduce((sum, entry) => sum + entry.stats.locations, 0);
   const totalStaff = organizations.reduce((sum, entry) => sum + entry.stats.staff, 0);
   const databaseHealthy = databaseStatus.status === "connected";
-  const databaseRecordTotal =
-    databaseStatus.organizationCount +
-    databaseStatus.facilityCount +
-    databaseStatus.staffUserCount +
-    databaseStatus.customerCount +
-    databaseStatus.householdCount;
+  const databaseRecordTotal = databaseStatus.tableCounts.reduce((sum, entry) => sum + entry.records, 0);
 
   const cards: KpiCard[] = [
     {

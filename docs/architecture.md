@@ -127,7 +127,8 @@ Organizations and facilities are the first Cairn data area to read from the prod
 - `organizations.data_mode` classifies each tenant as `demo`, `sandbox`, or `production`.
 - Public facility landing metadata and display context can load organization and facility records through the server data layer.
 - `db/repositories` contains the first explicit repository layer for organization and facility reads.
-- `/admin/database` provides a read-only internal connection and record-count status page.
+- `/admin/database` provides read-only internal connection status, table count, record counts by table, migration metadata, and seed data status.
+- `/admin/data-sources` provides platform-admin visibility into which modules are Neon-backed, demo-backed, local-only, or not yet migrated.
 - Existing demo seed data remains as a fallback so local review environments do not require a live database.
 - Tenant helpers require organization context for facility reads. Facility slugs are not treated as globally authoritative.
 - Platform-wide organization views are still mock/localStorage-backed until a dedicated platform admin migration replaces the current registry.
@@ -214,6 +215,7 @@ Current migration status:
 - Household list reads are backed by Neon.
 - Customer create, edit, delete, merge, membership, check-in, waiver, registration, POS, and household editing workflows are not migrated yet.
 - The existing client state provider remains in place for operational actions until server-backed write paths exist.
+- The v0.2.3 data-source audit is documented in [Data Sources](./data-sources.md) and exposed internally at `/admin/data-sources`.
 
 Customer ownership rules:
 
@@ -274,6 +276,14 @@ Tenant expectations:
 - Cross-tenant reads must only exist in explicit platform admin or support contexts.
 - Privileged reads and writes must enforce permissions server-side, not only in UI navigation.
 
+Repository audit findings:
+
+- Facility repository slug lookup requires `organizationId`.
+- Customer and household tenant-facing list reads resolve active organization before querying.
+- Staff repositories include platform-wide admin reads plus organization-scoped and facility-scoped reads.
+- Platform-wide counts and lists are acceptable only for platform admin/database visibility.
+- Demo fallback data remains useful for local review, but cannot be treated as production data.
+
 ### Support Access
 
 Support access should be a durable, auditable platform workflow.
@@ -294,7 +304,7 @@ The data migration should be phased:
 - Phase 4: check-ins, POS transactions, products, rentals, and waivers
 - Phase 5: notifications, support requests, release notifications, and audit logs
 
-See [Data Migration Plan](./data-migration-plan.md) for the detailed audit and migration roadmap, and [Real Data Implementation Plan](./real-data-implementation-plan.md) for the v0.2.x implementation sequence.
+See [Data Sources](./data-sources.md) for the current storage inventory, [Data Migration Plan](./data-migration-plan.md) for the detailed audit and migration roadmap, and [Real Data Implementation Plan](./real-data-implementation-plan.md) for the v0.2.x implementation sequence.
 
 ## Integration Readiness
 

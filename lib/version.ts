@@ -1,11 +1,11 @@
 export type ReleaseType = "patch" | "minor" | "major";
 
 export const version = {
-  currentVersion: "0.2.2",
-  releaseName: "Release Badge Color Standardization",
+  currentVersion: "0.2.3",
+  releaseName: "Neon Readiness Audit",
   releaseDate: "2026-06-21",
   releaseType: "patch" as ReleaseType,
-  summary: "Release badge colors now separate version labels, SemVer release types, and change categories."
+  summary: "Data source inventory and database readiness visibility now clarify what is Neon-backed versus demo-backed."
 } as const;
 
 export function formatReleaseType(type: ReleaseType) {

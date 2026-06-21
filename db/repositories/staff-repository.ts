@@ -97,3 +97,19 @@ export async function getStaffUserCount(): Promise<number> {
   const [row] = await database.select({ value: count() }).from(staffUsers);
   return row?.value ?? 0;
 }
+
+export async function getStaffRoleCount(): Promise<number> {
+  const database = getDatabase();
+  if (!database) return 0;
+
+  const [row] = await database.select({ value: count() }).from(staffRoles);
+  return row?.value ?? 0;
+}
+
+export async function getStaffFacilityAccessCount(): Promise<number> {
+  const database = getDatabase();
+  if (!database) return 0;
+
+  const [row] = await database.select({ value: count() }).from(staffFacilityAccess);
+  return row?.value ?? 0;
+}

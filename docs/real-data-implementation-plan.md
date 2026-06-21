@@ -56,6 +56,8 @@ v0.2.x now includes the first production data foundation pieces.
 - `db/migrations` contains the initial SQL migration generated from the schema.
 - `db/index.ts` exposes the typed database client.
 - `/api/internal/database-health` verifies whether the configured database connection is reachable without exposing credentials or connection details.
+- `/admin/database` now shows connection state, known table count, record counts by table, the latest committed Drizzle migration, and seed data status.
+- `/admin/data-sources` now exposes the v0.2.3 data-source inventory for platform administrators.
 - `npm run db:generate`, `npm run db:migrate`, and `npm run db:studio` provide the migration and inspection workflow.
 - Local tooling loads `DATABASE_URL` from `.env.local`.
 
@@ -73,7 +75,8 @@ Organizations and facilities are the first data area wired toward the production
 - `db/tenant.ts` provides fallback-aware active facility context on top of the repository layer.
 - Facility lookup requires organization scope so facility slugs do not become global tenant bypasses.
 - The public facility landing page can read organization and facility display data from the database when available.
-- `/admin/database` shows connection status, organization count, and facility count for internal review.
+- `/admin/database` shows connection status, table count, record counts, migration metadata, and seed data status for internal review.
+- `/admin/data-sources` identifies each major module as Neon-backed, demo-backed, local-only, or not yet migrated.
 - If `DATABASE_URL` is missing or the database query fails, the same helpers fall back to canonical demo seed data so local demo mode remains stable.
 
 This does not migrate customer or household write operations, memberships, programs, registrations, POS, waivers, notifications, support requests, or authentication. Those areas still use the existing mock/localStorage implementation until their planned migration phases. Customer and household read operations are the first low-risk server-backed workflow reads.
@@ -135,6 +138,9 @@ Organization boundary audit:
 - Organization `data_mode` is inherited by facilities, staff, future customers, households, memberships, programs, registrations, and reports.
 - Facilities require `organization_id`, so future facility-scoped records can inherit organization scope from their facility.
 - Staff users require `organization_id`, so staff records cannot float outside a tenant.
+- Facility repository lookups require organization scope before matching slugs.
+- Current customer and household list pages resolve active organization before querying Neon.
+- Broad repository reads and counts are limited to platform-admin/database visibility surfaces.
 - Future customer, household, membership, registration, POS, waiver, notification, and support records should include `organization_id`; facility-scoped records should also include `facility_id`.
 
 ## Customer & Household Foundation Started
@@ -203,9 +209,9 @@ Goal: identify every place production data enters, changes, or leaves the app.
 
 Deliverables:
 
-- Map current `lib/state/*` providers to future server-backed domains.
-- Mark which localStorage keys can be retired, migrated, or kept as UI preferences.
-- Confirm tenant scope for each domain: organization-level, facility-level, customer-level, or platform-level.
+- Map current `lib/state/*` providers to future server-backed domains. Complete in [Data Sources](./data-sources.md).
+- Mark which localStorage keys can be retired, migrated, or kept as UI preferences. In progress through the v0.2.3 inventory.
+- Confirm tenant scope for each domain: organization-level, facility-level, customer-level, or platform-level. Initial audit complete for current repositories.
 
 ### 2. Schema Foundation
 

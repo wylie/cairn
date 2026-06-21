@@ -10,11 +10,11 @@ Version metadata is centralized in `lib/version.ts`.
 
 Current shipped version metadata:
 
-- `currentVersion`: `0.2.2`
-- `releaseName`: `Release Badge Color Standardization`
+- `currentVersion`: `0.2.3`
+- `releaseName`: `Neon Readiness Audit`
 - `releaseDate`: `2026-06-21`
 - `releaseType`: `patch`
-- `summary`: `Release badge colors now separate version labels, SemVer release types, and change categories.`
+- `summary`: `Data source inventory and database readiness visibility now clarify what is Neon-backed versus demo-backed.`
 
 All active application version displays should read from the `version` object in `lib/version.ts`. Compatibility exports may exist for older components, but they must derive from `version`.
 
@@ -126,21 +126,34 @@ Update notifications are generated from release note data by `lib/releases/notif
 
 When a release entry becomes the latest release, Cairn can generate a system notification such as:
 
-`Cairn has been updated to v0.2.2. View what's new.`
+`Cairn has been updated to v0.2.3. View what's new.`
 
 The notification uses the existing communications notification center, counts toward unread totals, can be marked read, and links directly to the matching release note anchor.
 
 ## Current Shipped Version
 
-Version: `v0.2.2`
+Version: `v0.2.3`
 
 Released: `2026-06-21`
 
-Title: Release Badge Color Standardization
+Title: Neon Readiness Audit
 
 Release type: Patch
 
-Summary: Release badge colors now separate version labels, SemVer release types, and change categories.
+Summary: Data source inventory and database readiness visibility now clarify what is Neon-backed versus demo-backed.
+
+### v0.2.3 Notes
+
+#### Added
+
+- Data source inventory
+- Admin data source visibility
+- Database health reporting
+
+#### Improved
+
+- Tenant isolation validation
+- Real-data migration planning
 
 ### v0.2.2 Notes
 

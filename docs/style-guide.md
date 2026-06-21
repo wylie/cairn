@@ -176,7 +176,7 @@ Release type chips:
 - Patch: blue / cyan
 
 Current patch example:
-- `v0.2.2` Release Badge Color Standardization uses neutral version styling.
+- `v0.2.3` Neon Readiness Audit uses neutral version styling.
 - `Patch` uses blue / cyan release type styling.
 
 Release section chips:

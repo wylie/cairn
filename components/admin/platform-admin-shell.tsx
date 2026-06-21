@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
-import { BellRing, Building2, LayoutDashboard, Layers3, FlaskConical, CreditCard, Settings, PlugZap, Database, Users } from "lucide-react";
+import { BellRing, Building2, ClipboardList, LayoutDashboard, Layers3, FlaskConical, CreditCard, Settings, PlugZap, Database, Users } from "lucide-react";
 import { CairnBrand } from "@/components/brand/cairn-brand";
 import { Button } from "@/components/ui/button";
 import { getActiveRouteHref } from "@/lib/navigation/route-matching";
@@ -15,6 +15,7 @@ const navItems = [
   { href: "/admin/support", label: "Support Console", icon: BellRing },
   { href: "/admin/organizations", label: "Organizations", icon: Building2 },
   { href: "/admin/database", label: "Database", icon: Database },
+  { href: "/admin/data-sources", label: "Data Sources", icon: ClipboardList },
   { href: "/admin/staff", label: "Staff Accounts", icon: Users },
   { href: "/admin/templates", label: "Facility Templates", icon: Layers3 },
   { href: "/admin/demo-facilities", label: "Demo Organizations", icon: FlaskConical },

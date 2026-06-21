@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/page-header";
-import { getDatabaseStatus } from "@/lib/database-status";
+import { getDatabaseRecordTotal, getDatabaseStatus } from "@/lib/database-status";
 import { version } from "@/lib/version";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +9,10 @@ export const dynamic = "force-dynamic";
 export default async function AdminDatabasePage() {
   const status = await getDatabaseStatus();
   const connected = status.status === "connected";
+  const totalRecords = getDatabaseRecordTotal(status);
+  const lastMigration = status.lastMigrationAt
+    ? `${status.lastMigrationTag} · ${new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(status.lastMigrationAt))}`
+    : "Not available";
 
   return (
     <section className="space-y-4">
@@ -20,7 +24,7 @@ export default async function AdminDatabasePage() {
 
       <p className="text-sm text-muted-foreground">Last updated: {new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(status.checkedAt))}</p>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardHeader>
             <CardTitle>Connection</CardTitle>
@@ -34,50 +38,73 @@ export default async function AdminDatabasePage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Organizations</CardTitle>
+            <CardTitle>Tables</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold">{status.organizationCount}</p>
-            <p className="mt-2 text-sm text-muted-foreground">Seeded tenant records available in Neon.</p>
+            <p className="text-2xl font-semibold">{status.tableCount}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Known Drizzle schema tables in the Neon foundation.</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Facilities</CardTitle>
+            <CardTitle>Total Records</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold">{status.facilityCount}</p>
-            <p className="mt-2 text-sm text-muted-foreground">Facility records associated with seeded organizations.</p>
+            <p className="text-2xl font-semibold">{totalRecords}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Combined records across the current database-backed foundation.</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Staff Users</CardTitle>
+            <CardTitle>Seed Data</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold">{status.staffUserCount}</p>
-            <p className="mt-2 text-sm text-muted-foreground">Database-backed staff account records.</p>
+            <p className="text-2xl font-semibold">{status.seedDataStatus}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Checks core tenant, facility, staff, customer, and household seed records.</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Customers</CardTitle>
+            <CardTitle>Last Migration</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold">{status.customerCount}</p>
-            <p className="mt-2 text-sm text-muted-foreground">Customer foundation records in Neon.</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Households</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold">{status.householdCount}</p>
-            <p className="mt-2 text-sm text-muted-foreground">Household foundation records in Neon.</p>
+            <p className="text-base font-semibold">{lastMigration}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Read from the Drizzle migration journal committed in this repository.</p>
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Record Counts by Table</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="py-2 pr-3">Table</th>
+                  <th className="py-2 pr-3">Records</th>
+                  <th className="py-2 pr-3">Readiness</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {status.tableCounts.map((entry) => (
+                  <tr key={entry.table}>
+                    <td className="py-3 pr-3 font-medium">{entry.table}</td>
+                    <td className="py-3 pr-3">{entry.records}</td>
+                    <td className="py-3 pr-3">
+                      <Badge tone={connected && entry.records > 0 ? "success" : "muted"}>
+                        {connected && entry.records > 0 ? "Seeded" : connected ? "Empty" : "Unavailable"}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </section>
   );
 }

@@ -57,12 +57,34 @@ const realDataFoundationRelease: ReleaseNote = {
   }
 };
 
-const releaseBadgeColorStandardizationRelease: ReleaseNote = {
+const neonReadinessAuditRelease: ReleaseNote = {
   version: version.currentVersion,
   releaseName: version.releaseName,
   releaseDate: version.releaseDate,
   releaseType: version.releaseType,
   summary: version.summary,
+  sections: {
+    added: [
+      "Data source inventory",
+      "Admin data source visibility",
+      "Database health reporting"
+    ],
+    improved: [
+      "Tenant isolation validation",
+      "Real-data migration planning"
+    ],
+    fixed: [],
+    changed: [],
+    knownIssues: []
+  }
+};
+
+const releaseBadgeColorStandardizationRelease: ReleaseNote = {
+  version: "0.2.2",
+  releaseName: "Release Badge Color Standardization",
+  releaseDate: "2026-06-21",
+  releaseType: "patch",
+  summary: "Release badge colors now separate version labels, SemVer release types, and change categories.",
   sections: {
     added: [],
     improved: [
@@ -133,6 +155,7 @@ export function compareReleaseNotesNewestFirst(a: ReleaseNote, b: ReleaseNote) {
 }
 
 const releaseNoteEntries: ReleaseNote[] = [
+  neonReadinessAuditRelease,
   releaseBadgeColorStandardizationRelease,
   platformDashboardReleaseNotesPolishRelease,
   realDataFoundationRelease,

@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/page-header";
 import { getReleaseAnchor, latestRelease, releaseNotes, type ReleaseNoteSection } from "@/lib/releases/release-notes";
-import { formatReleaseType, version } from "@/lib/version";
+import { formatReleaseType, type ReleaseType, version } from "@/lib/version";
 
 const sectionLabels: Record<ReleaseNoteSection, string> = {
   added: "Added",
@@ -18,6 +18,12 @@ const sectionTone: Record<ReleaseNoteSection, "default" | "success" | "warning" 
   fixed: "muted",
   changed: "warning",
   knownIssues: "warning"
+};
+
+const releaseTypeTone: Record<ReleaseType, "default" | "success" | "warning" | "danger" | "muted"> = {
+  major: "danger",
+  minor: "success",
+  patch: "muted"
 };
 
 function formatReleaseDate(date: string) {
@@ -62,7 +68,7 @@ export default function ReleaseNotesPage() {
                 <Badge tone={release.version === latestRelease.version ? "success" : "muted"}>
                   v{release.version}
                 </Badge>
-                <Badge tone="muted">{formatReleaseType(release.releaseType)}</Badge>
+                <Badge tone={releaseTypeTone[release.releaseType]}>{formatReleaseType(release.releaseType)}</Badge>
                 <p className="text-sm text-muted-foreground">{formatReleaseDate(release.releaseDate)}</p>
               </div>
               <CardTitle className="text-xl">{release.releaseName}</CardTitle>

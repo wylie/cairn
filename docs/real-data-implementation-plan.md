@@ -39,7 +39,7 @@ The Next.js server layer should own all production reads and writes. Browser cod
 `lib/version.ts` owns shipped version metadata through the `version` object.
 
 - Current version displays read `currentVersion`, `releaseName`, `releaseDate`, `releaseType`, and `summary`.
-- Cairn identifies the shipped product as `v0.2.0`.
+- Cairn identifies the shipped product through `version.currentVersion`.
 - Historical release entries, such as `v0.1.0`, stay in Release Notes below the current shipped version.
 - Release Notes and Roadmap should use `version` for current version display instead of hardcoded strings.
 - Cairn uses CI/CD release discipline with Semantic Versioning.

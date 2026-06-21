@@ -12,11 +12,11 @@ export type ReleaseNote = {
 };
 
 const realDataFoundationRelease: ReleaseNote = {
-  version: version.currentVersion,
-  releaseName: version.releaseName,
-  releaseDate: version.releaseDate,
-  releaseType: version.releaseType,
-  summary: version.summary,
+  version: "0.2.0",
+  releaseName: "Real Data Foundation",
+  releaseDate: "2026-06-29",
+  releaseType: "minor",
+  summary: "Initial real database foundation using Neon.",
   sections: {
     added: [
       "Neon database integration",
@@ -57,6 +57,32 @@ const realDataFoundationRelease: ReleaseNote = {
   }
 };
 
+const patchReleaseNotesSupportRelease: ReleaseNote = {
+  version: version.currentVersion,
+  releaseName: version.releaseName,
+  releaseDate: version.releaseDate,
+  releaseType: version.releaseType,
+  summary: version.summary,
+  sections: {
+    added: [
+      "Patch release notes support",
+      "Release type badges for Major, Minor, and Patch releases",
+      "Current patch release metadata"
+    ],
+    improved: [
+      "Release Notes now document every shipped version",
+      "Patch releases sort ahead of their base minor release",
+      "Patch release badges use a lighter visual treatment than major and minor releases"
+    ],
+    fixed: [],
+    changed: [
+      "Version metadata now identifies the current shipped patch release",
+      "Release documentation clarifies that every releasable commit increments a version"
+    ],
+    knownIssues: []
+  }
+};
+
 function parseVersion(value: string) {
   return value
     .replace(/^v/i, "")
@@ -83,6 +109,7 @@ export function compareReleaseNotesNewestFirst(a: ReleaseNote, b: ReleaseNote) {
 }
 
 const releaseNoteEntries: ReleaseNote[] = [
+  patchReleaseNotesSupportRelease,
   realDataFoundationRelease,
   {
     version: "0.1.0",

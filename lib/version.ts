@@ -1,11 +1,11 @@
 export type ReleaseType = "patch" | "minor" | "major";
 
 export const version = {
-  currentVersion: "0.2.0",
-  releaseName: "Real Data Foundation",
+  currentVersion: "0.2.1",
+  releaseName: "Patch Release Notes Support",
   releaseDate: "2026-06-29",
-  releaseType: "minor" as ReleaseType,
-  summary: "Initial real database foundation using Neon."
+  releaseType: "patch" as ReleaseType,
+  summary: "Release Notes now support patch-level shipped versions."
 } as const;
 
 export function formatReleaseType(type: ReleaseType) {

@@ -4,6 +4,8 @@ Cairn's roadmap is milestone-based. It describes product direction, not deployme
 
 Version ranges are directional. Shipped versions are documented in Release Notes, while this roadmap describes the next capability areas expected to follow the current product foundation.
 
+Release Notes are the authoritative product history for every shipped version. Patch releases are expected during continuous deployment and should be documented individually, even when they do not change roadmap milestones.
+
 ## v0.2.x - Real Data Foundation
 
 Status: Shipped

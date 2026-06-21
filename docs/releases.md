@@ -10,11 +10,11 @@ Version metadata is centralized in `lib/version.ts`.
 
 Current shipped version metadata:
 
-- `currentVersion`: `0.2.0`
-- `releaseName`: `Real Data Foundation`
+- `currentVersion`: `0.2.1`
+- `releaseName`: `Patch Release Notes Support`
 - `releaseDate`: `2026-06-29`
-- `releaseType`: `minor`
-- `summary`: `Initial real database foundation using Neon.`
+- `releaseType`: `patch`
+- `summary`: `Release Notes now support patch-level shipped versions.`
 
 All active application version displays should read from the `version` object in `lib/version.ts`. Compatibility exports may exist for older components, but they must derive from `version`.
 
@@ -24,7 +24,7 @@ Cairn follows SemVer-style increments during pilot and production work.
 
 ### PATCH
 
-Use PATCH versions for bug fixes, UI polish, documentation, refactors, and internal improvements.
+Use PATCH versions for bug fixes, UI polish, accessibility improvements, documentation, refactors, cleanup, and internal improvements. Patch releases are expected and normal during continuous deployment.
 
 Examples:
 
@@ -51,7 +51,7 @@ Examples:
 - `1.0.0`
 - `2.0.0`
 
-Every commit should increment the product version before deployment. For now:
+Every releasable commit should increment the product version before deployment. For now:
 
 - Feature commits increment MINOR when user-visible.
 - Fixes, refactors, documentation, and internal improvements increment PATCH.
@@ -60,11 +60,13 @@ Every commit should increment the product version before deployment. For now:
 
 Release notes are file-based in `lib/releases/release-notes.ts`.
 
+Release Notes are Cairn's authoritative product history. Every version bump receives a Release Notes entry, including patch versions such as `0.2.1`, `0.2.2`, and `0.2.3`.
+
 To ship a version:
 
 1. Update `version` in `lib/version.ts`.
 2. Add or update the shipped release entry in `releaseNotes`.
-3. Include sections for `added`, `improved`, `fixed`, `changed`, and `knownIssues`.
+3. Include `version`, `releaseType`, `releaseDate`, `releaseName`, `summary`, `added`, `improved`, `fixed`, `changed`, and `knownIssues`.
 4. Keep facility-facing notes clear and avoid platform-only implementation details when possible.
 5. Run the build before committing.
 
@@ -102,21 +104,40 @@ Update notifications are generated from release note data by `lib/releases/notif
 
 When a release entry becomes the latest release, Cairn can generate a system notification such as:
 
-`Cairn has been updated to v0.2.0. View what's new.`
+`Cairn has been updated to v0.2.1. View what's new.`
 
 The notification uses the existing communications notification center, counts toward unread totals, can be marked read, and links directly to the matching release note anchor.
 
 ## Current Shipped Version
 
-Version: `v0.2.0`
+Version: `v0.2.1`
 
 Released: `2026-06-29`
 
-Title: Real Data Foundation
+Title: Patch Release Notes Support
 
-Release type: Minor
+Release type: Patch
 
-Summary: Initial real database foundation using Neon.
+Summary: Release Notes now support patch-level shipped versions.
+
+### v0.2.1 Notes
+
+#### Added
+
+- Patch release notes support
+- Release type badges for Major, Minor, and Patch releases
+- Current patch release metadata
+
+#### Improved
+
+- Release Notes now document every shipped version.
+- Patch releases sort ahead of their base minor release.
+- Patch release badges use a lighter visual treatment than major and minor releases.
+
+#### Changed
+
+- Version metadata now identifies the current shipped patch release.
+- Release documentation clarifies that every releasable commit increments a version.
 
 ### v0.2.0 Notes
 

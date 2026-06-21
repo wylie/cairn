@@ -7,6 +7,10 @@ describe("ReleaseNotesPage", () => {
 
     expect(screen.getByRole("heading", { name: "Release Notes" })).toBeInTheDocument();
     expect(screen.getByText("Release Type")).toBeInTheDocument();
+    expect(screen.getByText("Patch Release Notes Support")).toBeInTheDocument();
+    expect(screen.getAllByText("Patch").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Release Notes now support patch-level shipped versions.").length).toBeGreaterThan(0);
+    expect(screen.getByText("Patch release notes support")).toBeInTheDocument();
     expect(screen.getAllByText("Minor").length).toBeGreaterThan(0);
     expect(screen.getByText("Real Data Foundation")).toBeInTheDocument();
     expect(screen.getAllByText("Initial real database foundation using Neon.").length).toBeGreaterThan(0);

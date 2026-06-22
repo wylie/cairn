@@ -24,16 +24,30 @@ export const roadmapMilestones: RoadmapMilestone[] = [
   },
   {
     versionRange: "v0.3.x",
+    title: "Customer & Household Persistence",
+    focus: [
+      "Customer create/edit/delete",
+      "Household create/edit/delete",
+      "Neon-backed customer management",
+      "Neon-backed household management",
+      "Organization-scoped repository writes"
+    ],
+    status: "Shipped"
+  },
+  {
+    versionRange: "v0.4.x",
     title: "Customer Operations",
     focus: [
-      "Customer create/edit",
-      "Household management",
-      "Imports"
+      "Customer imports",
+      "Household imports",
+      "Customer merge workflows",
+      "Relationship roles",
+      "Audit events"
     ],
     status: "Planned"
   },
   {
-    versionRange: "v0.4.x",
+    versionRange: "v0.5.x",
     title: "Memberships & Check-In",
     focus: [
       "Membership persistence",
@@ -43,7 +57,7 @@ export const roadmapMilestones: RoadmapMilestone[] = [
     status: "Planned"
   },
   {
-    versionRange: "v0.5.x",
+    versionRange: "v0.6.x",
     title: "Programs & Registrations",
     focus: [
       "Programs",
@@ -54,7 +68,7 @@ export const roadmapMilestones: RoadmapMilestone[] = [
     status: "Planned"
   },
   {
-    versionRange: "v0.6.x",
+    versionRange: "v0.7.x",
     title: "Pilot Readiness",
     focus: [
       "Multi-facility testing",

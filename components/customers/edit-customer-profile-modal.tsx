@@ -36,7 +36,7 @@ export function EditCustomerProfileModal({
     emergencyContactPhone?: string;
     notes?: string;
     profilePhotoUrl?: string;
-  }) => { ok: boolean; message: string };
+  }) => Promise<{ ok: boolean; message: string }> | { ok: boolean; message: string };
 }) {
   const pronounOptions = ["She/her", "He/him", "They/them", "She/they", "He/they", "Ask me", "Prefer not to say", "Custom"] as const;
   const initial = useMemo(
@@ -65,6 +65,7 @@ export function EditCustomerProfileModal({
 
   const [form, setForm] = useState(initial);
   const [warning, setWarning] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const normalizedState = normalizeStateInput(form.state);
   const stateInlineError = normalizedState.length === 2 && !isValidUsState(normalizedState) ? "Use a valid 2-letter US state code." : "";
 
@@ -76,7 +77,7 @@ export function EditCustomerProfileModal({
 
   if (!open) return null;
 
-  const submit = () => {
+  const submit = async () => {
     const normalizedForm = {
       ...form,
       addressLine1: normalizeStreetAddress(form.addressLine1 ?? ""),
@@ -84,12 +85,13 @@ export function EditCustomerProfileModal({
       city: normalizeCity(form.city ?? ""),
       state: normalizeStateInput(form.state ?? "")
     };
-    if (!isValidUsState(normalizedForm.state)) {
+    if (normalizedForm.state && !isValidUsState(normalizedForm.state)) {
       setWarning("Enter a valid 2-letter US state code.");
       return;
     }
     setForm(normalizedForm);
-    const result = onSave(normalizedForm);
+    setIsSubmitting(true);
+    const result = await Promise.resolve(onSave(normalizedForm)).finally(() => setIsSubmitting(false));
     if (!result.ok) {
       setWarning(result.message);
       return;
@@ -112,7 +114,9 @@ export function EditCustomerProfileModal({
             TODO: Future webcam support will capture/preview/retake profile photo before save.
           </p>
           <div className="flex flex-wrap gap-2">
-            <Button className="min-h-11" onClick={submit}>Save Changes</Button>
+            <Button className="min-h-11" onClick={submit} disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : "Save Changes"}
+            </Button>
             <Button className="min-h-11" variant="secondary" onClick={onClose}>Cancel</Button>
           </div>
         </div>

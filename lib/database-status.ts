@@ -28,6 +28,7 @@ export type DatabaseStatus = {
   tableCounts: DatabaseTableCount[];
   lastMigrationTag: string | null;
   lastMigrationAt: string | null;
+  lastSeedRunAt: string | null;
   seedDataStatus: "Seeded" | "Partial" | "Empty" | "Unavailable";
   checkedAt: string;
 };
@@ -103,6 +104,7 @@ function buildStatus(input: {
     tableCounts,
     lastMigrationTag: migration.tag,
     lastMigrationAt: migration.at,
+    lastSeedRunAt: null,
     seedDataStatus: getSeedDataStatus(tableCounts, input.connected),
     checkedAt: new Date().toISOString()
   };

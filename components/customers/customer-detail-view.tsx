@@ -26,7 +26,7 @@ import { buildDetailHref } from "@/lib/navigation/detail-navigation";
 import { buildMembershipCardRecord } from "@/lib/memberships/cards";
 import { ROLE_LABELS } from "@/lib/staff/capabilities";
 import { PERMISSION_LABELS } from "@/lib/staff/permissions";
-import type { CommunicationRecord, StaffRole } from "@/types/domain";
+import type { CommunicationRecord, Customer, StaffRole } from "@/types/domain";
 
 type CustomerDocumentType =
   | "waiver"
@@ -47,7 +47,13 @@ type CustomerDocumentRecord = {
   status: "active" | "archived";
 };
 
-export function CustomerDetailView({ customerId }: { customerId: string }) {
+export function CustomerDetailView({
+  customerId,
+  persistedCustomer
+}: {
+  customerId: string;
+  persistedCustomer?: Customer;
+}) {
   const pathname = usePathname() ?? "";
   const {
     customers,
@@ -125,7 +131,8 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
   >("all");
   const [communicationFilter, setCommunicationFilter] = useState<"all" | CommunicationRecord["channel"]>("all");
   const photoInputRef = useRef<HTMLInputElement | null>(null);
-  const customer = customers.find((entry) => entry.id === customerId);
+  const customer = persistedCustomer ?? customers.find((entry) => entry.id === customerId);
+  const usesPersistedCustomer = Boolean(persistedCustomer);
 
   if (!customer) {
     return <p className="text-sm text-muted-foreground">Customer not found.</p>;
@@ -672,7 +679,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                 </div>
               </div>
             </div>
-            <CustomerDetailActions customerId={customer.id} />
+            <CustomerDetailActions customerId={customer.id} persistedCustomer={persistedCustomer} />
           </div>
           <div className="mt-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -1184,7 +1191,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                 </Button>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button variant="secondary" className="h-10" onClick={() => setProfileFeedback("Search a member below and add to an existing household from their profile.")}>
+                    <Button variant="secondary" className="h-10" onClick={() => setProfileFeedback(usesPersistedCustomer ? "Household assignment is managed on the Households page for Neon-backed customers." : "Search a member below and add to an existing household from their profile.")}>
                   Join Household
                 </Button>
                 <Button variant="secondary" className="h-10" onClick={() => setProfileFeedback("Use member relationship controls below to mark parent/guardian links.")}>

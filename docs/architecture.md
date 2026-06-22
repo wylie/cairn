@@ -184,38 +184,40 @@ Future authentication work should authenticate staff through a production provid
 
 ### Customer & Household Foundation
 
-Customers and households now have database foundations. Customer and household list read operations have started moving to Neon, while customer write workflows, household editing, and operational workflows still use the existing demo persistence.
+Customers and households now have database-backed profile workflows for modeled fields. Customer and household list/detail/create/edit/delete operations use Neon through server actions and repository helpers, while memberships, check-ins, waivers, programs, POS, and authentication still use the existing demo persistence.
 
 - `customers.organization_id` requires every customer to belong to one organization.
 - `customers.household_id` is nullable so individual customers can exist before household relationships are assigned.
 - `households.organization_id` requires every household to belong to one organization.
 - `households.primary_contact_id` is nullable so household records can be created before a primary contact is selected.
-- `db/repositories/customer-repository.ts` and `db/repositories/household-repository.ts` provide server-only read helpers and counts.
+- `db/repositories/customer-repository.ts` and `db/repositories/household-repository.ts` provide server-only read, write, delete, and count helpers.
 - `/admin/database` reports customer and household counts from Neon for internal visibility.
 - `npm run db:seed` seeds a small fictional customer and household set for each demo organization.
 
 Customer read path:
 
-- The staff customer list page resolves the active organization from the server-side organization context.
-- The page reads customers through `db/repositories/customer-repository.ts`.
-- Customer reads are organization-scoped before rows are mapped into the existing customer card UI.
+- The staff customer list and detail pages resolve the active organization from the server-side organization context.
+- The pages read customers through `db/repositories/customer-repository.ts`.
+- Customer creates, edits, and deletes call server actions that resolve organization context before repository writes.
+- Customer reads and writes are organization-scoped before rows are mapped into the existing customer UI.
 - If the database path is unavailable, the client list falls back to existing demo state for local demo stability.
 - If no customer rows exist, the list shows a friendly empty state instead of surfacing a database error.
 
 Household read path:
 
-- The staff household list page resolves the active organization from the server-side organization context.
-- The page reads households through `db/repositories/household-repository.ts`.
-- Household reads are organization-scoped before rows are mapped into the existing household workspace UI.
-- Primary-contact metadata is derived from organization-scoped customer reads where available.
+- The staff household list and detail pages resolve the active organization from the server-side organization context.
+- The pages read households through `db/repositories/household-repository.ts`.
+- Household creates, edits, and deletes call server actions that resolve organization context before repository writes.
+- Household reads and writes are organization-scoped before rows are mapped into the existing household workspace UI.
+- Primary-contact metadata and household membership display are derived from organization-scoped customer reads where available.
 
 Current migration status:
 
-- Customer list reads are backed by Neon.
-- Household list reads are backed by Neon.
-- Customer create, edit, delete, merge, membership, check-in, waiver, registration, POS, and household editing workflows are not migrated yet.
+- Customer list, detail, create, edit, and delete are backed by Neon for modeled profile fields.
+- Household list, detail, create, edit, and delete are backed by Neon for modeled household fields.
+- Customer merge, membership, check-in, waiver, registration, POS, richer household relationships, and billing workflows are not migrated yet.
 - The existing client state provider remains in place for operational actions until server-backed write paths exist.
-- The v0.2.3 data-source audit is documented in [Data Sources](./data-sources.md) and exposed internally at `/admin/data-sources`.
+- The v0.3.0 data-source audit is documented in [Data Sources](./data-sources.md) and exposed internally at `/admin/data-sources`.
 
 Customer ownership rules:
 

@@ -2,51 +2,13 @@ import { cookies } from "next/headers";
 import { HouseholdsPageClient } from "@/components/households/households-page-client";
 import { getDatabase } from "@/db";
 import { getActiveFacilityContext } from "@/db/tenant";
-import { getCustomersByOrganization, type CustomerRecord } from "@/db/repositories/customer-repository";
-import { getHouseholdsByOrganization, type HouseholdRecord } from "@/db/repositories/household-repository";
-import type { Customer, Household } from "@/types/domain";
-
-function mapHouseholdRecordToDisplayHousehold(
-  household: HouseholdRecord,
-  customersById: Map<string, Customer>,
-  locationId: string
-): Household {
-  const primaryContactId = household.primaryContactId ?? "";
-  const primaryContact = customersById.get(primaryContactId);
-
-  return {
-    id: household.id,
-    householdName: household.name,
-    primaryContactCustomerId: primaryContactId,
-    billingCustomerId: primaryContactId,
-    locationId,
-    householdStatus: "active",
-    preferredCommunicationMethod: primaryContact?.phone ? "sms" : "email",
-    email: primaryContact?.email,
-    phone: primaryContact?.phone,
-    notes: "Database-backed household foundation record.",
-    createdAt: household.createdAt.toISOString()
-  };
-}
-
-function mapCustomerRecordToDisplayCustomer(customer: CustomerRecord): Customer {
-  return {
-    id: customer.id,
-    memberId: customer.id,
-    organizationId: customer.organizationId,
-    locationId: "",
-    firstName: customer.firstName,
-    lastName: customer.lastName,
-    preferredName: customer.preferredName ?? undefined,
-    email: customer.email ?? "",
-    phone: customer.phone ?? "",
-    dateOfBirth: customer.birthDate ?? undefined,
-    tags: [],
-    checkInStatus: "out",
-    createdAt: customer.createdAt.toISOString(),
-    updatedAt: customer.updatedAt.toISOString()
-  };
-}
+import { getCustomersByOrganization } from "@/db/repositories/customer-repository";
+import { getHouseholdsByOrganization } from "@/db/repositories/household-repository";
+import {
+  buildHouseholdMembersFromCustomers,
+  mapCustomerRecordToDisplayCustomer,
+  mapHouseholdRecordToDisplayHousehold
+} from "@/lib/customer-household-persistence";
 
 async function getDatabaseHouseholdsForActiveOrganization() {
   if (!getDatabase()) return undefined;
@@ -61,17 +23,29 @@ async function getDatabaseHouseholdsForActiveOrganization() {
       getHouseholdsByOrganization(context.organization.id),
       getCustomersByOrganization(context.organization.id)
     ]);
-    const customersById = new Map(customers.map((customer) => [customer.id, mapCustomerRecordToDisplayCustomer(customer)]));
     const locationId = context.activeFacility?.id ?? context.facilities[0]?.id ?? "";
+    const displayCustomers = customers.map((customer, index) => mapCustomerRecordToDisplayCustomer(customer, index, locationId));
+    const customersById = new Map(displayCustomers.map((customer) => [customer.id, customer]));
+    const displayHouseholds = households.map((household) => mapHouseholdRecordToDisplayHousehold(household, customersById, locationId));
 
-    return households.map((household) => mapHouseholdRecordToDisplayHousehold(household, customersById, locationId));
+    return {
+      households: displayHouseholds,
+      customers: displayCustomers,
+      householdMembers: buildHouseholdMembersFromCustomers(displayCustomers, displayHouseholds)
+    };
   } catch {
     return undefined;
   }
 }
 
 export default async function HouseholdsPage() {
-  const households = await getDatabaseHouseholdsForActiveOrganization();
+  const persisted = await getDatabaseHouseholdsForActiveOrganization();
 
-  return <HouseholdsPageClient persistedHouseholds={households} />;
+  return (
+    <HouseholdsPageClient
+      persistedHouseholds={persisted?.households}
+      persistedCustomers={persisted?.customers}
+      persistedHouseholdMembers={persisted?.householdMembers}
+    />
+  );
 }

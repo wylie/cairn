@@ -17,7 +17,7 @@ const RELATIONSHIP_OPTIONS: Array<{ value: CustomerRelationshipType; label: stri
   { value: "other", label: "Other" }
 ];
 
-type NewCustomerInput = {
+export type NewCustomerInput = {
   firstName: string;
   lastName: string;
   preferredName?: string;
@@ -54,7 +54,7 @@ export function AddCustomerModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onCreate: (input: NewCustomerInput) => { ok: boolean; message: string; customerId?: string };
+  onCreate: (input: NewCustomerInput) => Promise<{ ok: boolean; message: string; customerId?: string }> | { ok: boolean; message: string; customerId?: string };
   title?: string;
   customers?: Customer[];
   autoCloseOnSuccess?: boolean;
@@ -91,6 +91,7 @@ export function AddCustomerModal({
   const [relationshipType, setRelationshipType] = useState<CustomerRelationshipType>("parent_guardian");
   const [relationshipNotes, setRelationshipNotes] = useState("");
   const [warning, setWarning] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdCustomerId, setCreatedCustomerId] = useState<string | null>(null);
   const [createdDisplayName, setCreatedDisplayName] = useState("");
 
@@ -184,8 +185,9 @@ export function AddCustomerModal({
     relationshipNotes: relatedCustomerId ? relationshipNotes : undefined
   };
 
-  const submit = () => {
-    const result = onCreate(payload);
+  const submit = async () => {
+    setIsSubmitting(true);
+    const result = await Promise.resolve(onCreate(payload)).finally(() => setIsSubmitting(false));
     if (!result.ok) {
       setWarning(result.message);
       return;
@@ -484,7 +486,9 @@ export function AddCustomerModal({
                   Next
                 </Button>
               ) : (
-                <Button className="min-h-11" onClick={submit}>Create Customer</Button>
+                <Button className="min-h-11" onClick={submit} disabled={isSubmitting}>
+                  {isSubmitting ? "Creating..." : "Create Customer"}
+                </Button>
               )}
             </div>
           </div>

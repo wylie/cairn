@@ -41,20 +41,20 @@ export const dataSourceInventory: DataSourceInventoryItem[] = [
   {
     module: "Customers",
     status: "Neon-backed",
-    currentSource: "Customer list reads use Neon where available; customer write workflows still use demo/local mock state.",
-    repositoryLayer: "Server-only customer reads, organization-scoped customer lists, scoped search, and counts exist.",
-    scopeAudit: "`customers.organization_id` is required. Customer list pages resolve active organization before reading.",
-    migrationStatus: "Read foundation is in place; create, edit, delete, merge, membership, waiver, and check-in writes remain demo-backed.",
-    plannedOrder: "Next customer operations phase: server actions for customer writes, imports, household links, and audit events."
+    currentSource: "Neon via `customers`, organization-scoped repositories, and server actions for customer profile writes.",
+    repositoryLayer: "Server-only customer reads, organization-scoped customer lists, scoped search, counts, create, edit, and delete.",
+    scopeAudit: "`customers.organization_id` is required. Customer reads and writes resolve the active organization before repository access.",
+    migrationStatus: "Fully persistent for customer profile list/detail/create/edit/delete. Membership, waiver, and check-in behaviors remain separate future migrations.",
+    plannedOrder: "Next customer operations phase: imports, merge workflows, audit events, and richer customer profile fields."
   },
   {
     module: "Households",
     status: "Neon-backed",
-    currentSource: "Household list reads use Neon where available; household editing remains demo/local mock state.",
-    repositoryLayer: "Server-only household reads, organization-scoped household lists, and counts exist.",
-    scopeAudit: "`households.organization_id` is required. Household pages resolve active organization and customer context before reading.",
-    migrationStatus: "Read foundation is in place; household edit, relationship mutation, and billing behavior remain demo-backed.",
-    plannedOrder: "After customer write migration: household membership, guardians, emergency contacts, and billing contacts."
+    currentSource: "Neon via `households` and customer `household_id` links with server actions for household profile writes.",
+    repositoryLayer: "Server-only household reads, organization-scoped household lists, counts, create, edit, and delete.",
+    scopeAudit: "`households.organization_id` is required. Household reads and writes resolve the active organization before repository access.",
+    migrationStatus: "Fully persistent for household list/detail/create/edit/delete and primary-contact assignment. Membership, billing, and relationship detail behavior remain future migrations.",
+    plannedOrder: "Next household operations phase: richer household member roles, guardians, emergency contacts, billing contacts, and audit events."
   },
   {
     module: "Memberships",

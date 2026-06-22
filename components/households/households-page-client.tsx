@@ -2,9 +2,17 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 import { HouseholdsWorkspace } from "@/components/households/households-workspace";
-import type { Household } from "@/types/domain";
+import type { Customer, Household, HouseholdMember } from "@/types/domain";
 
-export function HouseholdsPageClient({ persistedHouseholds }: { persistedHouseholds?: Household[] }) {
+export function HouseholdsPageClient({
+  persistedHouseholds,
+  persistedCustomers,
+  persistedHouseholdMembers
+}: {
+  persistedHouseholds?: Household[];
+  persistedCustomers?: Customer[];
+  persistedHouseholdMembers?: HouseholdMember[];
+}) {
   const pathname = usePathname() ?? "/households";
   const searchParams = useSearchParams();
   const currentSearch = searchParams?.toString?.() ?? "";
@@ -16,6 +24,8 @@ export function HouseholdsPageClient({ persistedHouseholds }: { persistedHouseho
       pathname={pathname}
       currentSearch={currentSearch}
       persistedHouseholds={persistedHouseholds}
+      persistedCustomers={persistedCustomers}
+      persistedHouseholdMembers={persistedHouseholdMembers}
     />
   );
 }

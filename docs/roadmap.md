@@ -19,17 +19,31 @@ Focus:
 - Households
 - Data classification
 
-## v0.3.x - Customer Operations
+## v0.3.x - Customer & Household Persistence
+
+Status: Shipped
+
+Focus:
+
+- Customer create/edit/delete
+- Household create/edit/delete
+- Neon-backed customer management
+- Neon-backed household management
+- Organization-scoped repository writes
+
+## v0.4.x - Customer Operations
 
 Status: Planned
 
 Focus:
 
-- Customer create/edit
-- Household management
-- Imports
+- Customer imports
+- Household imports
+- Customer merge workflows
+- Relationship roles
+- Audit events
 
-## v0.4.x - Memberships & Check-In
+## v0.5.x - Memberships & Check-In
 
 Status: Planned
 
@@ -39,7 +53,7 @@ Focus:
 - Check-ins
 - Attendance
 
-## v0.5.x - Programs & Registrations
+## v0.6.x - Programs & Registrations
 
 Status: Planned
 
@@ -50,7 +64,7 @@ Focus:
 - Registrations
 - Waitlists
 
-## v0.6.x - Pilot Readiness
+## v0.7.x - Pilot Readiness
 
 Status: Planned
 

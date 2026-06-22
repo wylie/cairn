@@ -62,11 +62,11 @@ const realDataFoundationRelease: ReleaseNote = {
 };
 
 const releaseNotesCommitLinksRelease: ReleaseNote = {
-  version: version.currentVersion,
-  releaseName: version.releaseName,
-  releaseDate: version.releaseDate,
-  releaseType: version.releaseType,
-  summary: version.summary,
+  version: "0.2.4",
+  releaseName: "Release Notes Commit Links",
+  releaseDate: "2026-06-21",
+  releaseType: "patch",
+  summary: "Release Notes are simpler to scan and can link to GitHub commits when metadata is available.",
   sections: {
     added: [],
     improved: [
@@ -78,6 +78,35 @@ const releaseNotesCommitLinksRelease: ReleaseNote = {
       "Removed duplicated release summary card"
     ],
     knownIssues: []
+  }
+};
+
+const customerHouseholdPersistenceRelease: ReleaseNote = {
+  version: version.currentVersion,
+  releaseName: version.releaseName,
+  releaseDate: version.releaseDate,
+  releaseType: version.releaseType,
+  summary: version.summary,
+  sections: {
+    added: [
+      "Customer create/edit/delete",
+      "Household create/edit/delete",
+      "Neon-backed customer management",
+      "Neon-backed household management"
+    ],
+    improved: [
+      "Repository architecture",
+      "Database diagnostics",
+      "Tenant isolation"
+    ],
+    fixed: [],
+    changed: [
+      "Customers now persist to Neon",
+      "Households now persist to Neon"
+    ],
+    knownIssues: [
+      "Memberships, check-ins, waivers, programs, POS, and authentication still use demo persistence"
+    ]
   }
 };
 
@@ -182,6 +211,7 @@ export function compareReleaseNotesNewestFirst(a: ReleaseNote, b: ReleaseNote) {
 }
 
 const releaseNoteEntries: ReleaseNote[] = [
+  customerHouseholdPersistenceRelease,
   releaseNotesCommitLinksRelease,
   neonReadinessAuditRelease,
   releaseBadgeColorStandardizationRelease,

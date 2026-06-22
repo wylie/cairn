@@ -1,15 +1,26 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { ModalShell } from "@/components/ui/modal-shell";
 import { SellAccessModal } from "@/components/pos/sell-access-modal";
 import { StaffSwitcher } from "@/components/staff/staff-switcher";
 import { EditCustomerProfileModal } from "@/components/customers/edit-customer-profile-modal";
 import { GrantCompAccessModal, type GrantCompAccessInput } from "@/components/customers/grant-comp-access-modal";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
+import { deletePersistedCustomerAction, updatePersistedCustomerAction } from "@/app/(app)/customers/actions";
+import type { Customer } from "@/types/domain";
 
-export function CustomerDetailActions({ customerId }: { customerId: string }) {
+export function CustomerDetailActions({
+  customerId,
+  persistedCustomer
+}: {
+  customerId: string;
+  persistedCustomer?: Customer;
+}) {
+  const router = useRouter();
   const { customers, accessProducts, runCustomerCheckInAction, sellAccessProducts, updateCustomerWaiver, updateCustomerProfile, addCustomerAccessRecord } = useCustomerState();
   const { activeStaff, assertPermission, requestStaffSwitch, hasPermission, logAuditEvent } = useWorkstationState();
   const [feedback, setFeedback] = useState("");
@@ -18,8 +29,11 @@ export function CustomerDetailActions({ customerId }: { customerId: string }) {
   const [sellingAccess, setSellingAccess] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
   const [grantingComp, setGrantingComp] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const customer = useMemo(() => customers.find((entry) => entry.id === customerId), [customers, customerId]);
+  const customer = useMemo(() => persistedCustomer ?? customers.find((entry) => entry.id === customerId), [customers, customerId, persistedCustomer]);
+  const usesPersistedCustomer = Boolean(persistedCustomer);
   const checkedIn = customer?.checkInStatus === "in";
 
   if (!customer) return null;
@@ -114,12 +128,13 @@ export function CustomerDetailActions({ customerId }: { customerId: string }) {
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-start gap-2">
-        <Button variant={checkedIn ? "secondary" : "primary"} onClick={onToggle}>
+        <Button variant={checkedIn ? "secondary" : "primary"} onClick={onToggle} disabled={usesPersistedCustomer}>
           {checkedIn ? "Check Out" : "Check In"}
         </Button>
-        <Button variant="primary" onClick={() => setSellingAccess(true)}>Sell Access</Button>
+        <Button variant="primary" onClick={() => setSellingAccess(true)} disabled={usesPersistedCustomer}>Sell Access</Button>
         <Button
           variant="secondary"
+          disabled={usesPersistedCustomer}
           onClick={() => {
             if (!activeStaff) {
               setWarning("Select staff PIN to continue.");
@@ -155,6 +170,9 @@ export function CustomerDetailActions({ customerId }: { customerId: string }) {
           Mark Waiver Signed
         </Button>
         <Button variant="secondary" onClick={() => setEditingProfile(true)}>Edit Profile</Button>
+        {usesPersistedCustomer ? (
+          <Button variant="destructiveSubtle" onClick={() => setConfirmingDelete(true)}>Delete Customer</Button>
+        ) : null}
         {activeStaff && hasPermission("grantCompAccess") ? (
           <div className="w-full sm:ml-auto sm:w-auto">
             <Button variant="caution" onClick={() => setGrantingComp(true)}>Grant Comp Access</Button>
@@ -171,6 +189,11 @@ export function CustomerDetailActions({ customerId }: { customerId: string }) {
             </div>
           ) : null}
         </div>
+      ) : null}
+      {usesPersistedCustomer ? (
+        <p className="text-xs text-muted-foreground">
+          Customer profile edits are Neon-backed. Check-in, access sales, and waivers remain on demo persistence until their migration releases.
+        </p>
       ) : null}
       {sellingAccess ? (
         <SellAccessModal
@@ -208,7 +231,30 @@ export function CustomerDetailActions({ customerId }: { customerId: string }) {
           open
           customer={customer}
           onClose={() => setEditingProfile(false)}
-          onSave={(input) => {
+          onSave={async (input) => {
+            if (usesPersistedCustomer) {
+              const result = await updatePersistedCustomerAction(customer.id, {
+                firstName: input.firstName,
+                lastName: input.lastName,
+                preferredName: input.preferredName,
+                dateOfBirth: input.dateOfBirth,
+                email: input.email,
+                phone: input.phone,
+                householdId: customer.householdId ?? null,
+                active: !customer.tags.includes("Inactive")
+              });
+              if (result.ok) {
+                setFeedback("Profile updated in Neon.");
+                setWarning("");
+                setShowSwitchPrompt(false);
+                router.refresh();
+              } else {
+                setWarning(result.message);
+                setFeedback("");
+              }
+              return result;
+            }
+
             if (!activeStaff) {
               requestStaffSwitch("Staff PIN Required");
               setWarning("Select staff PIN to continue.");
@@ -236,6 +282,45 @@ export function CustomerDetailActions({ customerId }: { customerId: string }) {
             return result;
           }}
         />
+      ) : null}
+      {confirmingDelete ? (
+        <ModalShell
+          open
+          ariaLabel="Delete customer"
+          title="Delete Customer"
+          description="This removes the customer record from Neon for this organization. This cannot be undone."
+          onClose={() => setConfirmingDelete(false)}
+          footer={
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="secondary" onClick={() => setConfirmingDelete(false)}>Cancel</Button>
+              <Button
+                variant="destructive"
+                disabled={isDeleting}
+                onClick={async () => {
+                  setIsDeleting(true);
+                  const result = await deletePersistedCustomerAction(customer.id);
+                  setIsDeleting(false);
+                  if (!result.ok) {
+                    setWarning(result.message);
+                    setFeedback("");
+                    return;
+                  }
+                  setFeedback(result.message);
+                  setWarning("");
+                  setConfirmingDelete(false);
+                  router.push("/customers");
+                  router.refresh();
+                }}
+              >
+                {isDeleting ? "Deleting..." : "Delete Customer"}
+              </Button>
+            </div>
+          }
+        >
+          <p className="text-sm text-muted-foreground">
+            Delete {customer.firstName} {customer.lastName}? Memberships, check-ins, POS, and waiver data are not migrated in this release and are not affected by this Neon customer delete.
+          </p>
+        </ModalShell>
       ) : null}
       {grantingComp ? (
         <GrantCompAccessModal

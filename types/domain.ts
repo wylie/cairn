@@ -939,6 +939,7 @@ export interface Customer {
   memberId: string;
   organizationId: string;
   locationId: string;
+  householdId?: string;
   createdAt?: string;
   firstName: string;
   lastName: string;

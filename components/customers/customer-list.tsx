@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AddCustomerModal } from "@/components/customers/add-customer-modal";
 import { CustomerCard } from "@/components/customers/customer-card";
 import { SellAccessModal } from "@/components/pos/sell-access-modal";
@@ -16,8 +16,10 @@ import { buildCustomerDetailHref } from "@/lib/navigation/detail-navigation";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import type { Customer } from "@/types/domain";
+import { createPersistedCustomerAction } from "@/app/(app)/customers/actions";
 
 export function CustomerList({ persistedCustomers }: { persistedCustomers?: Customer[] }) {
+  const router = useRouter();
   const pathname = usePathname() ?? "";
   const searchParams = useSearchParams();
   const currentSearch = searchParams?.toString?.() ?? "";
@@ -32,6 +34,7 @@ export function CustomerList({ persistedCustomers }: { persistedCustomers?: Cust
   const [showSwitchPrompt, setShowSwitchPrompt] = useState(false);
   const [sellCustomerId, setSellCustomerId] = useState<string | null>(null);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const usesPersistedCustomers = Array.isArray(persistedCustomers);
   const displayedCustomers = persistedCustomers ?? customers;
   const hasCustomerRecords = displayedCustomers.length > 0;
 
@@ -128,18 +131,18 @@ export function CustomerList({ persistedCustomers }: { persistedCustomers?: Cust
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((customer) => (
             (() => {
-              const membership = getMembershipForCustomer(customer);
-              const punchPass = getPassForCustomer(customer);
-              const decision = evaluateCustomerEntry(customer.id);
-              const canCheckIn = customer.checkInStatus === "in" || decision.allowed;
-              const blockedReason = canCheckIn ? undefined : decision.reasons[0] ?? "No valid access method.";
+              const membership = usesPersistedCustomers ? undefined : getMembershipForCustomer(customer);
+              const punchPass = usesPersistedCustomers ? undefined : getPassForCustomer(customer);
+              const decision = usesPersistedCustomers ? null : evaluateCustomerEntry(customer.id);
+              const canCheckIn = usesPersistedCustomers ? false : customer.checkInStatus === "in" || Boolean(decision?.allowed);
+              const blockedReason = usesPersistedCustomers ? "Check-in still uses demo persistence and is not migrated yet." : canCheckIn ? undefined : decision?.reasons[0] ?? "No valid access method.";
               return (
             <CustomerCard
               key={customer.id}
               customer={customer}
               membership={membership}
               punchPass={punchPass}
-              waiver={getWaiverForCustomer(customer)}
+              waiver={usesPersistedCustomers ? undefined : getWaiverForCustomer(customer)}
               householdHref={
                 householdMembers.find((entry) => entry.customerId === customer.id)?.householdId
                   ? `/households/${householdMembers.find((entry) => entry.customerId === customer.id)?.householdId}`
@@ -195,8 +198,14 @@ export function CustomerList({ persistedCustomers }: { persistedCustomers?: Cust
         <AddCustomerModal
           open
           onClose={() => setShowAddCustomer(false)}
-          customers={customers}
-          onCreate={(input) => {
+          customers={displayedCustomers}
+          onCreate={async (input) => {
+            if (usesPersistedCustomers) {
+              const result = await createPersistedCustomerAction(input);
+              if (result.ok) router.refresh();
+              return result;
+            }
+
             const result = addCustomer({
               ...input,
               createdByStaffId: activeStaff?.id,
@@ -214,10 +223,14 @@ export function CustomerList({ persistedCustomers }: { persistedCustomers?: Cust
             setWarning("");
             setShowSwitchPrompt(false);
           }}
-          quickActions={{
-            onSellAccess: (customerId) => setSellCustomerId(customerId),
-            onCheckIn: (customerId) => handleToggleCheckIn(customerId)
-          }}
+          quickActions={
+            usesPersistedCustomers
+              ? undefined
+              : {
+                  onSellAccess: (customerId) => setSellCustomerId(customerId),
+                  onCheckIn: (customerId) => handleToggleCheckIn(customerId)
+                }
+          }
         />
       ) : null}
     </section>

@@ -13,6 +13,9 @@ export default async function AdminDatabasePage() {
   const lastMigration = status.lastMigrationAt
     ? `${status.lastMigrationTag} · ${new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(status.lastMigrationAt))}`
     : "Not available";
+  const lastSeedRun = status.lastSeedRunAt
+    ? new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(status.lastSeedRunAt))
+    : "Not recorded";
 
   return (
     <section className="space-y-4">
@@ -65,11 +68,38 @@ export default async function AdminDatabasePage() {
         </Card>
         <Card>
           <CardHeader>
+            <CardTitle>Customers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.customerCount}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Neon-backed customer records available to customer workflows.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Households</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.householdCount}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Neon-backed household records available to household workflows.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
             <CardTitle>Last Migration</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-base font-semibold">{lastMigration}</p>
             <p className="mt-2 text-sm text-muted-foreground">Read from the Drizzle migration journal committed in this repository.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Last Seed Run</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-base font-semibold">{lastSeedRun}</p>
+            <p className="mt-2 text-sm text-muted-foreground">A dedicated seed-run audit table does not exist yet.</p>
           </CardContent>
         </Card>
       </div>

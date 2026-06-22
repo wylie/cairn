@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { ContextBackLink } from "@/components/shared/context-back-link";
 import { CustomerAvatar } from "@/components/customers/customer-avatar";
@@ -9,7 +10,10 @@ import { HouseholdAvatar } from "@/components/households/household-avatar";
 import { DigitalMembershipCard } from "@/components/memberships/digital-membership-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ModalShell } from "@/components/ui/modal-shell";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormField, FormGrid } from "@/components/shared/form-layout";
 import { SearchInput } from "@/components/shared/search-input";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useSettingsState } from "@/lib/state/settings-state";
@@ -17,7 +21,7 @@ import { useWorkstationState } from "@/lib/state/workstation-state";
 import { formatDate, formatDateTime } from "@/lib/format/date";
 import { formatCurrency } from "@/lib/transactions";
 import { buildCustomerDetailHref, buildDetailHref } from "@/lib/navigation/detail-navigation";
-import type { Household } from "@/types/domain";
+import type { Customer, Household, HouseholdMember } from "@/types/domain";
 import {
   formatHouseholdRelationship,
   formatHouseholdRole,
@@ -26,6 +30,11 @@ import {
   type HouseholdHealthStatus
 } from "@/lib/households/presentation";
 import { buildMembershipCardRecord } from "@/lib/memberships/cards";
+import {
+  createPersistedHouseholdAction,
+  deletePersistedHouseholdAction,
+  updatePersistedHouseholdAction
+} from "@/app/(app)/households/actions";
 
 function titleCase(value: string) {
   return value
@@ -58,13 +67,18 @@ export function HouseholdsWorkspace({
   initialHouseholdId,
   pathname = "/households",
   currentSearch = "",
-  persistedHouseholds
+  persistedHouseholds,
+  persistedCustomers,
+  persistedHouseholdMembers
 }: {
   initialHouseholdId?: string;
   pathname?: string;
   currentSearch?: string;
   persistedHouseholds?: Household[];
+  persistedCustomers?: Customer[];
+  persistedHouseholdMembers?: HouseholdMember[];
 }) {
+  const router = useRouter();
   const {
     households,
     householdMembers,
@@ -91,25 +105,30 @@ export function HouseholdsWorkspace({
   const focusFilter = (queryParams.get("focus") as HouseholdFocusFilter | null) ?? null;
   const [query, setQuery] = useState("");
   const [feedback, setFeedback] = useState("");
+  const usesPersistedHouseholds = Array.isArray(persistedHouseholds);
   const displayHouseholds = persistedHouseholds ?? households;
+  const displayCustomers = persistedCustomers ?? customers;
+  const displayHouseholdMembers = persistedHouseholdMembers ?? householdMembers;
   const [selectedHouseholdId, setSelectedHouseholdId] = useState(initialHouseholdId ?? displayHouseholds[0]?.id ?? "");
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [showHouseholdForm, setShowHouseholdForm] = useState<"create" | "edit" | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const householdPhotoInputRef = useRef<HTMLInputElement | null>(null);
 
   const householdRows = useMemo(() => {
     const todayKey = new Date().toISOString().slice(0, 10);
     return displayHouseholds.map((household) => {
-      const members = householdMembers
+      const members = displayHouseholdMembers
         .filter((entry) => entry.householdId === household.id)
         .map((entry) => ({
           membership: entry,
-          customer: customers.find((customer) => customer.id === entry.customerId)
+          customer: displayCustomers.find((customer) => customer.id === entry.customerId)
         }))
-        .filter((entry): entry is { membership: (typeof householdMembers)[number]; customer: NonNullable<typeof entry.customer> } => Boolean(entry.customer));
+        .filter((entry): entry is { membership: (typeof displayHouseholdMembers)[number]; customer: NonNullable<typeof entry.customer> } => Boolean(entry.customer));
       const memberIds = members.map((entry) => entry.customer.id);
-      const primaryContact = customers.find((entry) => entry.id === household.primaryContactCustomerId);
-      const secondaryContact = customers.find((entry) => entry.id === household.secondaryContactCustomerId);
-      const billingContact = customers.find((entry) => entry.id === household.billingCustomerId);
+      const primaryContact = displayCustomers.find((entry) => entry.id === household.primaryContactCustomerId);
+      const secondaryContact = displayCustomers.find((entry) => entry.id === household.secondaryContactCustomerId);
+      const billingContact = displayCustomers.find((entry) => entry.id === household.billingCustomerId);
       const activeMemberships = customerAccessRecords.filter(
         (entry) =>
           (entry.householdId === household.id || memberIds.includes(entry.customerId)) &&
@@ -217,7 +236,7 @@ export function HouseholdsWorkspace({
         })),
         ...upcomingRegistrations.slice(0, 3).map((entry) => ({
           id: `registration-${entry.registration.id}`,
-          title: `${customers.find((customer) => customer.id === entry.registration.customerId)?.firstName ?? "Member"} registered`,
+          title: `${displayCustomers.find((customer) => customer.id === entry.registration.customerId)?.firstName ?? "Member"} registered`,
           occurredAt: entry.session?.startsAt ?? todayKey
         })),
         ...alerts.slice(0, 2).map((alert) => ({
@@ -267,9 +286,9 @@ export function HouseholdsWorkspace({
   }, [
     checkInRecords,
     customerAccessRecords,
-    customers,
+    displayCustomers,
     displayHouseholds,
-    householdMembers,
+    displayHouseholdMembers,
     operationsAlerts,
     operationsTasks,
     registrations,
@@ -387,6 +406,11 @@ export function HouseholdsWorkspace({
             ? "Household detail dashboard for memberships, waivers, registrations, billing, communications, check-ins, and shared activity."
             : "Manage family units, shared memberships, waivers, billing, registrations, check-ins, and communication from one operational workspace."
         }
+        actions={
+          usesPersistedHouseholds ? (
+            <Button onClick={() => setShowHouseholdForm("create")}>Add Household</Button>
+          ) : undefined
+        }
       />
 
       {isDetailPage ? (
@@ -404,6 +428,11 @@ export function HouseholdsWorkspace({
       ) : null}
 
       {feedback ? <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{feedback}</p> : null}
+      {usesPersistedHouseholds ? (
+        <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900">
+          Household profile writes are Neon-backed. Memberships, check-ins, waivers, billing, and program activity remain on demo persistence until future releases.
+        </p>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5" aria-label="household-dashboard-widgets">
         <Link href={buildHouseholdWorkspaceHref("missing-waivers")}><SummaryCard label="Households Missing Waivers" value={`${householdRows.filter((row) => row.missingWaivers.length > 0).length}`} interactive /></Link>
@@ -577,6 +606,12 @@ export function HouseholdsWorkspace({
                     <Button variant="secondary">View Receipts</Button>
                     <Button variant="secondary">Send Message</Button>
                     <Button variant="secondary">Add Member</Button>
+                    {usesPersistedHouseholds ? (
+                      <>
+                        <Button variant="secondary" onClick={() => setShowHouseholdForm("edit")}>Edit Household</Button>
+                        <Button variant="destructiveSubtle" onClick={() => setConfirmingDelete(true)}>Delete Household</Button>
+                      </>
+                    ) : null}
                     <Link href={buildHouseholdHref(selected.household.id, pathname, currentSearch)}>
                       <Button variant="secondary">Open Detail Page</Button>
                     </Link>
@@ -710,7 +745,7 @@ export function HouseholdsWorkspace({
                 <div className="mb-4 break-inside-avoid">
                 <SectionCard title="Household Access" ariaLabel="household-access-section" id="household-access-section">
                   <div className="space-y-3">
-                    <p>Who can currently enter: {selected.activeMemberships.map((entry) => customers.find((customer) => customer.id === entry.customerId)?.firstName).filter(Boolean).join(", ") || "None"}</p>
+                    <p>Who can currently enter: {selected.activeMemberships.map((entry) => displayCustomers.find((customer) => customer.id === entry.customerId)?.firstName).filter(Boolean).join(", ") || "None"}</p>
                     <p>Who is blocked: {selected.members.filter((entry) => !selected.activeMemberships.some((row) => row.customerId === entry.customer.id || row.coveredCustomerIds?.includes(entry.customer.id))).map((entry) => `${entry.customer.firstName} ${entry.customer.lastName}`).join(", ") || "None"}</p>
                     <p>Missing waivers: {selected.missingWaivers.map((entry) => `${entry.customer.firstName} ${entry.customer.lastName}`).join(", ") || "None"}</p>
                     <div className="flex flex-wrap gap-2">
@@ -743,14 +778,14 @@ export function HouseholdsWorkspace({
                           </Badge>
                         </div>
                         <div className="mt-2 grid gap-2 md:grid-cols-2">
-                          <p>Covered members: {(membership.coveredCustomerIds ?? []).map((id) => customers.find((entry) => entry.id === id)).filter(Boolean).map((entry) => `${entry!.firstName} ${entry!.lastName}`).join(", ") || "Primary member only"}</p>
+                          <p>Covered members: {(membership.coveredCustomerIds ?? []).map((id) => displayCustomers.find((entry) => entry.id === id)).filter(Boolean).map((entry) => `${entry!.firstName} ${entry!.lastName}`).join(", ") || "Primary member only"}</p>
                           <p>Start date: {formatDate(membership.startDate)}</p>
                           <p>Renewal date: {formatDate(membership.expirationDate)}</p>
                           <p>Membership health: {titleCase(membership.status)}</p>
                         </div>
                         <div className="mt-3 grid gap-3 lg:grid-cols-2">
                           {(membership.coveredCustomerIds?.length ? membership.coveredCustomerIds : [membership.customerId])
-                            .map((id) => customers.find((entry) => entry.id === id))
+                            .map((id) => displayCustomers.find((entry) => entry.id === id))
                             .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
                             .map((member) => (
                               <DigitalMembershipCard
@@ -963,7 +998,144 @@ export function HouseholdsWorkspace({
           )}
         </div>
       </div>
+      {showHouseholdForm ? (
+        <HouseholdPersistenceModal
+          mode={showHouseholdForm}
+          household={showHouseholdForm === "edit" ? selected?.household : undefined}
+          customers={displayCustomers}
+          onClose={() => setShowHouseholdForm(null)}
+          onSubmit={async (input) => {
+            const result =
+              showHouseholdForm === "edit" && selected
+                ? await updatePersistedHouseholdAction(selected.household.id, input)
+                : await createPersistedHouseholdAction(input);
+            if (!result.ok) {
+              setFeedback(result.message);
+              return result;
+            }
+            setFeedback(result.message);
+            if (result.householdId) setSelectedHouseholdId(result.householdId);
+            setShowHouseholdForm(null);
+            router.refresh();
+            return result;
+          }}
+        />
+      ) : null}
+      {confirmingDelete && selected ? (
+        <ModalShell
+          open
+          ariaLabel="Delete household"
+          title="Delete Household"
+          description="This removes the household record from Neon and clears its customer household links. This cannot be undone."
+          onClose={() => setConfirmingDelete(false)}
+          footer={
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="secondary" onClick={() => setConfirmingDelete(false)}>Cancel</Button>
+              <Button
+                variant="destructive"
+                onClick={async () => {
+                  const deletedHouseholdName = selected.household.householdName;
+                  const result = await deletePersistedHouseholdAction(selected.household.id);
+                  if (!result.ok) {
+                    setFeedback(result.message);
+                    return;
+                  }
+                  setFeedback(`${deletedHouseholdName} deleted from Neon.`);
+                  setConfirmingDelete(false);
+                  setSelectedHouseholdId(displayHouseholds.find((entry) => entry.id !== selected.household.id)?.id ?? "");
+                  router.refresh();
+                }}
+              >
+                Delete Household
+              </Button>
+            </div>
+          }
+        >
+          <p className="text-sm text-muted-foreground">
+            Delete {selected.household.householdName}? Memberships, check-ins, waivers, billing, and program data are not migrated in this release and are not deleted by this action.
+          </p>
+        </ModalShell>
+      ) : null}
     </section>
+  );
+}
+
+function HouseholdPersistenceModal({
+  mode,
+  household,
+  customers,
+  onClose,
+  onSubmit
+}: {
+  mode: "create" | "edit";
+  household?: Household;
+  customers: Customer[];
+  onClose: () => void;
+  onSubmit: (input: { name: string; primaryContactId?: string | null }) => Promise<{ ok: boolean; message: string }>;
+}) {
+  const [name, setName] = useState(household?.householdName ?? "");
+  const [primaryContactId, setPrimaryContactId] = useState(household?.primaryContactCustomerId ?? "");
+  const [warning, setWarning] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const title = mode === "edit" ? "Edit Household" : "Add Household";
+
+  return (
+    <ModalShell
+      open
+      ariaLabel={title}
+      title={title}
+      description="Household profile fields are persisted to Neon."
+      onClose={onClose}
+      maxWidthClassName="max-w-2xl"
+      footer={
+        <div className="space-y-3">
+          {warning ? <p role="alert" className="text-sm text-amber-800">{warning}</p> : null}
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button
+              disabled={isSubmitting}
+              onClick={async () => {
+                if (!name.trim()) {
+                  setWarning("Household name is required.");
+                  return;
+                }
+                setIsSubmitting(true);
+                const result = await Promise.resolve(onSubmit({ name, primaryContactId: primaryContactId || null })).finally(() => setIsSubmitting(false));
+                if (!result.ok) {
+                  setWarning(result.message);
+                  return;
+                }
+                setWarning("");
+              }}
+            >
+              {isSubmitting ? "Saving..." : mode === "edit" ? "Save Household" : "Create Household"}
+            </Button>
+          </div>
+        </div>
+      }
+    >
+      <FormGrid>
+        <FormField label="Household name" className="md:col-span-2">
+          <Input aria-label="Household name" value={name} onChange={(event) => setName(event.target.value)} />
+        </FormField>
+        <FormField label="Primary contact" className="md:col-span-2">
+          <select
+            aria-label="Primary contact"
+            className="h-11 w-full rounded-md border border-input bg-white px-3 text-sm"
+            value={primaryContactId}
+            onChange={(event) => setPrimaryContactId(event.target.value)}
+          >
+            <option value="">No primary contact</option>
+            {customers.map((customer) => (
+              <option key={customer.id} value={customer.id}>
+                {customer.firstName} {customer.lastName} {customer.phone ? `· ${customer.phone}` : ""}
+              </option>
+            ))}
+          </select>
+        </FormField>
+      </FormGrid>
+    </ModalShell>
   );
 }
 

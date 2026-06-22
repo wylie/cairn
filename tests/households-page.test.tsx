@@ -1,14 +1,23 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
-import HouseholdsPage from "@/app/(app)/households/page";
 import { HouseholdsWorkspace } from "@/components/households/households-workspace";
 import { TopBar } from "@/components/layout/top-bar";
 import { TestProviders } from "@/tests/test-providers";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/households",
-  useSearchParams: () => new URLSearchParams()
+  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({
+    refresh: vi.fn(),
+    push: vi.fn()
+  })
+}));
+
+vi.mock("@/app/(app)/households/actions", () => ({
+  createPersistedHouseholdAction: vi.fn(),
+  updatePersistedHouseholdAction: vi.fn(),
+  deletePersistedHouseholdAction: vi.fn()
 }));
 
 async function activateStaff(user: ReturnType<typeof userEvent.setup>, pin = "2222") {
@@ -18,12 +27,25 @@ async function activateStaff(user: ReturnType<typeof userEvent.setup>, pin = "22
 }
 
 describe("Households workspace", () => {
+  beforeEach(() => {
+    const store = new Map<string, string>();
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: {
+        getItem: vi.fn((key: string) => store.get(key) ?? null),
+        setItem: vi.fn((key: string, value: string) => store.set(key, value)),
+        removeItem: vi.fn((key: string) => store.delete(key)),
+        clear: vi.fn(() => store.clear())
+      }
+    });
+  });
+
   it("renders mixed adult/child household overview and health sections", async () => {
     const user = userEvent.setup();
     render(
       <TestProviders>
         <TopBar />
-        <HouseholdsPage />
+        <HouseholdsWorkspace pathname="/households" currentSearch="" />
       </TestProviders>
     );
 
@@ -48,7 +70,7 @@ describe("Households workspace", () => {
     render(
       <TestProviders>
         <TopBar />
-        <HouseholdsPage />
+        <HouseholdsWorkspace pathname="/households" currentSearch="" />
       </TestProviders>
     );
 
@@ -67,7 +89,7 @@ describe("Households workspace", () => {
     render(
       <TestProviders>
         <TopBar />
-        <HouseholdsPage />
+        <HouseholdsWorkspace pathname="/households" currentSearch="" />
       </TestProviders>
     );
 
@@ -86,7 +108,7 @@ describe("Households workspace", () => {
     render(
       <TestProviders>
         <TopBar />
-        <HouseholdsPage />
+        <HouseholdsWorkspace pathname="/households" currentSearch="" />
       </TestProviders>
     );
 

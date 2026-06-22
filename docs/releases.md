@@ -10,11 +10,11 @@ Version metadata is centralized in `lib/version.ts`.
 
 Current shipped version metadata:
 
-- `currentVersion`: `0.2.4`
-- `releaseName`: `Release Notes Commit Links`
+- `currentVersion`: `0.3.0`
+- `releaseName`: `Customer & Household Persistence`
 - `releaseDate`: `2026-06-21`
-- `releaseType`: `patch`
-- `summary`: `Release Notes are simpler to scan and can link to GitHub commits when metadata is available.`
+- `releaseType`: `minor`
+- `summary`: `Customers and households are now editable Neon-backed business workflows.`
 
 All active application version displays should read from the `version` object in `lib/version.ts`. Compatibility exports may exist for older components, but they must derive from `version`.
 
@@ -129,21 +129,45 @@ Update notifications are generated from release note data by `lib/releases/notif
 
 When a release entry becomes the latest release, Cairn can generate a system notification such as:
 
-`Cairn has been updated to v0.2.4. View what's new.`
+`Cairn has been updated to v0.3.0. View what's new.`
 
 The notification uses the existing communications notification center, counts toward unread totals, can be marked read, and links directly to the matching release note anchor.
 
 ## Current Shipped Version
 
-Version: `v0.2.4`
+Version: `v0.3.0`
 
 Released: `2026-06-21`
 
-Title: Release Notes Commit Links
+Title: Customer & Household Persistence
 
-Release type: Patch
+Release type: Minor
 
-Summary: Release Notes are simpler to scan and can link to GitHub commits when metadata is available.
+Summary: Customers and households are now editable Neon-backed business workflows.
+
+### v0.3.0 Notes
+
+#### Added
+
+- Customer create/edit/delete
+- Household create/edit/delete
+- Neon-backed customer management
+- Neon-backed household management
+
+#### Improved
+
+- Repository architecture
+- Database diagnostics
+- Tenant isolation
+
+#### Changed
+
+- Customers now persist to Neon
+- Households now persist to Neon
+
+#### Known Issues
+
+- Memberships, check-ins, waivers, programs, POS, and authentication still use demo persistence.
 
 ### v0.2.4 Notes
 

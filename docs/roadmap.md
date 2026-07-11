@@ -19,19 +19,18 @@ Focus:
 - Households
 - Data classification
 
-## v0.3.x - Customer & Household Persistence
+## v0.3.x - Customer Persistence
 
 Status: Shipped
 
 Focus:
 
-- Customer create/edit/delete
-- Household create/edit/delete
+- Customer CRUD
+- Customer repository
 - Neon-backed customer management
-- Neon-backed household management
-- Organization-scoped repository writes
+- Organization-scoped customer writes
 
-## v0.4.x - Customer Operations
+## v0.4.x - Customer & Household Operations
 
 Status: Planned
 

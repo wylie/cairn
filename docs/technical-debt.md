@@ -2,10 +2,9 @@
 
 This log captures deferred work discovered during v0.2.0 release readiness. These items are intentionally out of scope for the Real Data Foundation release.
 
-## v0.3.0 - Customer Operations
+## v0.3.0 - Customer Persistence
 
-- Move customer create, edit, deactivate, and merge operations behind server actions or route handlers.
-- Replace customer detail mock reads with organization-scoped repository reads where safe.
+- Move customer merge operations behind server actions or route handlers.
 - Move household management writes behind the server layer.
 - Define customer and household permission checks before enabling production writes.
 - Add tests for customer search, tenant isolation, and customer empty states.

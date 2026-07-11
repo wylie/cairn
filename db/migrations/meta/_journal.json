@@ -29,6 +29,13 @@
       "when": 1781968975462,
       "tag": "0003_lively_retro_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1783814400000,
+      "tag": "0004_customer_profile_fields",
+      "breakpoints": true
     }
   ]
 }

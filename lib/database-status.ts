@@ -4,11 +4,12 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { sql } from "drizzle-orm";
 import { getDatabase } from "@/db";
-import { getCustomerCount } from "@/db/repositories/customer-repository";
+import { getCustomerCount, getLastCustomerCreated } from "@/db/repositories/customer-repository";
 import { getFacilityCount } from "@/db/repositories/facility-repository";
 import { getHouseholdCount } from "@/db/repositories/household-repository";
 import { getOrganizationCount } from "@/db/repositories/organization-repository";
 import { getStaffFacilityAccessCount, getStaffRoleCount, getStaffUserCount } from "@/db/repositories/staff-repository";
+import { seedCustomers } from "@/db/seed-data";
 
 export type DatabaseTableCount = {
   table: string;
@@ -23,6 +24,9 @@ export type DatabaseStatus = {
   staffUserCount: number;
   staffFacilityAccessCount: number;
   customerCount: number;
+  customerSeedCount: number;
+  lastCustomerCreatedAt: string | null;
+  lastCustomerCreatedName: string | null;
   householdCount: number;
   tableCount: number;
   tableCounts: DatabaseTableCount[];
@@ -71,6 +75,8 @@ function buildStatus(input: {
   staffUserCount?: number;
   staffFacilityAccessCount?: number;
   customerCount?: number;
+  lastCustomerCreatedAt?: string | null;
+  lastCustomerCreatedName?: string | null;
   householdCount?: number;
 }): DatabaseStatus {
   const organizationCount = input.organizationCount ?? 0;
@@ -79,6 +85,7 @@ function buildStatus(input: {
   const staffUserCount = input.staffUserCount ?? 0;
   const staffFacilityAccessCount = input.staffFacilityAccessCount ?? 0;
   const customerCount = input.customerCount ?? 0;
+  const customerSeedCount = seedCustomers.length;
   const householdCount = input.householdCount ?? 0;
   const tableCounts = [
     { table: "organizations", records: organizationCount },
@@ -99,6 +106,9 @@ function buildStatus(input: {
     staffUserCount,
     staffFacilityAccessCount,
     customerCount,
+    customerSeedCount,
+    lastCustomerCreatedAt: input.lastCustomerCreatedAt ?? null,
+    lastCustomerCreatedName: input.lastCustomerCreatedName ?? null,
     householdCount,
     tableCount: tableCounts.length,
     tableCounts,
@@ -127,6 +137,7 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
       staffUserCount,
       staffFacilityAccessCount,
       customerCount,
+      lastCustomer,
       householdCount
     ] = await Promise.all([
       getOrganizationCount(),
@@ -135,6 +146,7 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
       getStaffUserCount(),
       getStaffFacilityAccessCount(),
       getCustomerCount(),
+      getLastCustomerCreated(),
       getHouseholdCount()
     ]);
 
@@ -146,6 +158,8 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
       staffUserCount,
       staffFacilityAccessCount,
       customerCount,
+      lastCustomerCreatedAt: lastCustomer?.createdAt.toISOString() ?? null,
+      lastCustomerCreatedName: lastCustomer ? `${lastCustomer.firstName} ${lastCustomer.lastName}` : null,
       householdCount
     });
   } catch {

@@ -16,6 +16,9 @@ export default async function AdminDatabasePage() {
   const lastSeedRun = status.lastSeedRunAt
     ? new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(status.lastSeedRunAt))
     : "Not recorded";
+  const lastCustomerCreated = status.lastCustomerCreatedAt
+    ? `${status.lastCustomerCreatedName ?? "Customer"} · ${new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(status.lastCustomerCreatedAt))}`
+    : "No customer records";
 
   return (
     <section className="space-y-4">
@@ -73,6 +76,24 @@ export default async function AdminDatabasePage() {
           <CardContent>
             <p className="text-2xl font-semibold">{status.customerCount}</p>
             <p className="mt-2 text-sm text-muted-foreground">Neon-backed customer records available to customer workflows.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Last Customer Created</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-base font-semibold">{lastCustomerCreated}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Newest customer profile stored in Neon.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Customer Seed Count</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.customerSeedCount}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Customer records defined in the committed seed dataset.</p>
           </CardContent>
         </Card>
         <Card>

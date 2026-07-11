@@ -3,6 +3,7 @@ import type { HouseholdRecord } from "@/db/repositories/household-repository";
 import type { Customer, Household, HouseholdMember } from "@/types/domain";
 
 export function buildDisplayMemberId(customer: CustomerRecord, index: number) {
+  if (customer.memberId?.trim()) return customer.memberId;
   if (customer.id.startsWith("cust_rb_")) return `RB-${String(1001 + index).padStart(4, "0")}`;
   if (customer.id.startsWith("cust_wcymca_")) return `WC-${String(1001 + index).padStart(4, "0")}`;
   if (customer.id.startsWith("cust_staff_")) return `S-${String(2001 + index).padStart(4, "0")}`;
@@ -19,9 +20,20 @@ export function mapCustomerRecordToDisplayCustomer(customer: CustomerRecord, ind
     firstName: customer.firstName,
     lastName: customer.lastName,
     preferredName: customer.preferredName ?? undefined,
+    pronouns: customer.pronouns ?? undefined,
+    customPronouns: customer.customPronouns ?? undefined,
     email: customer.email ?? "",
     phone: customer.phone ?? "",
+    addressLine1: customer.addressLine1 ?? undefined,
+    addressLine2: customer.addressLine2 ?? undefined,
+    city: customer.city ?? undefined,
+    state: customer.state ?? undefined,
+    postalCode: customer.postalCode ?? undefined,
     dateOfBirth: customer.birthDate ?? undefined,
+    emergencyContactName: customer.emergencyContactName ?? undefined,
+    emergencyContactPhone: customer.emergencyContactPhone ?? undefined,
+    notes: customer.notes ?? undefined,
+    profilePhotoUrl: customer.profilePhotoUrl ?? undefined,
     tags: customer.active ? ["Neon"] : ["Neon", "Inactive"],
     checkInStatus: "out",
     createdAt: customer.createdAt.toISOString(),

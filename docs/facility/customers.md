@@ -1,7 +1,7 @@
 # Customers
 
 ## Overview
-Customers are the core person records used across check-in, memberships, registrations, waivers, POS, households, communications, rentals, and reporting.
+Customers are the core person records used across check-in, memberships, registrations, waivers, POS, households, communications, rentals, and reporting. Customer profile create, read, update, delete, and search workflows are persisted in Neon through the customer repository.
 
 ## What You Can Do
 - create and edit customer records
@@ -14,7 +14,7 @@ Customers are the core person records used across check-in, memberships, registr
 ### Create a customer
 1. Open Customers.
 2. Select `Add Customer`.
-3. Enter required details.
+3. Enter required identity, birth date, phone, address, and emergency contact details.
 4. Save.
 5. Add household relationships if needed.
 
@@ -22,6 +22,13 @@ Customers are the core person records used across check-in, memberships, registr
 1. Open the customer profile from Customers, Check-In, POS, Registrations, or Household.
 2. Use the context-aware back link when returning to the previous workflow.
 3. Update fields and save.
+
+### Delete a customer
+1. Open the customer profile from Customers.
+2. Select `Delete Customer`.
+3. Confirm the destructive action.
+
+Deleted customer profile rows are removed from Neon for the active organization. Memberships, check-ins, waivers, and POS records are migrated in later releases.
 
 ### Upload or replace a photo
 1. Open the customer profile header.
@@ -56,6 +63,7 @@ Typical customer profiles include:
 - Photos improve check-in accuracy and roster usability.
 - Use the profile timeline when you need a chronological explanation of what happened.
 - Use alerts for real operational blockers, not ordinary notes.
+- Duplicate detection checks likely email, phone, and name/date-of-birth matches before a customer is saved.
 
 ## Related Features
 - [Households](./households.md)

@@ -24,19 +24,18 @@ export const roadmapMilestones: RoadmapMilestone[] = [
   },
   {
     versionRange: "v0.3.x",
-    title: "Customer & Household Persistence",
+    title: "Customer Persistence",
     focus: [
-      "Customer create/edit/delete",
-      "Household create/edit/delete",
+      "Customer CRUD",
+      "Customer repository",
       "Neon-backed customer management",
-      "Neon-backed household management",
-      "Organization-scoped repository writes"
+      "Organization-scoped customer writes"
     ],
     status: "Shipped"
   },
   {
     versionRange: "v0.4.x",
-    title: "Customer Operations",
+    title: "Customer & Household Operations",
     focus: [
       "Customer imports",
       "Household imports",

@@ -329,17 +329,6 @@ function normalizeCustomersForState(customers: Customer[], seededCustomers: Cust
   });
 }
 
-function mergeSeedCustomers(stored: Customer[], seededCustomers: Customer[]) {
-  const byId = new Map(stored.map((customer) => [customer.id, customer]));
-  const merged: Customer[] = [...stored];
-  for (const seeded of seededCustomers) {
-    if (!byId.has(seeded.id)) {
-      merged.push(seeded);
-    }
-  }
-  return merged;
-}
-
 function normalizeHouseholdMemberForState(member: HouseholdMember): HouseholdMember {
   return {
     ...member,
@@ -1220,7 +1209,6 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
   );
 
   const storageKeys = useMemo(() => ({
-    customers: buildScopedMockKey(activeOrgId, activeLocationId, "customers"),
     billingAccounts: buildScopedMockKey(activeOrgId, activeLocationId, "billingAccounts"),
     billingCredits: buildScopedMockKey(activeOrgId, activeLocationId, "billingCredits"),
     billingInvoices: buildScopedMockKey(activeOrgId, activeLocationId, "billingInvoices"),
@@ -1364,7 +1352,6 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     const storedSeedVersion = loadMockState(demoSeedVersionKey, "") as string;
     if (shouldRefreshDemoSeed(activeOrgId, storedSeedVersion)) {
       clearScopedMockState(activeOrgId, activeLocationId, [
-        "customers",
         "billingAccounts",
         "billingCredits",
         "billingInvoices",
@@ -1411,8 +1398,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
       checkedInByStaffName: record.checkedInByStaffName
     }));
 
-    const loadedCustomers = loadMockState(storageKeys.customers, seededCustomersForOrg) as Customer[];
-    setCustomers(normalizeCustomersForState(mergeSeedCustomers(loadedCustomers, seededCustomersForOrg), seededCustomersForOrg));
+    setCustomers(normalizeCustomersForState(seededCustomersForOrg, seededCustomersForOrg));
     setBillingAccounts(loadMockState(storageKeys.billingAccounts, seededBillingAccountsForOrg) as BillingAccount[]);
     setBillingCreditEntries(loadMockState(storageKeys.billingCredits, seededBillingCreditEntriesForOrg) as BillingCreditEntry[]);
     setBillingInvoices(loadMockState(storageKeys.billingInvoices, seededBillingInvoicesForOrg) as BillingInvoice[]);
@@ -1490,10 +1476,6 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     seededReservationsForOrg
   ]);
 
-  useEffect(() => {
-    if (!hydrated) return;
-    saveMockState(storageKeys.customers, customers);
-  }, [customers, hydrated]);
   useEffect(() => {
     if (!hydrated) return;
     saveMockState(storageKeys.billingAccounts, billingAccounts);
@@ -7295,7 +7277,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         clearScopedMockState(
           activeOrgId,
           activeLocationId,
-          ["customers", "billingAccounts", "billingCredits", "billingInvoices", "billingStatements", "membershipRenewals", "billingRefunds", "punchPasses", "checkIns", "memberships", "transactions", "products", "inventoryAudit", "productCategories", "programs", "sessions", "registrations", "registrationActivity", "accessRecords", "waivers", "signedWaiverRecords", "waiverTemplates", "waiverTemplateVersions", "households", "householdMembers", "rentableResources", "reservations", "maintenanceBlocks", "communications", "membershipCardEvents", "operationsAlertOverrides", "operationsManualAlerts", "operationsTasks"]
+          ["billingAccounts", "billingCredits", "billingInvoices", "billingStatements", "membershipRenewals", "billingRefunds", "punchPasses", "checkIns", "memberships", "transactions", "products", "inventoryAudit", "productCategories", "programs", "sessions", "registrations", "registrationActivity", "accessRecords", "waivers", "signedWaiverRecords", "waiverTemplates", "waiverTemplateVersions", "households", "householdMembers", "rentableResources", "reservations", "maintenanceBlocks", "communications", "membershipCardEvents", "operationsAlertOverrides", "operationsManualAlerts", "operationsTasks"]
         );
       }
     }),

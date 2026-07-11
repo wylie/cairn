@@ -41,11 +41,11 @@ export const dataSourceInventory: DataSourceInventoryItem[] = [
   {
     module: "Customers",
     status: "Neon-backed",
-    currentSource: "Neon via `customers`, organization-scoped repositories, and server actions for customer profile writes.",
-    repositoryLayer: "Server-only customer reads, organization-scoped customer lists, scoped search, counts, create, edit, and delete.",
-    scopeAudit: "`customers.organization_id` is required. Customer reads and writes resolve the active organization before repository access.",
-    migrationStatus: "Fully persistent for customer profile list/detail/create/edit/delete. Membership, waiver, and check-in behaviors remain separate future migrations.",
-    plannedOrder: "Next customer operations phase: imports, merge workflows, audit events, and richer customer profile fields."
+    currentSource: "Neon via `customers`, organization-scoped repositories, and server actions for customer profile reads and writes.",
+    repositoryLayer: "Server-only customer create, read, update, delete, search, count, duplicate-detection, and last-created helpers.",
+    scopeAudit: "`customers.organization_id` is required. Customer reads and writes resolve the active organization before repository access, and customer records are no longer loaded from or saved to the customer localStorage key.",
+    migrationStatus: "Fully persistent for customer profile list/detail/create/edit/delete/search. Membership, waiver, check-in, merge, import, and audit behaviors remain separate future migrations.",
+    plannedOrder: "Next customer operations phase: imports, merge workflows, audit events, and richer relationship behavior."
   },
   {
     module: "Households",

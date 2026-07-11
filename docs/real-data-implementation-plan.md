@@ -79,7 +79,7 @@ Organizations and facilities are the first data area wired toward the production
 - `/admin/data-sources` identifies each major module as Neon-backed, demo-backed, local-only, or not yet migrated.
 - If `DATABASE_URL` is missing or the database query fails, the same helpers fall back to canonical demo seed data so local demo mode remains stable.
 
-v0.3.0 migrates customer and household profile writes to Neon. Memberships, programs, registrations, POS, waivers, notifications, support requests, check-ins, and authentication still use the existing mock/localStorage implementation until their planned migration phases.
+v0.3.0 migrates customer CRUD and profile search to Neon through the customer repository. Memberships, programs, registrations, POS, waivers, notifications, support requests, check-ins, and authentication still use the existing mock/localStorage implementation until their planned migration phases.
 
 ## Data Classification Layer
 
@@ -143,18 +143,19 @@ Organization boundary audit:
 - Broad repository reads and counts are limited to platform-admin/database visibility surfaces.
 - Future customer, household, membership, registration, POS, waiver, notification, and support records should include `organization_id`; facility-scoped records should also include `facility_id`.
 
-## Customer & Household Foundation Started
+## Customer Foundation Started
 
-Customer and household database foundations now exist. Customer and household list/detail/create/edit/delete operations for modeled profile fields now use Neon through server actions and repository helpers.
+Customer and household database foundations now exist. Customer list/detail/create/edit/delete/search operations for modeled profile fields now use Neon through server actions and repository helpers. Household profile operations also have a Neon foundation, while richer household relationship behavior remains future work.
 
-- `customers` stores organization-owned customer identity fields: name, preferred name, contact details, birth date, household link, active status, and timestamps.
+- `customers` stores organization-owned customer profile fields: name, preferred name, pronouns, member ID, contact details, address, birth date, emergency contact, notes, profile photo URL, household link, active status, and timestamps.
 - `households` stores organization-owned household records with an optional primary contact reference.
-- `db/repositories/customer-repository.ts` exposes server-only reads, organization-scoped customer search, counts, create, edit, and delete.
+- `db/repositories/customer-repository.ts` exposes server-only reads, organization-scoped customer search, counts, create, edit, delete, duplicate detection, and last-created reporting.
 - `db/repositories/household-repository.ts` exposes server-only reads, counts, create, edit, delete, and customer household-link clearing.
-- `/admin/database` now reports customer and household counts from Neon for internal validation, plus migration and seed-run availability metadata.
+- `/admin/database` now reports customer count, last customer created, customer seed count, and household counts from Neon for internal validation, plus migration and seed-run availability metadata.
 - `npm run db:seed` now seeds small fictional customer and household sets for Summit Rec Collective, Riverstone Nature Center, and Western Carolina YMCA Association.
 - The staff customer list and detail pages read organization-scoped customers from Neon through the repository layer and map them into the existing customer UI.
 - The staff customer create/edit/delete flows call server actions that resolve the active organization before repository writes.
+- Customer records are no longer loaded from or saved to the customer localStorage mock key.
 - The staff household list and detail pages read organization-scoped households from Neon through the repository layer and map them into the existing household workspace UI.
 - The staff household create/edit/delete flows call server actions that resolve the active organization before repository writes.
 
@@ -265,11 +266,11 @@ Deliverables:
 
 - v0.1.x: Pilot Launch / External Testing
 - v0.2.x: Real Data Foundation
-- v0.3.x: Customer Operations
-- v0.4.x: Memberships & Check-In
-- v0.5.x: Programs & Registrations
-- v0.6.x: Pilot Customer Release
-- v0.7.x: Mobile & Member Experience
+- v0.3.x: Customer Persistence
+- v0.4.x: Customer & Household Operations
+- v0.5.x: Memberships & Check-In
+- v0.6.x: Programs & Registrations
+- v0.7.x: Pilot Customer Release
 - v1.0.0: Production Ready
 
 ## Non-Goals For This Foundation

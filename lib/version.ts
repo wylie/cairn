@@ -2,10 +2,10 @@ export type ReleaseType = "patch" | "minor" | "major";
 
 export const version = {
   currentVersion: "0.3.0",
-  releaseName: "Customer & Household Persistence",
-  releaseDate: "2026-06-21",
+  releaseName: "Customer Persistence",
+  releaseDate: "2026-07-11",
   releaseType: "minor" as ReleaseType,
-  summary: "Customers and households are now editable Neon-backed business workflows."
+  summary: "Customer CRUD now uses a Neon-backed repository and server persistence."
 } as const;
 
 export function formatReleaseType(type: ReleaseType) {

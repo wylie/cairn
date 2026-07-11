@@ -81,7 +81,7 @@ const releaseNotesCommitLinksRelease: ReleaseNote = {
   }
 };
 
-const customerHouseholdPersistenceRelease: ReleaseNote = {
+const customerPersistenceRelease: ReleaseNote = {
   version: version.currentVersion,
   releaseName: version.releaseName,
   releaseDate: version.releaseDate,
@@ -89,20 +89,17 @@ const customerHouseholdPersistenceRelease: ReleaseNote = {
   summary: version.summary,
   sections: {
     added: [
-      "Customer create/edit/delete",
-      "Household create/edit/delete",
-      "Neon-backed customer management",
-      "Neon-backed household management"
+      "Customer CRUD",
+      "Customer repository",
+      "Neon persistence"
     ],
     improved: [
-      "Repository architecture",
-      "Database diagnostics",
-      "Tenant isolation"
+      "Validation",
+      "Repository architecture"
     ],
     fixed: [],
     changed: [
-      "Customers now persist to Neon",
-      "Households now persist to Neon"
+      "Customer data no longer stored in localStorage"
     ],
     knownIssues: [
       "Memberships, check-ins, waivers, programs, POS, and authentication still use demo persistence"
@@ -211,7 +208,7 @@ export function compareReleaseNotesNewestFirst(a: ReleaseNote, b: ReleaseNote) {
 }
 
 const releaseNoteEntries: ReleaseNote[] = [
-  customerHouseholdPersistenceRelease,
+  customerPersistenceRelease,
   releaseNotesCommitLinksRelease,
   neonReadinessAuditRelease,
   releaseBadgeColorStandardizationRelease,

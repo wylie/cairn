@@ -18,7 +18,7 @@ This is both a readiness inventory and the current source-of-truth audit for mig
 | Organizations | Neon `organizations`, repository reads, Drizzle seed data, seed fallback in `db/tenant.ts` | Neon-backed | Organizations are root tenants and own `data_mode`. Platform admin provisioning still uses local registry state. |
 | Facilities | Neon `facilities`, organization-scoped repository reads, seed fallback in `db/tenant.ts` | Neon-backed | Facility lookup requires organization scope; facility slugs are not treated as globally authoritative. |
 | Staff | Neon `staff_users`, `staff_roles`, `staff_facility_access`; mock auth remains separate | Neon-backed | Staff records are database-backed for read-only validation. Production authentication and permission enforcement are future work. |
-| Customers | Neon `customers`, organization-scoped repositories, and server actions | Neon-backed | Customer list/detail/create/edit/delete are fully persistent for modeled profile fields. Membership, waiver, check-in, merge, and richer profile fields remain future migrations. |
+| Customers | Neon `customers`, organization-scoped repositories, and server actions | Neon-backed | Customer list/detail/create/edit/delete/search are fully persistent for modeled profile fields. Membership, waiver, check-in, merge, imports, and audit events remain future migrations. |
 | Households | Neon `households`, customer `household_id` links, organization-scoped repositories, and server actions | Neon-backed | Household list/detail/create/edit/delete and primary-contact assignment are fully persistent. Rich relationship roles, billing behavior, and membership behavior remain future migrations. |
 | Memberships | `lib/mocks/memberships.ts`, access records, punch passes, and `customer-state` local mock persistence | Demo-backed | No Neon schema or repository layer yet. |
 | Check-ins | `lib/mocks/checkins.ts` and `customer-state` local mock persistence | Demo-backed | Occupancy/check-in behavior is local demo state. |
@@ -38,7 +38,7 @@ The current repository layer is intentionally narrow:
 - `db/repositories/organization-repository.ts` provides platform/root tenant reads by slug and platform-wide counts.
 - `db/repositories/facility-repository.ts` requires `organizationId` for facility slug lookup and organization facility lists.
 - `db/repositories/staff-repository.ts` has platform-wide admin reads plus organization-scoped and facility-scoped staff reads.
-- `db/repositories/customer-repository.ts` has platform/admin reads plus organization-scoped customer list, search, create, edit, delete, and count helpers.
+- `db/repositories/customer-repository.ts` has platform/admin reads plus organization-scoped customer list, search, create, edit, delete, duplicate-detection, last-created, and count helpers.
 - `db/repositories/household-repository.ts` has platform/admin reads plus organization-scoped household list, create, edit, delete, customer-link clearing, and count helpers.
 
 Tenant-facing pages should use scoped repository helpers after resolving the active organization through `db/tenant.ts`. Platform admin pages may use cross-tenant reads only for explicit platform visibility.
@@ -48,6 +48,8 @@ Tenant-facing pages should use scoped repository helpers after resolving the act
 - Durable foundation tables include `organization_id` where expected for facilities, staff roles, staff users, customers, and households.
 - `facilities` has a unique index on `organization_id + slug`, preventing facility slugs from becoming global tenant keys.
 - `staff_users` has a unique index on `organization_id + email`, avoiding accidental cross-tenant email uniqueness assumptions.
+- Customer list/detail/create/edit/delete/search paths resolve the active organization before reading or writing Neon rows.
+- Customer records are no longer hydrated from or saved to the customer localStorage mock key.
 - Customer and household list/detail/create/edit/delete paths resolve the active organization before reading or writing Neon rows.
 - Demo fallback data is separated by organization id and `data_mode`, but fallback/demo state is not production-authoritative.
 - Platform admin organization provisioning still persists browser-local registry records and must be replaced before real customer provisioning.
@@ -76,6 +78,7 @@ The database health page at `/admin/database` reports:
 - known table count
 - record counts by table
 - customer and household record counts
+- last customer created and customer seed count
 - last committed Drizzle migration from `db/migrations/meta/_journal.json`
 - seed data status for the current database foundation
 - last seed run status, shown as unavailable until a dedicated seed-run audit table exists

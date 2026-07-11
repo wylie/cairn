@@ -549,3 +549,145 @@ export const seedCustomers = [
     active: true
   }
 ] as const;
+
+export const seedMembershipPlans = [
+  {
+    id: "plan_summit_unlimited",
+    organizationId: "org_summit",
+    facilityId: "loc_001",
+    name: "Unlimited Access",
+    kind: "individual",
+    durationDays: 30,
+    priceCents: 10900,
+    active: true
+  },
+  {
+    id: "plan_summit_family",
+    organizationId: "org_summit",
+    facilityId: "loc_001",
+    name: "Family Membership",
+    kind: "household",
+    durationDays: 30,
+    priceCents: 12900,
+    active: true
+  },
+  {
+    id: "plan_riverbend_family",
+    organizationId: "org_riverbend",
+    facilityId: "loc_101",
+    name: "Riverbend Family Access",
+    kind: "household",
+    durationDays: 30,
+    priceCents: 9900,
+    active: true
+  },
+  {
+    id: "plan_wcymca_individual",
+    organizationId: "org_western_carolina_ymca",
+    facilityId: "loc_201",
+    name: "YMCA Individual",
+    kind: "individual",
+    durationDays: 30,
+    priceCents: 7200,
+    active: true
+  }
+] as const;
+
+export const seedMemberships = [
+  {
+    id: "mem_001",
+    organizationId: "org_summit",
+    facilityId: "loc_001",
+    planId: "plan_summit_unlimited",
+    ownerType: "customer",
+    customerId: "cust_001",
+    householdId: null,
+    status: "active",
+    startsOn: "2026-06-13",
+    expiresOn: "2026-08-12",
+    notes: "Seeded active individual membership"
+  },
+  {
+    id: "mem_002",
+    organizationId: "org_summit",
+    facilityId: "loc_001",
+    planId: "plan_summit_family",
+    ownerType: "household",
+    customerId: "cust_003",
+    householdId: "hh_001",
+    status: "active",
+    startsOn: "2026-06-20",
+    expiresOn: "2026-08-20",
+    notes: "Seeded household membership"
+  },
+  {
+    id: "mem_003",
+    organizationId: "org_summit",
+    facilityId: "loc_001",
+    planId: "plan_summit_unlimited",
+    ownerType: "customer",
+    customerId: "cust_005",
+    householdId: null,
+    status: "expired",
+    startsOn: "2026-05-01",
+    expiresOn: "2026-06-01",
+    notes: "Seeded expired membership"
+  },
+  {
+    id: "mem_rb_001",
+    organizationId: "org_riverbend",
+    facilityId: "loc_101",
+    planId: "plan_riverbend_family",
+    ownerType: "household",
+    customerId: "cust_rb_001",
+    householdId: "hh_riverbend_001",
+    status: "active",
+    startsOn: "2026-06-15",
+    expiresOn: "2026-08-15",
+    notes: "Seeded Riverbend household membership"
+  },
+  {
+    id: "mem_wcymca_001",
+    organizationId: "org_western_carolina_ymca",
+    facilityId: "loc_201",
+    planId: "plan_wcymca_individual",
+    ownerType: "customer",
+    customerId: "cust_wcymca_001",
+    householdId: null,
+    status: "active",
+    startsOn: "2026-07-01",
+    expiresOn: "2026-08-01",
+    notes: "Seeded YMCA membership"
+  }
+] as const;
+
+export const seedCheckIns = [
+  {
+    id: "cin_001",
+    organizationId: "org_summit",
+    facilityId: "loc_001",
+    customerId: "cust_001",
+    membershipId: "mem_001",
+    checkedInAt: "2026-07-11T12:15:00Z",
+    checkedOutAt: null,
+    status: "checked-in",
+    accessStatus: "approved",
+    checkedInByStaffId: "staff_summit_taylor_nguyen",
+    checkedInByStaffName: "Taylor Nguyen"
+  },
+  {
+    id: "cin_002",
+    organizationId: "org_summit",
+    facilityId: "loc_001",
+    customerId: "cust_003",
+    membershipId: "mem_002",
+    checkedInAt: "2026-07-10T15:00:00Z",
+    checkedOutAt: "2026-07-10T17:30:00Z",
+    status: "checked-out",
+    accessStatus: "approved",
+    checkedInByStaffId: "staff_summit_jordan_kim",
+    checkedInByStaffName: "Jordan Kim",
+    checkedOutByStaffId: "staff_summit_jordan_kim",
+    checkedOutByStaffName: "Jordan Kim"
+  }
+] as const;

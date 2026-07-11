@@ -46,6 +46,18 @@ export const roadmapMilestones: RoadmapMilestone[] = [
   },
   {
     versionRange: "v0.4.x",
+    title: "Memberships & Check-In",
+    focus: [
+      "Membership persistence",
+      "Check-ins",
+      "Attendance",
+      "Centralized access rules",
+      "Membership and attendance diagnostics"
+    ],
+    status: "Shipped"
+  },
+  {
+    versionRange: "v0.5.x",
     title: "Customer & Household Operations",
     focus: [
       "Customer imports",
@@ -53,16 +65,6 @@ export const roadmapMilestones: RoadmapMilestone[] = [
       "Household imports",
       "Rich relationship roles",
       "Audit events"
-    ],
-    status: "Planned"
-  },
-  {
-    versionRange: "v0.5.x",
-    title: "Memberships & Check-In",
-    focus: [
-      "Membership persistence",
-      "Check-ins",
-      "Attendance"
     ],
     status: "Planned"
   },

@@ -219,11 +219,11 @@ const customerOperationsStabilizationRelease: ReleaseNote = {
 };
 
 const sitemapRobotsConfigurationRelease: ReleaseNote = {
-  version: version.currentVersion,
-  releaseName: version.releaseName,
-  releaseDate: version.releaseDate,
-  releaseType: version.releaseType,
-  summary: version.summary,
+  version: "0.3.5",
+  releaseName: "Sitemap & Robots Configuration",
+  releaseDate: "2026-07-11",
+  releaseType: "patch",
+  summary: "Public sitemap, crawler rules, and production canonical URLs now separate indexable Cairn pages from private application routes.",
   sections: {
     added: [
       "Public XML sitemap",
@@ -237,6 +237,36 @@ const sitemapRobotsConfigurationRelease: ReleaseNote = {
     changed: [],
     knownIssues: [
       "Private, authenticated, administrative, and operational app routes remain excluded from indexing"
+    ]
+  }
+};
+
+const membershipsCheckInPersistenceRelease: ReleaseNote = {
+  version: version.currentVersion,
+  releaseName: version.releaseName,
+  releaseDate: version.releaseDate,
+  releaseType: version.releaseType,
+  summary: version.summary,
+  sections: {
+    added: [
+      "Neon-backed membership management",
+      "Persistent customer check-ins and check-outs",
+      "Centralized access-rule evaluation",
+      "Membership and attendance diagnostics"
+    ],
+    improved: [
+      "Customer profile membership visibility",
+      "Currently-in and attendance workflows",
+      "Tenant and facility isolation"
+    ],
+    fixed: [
+      "Persisted customer profiles now show Neon-backed membership and check-in history instead of deferred membership placeholders"
+    ],
+    changed: [
+      "Memberships and check-ins no longer rely on localStorage or mock persistence"
+    ],
+    knownIssues: [
+      "Programs, registrations, POS, rentals, waivers, payment processing, imports, merge workflows, platform provisioning, and production authentication remain deferred"
     ]
   }
 };
@@ -342,6 +372,7 @@ export function compareReleaseNotesNewestFirst(a: ReleaseNote, b: ReleaseNote) {
 }
 
 const releaseNoteEntries: ReleaseNote[] = [
+  membershipsCheckInPersistenceRelease,
   sitemapRobotsConfigurationRelease,
   customerOperationsStabilizationRelease,
   customerAdministrationDataQualityRelease,

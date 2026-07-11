@@ -1,34 +1,31 @@
 # Check-In
 
 ## Overview
-Check-In supports customer lookup, waiver and membership validation, occupancy tracking, recent activity, household check-ins, and check-out workflows.
+Check-In supports persisted customer lookup, membership access validation, occupancy tracking, recent activity, staff overrides, and check-out workflows. Check-ins are stored in Neon and shared across browsers and devices.
 
 ## What You Can Do
 - search for customers quickly
-- check customers in by search, membership number, or card token
+- check customers in by search, member ID, phone, or email
 - review recent check-ins and current occupancy
-- resolve membership and waiver warnings
-- check out individuals or entire households
+- resolve active, expired, cancelled, or suspended membership states
+- check out individuals
 
 ## Common Workflows
 ### Check in a customer
 1. Open Check-In.
 2. Search for the customer.
 3. Select the correct result.
-4. Review access, membership, and waiver status.
+4. Review persisted membership access status.
 5. Complete check-in.
 
-### Check in a household
-1. Search for a household member.
-2. Open the household or use household check-in from the selected panel.
-3. Choose which members to check in.
-4. Resolve blocked members separately if needed.
+### Use staff override
+1. Search for the customer.
+2. Review the denied access reason.
+3. Use override only when local policy allows access without an active persisted membership.
+4. Add a clear note for the override.
 
 ### Resolve waiver issues
-1. Review the warning row or selected-customer panel.
-2. Confirm whether the waiver is missing, expired, or the wrong version.
-3. Send the customer to the waiver flow or use staff-assisted signing if permitted.
-4. Retry check-in when the issue is cleared.
+Waiver-backed access blocks remain deferred until waiver persistence is migrated. Use existing waiver workflows separately when local policy requires them.
 
 ### Check out a customer
 1. Open the current roster or recent check-ins.
@@ -36,13 +33,14 @@ Check-In supports customer lookup, waiver and membership validation, occupancy t
 3. Confirm the checkout time.
 
 ## Operational Notes
-- Customer photos should appear in search, selected customer panels, checked-in rows, and recent activity.
-- Automatic closeout settings can prevent stale occupancy counts.
+- Duplicate active check-ins for the same organization and customer are prevented.
+- Check-out requires an active check-in.
+- Automatic closeout settings remain future work.
 - Dashboard occupancy metrics deep-link into current check-in views.
 
 ## Tips
-- Customer photos and household context reduce front desk errors.
-- Use membership card tokens or customer search when the line is busy.
+- Customer and household context reduce front desk errors.
+- Search by name, phone, email, or member ID when the line is busy.
 - Recent check-ins are useful for correcting mistakes without leaving the workflow.
 
 ## Related Features

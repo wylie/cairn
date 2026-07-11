@@ -100,13 +100,13 @@ Robots rules are only search-engine instructions. Authentication, authorization,
 
 ## Database Foundation
 
-v0.2.x is limited to the Real Data Foundation: organizations, facilities, staff, customers, households, demo/production separation, and versioning. Customer editing, memberships, check-ins, programs, POS, and production authentication move to later releases.
+The database foundation now covers organizations, facilities, staff, customers, households, memberships, check-ins, demo/production separation, and versioning. Programs, registrations, POS, waivers, payment processing, platform provisioning, and production authentication move to later releases.
 
 ### Current State
 
-- Organizations, facilities, customers, households, and customer-household relationships are Neon-backed through the repository layer.
-- Customer and household CRUD, customer search, duplicate warnings, and persisted profile basics use organization-scoped Neon reads and writes.
-- Memberships, check-ins, programs, registrations, POS, waivers, communications, documents, support, integrations, and platform-admin registry workflows still use mock or local demo persistence until their domain migrations are completed.
+- Organizations, facilities, customers, households, customer-household relationships, memberships, and check-ins are Neon-backed through the repository layer.
+- Customer and household CRUD, customer search, duplicate warnings, persisted profile basics, membership management, customer check-in, check-out, currently-in roster, and customer attendance history use organization-scoped Neon reads and writes.
+- Programs, registrations, POS, waivers, communications, documents, support, integrations, and platform-admin registry workflows still use mock or local demo persistence until their domain migrations are completed.
 - localStorage remains acceptable only for harmless UI preferences, short-lived drafts, and explicitly deferred demo workflows going forward.
 
 ### New State
@@ -115,8 +115,8 @@ v0.2.x is limited to the Real Data Foundation: organizations, facilities, staff,
 - `drizzle.config.ts` points Drizzle at the schema in `db/schema` and migrations in `db/migrations`.
 - `DATABASE_URL` is the documented connection string for Neon PostgreSQL.
 - `db/index.ts` exposes a typed Drizzle database client without requiring application workflows to use it yet.
-- `db/schema` contains the initial tenant, staff, customer, and household foundation: organizations, organization data classification, facilities, staff users, staff roles, staff role assignment, staff facility access, customers, and households.
-- `db/seed.ts` seeds the initial organizations, facilities, staff, customers, and households for Summit Rec Collective, Riverstone Nature Center, and Western Carolina YMCA Association.
+- `db/schema` contains the tenant, staff, customer, household, membership, and check-in foundation: organizations, organization data classification, facilities, staff users, staff roles, staff role assignment, staff facility access, customers, households, membership plans, memberships, and check-ins.
+- `db/seed.ts` seeds the initial organizations, facilities, staff, customers, households, membership plans, memberships, and check-ins for Summit Rec Collective, Riverstone Nature Center, and Western Carolina YMCA Association.
 - `db/tenant.ts` provides server-side Drizzle reads for organization and facility context, with demo seed fallback when the database is unavailable.
 - `/api/internal/database-health` checks whether the configured database connection is available and returns only `connected` or `disconnected` status.
 
@@ -196,7 +196,7 @@ Future authentication work should authenticate staff through a production provid
 
 ### Customer And Household Foundation
 
-Customers and households now have database-backed profile workflows for modeled fields. Customer list/detail/create/edit/delete/search and household list/detail/create/edit/delete/member assignment operations use Neon through server actions and repository helpers, while memberships, check-ins, waivers, programs, POS, documents, communications, billing, rich relationship roles, and authentication still use the existing demo persistence.
+Customers and households now have database-backed profile workflows for modeled fields. Customer list/detail/create/edit/delete/search and household list/detail/create/edit/delete/member assignment operations use Neon through server actions and repository helpers, while waivers, programs, POS, documents, communications, billing, rich relationship roles, and authentication still use the existing demo persistence.
 
 - `customers.organization_id` requires every customer to belong to one organization.
 - `customers.household_id` is nullable so individual customers can exist before household relationships are assigned.
@@ -204,7 +204,7 @@ Customers and households now have database-backed profile workflows for modeled 
 - Customer server actions validate required fields, email format, normalized phone values, birth-date validity, and US state format before writing.
 - Duplicate-customer checks warn on exact email, exact normalized phone, or matching name plus birth date within the active organization. Staff may review the possible match and save anyway; merge is not built yet.
 - `db/repositories/customer-repository.ts` provides server-only create, read, update, delete, normalized search, count, duplicate-warning, potential duplicate count, and last-created helpers.
-- Customer search is organization-scoped, trims and normalizes input, and supports partial matching across first name, last name, preferred name, email, and phone.
+- Customer search is organization-scoped, trims and normalizes input, and supports partial matching across first name, last name, preferred name, member ID, email, and phone.
 - Customer delete uses a transaction when clearing household primary-contact references and deleting the customer row.
 - `households.organization_id` requires every household to belong to one organization.
 - `households.primary_contact_id` is nullable so household records can be created before a primary contact is selected.
@@ -224,7 +224,7 @@ Customer read path:
 - The customer mock-state provider no longer loads or saves customer records from the customer localStorage key.
 - If the database path is unavailable, customer and household app pages show empty or unavailable states instead of falling back to seeded demo customer or household records.
 - If no customer rows exist, the list shows a friendly empty state instead of surfacing a database error.
-- Persisted customer profiles show persisted personal, contact, active-status, household, emergency-contact, notes, and profile-photo URL data. Unmigrated access, waiver, check-in, POS, registration, document, communication, and alert areas are labelled as deferred instead of showing demo records.
+- Persisted customer profiles show persisted personal, contact, active-status, household, emergency-contact, notes, profile-photo URL, membership, and check-in history data. Unmigrated waiver, POS, registration, document, communication, and alert areas are labelled as deferred instead of showing demo records.
 
 Household read path:
 
@@ -240,9 +240,10 @@ Current migration status:
 
 - Customer list, detail, create, edit, delete, and search are backed by Neon for modeled profile fields.
 - Household list, detail, create, edit, delete, add-member, remove-member, and primary-contact management are backed by Neon.
-- Customer merge, membership, check-in, waiver, registration, POS, documents, communications, richer household relationships, and billing workflows are not migrated yet.
+- Membership list, detail, create, edit, cancel/suspend, customer profile membership visibility, customer check-in, check-out, active roster, today history, and customer check-in history are backed by Neon.
+- Customer merge, waiver, registration, POS, documents, communications, richer household relationships, and billing workflows are not migrated yet.
 - The existing client state provider remains in place for operational actions until server-backed write paths exist.
-- The v0.3.4 data-source audit is documented in [Data Sources](./data-sources.md) and exposed internally at `/admin/data-sources`.
+- The v0.4.0 data-source audit is documented in [Data Sources](./data-sources.md) and exposed internally at `/admin/data-sources`.
 
 Customer ownership rules:
 
@@ -258,6 +259,23 @@ Household ownership rules:
 - A customer can belong to zero or one household.
 - Removing a customer from a household clears `customers.household_id` and does not delete the customer.
 - Deleting a household clears member customer links and does not delete customer records.
+
+### Membership And Check-In Foundation
+
+Memberships and check-ins are Neon-backed for the v0.4.0 persistence milestone. The implementation intentionally stops short of payment processing, POS fulfillment, registrations, rentals, waivers, and automatic billing.
+
+- `membership_plans` stores organization-owned and optionally facility-scoped plan definitions with plan kind, duration, price, active state, and timestamps.
+- `memberships` stores organization-owned and optionally facility-scoped access records with individual or household ownership, plan, status, start date, expiration date, cancellation/suspension timestamps, notes, and timestamps.
+- Membership ownership is limited to either an organization-owned customer or an organization-owned household. Household memberships can expose covered members through the existing customer-household relationship.
+- Membership states are `active`, `expired`, `cancelled`, and `suspended`. Cancellation or suspension changes status without deleting the membership row or any check-in history.
+- `db/repositories/membership-repository.ts` owns plan reads, membership CRUD, status transitions, customer membership lookups, status counts, data-mode counts, and active-access evaluation.
+- Active-access evaluation is centralized and checks organization, facility scope when present, customer or household ownership, membership status, and start/expiration dates before approving check-in access.
+- `check_ins` stores organization/facility/customer attendance records with optional membership reference, check-in timestamp, optional check-out timestamp, staff metadata, access status, optional denial reason, and created timestamp.
+- `db/repositories/check-in-repository.ts` owns check-in, check-out, active roster, today history, customer history, duplicate-active prevention, repository error handling, and diagnostics.
+- Check-in writes validate customer and facility organization ownership before insert.
+- A partial unique index prevents duplicate active check-ins for the same organization/customer. Check-out updates only an active check-in in the same organization.
+- Staff overrides can create an override check-in record when no active persisted membership grants access. Waiver-backed access blocks remain deferred until waivers are migrated.
+- `/admin/database` reports membership and attendance counts from Neon, including membership totals by status, check-ins today, currently checked in, and check-in history.
 - Primary contact must be an organization-owned customer assigned to the household.
 - Future memberships can attach to either a household or customer depending on the product model, but the owning organization must remain explicit.
 - Household billing, emergency contacts, rich relationship roles, and guardian permissions should be modeled in later migrations after the household foundation is validated.
@@ -278,8 +296,8 @@ Organization
 
 ### Future State
 
-- Future releases will move workflow domains behind the Next.js server/data layer incrementally.
-- Customer, household, membership, program, registration, waiver, POS, rental, notification, and support records remain unmigrated until their planned phases.
+- Future releases will move remaining workflow domains behind the Next.js server/data layer incrementally.
+- Program, registration, waiver, POS, rental, notification, support, payment, and platform-provisioning records remain unmigrated until their planned phases.
 - Existing localStorage-backed flows should be retired only after replacement server-backed reads and writes exist for the relevant domain.
 
 ### Multi-Tenant SaaS Model
@@ -330,9 +348,9 @@ Support access should be a durable, auditable platform workflow.
 The data migration should be phased:
 
 - Phase 1: identity, organizations, facilities, staff users, roles, and permissions
-- Phase 2: customers, households, emergency contacts, and memberships
-- Phase 3: programs, sessions, registrations, attendance, and waitlists
-- Phase 4: check-ins, POS transactions, products, rentals, and waivers
+- Phase 2: customers, households, emergency contacts, memberships, and check-ins
+- Phase 3: programs, sessions, registrations, attendance reporting, and waitlists
+- Phase 4: POS transactions, products, rentals, waivers, and payment records
 - Phase 5: notifications, support requests, release notifications, and audit logs
 
 See [Data Sources](./data-sources.md) for the current storage inventory, [Data Migration Plan](./data-migration-plan.md) for the detailed audit and migration roadmap, and [Real Data Implementation Plan](./real-data-implementation-plan.md) for the v0.2.x implementation sequence.

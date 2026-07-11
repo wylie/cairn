@@ -6,7 +6,7 @@ describe("RoadmapPage", () => {
     render(<RoadmapPage />);
 
     expect(screen.getByRole("heading", { name: "Roadmap" })).toBeInTheDocument();
-    expect(screen.getByText("Current v0.3.5")).toBeInTheDocument();
+    expect(screen.getByText("Current v0.4.0")).toBeInTheDocument();
     expect(screen.getByText("CI/CD")).toBeInTheDocument();
     expect(screen.getByText("Semantic Versioning")).toBeInTheDocument();
     expect(screen.getByText("v0.2.x")).toBeInTheDocument();
@@ -19,8 +19,9 @@ describe("RoadmapPage", () => {
     expect(screen.getByText("Persisted customer-household relationships")).toBeInTheDocument();
     expect(screen.getByText("Admin diagnostics")).toBeInTheDocument();
     expect(screen.getByText("Data-source migration")).toBeInTheDocument();
-    expect(screen.getByText("Customer & Household Operations")).toBeInTheDocument();
     expect(screen.getByText("Memberships & Check-In")).toBeInTheDocument();
+    expect(screen.getByText("Centralized access rules")).toBeInTheDocument();
+    expect(screen.getByText("Customer & Household Operations")).toBeInTheDocument();
     expect(screen.getByText("Programs & Registrations")).toBeInTheDocument();
     expect(screen.getByText("Pilot Readiness")).toBeInTheDocument();
     expect(screen.getByText("Production Ready")).toBeInTheDocument();

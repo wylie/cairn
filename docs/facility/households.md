@@ -10,7 +10,8 @@ Households are managed family or relationship units. They centralize customer re
 - delete a household without deleting its customer profiles
 - review persisted household members and primary contact
 - preserve simple member display while rich roles such as guardian, child, billing contact, and emergency-contact relationship are deferred
-- see deferred placeholders for shared membership, waiver, billing, registration, communication, task, alert, and activity data until those workflows are migrated
+- review shared persisted household membership coverage where available
+- see deferred placeholders for waiver, billing, registration, communication, task, alert, and activity data until those workflows are migrated
 - open member profiles and dependent portal views
 
 ## Common Workflows

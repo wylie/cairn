@@ -6,6 +6,11 @@ describe("ReleaseNotesPage", () => {
     render(<ReleaseNotesPage />);
 
     expect(screen.getByRole("heading", { name: "Release Notes" })).toBeInTheDocument();
+    expect(screen.getByText("Memberships & Check-In Persistence")).toBeInTheDocument();
+    expect(screen.getAllByText("Membership management and front-desk check-ins now persist through Neon with centralized access-rule evaluation.").length).toBeGreaterThan(0);
+    expect(screen.getByText("Neon-backed membership management")).toBeInTheDocument();
+    expect(screen.getByText("Persistent customer check-ins and check-outs")).toBeInTheDocument();
+    expect(screen.getByText("Centralized access-rule evaluation")).toBeInTheDocument();
     expect(screen.getByText("Sitemap & Robots Configuration")).toBeInTheDocument();
     expect(screen.getAllByText("Public sitemap, crawler rules, and production canonical URLs now separate indexable Cairn pages from private application routes.").length).toBeGreaterThan(0);
     expect(screen.getByText("Public XML sitemap")).toBeInTheDocument();

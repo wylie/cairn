@@ -6,10 +6,10 @@ Customers are the core person records used across check-in, memberships, registr
 ## What You Can Do
 - create and edit customer records
 - store a profile photo URL as part of the persisted profile
-- search persisted customers by first name, last name, preferred name, email, or phone
+- search persisted customers by first name, last name, preferred name, member ID, email, or phone
 - review profile sections through jump navigation
-- view persisted notes, household relationships, and profile metadata
-- see clear placeholders for visits, purchases, waivers, registrations, documents, communications, and alerts until those workflows are migrated
+- view persisted notes, household relationships, membership visibility, check-in history, and profile metadata
+- see clear placeholders for purchases, waivers, registrations, documents, communications, and alerts until those workflows are migrated
 - open related household, membership, registration, and receipt records
 
 ## Common Workflows
@@ -34,7 +34,7 @@ Edits use the same required-field, email, phone, birth-date, state, and duplicat
 2. Select `Delete Customer`.
 3. Confirm the destructive action.
 
-Deleted customer profile rows are removed from Neon for the active organization. Memberships, check-ins, waivers, and POS records are migrated in later releases.
+Deleted customer profile rows are removed from Neon for the active organization. Persisted memberships and check-ins retain their history through their own tables and safeguards. Waivers and POS records are migrated in later releases.
 
 ### Update a profile photo URL
 1. Open the customer profile.
@@ -45,7 +45,8 @@ Deleted customer profile rows are removed from Neon for the active organization.
 ### Review deferred operational sections
 1. Open the customer profile.
 2. Review persisted profile and household data normally.
-3. Treat memberships, check-ins, waivers, registrations, POS, documents, communications, and alerts as deferred placeholders until those persistence releases ship.
+3. Review persisted membership and check-in sections normally.
+4. Treat waivers, registrations, POS, documents, communications, and alerts as deferred placeholders until those persistence releases ship.
 
 ## Profile Sections
 Typical customer profiles include:

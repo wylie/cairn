@@ -1,54 +1,48 @@
 # Memberships
 
 ## Overview
-Memberships cover active recurring access, household plans, passes, renewals, freezes, cancellations, receipts, and digital membership cards.
+Memberships cover active access, household coverage, start and expiration dates, cancellations, suspensions, and customer profile visibility. Membership records are persisted in Neon for shared staff access across browsers and devices.
 
 ## What You Can Do
-- sell memberships and passes through POS or customer checkout
+- create individual or household memberships without payment processing
 - review membership status, renewal, and covered members
-- freeze, unfreeze, extend, renew, cancel, or change membership type
-- view billing history and linked receipts
+- edit membership dates, owner, plan, and notes
+- cancel or suspend a membership without deleting history
 - open related customer and household records
 
 ## Common Workflows
 ### Sell a membership
-1. Open POS.
-2. Select a customer.
-3. Add a membership product to the cart.
-4. Review pricing, taxes, and discounts.
-5. Complete checkout.
-6. Confirm the receipt and membership details.
+1. Open Memberships.
+2. Select a plan.
+3. Choose customer or household ownership.
+4. Set the start date, expiration date, status, and notes.
+5. Create the membership.
+6. Confirm the membership appears in the list and on the customer profile.
 
 ### Sell a day pass
-1. Open POS.
-2. Select the customer.
-3. Add the day pass or access product.
-4. Complete checkout.
-5. Check the customer in if needed.
+Day-pass sale and payment processing are still deferred. Use staff override during check-in only when local policy allows temporary access without an active persisted membership.
 
 ### Manage a membership
 1. Open Memberships.
 2. Search by customer, household, membership type, or status.
 3. Open the detail panel.
-4. Complete actions such as renew, freeze, cancel, or change type.
+4. Edit dates, owner, plan, status, or notes.
+5. Cancel or suspend when needed.
 
 ### Review a digital membership card
-1. Open the membership detail, customer profile, household, or customer portal.
-2. View the membership card.
-3. Confirm status, expiration, membership number, and QR token.
+Digital card issuance remains future work. Use the membership detail or customer profile to confirm status, plan, owner, and expiration.
 
 ## Membership States
 - Active
-- Expiring Soon
 - Expired
-- Frozen
 - Suspended
 - Cancelled
 
 ## Tips
 - Use household coverage views before troubleshooting family access.
-- Review linked receipts whenever a customer asks about renewals or charge history.
-- Use alerts for failed renewals and expiring memberships.
+- Check owner type before troubleshooting household coverage.
+- Review start and expiration dates before changing status.
+- Payment and receipt history are not part of the v0.4.0 membership persistence release.
 
 ## Related Features
 - [Check-In](./check-in.md)

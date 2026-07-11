@@ -15,7 +15,10 @@ const mocks = vi.hoisted(() => ({
   getLastCustomerCreated: vi.fn(),
   getPotentialDuplicateCustomerPairCount: vi.fn(),
   getHouseholdCount: vi.fn(),
-  getHouseholdRelationshipCounts: vi.fn()
+  getHouseholdRelationshipCounts: vi.fn(),
+  getMembershipPlanCount: vi.fn(),
+  getMembershipStatusCounts: vi.fn(),
+  getCheckInStatusCounts: vi.fn()
 }));
 
 vi.mock("@/db", () => ({
@@ -49,6 +52,15 @@ vi.mock("@/db/repositories/household-repository", () => ({
   getHouseholdRelationshipCounts: mocks.getHouseholdRelationshipCounts
 }));
 
+vi.mock("@/db/repositories/membership-repository", () => ({
+  getMembershipPlanCount: mocks.getMembershipPlanCount,
+  getMembershipStatusCounts: mocks.getMembershipStatusCounts
+}));
+
+vi.mock("@/db/repositories/check-in-repository", () => ({
+  getCheckInStatusCounts: mocks.getCheckInStatusCounts
+}));
+
 describe("getDatabaseStatus", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -69,9 +81,12 @@ describe("getDatabaseStatus", () => {
     mocks.getPotentialDuplicateCustomerPairCount.mockResolvedValue(2);
     mocks.getHouseholdCount.mockResolvedValue(5);
     mocks.getHouseholdRelationshipCounts.mockResolvedValue({ assignedCustomers: 9, unassignedCustomers: 3 });
+    mocks.getMembershipPlanCount.mockResolvedValue(4);
+    mocks.getMembershipStatusCounts.mockResolvedValue({ total: 11, active: 7, expired: 2, suspended: 1, cancelled: 1 });
+    mocks.getCheckInStatusCounts.mockResolvedValue({ today: 8, currentlyIn: 3, history: 44 });
   });
 
-  it("returns repository-backed customer and household diagnostics", async () => {
+  it("returns repository-backed customer, household, membership, and check-in diagnostics", async () => {
     const { getDatabaseStatus } = await import("@/lib/database-status");
     const status = await getDatabaseStatus();
 
@@ -87,9 +102,19 @@ describe("getDatabaseStatus", () => {
     expect(status.householdCount).toBe(5);
     expect(status.customersAssignedToHouseholds).toBe(9);
     expect(status.customersWithoutHouseholds).toBe(3);
+    expect(status.membershipPlanCount).toBe(4);
+    expect(status.membershipCount).toBe(11);
+    expect(status.activeMembershipCount).toBe(7);
+    expect(status.expiredMembershipCount).toBe(2);
+    expect(status.suspendedMembershipCount).toBe(1);
+    expect(status.checkInsToday).toBe(8);
+    expect(status.currentlyCheckedIn).toBe(3);
+    expect(status.checkInHistoryCount).toBe(44);
     expect(status.lastCustomerCreatedName).toBe("Nina Stone");
     expect(mocks.getCustomerActivityCounts).toHaveBeenCalledTimes(1);
     expect(mocks.getCustomerDataModeCounts).toHaveBeenCalledTimes(1);
     expect(mocks.getHouseholdRelationshipCounts).toHaveBeenCalledTimes(1);
+    expect(mocks.getMembershipStatusCounts).toHaveBeenCalledTimes(1);
+    expect(mocks.getCheckInStatusCounts).toHaveBeenCalledTimes(1);
   });
 });

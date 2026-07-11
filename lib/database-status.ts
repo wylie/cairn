@@ -13,6 +13,8 @@ import {
 } from "@/db/repositories/customer-repository";
 import { getFacilityCount } from "@/db/repositories/facility-repository";
 import { getHouseholdCount, getHouseholdRelationshipCounts } from "@/db/repositories/household-repository";
+import { getCheckInStatusCounts } from "@/db/repositories/check-in-repository";
+import { getMembershipPlanCount, getMembershipStatusCounts } from "@/db/repositories/membership-repository";
 import { getOrganizationCount } from "@/db/repositories/organization-repository";
 import { getStaffFacilityAccessCount, getStaffRoleCount, getStaffUserCount } from "@/db/repositories/staff-repository";
 import { seedCustomers } from "@/db/seed-data";
@@ -43,6 +45,14 @@ export type DatabaseStatus = {
   householdCount: number;
   customersAssignedToHouseholds: number;
   customersWithoutHouseholds: number;
+  membershipCount: number;
+  membershipPlanCount: number;
+  activeMembershipCount: number;
+  expiredMembershipCount: number;
+  suspendedMembershipCount: number;
+  checkInsToday: number;
+  currentlyCheckedIn: number;
+  checkInHistoryCount: number;
   tableCount: number;
   tableCounts: DatabaseTableCount[];
   lastMigrationTag: string | null;
@@ -101,6 +111,14 @@ function buildStatus(input: {
   householdCount?: number;
   customersAssignedToHouseholds?: number;
   customersWithoutHouseholds?: number;
+  membershipCount?: number;
+  membershipPlanCount?: number;
+  activeMembershipCount?: number;
+  expiredMembershipCount?: number;
+  suspendedMembershipCount?: number;
+  checkInsToday?: number;
+  currentlyCheckedIn?: number;
+  checkInHistoryCount?: number;
 }): DatabaseStatus {
   const organizationCount = input.organizationCount ?? 0;
   const facilityCount = input.facilityCount ?? 0;
@@ -118,6 +136,14 @@ function buildStatus(input: {
   const householdCount = input.householdCount ?? 0;
   const customersAssignedToHouseholds = input.customersAssignedToHouseholds ?? 0;
   const customersWithoutHouseholds = input.customersWithoutHouseholds ?? 0;
+  const membershipCount = input.membershipCount ?? 0;
+  const membershipPlanCount = input.membershipPlanCount ?? 0;
+  const activeMembershipCount = input.activeMembershipCount ?? 0;
+  const expiredMembershipCount = input.expiredMembershipCount ?? 0;
+  const suspendedMembershipCount = input.suspendedMembershipCount ?? 0;
+  const checkInsToday = input.checkInsToday ?? 0;
+  const currentlyCheckedIn = input.currentlyCheckedIn ?? 0;
+  const checkInHistoryCount = input.checkInHistoryCount ?? 0;
   const tableCounts = [
     { table: "organizations", records: organizationCount },
     { table: "facilities", records: facilityCount },
@@ -125,7 +151,10 @@ function buildStatus(input: {
     { table: "staff_users", records: staffUserCount },
     { table: "staff_facility_access", records: staffFacilityAccessCount },
     { table: "customers", records: customerCount },
-    { table: "households", records: householdCount }
+    { table: "households", records: householdCount },
+    { table: "membership_plans", records: membershipPlanCount },
+    { table: "memberships", records: membershipCount },
+    { table: "check_ins", records: checkInHistoryCount }
   ];
   const migration = getLastMigration();
 
@@ -150,6 +179,14 @@ function buildStatus(input: {
     householdCount,
     customersAssignedToHouseholds,
     customersWithoutHouseholds,
+    membershipCount,
+    membershipPlanCount,
+    activeMembershipCount,
+    expiredMembershipCount,
+    suspendedMembershipCount,
+    checkInsToday,
+    currentlyCheckedIn,
+    checkInHistoryCount,
     tableCount: tableCounts.length,
     tableCounts,
     lastMigrationTag: migration.tag,
@@ -182,7 +219,10 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
       lastCustomer,
       potentialDuplicateCustomerPairs,
       householdCount,
-      householdRelationshipCounts
+      householdRelationshipCounts,
+      membershipPlanCount,
+      membershipStatusCounts,
+      checkInStatusCounts
     ] = await Promise.all([
       getOrganizationCount(),
       getFacilityCount(),
@@ -195,7 +235,10 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
       getLastCustomerCreated(),
       getPotentialDuplicateCustomerPairCount(),
       getHouseholdCount(),
-      getHouseholdRelationshipCounts()
+      getHouseholdRelationshipCounts(),
+      getMembershipPlanCount(),
+      getMembershipStatusCounts(),
+      getCheckInStatusCounts()
     ]);
 
     return buildStatus({
@@ -216,7 +259,15 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
       lastCustomerCreatedName: lastCustomer ? `${lastCustomer.firstName} ${lastCustomer.lastName}` : null,
       householdCount,
       customersAssignedToHouseholds: householdRelationshipCounts.assignedCustomers,
-      customersWithoutHouseholds: householdRelationshipCounts.unassignedCustomers
+      customersWithoutHouseholds: householdRelationshipCounts.unassignedCustomers,
+      membershipCount: membershipStatusCounts.total,
+      membershipPlanCount,
+      activeMembershipCount: membershipStatusCounts.active,
+      expiredMembershipCount: membershipStatusCounts.expired,
+      suspendedMembershipCount: membershipStatusCounts.suspended,
+      checkInsToday: checkInStatusCounts.today,
+      currentlyCheckedIn: checkInStatusCounts.currentlyIn,
+      checkInHistoryCount: checkInStatusCounts.history
     });
   } catch {
     return disconnectedStatus();

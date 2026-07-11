@@ -91,6 +91,7 @@ export async function searchCustomers(organizationId: string, query: string): Pr
     ilike(customers.firstName, searchPattern),
     ilike(customers.lastName, searchPattern),
     ilike(customers.preferredName, searchPattern),
+    ilike(customers.memberId, searchPattern),
     ilike(customers.email, searchPattern),
     ilike(customers.phone, searchPattern),
     sql`${customers.firstName} || ' ' || ${customers.lastName} ilike ${searchPattern}`

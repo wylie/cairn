@@ -1,6 +1,17 @@
 import { sql } from "drizzle-orm";
-import { customers, facilities, getDatabase, getSqlClient, households, organizations, staffFacilityAccess, staffRoles, staffUsers } from "./index";
-import { seedCustomers, seedFacilities, seedHouseholds, seedOrganizations, seedStaffFacilityAccess, seedStaffRoles, seedStaffUsers } from "./seed-data";
+import { checkIns, customers, facilities, getDatabase, getSqlClient, households, membershipPlans, memberships, organizations, staffFacilityAccess, staffRoles, staffUsers } from "./index";
+import {
+  seedCheckIns,
+  seedCustomers,
+  seedFacilities,
+  seedHouseholds,
+  seedMembershipPlans,
+  seedMemberships,
+  seedOrganizations,
+  seedStaffFacilityAccess,
+  seedStaffRoles,
+  seedStaffUsers
+} from "./seed-data";
 
 async function main() {
   const database = getDatabase();
@@ -114,9 +125,73 @@ async function main() {
       }
     });
 
+  await database
+    .insert(membershipPlans)
+    .values([...seedMembershipPlans])
+    .onConflictDoUpdate({
+      target: membershipPlans.id,
+      set: {
+        organizationId: sql`excluded.organization_id`,
+        facilityId: sql`excluded.facility_id`,
+        name: sql`excluded.name`,
+        kind: sql`excluded.kind`,
+        durationDays: sql`excluded.duration_days`,
+        priceCents: sql`excluded.price_cents`,
+        active: sql`excluded.active`,
+        updatedAt: sql`now()`
+      }
+    });
+
+  await database
+    .insert(memberships)
+    .values([...seedMemberships])
+    .onConflictDoUpdate({
+      target: memberships.id,
+      set: {
+        organizationId: sql`excluded.organization_id`,
+        facilityId: sql`excluded.facility_id`,
+        planId: sql`excluded.plan_id`,
+        ownerType: sql`excluded.owner_type`,
+        customerId: sql`excluded.customer_id`,
+        householdId: sql`excluded.household_id`,
+        status: sql`excluded.status`,
+        startsOn: sql`excluded.starts_on`,
+        expiresOn: sql`excluded.expires_on`,
+        notes: sql`excluded.notes`,
+        updatedAt: sql`now()`
+      }
+    });
+
+  await database
+    .insert(checkIns)
+    .values(
+      seedCheckIns.map((entry) => ({
+        ...entry,
+        checkedInAt: new Date(entry.checkedInAt),
+        checkedOutAt: entry.checkedOutAt ? new Date(entry.checkedOutAt) : null
+      }))
+    )
+    .onConflictDoUpdate({
+      target: checkIns.id,
+      set: {
+        organizationId: sql`excluded.organization_id`,
+        facilityId: sql`excluded.facility_id`,
+        customerId: sql`excluded.customer_id`,
+        membershipId: sql`excluded.membership_id`,
+        checkedInAt: sql`excluded.checked_in_at`,
+        checkedOutAt: sql`excluded.checked_out_at`,
+        status: sql`excluded.status`,
+        accessStatus: sql`excluded.access_status`,
+        checkedInByStaffId: sql`excluded.checked_in_by_staff_id`,
+        checkedInByStaffName: sql`excluded.checked_in_by_staff_name`,
+        checkedOutByStaffId: sql`excluded.checked_out_by_staff_id`,
+        checkedOutByStaffName: sql`excluded.checked_out_by_staff_name`
+      }
+    });
+
   await sqlClient.end();
   console.log(
-    `Seeded ${seedOrganizations.length} organizations, ${seedFacilities.length} facilities, ${seedStaffRoles.length} staff roles, ${seedStaffUsers.length} staff users, ${seedCustomers.length} customers, and ${seedHouseholds.length} households.`
+    `Seeded ${seedOrganizations.length} organizations, ${seedFacilities.length} facilities, ${seedStaffRoles.length} staff roles, ${seedStaffUsers.length} staff users, ${seedCustomers.length} customers, ${seedHouseholds.length} households, ${seedMembershipPlans.length} membership plans, ${seedMemberships.length} memberships, and ${seedCheckIns.length} check-ins.`
   );
 }
 

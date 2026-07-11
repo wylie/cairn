@@ -10,11 +10,11 @@ Version metadata is centralized in `lib/version.ts`.
 
 Current shipped version metadata:
 
-- `currentVersion`: `0.3.5`
-- `releaseName`: `Sitemap & Robots Configuration`
+- `currentVersion`: `0.4.0`
+- `releaseName`: `Memberships & Check-In Persistence`
 - `releaseDate`: `2026-07-11`
-- `releaseType`: `patch`
-- `summary`: `Public sitemap, crawler rules, and production canonical URLs now separate indexable Cairn pages from private application routes.`
+- `releaseType`: `minor`
+- `summary`: `Membership management and front-desk check-ins now persist through Neon with centralized access-rule evaluation.`
 
 All active application version displays should read from the `version` object in `lib/version.ts`. Compatibility exports may exist for older components, but they must derive from `version`.
 
@@ -129,21 +129,48 @@ Update notifications are generated from release note data by `lib/releases/notif
 
 When a release entry becomes the latest release, Cairn can generate a system notification such as:
 
-`Cairn has been updated to v0.3.5. View what's new.`
+`Cairn has been updated to v0.4.0. View what's new.`
 
 The notification uses the existing communications notification center, counts toward unread totals, can be marked read, and links directly to the matching release note anchor.
 
 ## Current Shipped Version
 
-Version: `v0.3.5`
+Version: `v0.4.0`
 
 Released: `2026-07-11`
 
-Title: Sitemap & Robots Configuration
+Title: Memberships & Check-In Persistence
 
-Release type: Patch
+Release type: Minor
 
-Summary: Public sitemap, crawler rules, and production canonical URLs now separate indexable Cairn pages from private application routes.
+Summary: Membership management and front-desk check-ins now persist through Neon with centralized access-rule evaluation.
+
+### v0.4.0 Notes
+
+#### Added
+
+- Neon-backed membership management
+- Persistent customer check-ins and check-outs
+- Centralized access-rule evaluation
+- Membership and attendance diagnostics
+
+#### Improved
+
+- Customer profile membership visibility
+- Currently-in and attendance workflows
+- Tenant and facility isolation
+
+#### Changed
+
+- Memberships and check-ins no longer rely on localStorage or mock persistence
+
+#### Fixed
+
+- Persisted customer profiles now show Neon-backed membership and check-in history instead of deferred membership placeholders.
+
+#### Known Issues
+
+- Programs, registrations, POS, rentals, waivers, payment processing, imports, merge workflows, platform provisioning, and production authentication remain deferred.
 
 ### v0.3.5 Notes
 

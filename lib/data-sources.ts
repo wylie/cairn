@@ -44,7 +44,7 @@ export const dataSourceInventory: DataSourceInventoryItem[] = [
     currentSource: "Neon via `customers`, organization-scoped repositories, server actions, and server-backed customer search.",
     repositoryLayer: "Server-only customer create, read, update, delete, normalized search, count, duplicate-warning, potential duplicate count, and last-created helpers.",
     scopeAudit: "`customers.organization_id` is required. Customer reads, writes, and search resolve the active organization before repository access, and customer records are no longer loaded from or saved to the customer localStorage key.",
-    migrationStatus: "Fully persistent for customer profile list/detail/create/edit/delete/search. Search supports partial first name, last name, preferred name, email, and phone matching. Membership, waiver, check-in, merge, import, communications, documents, and audit behaviors remain separate future migrations.",
+    migrationStatus: "Fully persistent for customer profile list/detail/create/edit/delete/search. Search supports partial first name, last name, preferred name, email, and phone matching. Membership and check-in history views now read persisted records. Waiver, merge, import, communications, documents, and audit behaviors remain separate future migrations.",
     plannedOrder: "Next customer operations phase: imports, merge workflows, audit events, communications/documents persistence, and richer relationship behavior."
   },
   {
@@ -71,7 +71,7 @@ export const dataSourceInventory: DataSourceInventoryItem[] = [
     currentSource: "Neon via `households`, customer `household_id` links, organization-scoped repositories, and server actions.",
     repositoryLayer: "Server-only household create, read, update, delete, list-by-organization, member reads, member add/remove, primary-contact updates, counts, and duplicate checks.",
     scopeAudit: "`households.organization_id` is required. Household reads and writes resolve the active organization before repository access.",
-    migrationStatus: "Fully persistent for household list/detail/create/edit/delete, customer assignment, removal, and primary-contact assignment. Membership, billing, and rich relationship-role behavior remain future migrations.",
+    migrationStatus: "Fully persistent for household list/detail/create/edit/delete, customer assignment, removal, and primary-contact assignment. Household memberships now persist through membership ownership records; billing and rich relationship-role behavior remain future migrations.",
     plannedOrder: "Next household operations phase: richer household member roles, guardians, emergency contacts, billing contacts, and audit events."
   },
   {
@@ -94,21 +94,21 @@ export const dataSourceInventory: DataSourceInventoryItem[] = [
   },
   {
     module: "Memberships",
-    status: "Demo-backed",
-    currentSource: "`lib/mocks/memberships.ts`, `lib/mocks/access-records.ts`, `lib/mocks/passes.ts`, and `lib/state/customer-state.tsx` local mock persistence.",
-    repositoryLayer: "No Neon schema or repository layer yet.",
-    scopeAudit: "Mock records carry organization/location fields, but production isolation is not server-enforced.",
-    migrationStatus: "Not migrated.",
-    plannedOrder: "After customer and household write paths: memberships, access records, renewals, freezes, and card events."
+    status: "Neon-backed",
+    currentSource: "Neon `membership_plans` and `memberships` through `db/schema/memberships.ts`, `db/repositories/membership-repository.ts`, and membership server actions.",
+    repositoryLayer: "Server-only membership plan reads, membership create/read/update/status transitions, customer membership lookups, active-access checks, status counts, plan counts, and data-mode counts.",
+    scopeAudit: "`memberships.organization_id` is required and `memberships.facility_id` scopes facility-specific access when present. Membership reads and writes resolve organization and facility context before repository access, and ownership is limited to an organization-owned customer or household.",
+    migrationStatus: "Complete for membership plans, individual memberships, household memberships, start and expiration dates, active/expired/cancelled/suspended states, profile visibility, and access-rule lookups. Renewals, payment processing, freezes, card events, and billing remain future work.",
+    plannedOrder: "Future membership work: renewals, payment-backed sales, freezes, card events, billing history, and richer reporting."
   },
   {
     module: "Check-ins",
-    status: "Demo-backed",
-    currentSource: "`lib/mocks/checkins.ts` and `lib/state/customer-state.tsx` local mock persistence.",
-    repositoryLayer: "No Neon schema or repository layer yet.",
-    scopeAudit: "Demo check-ins are scoped in mock state by organization and location keys, but remain browser-local.",
-    migrationStatus: "Not migrated.",
-    plannedOrder: "After membership access rules: check-in sessions, occupancy, overrides, and audit events."
+    status: "Neon-backed",
+    currentSource: "Neon `check_ins` through `db/schema/check-ins.ts`, `db/repositories/check-in-repository.ts`, and check-in server actions.",
+    repositoryLayer: "Server-only check-in, check-out, active roster, today history, customer history, status counts, data-mode counts, duplicate-active prevention, and integrity checks.",
+    scopeAudit: "`check_ins.organization_id`, `facility_id`, and `customer_id` are required. Check-ins validate customer and facility organization ownership, enforce active membership access unless staff override is used, and prevent duplicate active check-ins per organization/customer.",
+    migrationStatus: "Complete for customer check-in, check-out, currently-in roster, today history, customer profile history, staff override records, and admin diagnostics. Backdated check-in, capacity rules, automatic closeout, and waiver enforcement remain future work.",
+    plannedOrder: "Future attendance work: capacity rules, backdated corrections, automatic closeout, waiver-backed blocks, audit events, and reporting."
   },
   {
     module: "Programs",

@@ -188,6 +188,69 @@ export default async function AdminDatabasePage() {
         </Card>
         <Card>
           <CardHeader>
+            <CardTitle>Memberships</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.membershipCount}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Neon-backed membership records available to access workflows.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Active Memberships</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.activeMembershipCount}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Membership rows currently granting access.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Expired Memberships</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.expiredMembershipCount}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Membership rows retained as historical access records.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Suspended Memberships</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.suspendedMembershipCount}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Membership rows temporarily blocked from check-in access.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Check-Ins Today</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.checkInsToday}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Persisted check-ins recorded today across facilities.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Currently Checked In</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.currentlyCheckedIn}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Open check-in records without a checkout timestamp.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Check-In History</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.checkInHistoryCount}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Total persisted attendance records retained in Neon.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
             <CardTitle>Last Migration</CardTitle>
           </CardHeader>
           <CardContent>

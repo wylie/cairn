@@ -44,7 +44,19 @@ Focus:
 - Deterministic repository reads and search ordering
 - Focused validation and repository-boundary coverage
 
-## v0.4.x - Customer & Household Operations
+## v0.4.x - Memberships & Check-In
+
+Status: Shipped
+
+Focus:
+
+- Membership persistence
+- Check-ins
+- Attendance
+- Centralized access rules
+- Membership and attendance diagnostics
+
+## v0.5.x - Customer & Household Operations
 
 Status: Planned
 
@@ -55,16 +67,6 @@ Focus:
 - Household imports
 - Rich relationship roles
 - Audit events
-
-## v0.5.x - Memberships & Check-In
-
-Status: Planned
-
-Focus:
-
-- Membership persistence
-- Check-ins
-- Attendance
 
 ## v0.6.x - Programs & Registrations
 

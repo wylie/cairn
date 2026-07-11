@@ -32,7 +32,7 @@ import {
   removePersistedHouseholdMemberAction,
   setPersistedHouseholdPrimaryContactAction
 } from "@/app/(app)/households/actions";
-import type { CommunicationRecord, Customer, Household, HouseholdMember, StaffRole } from "@/types/domain";
+import type { CheckInLogRecord, CommunicationRecord, Customer, CustomerAccessRecord, Household, HouseholdMember, StaffRole } from "@/types/domain";
 
 type CustomerDocumentType =
   | "waiver"
@@ -59,6 +59,8 @@ export function CustomerDetailView({
   persistedCustomers,
   persistedHouseholds,
   persistedHouseholdMembers,
+  persistedAccessRecords,
+  persistedCheckInRecords,
   persistedMode = false
 }: {
   customerId: string;
@@ -66,6 +68,8 @@ export function CustomerDetailView({
   persistedCustomers?: Customer[];
   persistedHouseholds?: Household[];
   persistedHouseholdMembers?: HouseholdMember[];
+  persistedAccessRecords?: CustomerAccessRecord[];
+  persistedCheckInRecords?: CheckInLogRecord[];
   persistedMode?: boolean;
 }) {
   const router = useRouter();
@@ -194,7 +198,7 @@ export function CustomerDetailView({
   );
   const customerCommunications = usesPersistedCustomer ? [] : communications.filter((entry) => entry.customerId === customer.id);
   const recentCheckIns = usesPersistedCustomer
-    ? []
+    ? persistedCheckInRecords ?? []
     : checkInRecords
     .filter((entry) => entry.customerId === customer.id)
     .sort((a, b) => b.checkInTime.localeCompare(a.checkInTime))
@@ -222,7 +226,7 @@ export function CustomerDetailView({
     .filter((entry) => entry.session)
     .sort((a, b) => (b.session?.startsAt ?? "").localeCompare(a.session?.startsAt ?? ""));
   const accessRecords = usesPersistedCustomer
-    ? []
+    ? persistedAccessRecords ?? []
     : customerAccessRecords
     .filter((entry) => entry.customerId === customer.id)
     .sort((a, b) => (b.startDate ?? "").localeCompare(a.startDate ?? ""));
@@ -266,12 +270,13 @@ export function CustomerDetailView({
   });
   const latestUpcomingSession = upcomingSessions[0];
   const activeAccessCount = accessRecords.filter((entry) => entry.status === "active").length;
+  const persistedChosenAccess = usesPersistedCustomer ? accessRecords.find((entry) => entry.status === "active") ?? null : null;
   const decision = usesPersistedCustomer
     ? {
-        allowed: false,
-        chosenAccess: null,
+        allowed: Boolean(persistedChosenAccess),
+        chosenAccess: persistedChosenAccess,
         sessionAccess: null,
-        reasons: ["Membership and access persistence are not migrated yet."],
+        reasons: persistedChosenAccess ? ["Access approved via persisted membership."] : ["No active persisted membership found."],
         warnings: []
       }
     : evaluateCustomerEntry(customer.id);
@@ -873,8 +878,8 @@ export function CustomerDetailView({
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="detail-summary-cards">
           <CustomerSummaryCard
             title="Access Status"
-            value={usesPersistedCustomer ? "Deferred" : activeAccessCount > 0 ? `${activeAccessCount} active` : "No active access"}
-            detail={usesPersistedCustomer ? "Membership/access persistence is not built yet." : membership?.planName ?? pass?.title ?? customer.dayPassProductName ?? "No current plan or pass"}
+            value={activeAccessCount > 0 ? `${activeAccessCount} active` : "No active access"}
+            detail={usesPersistedCustomer ? persistedChosenAccess?.notes ?? "No current persisted membership" : membership?.planName ?? pass?.title ?? customer.dayPassProductName ?? "No current plan or pass"}
           />
           <CustomerSummaryCard
             title="Waiver Status"
@@ -883,8 +888,8 @@ export function CustomerDetailView({
           />
           <CustomerSummaryCard
             title="Current Access"
-            value={usesPersistedCustomer ? "Deferred" : currentAccessLabel}
-            detail={usesPersistedCustomer ? "No mock access is shown on Neon-backed profiles." : currentAccessDetail}
+            value={currentAccessLabel}
+            detail={currentAccessDetail}
           />
           <CustomerSummaryCard
             title="Upcoming Registration"
@@ -931,9 +936,7 @@ export function CustomerDetailView({
       <Card aria-label="detail-access-products">
         <CardHeader><CardTitle>Access Products</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
-          {usesPersistedCustomer ? (
-            <p className="text-muted-foreground">Memberships and access products are not persisted yet. No demo access records are shown for Neon-backed customers.</p>
-          ) : accessRecords.length === 0 ? (
+          {accessRecords.length === 0 ? (
             <p className="text-muted-foreground">No access products yet.</p>
           ) : null}
           {accessRecords.map((entry) => (

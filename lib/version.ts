@@ -1,11 +1,11 @@
 export type ReleaseType = "patch" | "minor" | "major";
 
 export const version = {
-  currentVersion: "0.3.5",
-  releaseName: "Sitemap & Robots Configuration",
+  currentVersion: "0.4.0",
+  releaseName: "Memberships & Check-In Persistence",
   releaseDate: "2026-07-11",
-  releaseType: "patch" as ReleaseType,
-  summary: "Public sitemap, crawler rules, and production canonical URLs now separate indexable Cairn pages from private application routes."
+  releaseType: "minor" as ReleaseType,
+  summary: "Membership management and front-desk check-ins now persist through Neon with centralized access-rule evaluation."
 } as const;
 
 export function formatReleaseType(type: ReleaseType) {

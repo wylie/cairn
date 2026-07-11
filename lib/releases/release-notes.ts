@@ -135,11 +135,11 @@ const householdPersistenceRelease: ReleaseNote = {
 };
 
 const customerExperienceImprovementsRelease: ReleaseNote = {
-  version: version.currentVersion,
-  releaseName: version.releaseName,
-  releaseDate: version.releaseDate,
-  releaseType: version.releaseType,
-  summary: version.summary,
+  version: "0.3.2",
+  releaseName: "Customer Experience Improvements",
+  releaseDate: "2026-07-11",
+  releaseType: "patch",
+  summary: "Customer search, validation, duplicate warnings, and profile clarity are improved for Neon-backed records.",
   sections: {
     added: [
       "Neon-backed customer search",
@@ -159,6 +159,33 @@ const customerExperienceImprovementsRelease: ReleaseNote = {
     changed: [],
     knownIssues: [
       "Memberships, check-ins, waivers, programs, POS, documents, communications, and authentication still use demo persistence until their migration releases"
+    ]
+  }
+};
+
+const customerAdministrationDataQualityRelease: ReleaseNote = {
+  version: version.currentVersion,
+  releaseName: version.releaseName,
+  releaseDate: version.releaseDate,
+  releaseType: version.releaseType,
+  summary: version.summary,
+  sections: {
+    added: [],
+    improved: [
+      "Customer and household admin diagnostics",
+      "Repository consistency",
+      "Data-source visibility",
+      "Customer operations documentation",
+      "Automated coverage for customer workflows"
+    ],
+    fixed: [
+      "Stale localStorage references in completed customer and household workflow documentation",
+      "Unscoped customer and household repository helper exports",
+      "Inaccurate customer and household admin metric coverage"
+    ],
+    changed: [],
+    knownIssues: [
+      "Memberships, check-ins, waivers, programs, POS, documents, communications, imports, merge workflows, and authentication remain deferred to later releases"
     ]
   }
 };
@@ -264,6 +291,7 @@ export function compareReleaseNotesNewestFirst(a: ReleaseNote, b: ReleaseNote) {
 }
 
 const releaseNoteEntries: ReleaseNote[] = [
+  customerAdministrationDataQualityRelease,
   customerExperienceImprovementsRelease,
   householdPersistenceRelease,
   customerPersistenceRelease,

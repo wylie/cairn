@@ -48,6 +48,24 @@ export const dataSourceInventory: DataSourceInventoryItem[] = [
     plannedOrder: "Next customer operations phase: imports, merge workflows, audit events, communications/documents persistence, and richer relationship behavior."
   },
   {
+    module: "Customer Search",
+    status: "Neon-backed",
+    currentSource: "Neon `customers` through `db/repositories/customer-repository.ts` normalized search helpers.",
+    repositoryLayer: "Server-only `searchCustomers(organizationId, query)` requires organization scope and normalizes query text before searching.",
+    scopeAudit: "Search resolves the active organization before repository access and cannot return rows from another organization.",
+    migrationStatus: "Complete for first name, last name, preferred name, email, phone, and full-name partial matching.",
+    plannedOrder: "Future work may add production-scale ranking or dedicated search infrastructure after real customer imports exist."
+  },
+  {
+    module: "Customer Create/Edit/Delete",
+    status: "Neon-backed",
+    currentSource: "Neon `customers` through server actions in `app/(app)/customers/actions.ts` and customer repository mutations.",
+    repositoryLayer: "Server-only create, update, and delete helpers require organization ids; server actions resolve active organization before writes.",
+    scopeAudit: "Mutations validate organization ownership, shared customer validation, duplicate warnings, and safe household primary-contact cleanup before deletion.",
+    migrationStatus: "Complete for modeled customer profile fields. Imports, merge workflows, audit events, and operational adjunct records remain future work.",
+    plannedOrder: "Future customer operations add imports, merge, audit history, and richer communication/document persistence."
+  },
+  {
     module: "Households",
     status: "Neon-backed",
     currentSource: "Neon via `households`, customer `household_id` links, organization-scoped repositories, and server actions.",
@@ -55,6 +73,15 @@ export const dataSourceInventory: DataSourceInventoryItem[] = [
     scopeAudit: "`households.organization_id` is required. Household reads and writes resolve the active organization before repository access.",
     migrationStatus: "Fully persistent for household list/detail/create/edit/delete, customer assignment, removal, and primary-contact assignment. Membership, billing, and rich relationship-role behavior remain future migrations.",
     plannedOrder: "Next household operations phase: richer household member roles, guardians, emergency contacts, billing contacts, and audit events."
+  },
+  {
+    module: "Household Create/Edit/Delete",
+    status: "Neon-backed",
+    currentSource: "Neon `households` and customer `household_id` links through server actions in `app/(app)/households/actions.ts`.",
+    repositoryLayer: "Server-only household create, update, delete, duplicate-name checks, member reads, primary-contact updates, and customer link clearing.",
+    scopeAudit: "Mutations resolve the active organization before writes, validate primary-contact ownership, and clear customer links without deleting customers.",
+    migrationStatus: "Complete for household profile records, member assignment, member removal, primary-contact management, and safe household deletion.",
+    plannedOrder: "Future household operations add richer relationship roles, guardian permissions, billing roles, imports, and audit events."
   },
   {
     module: "Customer-Household Relationships",

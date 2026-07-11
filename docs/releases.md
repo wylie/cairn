@@ -10,11 +10,11 @@ Version metadata is centralized in `lib/version.ts`.
 
 Current shipped version metadata:
 
-- `currentVersion`: `0.3.2`
-- `releaseName`: `Customer Experience Improvements`
+- `currentVersion`: `0.3.3`
+- `releaseName`: `Customer Administration & Data Quality`
 - `releaseDate`: `2026-07-11`
 - `releaseType`: `patch`
-- `summary`: `Customer search, validation, duplicate warnings, and profile clarity are improved for Neon-backed records.`
+- `summary`: `Customer and household administration, data-source visibility, repository boundaries, and workflow coverage are finalized for v0.3.x.`
 
 All active application version displays should read from the `version` object in `lib/version.ts`. Compatibility exports may exist for older components, but they must derive from `version`.
 
@@ -129,21 +129,41 @@ Update notifications are generated from release note data by `lib/releases/notif
 
 When a release entry becomes the latest release, Cairn can generate a system notification such as:
 
-`Cairn has been updated to v0.3.2. View what's new.`
+`Cairn has been updated to v0.3.3. View what's new.`
 
 The notification uses the existing communications notification center, counts toward unread totals, can be marked read, and links directly to the matching release note anchor.
 
 ## Current Shipped Version
 
-Version: `v0.3.2`
+Version: `v0.3.3`
 
 Released: `2026-07-11`
 
-Title: Customer Experience Improvements
+Title: Customer Administration & Data Quality
 
 Release type: Patch
 
-Summary: Customer search, validation, duplicate warnings, and profile clarity are improved for Neon-backed records.
+Summary: Customer and household administration, data-source visibility, repository boundaries, and workflow coverage are finalized for v0.3.x.
+
+### v0.3.3 Notes
+
+#### Improved
+
+- Customer and household admin diagnostics
+- Repository consistency
+- Data-source visibility
+- Customer operations documentation
+- Automated coverage for customer workflows
+
+#### Fixed
+
+- Stale localStorage references in completed customer and household workflow documentation.
+- Unscoped customer and household repository helper exports.
+- Inaccurate customer and household admin metric coverage.
+
+#### Known Issues
+
+- Memberships, check-ins, waivers, programs, POS, documents, communications, imports, merge workflows, and authentication remain deferred to later releases.
 
 ### v0.3.2 Notes
 

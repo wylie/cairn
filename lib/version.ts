@@ -1,11 +1,11 @@
 export type ReleaseType = "patch" | "minor" | "major";
 
 export const version = {
-  currentVersion: "0.3.2",
-  releaseName: "Customer Experience Improvements",
+  currentVersion: "0.3.3",
+  releaseName: "Customer Administration & Data Quality",
   releaseDate: "2026-07-11",
   releaseType: "patch" as ReleaseType,
-  summary: "Customer search, validation, duplicate warnings, and profile clarity are improved for Neon-backed records."
+  summary: "Customer and household administration, data-source visibility, repository boundaries, and workflow coverage are finalized for v0.3.x."
 } as const;
 
 export function formatReleaseType(type: ReleaseType) {

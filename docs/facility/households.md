@@ -8,8 +8,8 @@ Households are managed family or relationship units. They centralize customer re
 - add and remove existing customers from households
 - set or change the primary contact
 - delete a household without deleting its customer profiles
-- assign roles such as primary adult, guardian, child, or emergency contact
 - review persisted household members and primary contact
+- preserve simple member display while rich roles such as guardian, child, billing contact, and emergency-contact relationship are deferred
 - see deferred placeholders for shared membership, waiver, billing, registration, communication, task, alert, and activity data until those workflows are migrated
 - open member profiles and dependent portal views
 
@@ -18,7 +18,7 @@ Households are managed family or relationship units. They centralize customer re
 1. Open Households.
 2. Create a new household record.
 3. Set the primary contact.
-4. Add members and relationship roles.
+4. Add members.
 
 ### Add a household member
 1. Open the household detail page.

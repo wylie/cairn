@@ -24,7 +24,7 @@ export const roadmapMilestones: RoadmapMilestone[] = [
   },
   {
     versionRange: "v0.3.x",
-    title: "Customer Persistence",
+    title: "Customer Operations",
     focus: [
       "Customer CRUD",
       "Customer repository",
@@ -36,7 +36,11 @@ export const roadmapMilestones: RoadmapMilestone[] = [
       "Profile clarity for persisted customer data",
       "Household CRUD",
       "Persisted customer-household relationships",
-      "Primary-contact management"
+      "Primary-contact management",
+      "Admin diagnostics",
+      "Data-source migration",
+      "Customer operations documentation",
+      "Automated customer workflow coverage"
     ],
     status: "Shipped"
   },

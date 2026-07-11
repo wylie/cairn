@@ -1,7 +1,7 @@
 import "server-only";
 
 import { and, asc, count, desc, eq, ilike, or, sql, type SQLWrapper } from "drizzle-orm";
-import { customers, getDatabase, households } from "@/db";
+import { customers, getDatabase, households, organizations } from "@/db";
 import { getPhoneDigits, normalizeCustomerSearchQuery } from "@/lib/customer-validation";
 
 export type CustomerRecord = typeof customers.$inferSelect;
@@ -44,21 +44,15 @@ export type CustomerDuplicateInput = {
 export type CustomerDuplicateMatch = CustomerRecord & {
   matchedOn: string[];
 };
-
-export async function getCustomer(customerId: string): Promise<CustomerRecord | null> {
-  const database = getDatabase();
-  if (!database) return null;
-
-  const [customer] = await database.select().from(customers).where(eq(customers.id, customerId)).limit(1);
-  return customer ?? null;
-}
-
-export async function getCustomers(): Promise<CustomerRecord[]> {
-  const database = getDatabase();
-  if (!database) return [];
-
-  return database.select().from(customers).orderBy(asc(customers.lastName), asc(customers.firstName));
-}
+export type CustomerActivityCounts = {
+  active: number;
+  inactive: number;
+};
+export type CustomerDataModeCounts = {
+  demo: number;
+  sandbox: number;
+  production: number;
+};
 
 export async function getCustomersByOrganization(organizationId: string): Promise<CustomerRecord[]> {
   const database = getDatabase();
@@ -158,17 +152,46 @@ export async function findDuplicateCustomers(input: CustomerDuplicateInput): Pro
     });
 }
 
-export async function findDuplicateCustomer(input: CustomerDuplicateInput): Promise<CustomerRecord | null> {
-  const [duplicate] = await findDuplicateCustomers(input);
-  return duplicate ?? null;
-}
-
 export async function getCustomerCount(): Promise<number> {
   const database = getDatabase();
   if (!database) return 0;
 
   const [row] = await database.select({ value: count() }).from(customers);
   return row?.value ?? 0;
+}
+
+export async function getCustomerActivityCounts(): Promise<CustomerActivityCounts> {
+  const database = getDatabase();
+  if (!database) return { active: 0, inactive: 0 };
+
+  const [activeRow, inactiveRow] = await Promise.all([
+    database.select({ value: count() }).from(customers).where(eq(customers.active, true)),
+    database.select({ value: count() }).from(customers).where(eq(customers.active, false))
+  ]);
+
+  return {
+    active: activeRow[0]?.value ?? 0,
+    inactive: inactiveRow[0]?.value ?? 0
+  };
+}
+
+export async function getCustomerDataModeCounts(): Promise<CustomerDataModeCounts> {
+  const database = getDatabase();
+  if (!database) return { demo: 0, sandbox: 0, production: 0 };
+
+  const rows = await database
+    .select({ mode: organizations.dataMode, value: count(customers.id) })
+    .from(organizations)
+    .leftJoin(customers, eq(customers.organizationId, organizations.id))
+    .groupBy(organizations.dataMode);
+
+  return rows.reduce<CustomerDataModeCounts>(
+    (accumulator, row) => ({
+      ...accumulator,
+      [row.mode]: row.value
+    }),
+    { demo: 0, sandbox: 0, production: 0 }
+  );
 }
 
 export async function getPotentialDuplicateCustomerPairCount(): Promise<number> {

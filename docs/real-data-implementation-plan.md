@@ -57,7 +57,7 @@ v0.2.x now includes the first production data foundation pieces.
 - `db/index.ts` exposes the typed database client.
 - `/api/internal/database-health` verifies whether the configured database connection is reachable without exposing credentials or connection details.
 - `/admin/database` now shows connection state, known table count, record counts by table, the latest committed Drizzle migration, and seed data status.
-- `/admin/data-sources` now exposes the v0.3.2 data-source inventory for platform administrators.
+- `/admin/data-sources` now exposes the v0.3.3 data-source inventory for platform administrators.
 - `npm run db:generate`, `npm run db:migrate`, and `npm run db:studio` provide the migration and inspection workflow.
 - Local tooling loads `DATABASE_URL` from `.env.local`.
 
@@ -151,7 +151,7 @@ Customer and household database foundations now exist. Customer list/detail/crea
 - `households` stores organization-owned household records with an optional primary contact reference.
 - `db/repositories/customer-repository.ts` exposes server-only reads, normalized organization-scoped customer search, counts, create, edit, delete, duplicate warnings, potential duplicate pair counts, and last-created reporting.
 - `db/repositories/household-repository.ts` exposes server-only reads, counts, create, edit, delete, member reads, member add/remove, primary-contact updates, duplicate checks, and customer household-link clearing.
-- `/admin/database` now reports customer count, searchable customer count, potential duplicate pairs, last customer created, customer seed count, household counts, customers assigned to households, and customers without households from Neon for internal validation, plus migration and seed-run availability metadata.
+- `/admin/database` now reports customer count, active and inactive customers, demo/sandbox/production customer counts, searchable customer count, potential duplicate pairs, last customer created, customer seed count, household counts, customers assigned to households, and customers without households from Neon for internal validation, plus migration and seed-run availability metadata.
 - `npm run db:seed` now seeds small fictional customer and household sets for Summit Rec Collective, Riverstone Nature Center, and Western Carolina YMCA Association.
 - The staff customer list and detail pages read organization-scoped customers from Neon through the repository layer and map them into the existing customer UI.
 - Customer search is Neon-backed and organization-scoped. It trims and normalizes input and supports partial matching on first name, last name, preferred name, email, and phone.
@@ -177,7 +177,7 @@ Seed strategy:
 
 Customer And Household Migration Plan:
 
-Current: customer and household records are Neon-backed for modeled CRUD, customer search, validation, duplicate warnings, and customer-household links. Remaining customer-adjacent workflows such as memberships, check-ins, registrations, waivers, POS, documents, communications, merge behavior, richer relationship roles, and billing still use localStorage-backed mock data until their models are migrated.
+Current: the v0.3.x Customer Operations milestone is complete for modeled customer and household CRUD, customer search, validation, duplicate warnings, customer-household links, admin diagnostics, data-source visibility, repository boundaries, and focused workflow coverage. Remaining customer-adjacent workflows such as memberships, check-ins, registrations, waivers, POS, documents, communications, imports, merge behavior, richer relationship roles, and billing still use localStorage-backed mock data until their models are migrated.
 
 Future: Neon PostgreSQL becomes the durable source of truth through the Next.js server/data layer.
 
@@ -219,7 +219,7 @@ Goal: identify every place production data enters, changes, or leaves the app.
 Deliverables:
 
 - Map current `lib/state/*` providers to future server-backed domains. Complete in [Data Sources](./data-sources.md).
-- Mark which localStorage keys can be retired, migrated, or kept as UI preferences. In progress through the v0.3.2 inventory.
+- Mark which localStorage keys can be retired, migrated, or kept as UI preferences. Complete for the v0.3.x customer and household inventory; remaining localStorage use belongs to deferred domains or UI preferences.
 - Confirm tenant scope for each domain: organization-level, facility-level, customer-level, or platform-level. Initial audit complete for current repositories.
 
 ### 2. Schema Foundation
@@ -272,7 +272,7 @@ Deliverables:
 
 - v0.1.x: Pilot Launch / External Testing
 - v0.2.x: Real Data Foundation
-- v0.3.x: Customer Persistence
+- v0.3.x: Customer Operations
 - v0.4.x: Customer & Household Operations
 - v0.5.x: Memberships & Check-In
 - v0.6.x: Programs & Registrations

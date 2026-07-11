@@ -19,7 +19,7 @@ Focus:
 - Households
 - Data classification
 
-## v0.3.x - Customer Persistence
+## v0.3.x - Customer Operations
 
 Status: Shipped
 
@@ -36,6 +36,10 @@ Focus:
 - Household CRUD
 - Persisted customer-household relationships
 - Primary-contact management
+- Admin diagnostics
+- Data-source migration
+- Customer operations documentation
+- Automated customer workflow coverage
 
 ## v0.4.x - Customer & Household Operations
 

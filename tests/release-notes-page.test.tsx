@@ -6,6 +6,10 @@ describe("ReleaseNotesPage", () => {
     render(<ReleaseNotesPage />);
 
     expect(screen.getByRole("heading", { name: "Release Notes" })).toBeInTheDocument();
+    expect(screen.getByText("Customer Administration & Data Quality")).toBeInTheDocument();
+    expect(screen.getAllByText("Customer and household administration, data-source visibility, repository boundaries, and workflow coverage are finalized for v0.3.x.").length).toBeGreaterThan(0);
+    expect(screen.getByText("Customer and household admin diagnostics")).toBeInTheDocument();
+    expect(screen.getByText("Repository consistency")).toBeInTheDocument();
     expect(screen.getByText("Customer Experience Improvements")).toBeInTheDocument();
     expect(screen.getAllByText("Customer search, validation, duplicate warnings, and profile clarity are improved for Neon-backed records.").length).toBeGreaterThan(0);
     expect(screen.getByText("Neon-backed customer search")).toBeInTheDocument();

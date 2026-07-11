@@ -80,6 +80,51 @@ export default async function AdminDatabasePage() {
         </Card>
         <Card>
           <CardHeader>
+            <CardTitle>Active Customers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.activeCustomerCount}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Customer rows currently marked active in Neon.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Inactive Customers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.inactiveCustomerCount}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Customer rows retained but marked inactive in Neon.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Demo Customers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.demoCustomerCount}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Customers owned by organizations with demo data mode.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Sandbox Customers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.sandboxCustomerCount}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Customers owned by organizations with sandbox data mode.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Production Customers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.productionCustomerCount}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Customers owned by organizations with production data mode.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
             <CardTitle>Searchable Customers</CardTitle>
           </CardHeader>
           <CardContent>

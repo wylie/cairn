@@ -1,6 +1,5 @@
 import { cookies } from "next/headers";
 import { CustomerDetailView } from "@/components/customers/customer-detail-view";
-import { getDatabase } from "@/db";
 import { getCustomerByOrganization, getCustomersByOrganization } from "@/db/repositories/customer-repository";
 import { getHouseholdsByOrganization } from "@/db/repositories/household-repository";
 import { getActiveFacilityContext } from "@/db/tenant";
@@ -12,12 +11,12 @@ import {
 
 async function getPersistedCustomerContext(customerId: string) {
   if (process.env.NODE_ENV === "test") return undefined;
-  if (!getDatabase()) return undefined;
 
   const store = await cookies();
   const orgSlug = store.get("cairn_org_slug")?.value ?? "summit";
   const context = await getActiveFacilityContext(orgSlug);
   if (!context) return undefined;
+  if (context.source !== "database") return undefined;
 
   try {
     const [customer, customers, households] = await Promise.all([

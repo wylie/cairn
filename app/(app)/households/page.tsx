@@ -1,6 +1,5 @@
 import { cookies } from "next/headers";
 import { HouseholdsPageClient } from "@/components/households/households-page-client";
-import { getDatabase } from "@/db";
 import { getActiveFacilityContext } from "@/db/tenant";
 import { getCustomersByOrganization } from "@/db/repositories/customer-repository";
 import { getHouseholdsByOrganization } from "@/db/repositories/household-repository";
@@ -10,13 +9,12 @@ import {
   mapHouseholdRecordToDisplayHousehold
 } from "@/lib/customer-household-persistence";
 
-async function getDatabaseHouseholdsForActiveOrganization() {
-  if (!getDatabase()) return { households: [], customers: [], householdMembers: [] };
-
+async function getPersistedHouseholdsForActiveOrganization() {
   const store = await cookies();
   const orgSlug = store.get("cairn_org_slug")?.value ?? "summit";
   const context = await getActiveFacilityContext(orgSlug);
   if (!context) return { households: [], customers: [], householdMembers: [] };
+  if (context.source !== "database") return { households: [], customers: [], householdMembers: [] };
 
   try {
     const [households, customers] = await Promise.all([
@@ -39,7 +37,7 @@ async function getDatabaseHouseholdsForActiveOrganization() {
 }
 
 export default async function HouseholdsPage() {
-  const persisted = await getDatabaseHouseholdsForActiveOrganization();
+  const persisted = await getPersistedHouseholdsForActiveOrganization();
 
   return (
     <HouseholdsPageClient

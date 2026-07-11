@@ -1,6 +1,5 @@
 import { cookies } from "next/headers";
 import { HouseholdsWorkspace } from "@/components/households/households-workspace";
-import { getDatabase } from "@/db";
 import { getCustomersByOrganization } from "@/db/repositories/customer-repository";
 import { getHouseholdsByOrganization } from "@/db/repositories/household-repository";
 import { getActiveFacilityContext } from "@/db/tenant";
@@ -11,12 +10,11 @@ import {
 } from "@/lib/customer-household-persistence";
 
 async function getPersistedHouseholdContext() {
-  if (!getDatabase()) return { households: [], customers: [], householdMembers: [] };
-
   const store = await cookies();
   const orgSlug = store.get("cairn_org_slug")?.value ?? "summit";
   const context = await getActiveFacilityContext(orgSlug);
   if (!context) return { households: [], customers: [], householdMembers: [] };
+  if (context.source !== "database") return { households: [], customers: [], householdMembers: [] };
 
   try {
     const [households, customers] = await Promise.all([

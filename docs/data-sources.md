@@ -1,6 +1,6 @@
 # Data Sources
 
-Cairn v0.3.2 documents which modules are database-backed today and which modules still rely on demo storage.
+Cairn v0.3.3 documents which modules are database-backed today and which modules still rely on demo storage.
 
 This is both a readiness inventory and the current source-of-truth audit for migrated workflows. It should be reviewed before any future Neon schema or workflow migration work.
 
@@ -18,8 +18,11 @@ This is both a readiness inventory and the current source-of-truth audit for mig
 | Organizations | Neon `organizations`, repository reads, Drizzle seed data, seed fallback in `db/tenant.ts` | Neon-backed | Organizations are root tenants and own `data_mode`. Platform admin provisioning still uses local registry state. |
 | Facilities | Neon `facilities`, organization-scoped repository reads, seed fallback in `db/tenant.ts` | Neon-backed | Facility lookup requires organization scope; facility slugs are not treated as globally authoritative. |
 | Staff | Neon `staff_users`, `staff_roles`, `staff_facility_access`; mock auth remains separate | Neon-backed | Staff records are database-backed for read-only validation. Production authentication and permission enforcement are future work. |
-| Customers | Neon `customers`, organization-scoped repositories, and server actions | Neon-backed | Customer list/detail/create/edit/delete/search are fully persistent for modeled profile fields. Search supports first name, last name, preferred name, email, and phone with organization scope. Membership, waiver, check-in, merge, imports, communications, documents, and audit events remain future migrations. |
-| Households | Neon `households`, customer `household_id` links, organization-scoped repositories, and server actions | Neon-backed | Household list/detail/create/edit/delete, member add/remove, and primary-contact assignment are fully persistent. Rich relationship roles, billing behavior, and membership behavior remain future migrations. |
+| Customers | Neon `customers`, organization-scoped repositories, and server actions | Neon-backed | Customer list/detail and modeled profile reads are fully persistent. Membership, waiver, check-in, merge, imports, communications, documents, and audit events remain future migrations. |
+| Customer Search | Neon `customers`, `searchCustomers(organizationId, query)`, and server-rendered customer list queries | Neon-backed | Search is organization-scoped and supports normalized partial matching on first name, last name, preferred name, email, phone, and full name. It does not fall back to localStorage or hardcoded records. |
+| Customer Create/Edit/Delete | Neon `customers`, customer server actions, and organization-scoped repository mutations | Neon-backed | Create/edit/delete are fully persistent for modeled profile fields. Validation, duplicate warnings, and household primary-contact cleanup are handled before mutation. |
+| Households | Neon `households`, customer `household_id` links, organization-scoped repositories, and server actions | Neon-backed | Household list/detail and member display are fully persistent. Rich relationship roles, billing behavior, and membership behavior remain future migrations. |
+| Household Create/Edit/Delete | Neon `households`, customer `household_id` links, household server actions, and repository mutations | Neon-backed | Household create/edit/delete, member add/remove, and primary-contact assignment are fully persistent. Deleting a household clears member links without deleting customers. |
 | Customer-Household Relationships | Neon `customers.household_id` with `ON DELETE SET NULL`, organization-scoped repositories, and server actions | Neon-backed | A customer can belong to zero or one household. Removing a member clears the link without deleting the customer. Deleting a household clears member links without deleting customers. |
 | Memberships | `lib/mocks/memberships.ts`, access records, punch passes, and `customer-state` local mock persistence | Demo-backed | No Neon schema or repository layer yet. |
 | Check-ins | `lib/mocks/checkins.ts` and `customer-state` local mock persistence | Demo-backed | Occupancy/check-in behavior is local demo state. |
@@ -39,8 +42,8 @@ The current repository layer is intentionally narrow:
 - `db/repositories/organization-repository.ts` provides platform/root tenant reads by slug and platform-wide counts.
 - `db/repositories/facility-repository.ts` requires `organizationId` for facility slug lookup and organization facility lists.
 - `db/repositories/staff-repository.ts` has platform-wide admin reads plus organization-scoped and facility-scoped staff reads.
-- `db/repositories/customer-repository.ts` has platform/admin reads plus organization-scoped customer list, normalized search, create, edit, delete, duplicate-warning, last-created, potential duplicate count, and count helpers.
-- `db/repositories/household-repository.ts` has platform/admin reads plus organization-scoped household list, create, edit, delete, member reads, member add/remove, primary-contact updates, duplicate checks, customer-link clearing, and count helpers.
+- `db/repositories/customer-repository.ts` has platform/admin metrics plus organization-scoped customer list, single-customer reads, normalized search, create, edit, delete, duplicate-warning, last-created, data-mode counts, active/inactive counts, potential duplicate count, and count helpers.
+- `db/repositories/household-repository.ts` has platform/admin metrics plus organization-scoped household list, single-household reads, create, edit, delete, member reads, member add/remove, primary-contact updates, duplicate checks, customer-link clearing, and count helpers.
 
 Tenant-facing pages should use scoped repository helpers after resolving the active organization through `db/tenant.ts`. Platform admin pages may use cross-tenant reads only for explicit platform visibility.
 
@@ -84,6 +87,8 @@ The database health page at `/admin/database` reports:
 - known table count
 - record counts by table
 - customer and household record counts
+- active and inactive customer counts
+- demo, sandbox, and production customer counts
 - searchable customer count
 - customers assigned to households and customers without households
 - potential duplicate customer pairs

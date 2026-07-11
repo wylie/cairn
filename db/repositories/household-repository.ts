@@ -13,21 +13,6 @@ export type HouseholdRelationshipCounts = {
   unassignedCustomers: number;
 };
 
-export async function getHousehold(householdId: string): Promise<HouseholdRecord | null> {
-  const database = getDatabase();
-  if (!database) return null;
-
-  const [household] = await database.select().from(households).where(eq(households.id, householdId)).limit(1);
-  return household ?? null;
-}
-
-export async function getHouseholds(): Promise<HouseholdRecord[]> {
-  const database = getDatabase();
-  if (!database) return [];
-
-  return database.select().from(households).orderBy(asc(households.name));
-}
-
 export async function getHouseholdsByOrganization(organizationId: string): Promise<HouseholdRecord[]> {
   const database = getDatabase();
   if (!database) return [];

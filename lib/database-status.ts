@@ -4,7 +4,13 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { sql } from "drizzle-orm";
 import { getDatabase } from "@/db";
-import { getCustomerCount, getLastCustomerCreated, getPotentialDuplicateCustomerPairCount } from "@/db/repositories/customer-repository";
+import {
+  getCustomerActivityCounts,
+  getCustomerCount,
+  getCustomerDataModeCounts,
+  getLastCustomerCreated,
+  getPotentialDuplicateCustomerPairCount
+} from "@/db/repositories/customer-repository";
 import { getFacilityCount } from "@/db/repositories/facility-repository";
 import { getHouseholdCount, getHouseholdRelationshipCounts } from "@/db/repositories/household-repository";
 import { getOrganizationCount } from "@/db/repositories/organization-repository";
@@ -24,6 +30,11 @@ export type DatabaseStatus = {
   staffUserCount: number;
   staffFacilityAccessCount: number;
   customerCount: number;
+  activeCustomerCount: number;
+  inactiveCustomerCount: number;
+  demoCustomerCount: number;
+  sandboxCustomerCount: number;
+  productionCustomerCount: number;
   customerSeedCount: number;
   searchableCustomerCount: number;
   potentialDuplicateCustomerPairs: number;
@@ -79,6 +90,11 @@ function buildStatus(input: {
   staffUserCount?: number;
   staffFacilityAccessCount?: number;
   customerCount?: number;
+  activeCustomerCount?: number;
+  inactiveCustomerCount?: number;
+  demoCustomerCount?: number;
+  sandboxCustomerCount?: number;
+  productionCustomerCount?: number;
   potentialDuplicateCustomerPairs?: number;
   lastCustomerCreatedAt?: string | null;
   lastCustomerCreatedName?: string | null;
@@ -92,6 +108,11 @@ function buildStatus(input: {
   const staffUserCount = input.staffUserCount ?? 0;
   const staffFacilityAccessCount = input.staffFacilityAccessCount ?? 0;
   const customerCount = input.customerCount ?? 0;
+  const activeCustomerCount = input.activeCustomerCount ?? 0;
+  const inactiveCustomerCount = input.inactiveCustomerCount ?? 0;
+  const demoCustomerCount = input.demoCustomerCount ?? 0;
+  const sandboxCustomerCount = input.sandboxCustomerCount ?? 0;
+  const productionCustomerCount = input.productionCustomerCount ?? 0;
   const customerSeedCount = seedCustomers.length;
   const potentialDuplicateCustomerPairs = input.potentialDuplicateCustomerPairs ?? 0;
   const householdCount = input.householdCount ?? 0;
@@ -116,6 +137,11 @@ function buildStatus(input: {
     staffUserCount,
     staffFacilityAccessCount,
     customerCount,
+    activeCustomerCount,
+    inactiveCustomerCount,
+    demoCustomerCount,
+    sandboxCustomerCount,
+    productionCustomerCount,
     customerSeedCount,
     searchableCustomerCount: customerCount,
     potentialDuplicateCustomerPairs,
@@ -151,6 +177,8 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
       staffUserCount,
       staffFacilityAccessCount,
       customerCount,
+      customerActivityCounts,
+      customerDataModeCounts,
       lastCustomer,
       potentialDuplicateCustomerPairs,
       householdCount,
@@ -162,6 +190,8 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
       getStaffUserCount(),
       getStaffFacilityAccessCount(),
       getCustomerCount(),
+      getCustomerActivityCounts(),
+      getCustomerDataModeCounts(),
       getLastCustomerCreated(),
       getPotentialDuplicateCustomerPairCount(),
       getHouseholdCount(),
@@ -176,6 +206,11 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
       staffUserCount,
       staffFacilityAccessCount,
       customerCount,
+      activeCustomerCount: customerActivityCounts.active,
+      inactiveCustomerCount: customerActivityCounts.inactive,
+      demoCustomerCount: customerDataModeCounts.demo,
+      sandboxCustomerCount: customerDataModeCounts.sandbox,
+      productionCustomerCount: customerDataModeCounts.production,
       potentialDuplicateCustomerPairs,
       lastCustomerCreatedAt: lastCustomer?.createdAt.toISOString() ?? null,
       lastCustomerCreatedName: lastCustomer ? `${lastCustomer.firstName} ${lastCustomer.lastName}` : null,

@@ -52,6 +52,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
       persistedCustomers={persisted?.customers}
       persistedHouseholds={persisted?.households}
       persistedHouseholdMembers={persisted?.householdMembers}
+      persistedMode={process.env.NODE_ENV !== "test"}
     />
   );
 }

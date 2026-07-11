@@ -5,9 +5,11 @@ Customers are the core person records used across check-in, memberships, registr
 
 ## What You Can Do
 - create and edit customer records
-- upload and replace customer photos
+- store a profile photo URL as part of the persisted profile
+- search persisted customers by first name, last name, preferred name, email, or phone
 - review profile sections through jump navigation
-- view visits, purchases, notes, waivers, relationships, communications, and alerts
+- view persisted notes, household relationships, and profile metadata
+- see clear placeholders for visits, purchases, waivers, registrations, documents, communications, and alerts until those workflows are migrated
 - open related household, membership, registration, and receipt records
 
 ## Common Workflows
@@ -18,10 +20,14 @@ Customers are the core person records used across check-in, memberships, registr
 4. Save.
 5. Add household relationships if needed.
 
+If Cairn finds a possible duplicate by exact email, exact normalized phone, or matching name plus birth date, staff see a warning and can review the possible existing customer. Staff may continue only after explicitly choosing to create the record anyway.
+
 ### Edit a customer
 1. Open the customer profile from Customers, Check-In, POS, Registrations, or Household.
 2. Use the context-aware back link when returning to the previous workflow.
 3. Update fields and save.
+
+Edits use the same required-field, email, phone, birth-date, state, and duplicate-warning rules as customer creation.
 
 ### Delete a customer
 1. Open the customer profile from Customers.
@@ -30,17 +36,16 @@ Customers are the core person records used across check-in, memberships, registr
 
 Deleted customer profile rows are removed from Neon for the active organization. Memberships, check-ins, waivers, and POS records are migrated in later releases.
 
-### Upload or replace a photo
-1. Open the customer profile header.
-2. Select `Upload Photo` or `Replace Photo`.
-3. Choose a supported image file.
-4. Confirm the preview.
+### Update a profile photo URL
+1. Open the customer profile.
+2. Select `Edit Profile`.
+3. Update the profile photo URL.
+4. Save the profile.
 
-### Resolve waiver issues from the profile
-1. Open the Waivers section in the profile.
-2. Review status, expiration, and signer details.
-3. Re-sign or direct the customer into the waiver workflow.
-4. Add an alert or note if follow-up is required.
+### Review deferred operational sections
+1. Open the customer profile.
+2. Review persisted profile and household data normally.
+3. Treat memberships, check-ins, waivers, registrations, POS, documents, communications, and alerts as deferred placeholders until those persistence releases ship.
 
 ## Profile Sections
 Typical customer profiles include:
@@ -63,7 +68,8 @@ Typical customer profiles include:
 - Photos improve check-in accuracy and roster usability.
 - Use the profile timeline when you need a chronological explanation of what happened.
 - Use alerts for real operational blockers, not ordinary notes.
-- Duplicate detection checks likely email, phone, and name/date-of-birth matches before a customer is saved.
+- Duplicate detection warns on likely email, phone, and name/date-of-birth matches before a customer is saved. It does not merge records yet.
+- Search is organization-scoped and reads from Neon, not browser-local customer state.
 
 ## Related Features
 - [Households](./households.md)

@@ -173,7 +173,7 @@ export function CustomerDetailActions({
         {usesPersistedCustomer ? (
           <Button variant="destructiveSubtle" onClick={() => setConfirmingDelete(true)}>Delete Customer</Button>
         ) : null}
-        {activeStaff && hasPermission("grantCompAccess") ? (
+        {!usesPersistedCustomer && activeStaff && hasPermission("grantCompAccess") ? (
           <div className="w-full sm:ml-auto sm:w-auto">
             <Button variant="caution" onClick={() => setGrantingComp(true)}>Grant Comp Access</Button>
           </div>
@@ -253,7 +253,8 @@ export function CustomerDetailActions({
                 notes: input.notes,
                 profilePhotoUrl: input.profilePhotoUrl,
                 householdId: customer.householdId ?? null,
-                active: !customer.tags.includes("Inactive")
+                active: !customer.tags.includes("Inactive"),
+                allowPotentialDuplicate: input.allowPotentialDuplicate
               });
               if (result.ok) {
                 setFeedback("Profile updated in Neon.");

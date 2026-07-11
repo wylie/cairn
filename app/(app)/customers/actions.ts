@@ -6,15 +6,22 @@ import { getActiveFacilityContext } from "@/db/tenant";
 import {
   createCustomer,
   deleteCustomer,
-  findDuplicateCustomer,
+  findDuplicateCustomers,
   getCustomerByOrganization,
   updateCustomer
 } from "@/db/repositories/customer-repository";
+import { normalizeCustomerInput, validateCustomerInput } from "@/lib/customer-validation";
 
 type CustomerActionResult = {
   ok: boolean;
   message: string;
   customerId?: string;
+  requiresConfirmation?: boolean;
+  duplicateMatches?: Array<{
+    customerId: string;
+    name: string;
+    matchedOn: string[];
+  }>;
 };
 
 export type PersistedCustomerInput = {
@@ -38,6 +45,7 @@ export type PersistedCustomerInput = {
   profilePhotoUrl?: string;
   householdId?: string | null;
   active?: boolean;
+  allowPotentialDuplicate?: boolean;
 };
 
 async function getActiveOrganizationContext() {
@@ -47,55 +55,12 @@ async function getActiveOrganizationContext() {
   return context ? { orgSlug, context } : null;
 }
 
-function normalizeOptional(value: string | null | undefined) {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : null;
-}
-
-function normalizeCustomerInput(input: PersistedCustomerInput) {
-  return {
-    firstName: input.firstName.trim(),
-    lastName: input.lastName.trim(),
-    preferredName: normalizeOptional(input.preferredName),
-    pronouns: normalizeOptional(input.pronouns),
-    customPronouns: normalizeOptional(input.customPronouns),
-    memberId: normalizeOptional(input.memberId),
-    birthDate: normalizeOptional(input.dateOfBirth),
-    email: normalizeOptional(input.email),
-    phone: normalizeOptional(input.phone),
-    addressLine1: normalizeOptional(input.addressLine1),
-    addressLine2: normalizeOptional(input.addressLine2),
-    city: normalizeOptional(input.city),
-    state: normalizeOptional(input.state),
-    postalCode: normalizeOptional(input.postalCode),
-    emergencyContactName: normalizeOptional(input.emergencyContactName),
-    emergencyContactPhone: normalizeOptional(input.emergencyContactPhone),
-    notes: normalizeOptional(input.notes),
-    profilePhotoUrl: normalizeOptional(input.profilePhotoUrl),
-    householdId: input.householdId === undefined ? undefined : normalizeOptional(input.householdId),
-    active: input.active ?? true
-  };
-}
-
-function validateCustomerInput(input: ReturnType<typeof normalizeCustomerInput>) {
-  if (!input.firstName || !input.lastName) return "First and last name are required.";
-  if (!input.birthDate) return "Date of birth is required.";
-  if (!input.phone) return "Phone is required.";
-  if (!input.addressLine1) return "Address line 1 is required.";
-  if (!input.city) return "City is required.";
-  if (!input.state) return "State is required.";
-  if (!input.postalCode) return "ZIP/postal code is required.";
-  if (!input.emergencyContactName) return "Emergency contact name is required.";
-  if (!input.emergencyContactPhone) return "Emergency contact phone is required.";
-  return "";
-}
-
 async function getDuplicateMessage(input: {
   organizationId: string;
   customer: ReturnType<typeof normalizeCustomerInput>;
   excludeCustomerId?: string;
 }) {
-  const duplicate = await findDuplicateCustomer({
+  const duplicates = await findDuplicateCustomers({
     organizationId: input.organizationId,
     firstName: input.customer.firstName,
     lastName: input.customer.lastName,
@@ -104,8 +69,16 @@ async function getDuplicateMessage(input: {
     phone: input.customer.phone,
     excludeCustomerId: input.excludeCustomerId
   });
-  if (!duplicate) return "";
-  return `Possible duplicate: ${duplicate.firstName} ${duplicate.lastName} already exists. Review the existing profile before saving.`;
+  if (duplicates.length === 0) return null;
+  const matches = duplicates.map((duplicate) => ({
+    customerId: duplicate.id,
+    name: `${duplicate.firstName} ${duplicate.lastName}`,
+    matchedOn: duplicate.matchedOn
+  }));
+  return {
+    message: `Possible duplicate: ${matches[0].name} already exists. Review the existing profile, or save anyway if this is a separate customer.`,
+    matches
+  };
 }
 
 function revalidateCustomerPaths(orgSlug: string, customerId?: string) {
@@ -122,14 +95,21 @@ export async function createPersistedCustomerAction(input: PersistedCustomerInpu
   if (!active) return { ok: false, message: "Database-backed organization context is unavailable." };
 
   const normalized = normalizeCustomerInput(input);
-  const validationMessage = validateCustomerInput(normalized);
-  if (validationMessage) return { ok: false, message: validationMessage };
+  const validation = validateCustomerInput(normalized);
+  if (!validation.ok) return { ok: false, message: validation.message };
 
-  const duplicateMessage = await getDuplicateMessage({
+  const duplicate = await getDuplicateMessage({
     organizationId: active.context.organization.id,
     customer: normalized
   });
-  if (duplicateMessage) return { ok: false, message: duplicateMessage };
+  if (duplicate && !input.allowPotentialDuplicate) {
+    return {
+      ok: false,
+      message: duplicate.message,
+      requiresConfirmation: true,
+      duplicateMatches: duplicate.matches
+    };
+  }
 
   const customerId = `cust_${crypto.randomUUID()}`;
   const customer = await createCustomer({
@@ -156,15 +136,22 @@ export async function updatePersistedCustomerAction(
   if (!existing) return { ok: false, message: "Customer not found for this organization." };
 
   const normalized = normalizeCustomerInput(input);
-  const validationMessage = validateCustomerInput(normalized);
-  if (validationMessage) return { ok: false, message: validationMessage };
+  const validation = validateCustomerInput(normalized);
+  if (!validation.ok) return { ok: false, message: validation.message };
 
-  const duplicateMessage = await getDuplicateMessage({
+  const duplicate = await getDuplicateMessage({
     organizationId: active.context.organization.id,
     customer: normalized,
     excludeCustomerId: customerId
   });
-  if (duplicateMessage) return { ok: false, message: duplicateMessage };
+  if (duplicate && !input.allowPotentialDuplicate) {
+    return {
+      ok: false,
+      message: duplicate.message,
+      requiresConfirmation: true,
+      duplicateMatches: duplicate.matches
+    };
+  }
 
   const customer = await updateCustomer(customerId, active.context.organization.id, normalized);
   if (!customer) return { ok: false, message: "Customer could not be updated in Neon." };

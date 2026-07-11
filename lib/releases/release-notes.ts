@@ -108,11 +108,11 @@ const customerPersistenceRelease: ReleaseNote = {
 };
 
 const householdPersistenceRelease: ReleaseNote = {
-  version: version.currentVersion,
-  releaseName: version.releaseName,
-  releaseDate: version.releaseDate,
-  releaseType: version.releaseType,
-  summary: version.summary,
+  version: "0.3.1",
+  releaseName: "Household Persistence",
+  releaseDate: "2026-07-11",
+  releaseType: "patch",
+  summary: "Household CRUD and customer-household relationships now persist through Neon.",
   sections: {
     added: [
       "Neon-backed household CRUD",
@@ -130,6 +130,35 @@ const householdPersistenceRelease: ReleaseNote = {
     ],
     knownIssues: [
       "Memberships, check-ins, waivers, programs, POS, and authentication still use demo persistence"
+    ]
+  }
+};
+
+const customerExperienceImprovementsRelease: ReleaseNote = {
+  version: version.currentVersion,
+  releaseName: version.releaseName,
+  releaseDate: version.releaseDate,
+  releaseType: version.releaseType,
+  summary: version.summary,
+  sections: {
+    added: [
+      "Neon-backed customer search",
+      "Duplicate-customer warnings",
+      "Improved validation states"
+    ],
+    improved: [
+      "Customer profile clarity",
+      "Empty and loading states",
+      "Error handling",
+      "Customer and household data integrity"
+    ],
+    fixed: [
+      "Persisted customer profiles no longer display mock access, waiver, check-in, POS, registration, document, communication, or alert records as persisted data",
+      "Customer and household pages no longer fall back to mock records when Neon context is unavailable in the app"
+    ],
+    changed: [],
+    knownIssues: [
+      "Memberships, check-ins, waivers, programs, POS, documents, communications, and authentication still use demo persistence until their migration releases"
     ]
   }
 };
@@ -235,6 +264,7 @@ export function compareReleaseNotesNewestFirst(a: ReleaseNote, b: ReleaseNote) {
 }
 
 const releaseNoteEntries: ReleaseNote[] = [
+  customerExperienceImprovementsRelease,
   householdPersistenceRelease,
   customerPersistenceRelease,
   releaseNotesCommitLinksRelease,

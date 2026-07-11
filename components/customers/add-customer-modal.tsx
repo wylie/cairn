@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { FormField, FormGrid } from "@/components/shared/form-layout";
 import { SearchInput } from "@/components/shared/search-input";
+import { normalizeCustomerInput, normalizePhone, validateCustomerInput } from "@/lib/customer-validation";
 import type { Customer, CustomerRelationshipType } from "@/types/domain";
 
 const RELATIONSHIP_OPTIONS: Array<{ value: CustomerRelationshipType; label: string }> = [
@@ -40,6 +41,19 @@ export type NewCustomerInput = {
   relatedCustomerId?: string;
   relationshipType?: CustomerRelationshipType;
   relationshipNotes?: string;
+  allowPotentialDuplicate?: boolean;
+};
+
+type CustomerCreateResult = {
+  ok: boolean;
+  message: string;
+  customerId?: string;
+  requiresConfirmation?: boolean;
+  duplicateMatches?: Array<{
+    customerId: string;
+    name: string;
+    matchedOn: string[];
+  }>;
 };
 
 export function AddCustomerModal({
@@ -54,7 +68,7 @@ export function AddCustomerModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onCreate: (input: NewCustomerInput) => Promise<{ ok: boolean; message: string; customerId?: string }> | { ok: boolean; message: string; customerId?: string };
+  onCreate: (input: NewCustomerInput) => Promise<CustomerCreateResult> | CustomerCreateResult;
   title?: string;
   customers?: Customer[];
   autoCloseOnSuccess?: boolean;
@@ -91,6 +105,7 @@ export function AddCustomerModal({
   const [relationshipType, setRelationshipType] = useState<CustomerRelationshipType>("parent_guardian");
   const [relationshipNotes, setRelationshipNotes] = useState("");
   const [warning, setWarning] = useState("");
+  const [duplicateWarning, setDuplicateWarning] = useState<CustomerCreateResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdCustomerId, setCreatedCustomerId] = useState<string | null>(null);
   const [createdDisplayName, setCreatedDisplayName] = useState("");
@@ -151,6 +166,7 @@ export function AddCustomerModal({
     setRelationshipType("parent_guardian");
     setRelationshipNotes("");
     setWarning("");
+    setDuplicateWarning(null);
     setCreatedCustomerId(null);
     setCreatedDisplayName("");
   };
@@ -185,10 +201,13 @@ export function AddCustomerModal({
     relationshipNotes: relatedCustomerId ? relationshipNotes : undefined
   };
 
-  const submit = async () => {
+  const submit = async (allowPotentialDuplicate = false) => {
     setIsSubmitting(true);
-    const result = await Promise.resolve(onCreate(payload)).finally(() => setIsSubmitting(false));
+    const result = await Promise.resolve(onCreate({ ...payload, allowPotentialDuplicate })).finally(() => setIsSubmitting(false));
     if (!result.ok) {
+      if (result.requiresConfirmation) {
+        setDuplicateWarning(result);
+      }
       setWarning(result.message);
       return;
     }
@@ -199,31 +218,36 @@ export function AddCustomerModal({
       onCreated?.(result.customerId, payload);
     }
     setWarning("");
+    setDuplicateWarning(null);
     if (autoCloseOnSuccess) {
       close();
     }
   };
 
   const validateStep = () => {
+    const normalized = normalizeCustomerInput(payload);
+    const validation = validateCustomerInput(normalized);
     if (step === 0) {
-      if (!firstName.trim() || !lastName.trim()) return "First and last name are required.";
-      if (!dateOfBirth.trim()) return "Date of birth is required.";
+      if (validation.fieldErrors.firstName) return validation.fieldErrors.firstName;
+      if (validation.fieldErrors.lastName) return validation.fieldErrors.lastName;
+      if (validation.fieldErrors.dateOfBirth) return validation.fieldErrors.dateOfBirth;
       return "";
     }
     if (step === 1) {
-      if (!phone.trim()) return "Phone is required.";
+      if (validation.fieldErrors.phone) return validation.fieldErrors.phone;
+      if (validation.fieldErrors.email) return validation.fieldErrors.email;
       return "";
     }
     if (step === 2) {
-      if (!addressLine1.trim()) return "Address line 1 is required.";
-      if (!city.trim()) return "City is required.";
-      if (!state.trim()) return "State is required.";
-      if (!postalCode.trim()) return "ZIP/postal code is required.";
+      if (validation.fieldErrors.addressLine1) return validation.fieldErrors.addressLine1;
+      if (validation.fieldErrors.city) return validation.fieldErrors.city;
+      if (validation.fieldErrors.state) return validation.fieldErrors.state;
+      if (validation.fieldErrors.postalCode) return validation.fieldErrors.postalCode;
       return "";
     }
     if (step === 3) {
-      if (!emergencyContactName.trim()) return "Emergency contact name is required.";
-      if (!emergencyContactPhone.trim()) return "Emergency contact phone is required.";
+      if (validation.fieldErrors.emergencyContactName) return validation.fieldErrors.emergencyContactName;
+      if (validation.fieldErrors.emergencyContactPhone) return validation.fieldErrors.emergencyContactPhone;
       return "";
     }
     return "";
@@ -288,7 +312,7 @@ export function AddCustomerModal({
       return (
         <FormGrid label="new-customer-contact-grid">
           <FormField label="Phone">
-            <Input value={phone} onChange={(event) => setPhone(event.target.value)} aria-label="Phone" />
+            <Input value={phone} onChange={(event) => setPhone(event.target.value)} onBlur={() => setPhone(normalizePhone(phone) ?? "")} aria-label="Phone" />
           </FormField>
           <FormField label="Email (optional)">
             <Input value={email} onChange={(event) => setEmail(event.target.value)} aria-label="Email" />
@@ -326,7 +350,12 @@ export function AddCustomerModal({
             <Input value={emergencyContactName} onChange={(event) => setEmergencyContactName(event.target.value)} aria-label="Emergency contact name" />
           </FormField>
           <FormField label="Emergency contact phone">
-            <Input value={emergencyContactPhone} onChange={(event) => setEmergencyContactPhone(event.target.value)} aria-label="Emergency contact phone" />
+            <Input
+              value={emergencyContactPhone}
+              onChange={(event) => setEmergencyContactPhone(event.target.value)}
+              onBlur={() => setEmergencyContactPhone(normalizePhone(emergencyContactPhone) ?? "")}
+              aria-label="Emergency contact phone"
+            />
           </FormField>
           <FormField label="Profile photo URL (optional)" className="md:col-span-2">
             <Input value={profilePhotoUrl} onChange={(event) => setProfilePhotoUrl(event.target.value)} aria-label="Profile photo URL" />
@@ -464,6 +493,27 @@ export function AddCustomerModal({
       footer={
         <div className="space-y-2">
           {warning ? <p role="alert" className="text-sm text-amber-800">{warning}</p> : null}
+          {duplicateWarning?.duplicateMatches?.length ? (
+            <div role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              <p className="font-medium">Possible duplicate customer</p>
+              <div className="mt-1 space-y-1">
+                {duplicateWarning.duplicateMatches.map((match) => (
+                  <p key={match.customerId}>
+                    {match.name} {match.matchedOn.length ? `matches on ${match.matchedOn.join(", ")}` : "may be the same person"}.
+                  </p>
+                ))}
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                className="mt-3 min-h-10"
+                onClick={() => submit(true)}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Creating..." : "Create Anyway"}
+              </Button>
+            </div>
+          ) : null}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Button variant="outline" className="min-h-11" onClick={() => setStep((value) => Math.max(0, value - 1))} disabled={step === 0}>
               Back
@@ -486,7 +536,7 @@ export function AddCustomerModal({
                   Next
                 </Button>
               ) : (
-                <Button className="min-h-11" onClick={submit} disabled={isSubmitting}>
+                <Button className="min-h-11" onClick={() => submit(false)} disabled={isSubmitting}>
                   {isSubmitting ? "Creating..." : "Create Customer"}
                 </Button>
               )}

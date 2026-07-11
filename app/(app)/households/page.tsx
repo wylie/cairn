@@ -11,12 +11,12 @@ import {
 } from "@/lib/customer-household-persistence";
 
 async function getDatabaseHouseholdsForActiveOrganization() {
-  if (!getDatabase()) return undefined;
+  if (!getDatabase()) return { households: [], customers: [], householdMembers: [] };
 
   const store = await cookies();
   const orgSlug = store.get("cairn_org_slug")?.value ?? "summit";
   const context = await getActiveFacilityContext(orgSlug);
-  if (!context) return undefined;
+  if (!context) return { households: [], customers: [], householdMembers: [] };
 
   try {
     const [households, customers] = await Promise.all([
@@ -34,7 +34,7 @@ async function getDatabaseHouseholdsForActiveOrganization() {
       householdMembers: buildHouseholdMembersFromCustomers(displayCustomers, displayHouseholds)
     };
   } catch {
-    return undefined;
+    return { households: [], customers: [], householdMembers: [] };
   }
 }
 

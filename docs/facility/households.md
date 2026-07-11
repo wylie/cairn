@@ -1,7 +1,7 @@
 # Households
 
 ## Overview
-Households are managed family or relationship units. They centralize customer relationships, membership coverage, waivers, registrations, purchases, billing, communications, and shared activity. Household records and customer-household assignments are persisted in Neon.
+Households are managed family or relationship units. They centralize customer relationships and are the future home for shared membership coverage, waivers, registrations, purchases, billing, communications, and activity. Household records, customer assignments, and primary-contact links are persisted in Neon.
 
 ## What You Can Do
 - create household groupings
@@ -9,8 +9,8 @@ Households are managed family or relationship units. They centralize customer re
 - set or change the primary contact
 - delete a household without deleting its customer profiles
 - assign roles such as primary adult, guardian, child, or emergency contact
-- review shared membership, waiver, billing, and registration health
-- view household-wide communications, tasks, alerts, and activity
+- review persisted household members and primary contact
+- see deferred placeholders for shared membership, waiver, billing, registration, communication, task, alert, and activity data until those workflows are migrated
 - open member profiles and dependent portal views
 
 ## Common Workflows
@@ -42,8 +42,8 @@ Deleting a household clears member customer links and does not delete customer p
 
 ### Review household health
 1. Open a household.
-2. Review cards for members, active memberships, missing waivers, programs, balance, and visits.
-3. Use quick actions to resolve blockers.
+2. Review persisted member and primary-contact data.
+3. Treat membership, waiver, program, balance, visit, communication, and alert cards as deferred until those persistence releases ship.
 
 ### Manage household check-in
 1. Open the household detail page.

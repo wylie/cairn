@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AddCustomerModal } from "@/components/customers/add-customer-modal";
 import { CustomerCard } from "@/components/customers/customer-card";
@@ -18,7 +18,13 @@ import { useWorkstationState } from "@/lib/state/workstation-state";
 import type { Customer } from "@/types/domain";
 import { createPersistedCustomerAction } from "@/app/(app)/customers/actions";
 
-export function CustomerList({ persistedCustomers }: { persistedCustomers?: Customer[] }) {
+export function CustomerList({
+  persistedCustomers,
+  databaseAvailable = true
+}: {
+  persistedCustomers?: Customer[];
+  databaseAvailable?: boolean;
+}) {
   const router = useRouter();
   const pathname = usePathname() ?? "";
   const searchParams = useSearchParams();
@@ -34,14 +40,36 @@ export function CustomerList({ persistedCustomers }: { persistedCustomers?: Cust
   const [showSwitchPrompt, setShowSwitchPrompt] = useState(false);
   const [sellCustomerId, setSellCustomerId] = useState<string | null>(null);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const [isSearchPending, startSearchTransition] = useTransition();
   const usesPersistedCustomers = Array.isArray(persistedCustomers);
   const displayedCustomers = persistedCustomers ?? customers;
   const hasCustomerRecords = displayedCustomers.length > 0;
 
+  useEffect(() => {
+    setQuery(initialQuery);
+  }, [initialQuery]);
+
+  useEffect(() => {
+    if (!usesPersistedCustomers) return;
+    const handle = window.setTimeout(() => {
+      const normalizedQuery = query.trim().replace(/\s+/g, " ");
+      if (normalizedQuery === initialQuery) return;
+      const params = new URLSearchParams(searchParams?.toString?.() ?? "");
+      if (normalizedQuery) params.set("query", normalizedQuery);
+      else params.delete("query");
+      const nextSearch = params.toString();
+      startSearchTransition(() => {
+        router.replace(nextSearch ? `${pathname}?${nextSearch}` : pathname, { scroll: false });
+      });
+    }, 250);
+    return () => window.clearTimeout(handle);
+  }, [initialQuery, pathname, query, router, searchParams, usesPersistedCustomers]);
+
   const filtered = useMemo(
     () =>
-      filterCustomers(displayedCustomers, query, { households, householdMembers }).filter((customer) => {
+      (usesPersistedCustomers ? displayedCustomers : filterCustomers(displayedCustomers, query, { households, householdMembers })).filter((customer) => {
         if (waiverFilter === "missing") {
+          if (usesPersistedCustomers) return false;
           const decision = evaluateCustomerEntry(customer.id);
           const hasWaiverIssue =
             decision.reasons.some((reason) => reason.toLowerCase().includes("waiver")) ||
@@ -59,7 +87,7 @@ export function CustomerList({ persistedCustomers }: { persistedCustomers?: Cust
 
         return true;
       }),
-    [displayedCustomers, query, households, householdMembers, waiverFilter, birthdayFilter, evaluateCustomerEntry]
+    [displayedCustomers, query, households, householdMembers, waiverFilter, birthdayFilter, evaluateCustomerEntry, usesPersistedCustomers]
   );
   const sellCustomer = useMemo(() => customers.find((entry) => entry.id === sellCustomerId) ?? null, [customers, sellCustomerId]);
 
@@ -100,7 +128,7 @@ export function CustomerList({ persistedCustomers }: { persistedCustomers?: Cust
           <SearchInput
             value={query}
             onChange={setQuery}
-            placeholder="Search by name, email, phone, or member ID"
+            placeholder="Search by first name, last name, preferred name, email, or phone"
             label="Search customers"
           />
         </div>
@@ -109,6 +137,14 @@ export function CustomerList({ persistedCustomers }: { persistedCustomers?: Cust
         {birthdayFilter === "today" ? <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-900">Birthday: Today</span> : null}
       </div>
       {feedback ? <Notice role="status" tone="success" className="px-4 py-3">{feedback}</Notice> : null}
+      {usesPersistedCustomers && isSearchPending ? (
+        <Notice role="status" tone="info" className="px-4 py-3">Searching Neon customer records...</Notice>
+      ) : null}
+      {usesPersistedCustomers && !databaseAvailable ? (
+        <Notice role="alert" tone="warning" className="px-4 py-3">
+          Customer records are unavailable because the Neon database context could not be reached. Check database status or try again.
+        </Notice>
+      ) : null}
       {warning ? (
         <Notice role="alert" tone="warning" className="px-4 py-3">
           <p>{warning}</p>
@@ -122,8 +158,16 @@ export function CustomerList({ persistedCustomers }: { persistedCustomers?: Cust
       {filtered.length === 0 ? (
         <div className="space-y-2">
           <EmptyState
-            title={hasCustomerRecords ? "No customers found" : "No customers have been added yet."}
-            description={hasCustomerRecords ? "Try a different name, email, phone, or member ID, or add a walk-in customer to continue." : "Customer records will appear here once they are seeded or migrated into the database."}
+            title={hasCustomerRecords || query.trim() ? "No customers found" : "No customers have been added yet."}
+            description={
+              query.trim()
+                ? usesPersistedCustomers
+                  ? "No Neon-backed customer matches that name, preferred name, email, or phone. Try a shorter search or add a new customer."
+                  : "Try a different name, phone, member ID, or household, or add a new customer."
+                : databaseAvailable
+                  ? "Customer records will appear here once they are created or seeded in Neon."
+                  : "Reconnect Neon to load customer records for this organization."
+            }
           />
           <Button className="min-h-11" variant="outline" onClick={() => setShowAddCustomer(true)}>Add Customer</Button>
         </div>
@@ -144,7 +188,9 @@ export function CustomerList({ persistedCustomers }: { persistedCustomers?: Cust
               punchPass={punchPass}
               waiver={usesPersistedCustomers ? undefined : getWaiverForCustomer(customer)}
               householdHref={
-                householdMembers.find((entry) => entry.customerId === customer.id)?.householdId
+                customer.householdId
+                  ? `/households/${customer.householdId}`
+                  : householdMembers.find((entry) => entry.customerId === customer.id)?.householdId
                   ? `/households/${householdMembers.find((entry) => entry.customerId === customer.id)?.householdId}`
                   : undefined
               }

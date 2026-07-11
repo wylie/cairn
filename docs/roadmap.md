@@ -29,6 +29,10 @@ Focus:
 - Customer repository
 - Neon-backed customer management
 - Organization-scoped customer writes
+- Customer Experience
+- Neon-backed customer search
+- Duplicate-customer warnings
+- Profile clarity for persisted customer data
 - Household CRUD
 - Persisted customer-household relationships
 - Primary-contact management

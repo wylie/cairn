@@ -43,6 +43,13 @@
       "when": 1783900800000,
       "tag": "0005_household_relationship_constraints",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783987200000,
+      "tag": "0006_customer_search_indexes",
+      "breakpoints": true
     }
   ]
 }

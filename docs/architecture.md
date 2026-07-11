@@ -93,9 +93,10 @@ v0.2.x is limited to the Real Data Foundation: organizations, facilities, staff,
 
 ### Current State
 
-- Staff, customer, facility, and platform workflows still run on seeded mocks and localStorage-backed demo persistence.
-- Existing UI behavior is unchanged while the database foundation is introduced.
-- localStorage remains acceptable only for harmless UI preferences and short-lived drafts going forward.
+- Organizations, facilities, customers, households, and customer-household relationships are Neon-backed through the repository layer.
+- Customer and household CRUD, customer search, duplicate warnings, and persisted profile basics use organization-scoped Neon reads and writes.
+- Memberships, check-ins, programs, registrations, POS, waivers, communications, documents, support, integrations, and platform-admin registry workflows still use mock or local demo persistence until their domain migrations are completed.
+- localStorage remains acceptable only for harmless UI preferences, short-lived drafts, and explicitly deferred demo workflows going forward.
 
 ### New State
 
@@ -129,7 +130,7 @@ Organizations and facilities are the first Cairn data area to read from the prod
 - `db/repositories` contains the first explicit repository layer for organization and facility reads.
 - `/admin/database` provides read-only internal connection status, table count, record counts by table, migration metadata, and seed data status.
 - `/admin/data-sources` provides platform-admin visibility into which modules are Neon-backed, demo-backed, local-only, or not yet migrated.
-- Existing demo seed data remains as a fallback so local review environments do not require a live database.
+- Existing demo seed data remains as a fallback for unmigrated workflows so local review environments do not require every future domain to be database-backed.
 - Tenant helpers require organization context for facility reads. Facility slugs are not treated as globally authoritative.
 - Platform-wide organization views are still mock/localStorage-backed until a dedicated platform admin migration replaces the current registry.
 
@@ -184,18 +185,20 @@ Future authentication work should authenticate staff through a production provid
 
 ### Customer And Household Foundation
 
-Customers and households now have database-backed profile workflows for modeled fields. Customer list/detail/create/edit/delete/search and household list/detail/create/edit/delete/member assignment operations use Neon through server actions and repository helpers, while memberships, check-ins, waivers, programs, POS, billing, rich relationship roles, and authentication still use the existing demo persistence.
+Customers and households now have database-backed profile workflows for modeled fields. Customer list/detail/create/edit/delete/search and household list/detail/create/edit/delete/member assignment operations use Neon through server actions and repository helpers, while memberships, check-ins, waivers, programs, POS, documents, communications, billing, rich relationship roles, and authentication still use the existing demo persistence.
 
 - `customers.organization_id` requires every customer to belong to one organization.
 - `customers.household_id` is nullable so individual customers can exist before household relationships are assigned.
 - Customer profile fields include identity, preferred name, pronouns, member ID, contact details, address, emergency contact, notes, profile photo URL, active state, and timestamps.
-- Customer server actions validate required fields and check for likely duplicate email, phone, or name/date-of-birth matches before writing.
-- `db/repositories/customer-repository.ts` provides server-only create, read, update, delete, search, count, duplicate-detection, and last-created helpers.
+- Customer server actions validate required fields, email format, normalized phone values, birth-date validity, and US state format before writing.
+- Duplicate-customer checks warn on exact email, exact normalized phone, or matching name plus birth date within the active organization. Staff may review the possible match and save anyway; merge is not built yet.
+- `db/repositories/customer-repository.ts` provides server-only create, read, update, delete, normalized search, count, duplicate-warning, potential duplicate count, and last-created helpers.
+- Customer search is organization-scoped, trims and normalizes input, and supports partial matching across first name, last name, preferred name, email, and phone.
 - `households.organization_id` requires every household to belong to one organization.
 - `households.primary_contact_id` is nullable so household records can be created before a primary contact is selected.
 - `customers.household_id` references `households.id` with `ON DELETE SET NULL`, so deleting a household clears customer household links without deleting customer profiles.
 - `db/repositories/household-repository.ts` provides server-only household create, read, update, delete, list-by-organization, member reads, member add/remove, primary-contact updates, duplicate checks, and count helpers.
-- `/admin/database` reports customer count, last customer created, customer seed count, household counts, customers assigned to households, and customers without households from Neon for internal visibility.
+- `/admin/database` reports customer count, searchable customer count, potential duplicate pairs, last customer created, customer seed count, household counts, customers assigned to households, and customers without households from Neon for internal visibility.
 - `npm run db:seed` seeds a small fictional customer and household set for each demo organization.
 
 Customer read path:
@@ -205,8 +208,9 @@ Customer read path:
 - Customer creates, edits, and deletes call server actions that resolve organization context before repository writes.
 - Customer reads and writes are organization-scoped before rows are mapped into the existing customer UI.
 - The customer mock-state provider no longer loads or saves customer records from the customer localStorage key.
-- If the database path is unavailable, the client list falls back to seeded demo state for local demo stability.
+- If the database path is unavailable, customer and household app pages show empty or unavailable states instead of falling back to seeded demo customer or household records.
 - If no customer rows exist, the list shows a friendly empty state instead of surfacing a database error.
+- Persisted customer profiles show persisted personal, contact, active-status, household, emergency-contact, notes, and profile-photo URL data. Unmigrated access, waiver, check-in, POS, registration, document, communication, and alert areas are labelled as deferred instead of showing demo records.
 
 Household read path:
 
@@ -222,9 +226,9 @@ Current migration status:
 
 - Customer list, detail, create, edit, delete, and search are backed by Neon for modeled profile fields.
 - Household list, detail, create, edit, delete, add-member, remove-member, and primary-contact management are backed by Neon.
-- Customer merge, membership, check-in, waiver, registration, POS, richer household relationships, and billing workflows are not migrated yet.
+- Customer merge, membership, check-in, waiver, registration, POS, documents, communications, richer household relationships, and billing workflows are not migrated yet.
 - The existing client state provider remains in place for operational actions until server-backed write paths exist.
-- The v0.3.1 data-source audit is documented in [Data Sources](./data-sources.md) and exposed internally at `/admin/data-sources`.
+- The v0.3.2 data-source audit is documented in [Data Sources](./data-sources.md) and exposed internally at `/admin/data-sources`.
 
 Customer ownership rules:
 

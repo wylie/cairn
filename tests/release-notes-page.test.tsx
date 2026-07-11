@@ -6,6 +6,10 @@ describe("ReleaseNotesPage", () => {
     render(<ReleaseNotesPage />);
 
     expect(screen.getByRole("heading", { name: "Release Notes" })).toBeInTheDocument();
+    expect(screen.getByText("Customer Experience Improvements")).toBeInTheDocument();
+    expect(screen.getAllByText("Customer search, validation, duplicate warnings, and profile clarity are improved for Neon-backed records.").length).toBeGreaterThan(0);
+    expect(screen.getByText("Neon-backed customer search")).toBeInTheDocument();
+    expect(screen.getByText("Duplicate-customer warnings")).toBeInTheDocument();
     expect(screen.getByText("Household Persistence")).toBeInTheDocument();
     expect(screen.getAllByText("Household CRUD and customer-household relationships now persist through Neon.").length).toBeGreaterThan(0);
     expect(screen.getByText("Neon-backed household CRUD")).toBeInTheDocument();

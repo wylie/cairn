@@ -5,6 +5,7 @@ import { TestProviders } from "@/tests/test-providers";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/customers",
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
   useSearchParams: () => new URLSearchParams(window.location.search)
 }));
 

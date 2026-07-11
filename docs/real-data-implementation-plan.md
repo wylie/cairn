@@ -57,7 +57,7 @@ v0.2.x now includes the first production data foundation pieces.
 - `db/index.ts` exposes the typed database client.
 - `/api/internal/database-health` verifies whether the configured database connection is reachable without exposing credentials or connection details.
 - `/admin/database` now shows connection state, known table count, record counts by table, the latest committed Drizzle migration, and seed data status.
-- `/admin/data-sources` now exposes the v0.3.1 data-source inventory for platform administrators.
+- `/admin/data-sources` now exposes the v0.3.2 data-source inventory for platform administrators.
 - `npm run db:generate`, `npm run db:migrate`, and `npm run db:studio` provide the migration and inspection workflow.
 - Local tooling loads `DATABASE_URL` from `.env.local`.
 
@@ -149,19 +149,23 @@ Customer and household database foundations now exist. Customer list/detail/crea
 
 - `customers` stores organization-owned customer profile fields: name, preferred name, pronouns, member ID, contact details, address, birth date, emergency contact, notes, profile photo URL, household link, active status, and timestamps.
 - `households` stores organization-owned household records with an optional primary contact reference.
-- `db/repositories/customer-repository.ts` exposes server-only reads, organization-scoped customer search, counts, create, edit, delete, duplicate detection, and last-created reporting.
+- `db/repositories/customer-repository.ts` exposes server-only reads, normalized organization-scoped customer search, counts, create, edit, delete, duplicate warnings, potential duplicate pair counts, and last-created reporting.
 - `db/repositories/household-repository.ts` exposes server-only reads, counts, create, edit, delete, member reads, member add/remove, primary-contact updates, duplicate checks, and customer household-link clearing.
-- `/admin/database` now reports customer count, last customer created, customer seed count, household counts, customers assigned to households, and customers without households from Neon for internal validation, plus migration and seed-run availability metadata.
+- `/admin/database` now reports customer count, searchable customer count, potential duplicate pairs, last customer created, customer seed count, household counts, customers assigned to households, and customers without households from Neon for internal validation, plus migration and seed-run availability metadata.
 - `npm run db:seed` now seeds small fictional customer and household sets for Summit Rec Collective, Riverstone Nature Center, and Western Carolina YMCA Association.
 - The staff customer list and detail pages read organization-scoped customers from Neon through the repository layer and map them into the existing customer UI.
+- Customer search is Neon-backed and organization-scoped. It trims and normalizes input and supports partial matching on first name, last name, preferred name, email, and phone.
 - The staff customer create/edit/delete flows call server actions that resolve the active organization before repository writes.
+- Customer create/edit actions share validation for required fields, email format, normalized phone values, birth-date validity, and US state format.
+- Duplicate-customer checks warn on exact email, exact normalized phone, or matching name plus birth date; staff can save anyway when the possible match is not the same person.
+- Persisted customer profiles show persisted profile and household data only. Membership, access, check-in, waiver, POS, registration, document, communication, and alert areas are labelled as deferred instead of showing demo records.
 - Customer records are no longer loaded from or saved to the customer localStorage mock key.
 - The staff household list and detail pages read organization-scoped households from Neon through the repository layer and map them into the existing household workspace UI.
 - The staff household create/edit/delete flows call server actions that resolve the active organization before repository writes.
 - Household member add/remove and primary-contact changes call server actions that resolve the active organization before repository writes.
 - Household records and relationship links are no longer loaded from or saved to household localStorage mock keys.
 
-Memberships, check-ins, registrations, waivers, POS, customer merge, richer relationship roles, billing behavior, and authentication are not migrated yet. Those workflows continue to use localStorage-backed mock data until their models, import paths, and write semantics are finalized.
+Memberships, check-ins, registrations, waivers, POS, documents, communications, customer merge, richer relationship roles, billing behavior, and authentication are not migrated yet. Those workflows continue to use localStorage-backed mock data until their models, import paths, and write semantics are finalized.
 
 Seed strategy:
 
@@ -173,7 +177,7 @@ Seed strategy:
 
 Customer And Household Migration Plan:
 
-Current: customer and household records are Neon-backed for modeled CRUD and customer-household links. Remaining customer-adjacent workflows such as memberships, check-ins, registrations, waivers, POS, merge behavior, richer relationship roles, and billing still use localStorage-backed mock data until their models are migrated.
+Current: customer and household records are Neon-backed for modeled CRUD, customer search, validation, duplicate warnings, and customer-household links. Remaining customer-adjacent workflows such as memberships, check-ins, registrations, waivers, POS, documents, communications, merge behavior, richer relationship roles, and billing still use localStorage-backed mock data until their models are migrated.
 
 Future: Neon PostgreSQL becomes the durable source of truth through the Next.js server/data layer.
 
@@ -182,7 +186,7 @@ Phases:
 1. Schema - create minimal organization-owned `customers` and `households` tables. Complete.
 2. Repositories - add server-only customer and household read helpers. Complete.
 3. Seed/demo data - design and add a limited demo seed set after relationships stabilize. Initial customer and household seeds are complete.
-4. Read operations - move low-risk customer and household views to server-backed reads with demo fallback. Customer and household list/detail reads are complete for modeled fields.
+4. Read operations - move low-risk customer and household views to server-backed reads. Customer and household list/detail reads are complete for modeled fields and no longer fall back to mock records in app routes when Neon context is unavailable.
 5. Write operations - move customer and household creates, updates, deletes, and household membership changes behind server actions or route handlers. Customer and household writes are complete for modeled fields; merge workflows, richer relationship roles, and audit trails remain future work.
 6. Full migration - retire remaining localStorage customer-adjacent adjunct state after imports, permissions, tests, and rollback paths exist.
 
@@ -215,7 +219,7 @@ Goal: identify every place production data enters, changes, or leaves the app.
 Deliverables:
 
 - Map current `lib/state/*` providers to future server-backed domains. Complete in [Data Sources](./data-sources.md).
-- Mark which localStorage keys can be retired, migrated, or kept as UI preferences. In progress through the v0.3.1 inventory.
+- Mark which localStorage keys can be retired, migrated, or kept as UI preferences. In progress through the v0.3.2 inventory.
 - Confirm tenant scope for each domain: organization-level, facility-level, customer-level, or platform-level. Initial audit complete for current repositories.
 
 ### 2. Schema Foundation

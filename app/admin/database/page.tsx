@@ -80,6 +80,24 @@ export default async function AdminDatabasePage() {
         </Card>
         <Card>
           <CardHeader>
+            <CardTitle>Searchable Customers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.searchableCustomerCount}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Organization-scoped customer rows searchable by name, preferred name, email, and phone.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Potential Duplicate Pairs</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.potentialDuplicateCustomerPairs}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Exact email, phone, or name plus birth-date matches within the same organization.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
             <CardTitle>Last Customer Created</CardTitle>
           </CardHeader>
           <CardContent>

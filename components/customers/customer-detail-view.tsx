@@ -58,13 +58,15 @@ export function CustomerDetailView({
   persistedCustomer,
   persistedCustomers,
   persistedHouseholds,
-  persistedHouseholdMembers
+  persistedHouseholdMembers,
+  persistedMode = false
 }: {
   customerId: string;
   persistedCustomer?: Customer;
   persistedCustomers?: Customer[];
   persistedHouseholds?: Household[];
   persistedHouseholdMembers?: HouseholdMember[];
+  persistedMode?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname() ?? "";
@@ -144,50 +146,62 @@ export function CustomerDetailView({
   >("all");
   const [communicationFilter, setCommunicationFilter] = useState<"all" | CommunicationRecord["channel"]>("all");
   const photoInputRef = useRef<HTMLInputElement | null>(null);
-  const customer = persistedCustomer ?? customers.find((entry) => entry.id === customerId);
-  const usesPersistedCustomer = Boolean(persistedCustomer);
-  const displayCustomers = persistedCustomers ?? customers;
-  const displayHouseholds = persistedHouseholds ?? households;
-  const displayHouseholdMembers = persistedHouseholdMembers ?? householdMembers;
+  const customer = persistedMode ? persistedCustomer : persistedCustomer ?? customers.find((entry) => entry.id === customerId);
+  const usesPersistedCustomer = persistedMode || Boolean(persistedCustomer);
+  const displayCustomers = persistedMode ? persistedCustomers ?? [] : persistedCustomers ?? customers;
+  const displayHouseholds = persistedMode ? persistedHouseholds ?? [] : persistedHouseholds ?? households;
+  const displayHouseholdMembers = persistedMode ? persistedHouseholdMembers ?? [] : persistedHouseholdMembers ?? householdMembers;
 
   if (!customer) {
-    return <p className="text-sm text-muted-foreground">Customer not found.</p>;
+    return (
+      <div className="rounded-lg border bg-card p-4 text-sm text-muted-foreground">
+        Customer not found in Neon for this organization.
+      </div>
+    );
   }
 
-  const membership = customer.membershipId ? memberships.find((entry) => entry.id === customer.membershipId) : undefined;
-  const waiver = customer.waiverId ? waivers.find((entry) => entry.id === customer.waiverId) : undefined;
-  const signedWaiverRecords = getSignedWaiverRecordsForCustomer(customer.id);
+  const membership = !usesPersistedCustomer && customer.membershipId ? memberships.find((entry) => entry.id === customer.membershipId) : undefined;
+  const waiver = !usesPersistedCustomer && customer.waiverId ? waivers.find((entry) => entry.id === customer.waiverId) : undefined;
+  const signedWaiverRecords = usesPersistedCustomer ? [] : getSignedWaiverRecordsForCustomer(customer.id);
   const activeSignedWaiver = activeSignedWaiverId
     ? signedWaiverRecords.find((entry) => entry.id === activeSignedWaiverId)
     : undefined;
-  const generalWaiverStatus = getWaiverStatusForCustomer(customer.id, "wtpl_general");
-  const pass = customer.punchPassId ? punchPasses.find((entry) => entry.id === customer.punchPassId) : undefined;
-  const [documents, setDocuments] = useState<CustomerDocumentRecord[]>([
-    {
-      id: `doc-waiver-${customer.id}`,
-      customerId: customer.id,
-      name: "Signed General Facility Waiver",
-      type: "waiver",
-      uploadedBy: "System",
-      uploadedAt: "2026-03-02T11:22:00Z",
-      status: "active"
-    },
-    {
-      id: `doc-membership-${customer.id}`,
-      customerId: customer.id,
-      name: "Membership Agreement",
-      type: "membership",
-      uploadedBy: "Maya Lopez",
-      uploadedAt: "2026-02-15T09:10:00Z",
-      status: "active"
-    }
-  ]);
-  const customerCommunications = communications.filter((entry) => entry.customerId === customer.id);
-  const recentCheckIns = checkInRecords
+  const generalWaiverStatus = usesPersistedCustomer ? null : getWaiverStatusForCustomer(customer.id, "wtpl_general");
+  const pass = !usesPersistedCustomer && customer.punchPassId ? punchPasses.find((entry) => entry.id === customer.punchPassId) : undefined;
+  const [documents, setDocuments] = useState<CustomerDocumentRecord[]>(() =>
+    usesPersistedCustomer
+      ? []
+      : [
+          {
+            id: `doc-waiver-${customer.id}`,
+            customerId: customer.id,
+            name: "Signed General Facility Waiver",
+            type: "waiver",
+            uploadedBy: "System",
+            uploadedAt: "2026-03-02T11:22:00Z",
+            status: "active"
+          },
+          {
+            id: `doc-membership-${customer.id}`,
+            customerId: customer.id,
+            name: "Membership Agreement",
+            type: "membership",
+            uploadedBy: "Maya Lopez",
+            uploadedAt: "2026-02-15T09:10:00Z",
+            status: "active"
+          }
+        ]
+  );
+  const customerCommunications = usesPersistedCustomer ? [] : communications.filter((entry) => entry.customerId === customer.id);
+  const recentCheckIns = usesPersistedCustomer
+    ? []
+    : checkInRecords
     .filter((entry) => entry.customerId === customer.id)
     .sort((a, b) => b.checkInTime.localeCompare(a.checkInTime))
     .slice(0, 6);
-  const recentPurchases = transactions
+  const recentPurchases = usesPersistedCustomer
+    ? []
+    : transactions
     .filter(
       (entry) =>
         entry.customerId === customer.id ||
@@ -196,7 +210,9 @@ export function CustomerDetailView({
     )
     .sort((a, b) => b.completedAt.localeCompare(a.completedAt))
     .slice(0, 6);
-  const customerSessionHistory = registrations
+  const customerSessionHistory = usesPersistedCustomer
+    ? []
+    : registrations
     .filter((entry) => entry.customerId === customer.id)
     .map((entry) => {
       const session = sessions.find((item) => item.id === entry.sessionId);
@@ -205,7 +221,9 @@ export function CustomerDetailView({
     })
     .filter((entry) => entry.session)
     .sort((a, b) => (b.session?.startsAt ?? "").localeCompare(a.session?.startsAt ?? ""));
-  const accessRecords = customerAccessRecords
+  const accessRecords = usesPersistedCustomer
+    ? []
+    : customerAccessRecords
     .filter((entry) => entry.customerId === customer.id)
     .sort((a, b) => (b.startDate ?? "").localeCompare(a.startDate ?? ""));
   const derivedAccessPurchases = accessRecords
@@ -248,7 +266,15 @@ export function CustomerDetailView({
   });
   const latestUpcomingSession = upcomingSessions[0];
   const activeAccessCount = accessRecords.filter((entry) => entry.status === "active").length;
-  const decision = evaluateCustomerEntry(customer.id);
+  const decision = usesPersistedCustomer
+    ? {
+        allowed: false,
+        chosenAccess: null,
+        sessionAccess: null,
+        reasons: ["Membership and access persistence are not migrated yet."],
+        warnings: []
+      }
+    : evaluateCustomerEntry(customer.id);
   const currentAccessLabel = decision.chosenAccess
     ? decision.chosenAccess.type === "membership"
       ? "Membership"
@@ -335,19 +361,21 @@ export function CustomerDetailView({
     : undefined;
   const householdDefaultPayment = householdBillingCustomer?.paymentMethods?.find((method) => method.isDefault);
   const householdCheckInRows = householdRows.filter((row) => row.customer);
-  const householdActiveCheckIns = householdCheckInRows.filter((row) => row.customer?.checkInStatus === "in").length;
-  const householdWaiverIssues = householdCheckInRows.filter((row) => {
+  const householdActiveCheckIns = usesPersistedCustomer ? 0 : householdCheckInRows.filter((row) => row.customer?.checkInStatus === "in").length;
+  const householdWaiverIssues = usesPersistedCustomer ? 0 : householdCheckInRows.filter((row) => {
     const rowCustomer = row.customer;
     if (!rowCustomer) return false;
     const rowWaiver = rowCustomer.waiverId ? waivers.find((entry) => entry.id === rowCustomer.waiverId) : undefined;
     return !rowWaiver || rowWaiver.status !== "valid";
   }).length;
-  const householdActiveAccess = householdCheckInRows.filter((row) => {
+  const householdActiveAccess = usesPersistedCustomer ? 0 : householdCheckInRows.filter((row) => {
     const rowCustomer = row.customer;
     if (!rowCustomer) return false;
     return customerAccessRecords.some((entry) => entry.customerId === rowCustomer.id && entry.status === "active");
   }).length;
-  const householdUpcomingPrograms = registrations
+  const householdUpcomingPrograms = usesPersistedCustomer
+    ? []
+    : registrations
     .filter((registration) => householdRows.some((row) => row.customerId === registration.customerId))
     .filter((registration) => registration.status === "confirmed" || registration.status === "waitlisted")
     .map((registration) => {
@@ -363,7 +391,9 @@ export function CustomerDetailView({
     .filter((entry) => entry.session)
     .sort((a, b) => (a.session?.startsAt ?? "").localeCompare(b.session?.startsAt ?? ""))
     .slice(0, 6);
-  const householdPurchases = transactions
+  const householdPurchases = usesPersistedCustomer
+    ? []
+    : transactions
     .filter((transaction) => {
       if (transaction.customerId && householdCustomerIdSet.has(transaction.customerId)) return true;
       if (transaction.purchaserCustomerId && householdCustomerIdSet.has(transaction.purchaserCustomerId)) return true;
@@ -372,9 +402,9 @@ export function CustomerDetailView({
     .sort((a, b) => b.completedAt.localeCompare(a.completedAt))
     .slice(0, 6);
   const alerts: Array<{ id: string; tone: "warning" | "danger" | "success"; message: string }> = [];
-  const customerOperationsAlerts = operationsAlerts.filter((entry) => entry.customerId === customer.id);
+  const customerOperationsAlerts = usesPersistedCustomer ? [] : operationsAlerts.filter((entry) => entry.customerId === customer.id);
   const openCustomerOperationsAlerts = customerOperationsAlerts.filter((entry) => entry.status === "open");
-  if (!waiver || waiver.status !== "valid") alerts.push({ id: "waiver", tone: "danger", message: waiver?.status === "expired" ? "Waiver expired" : "Waiver missing" });
+  if (!usesPersistedCustomer && (!waiver || waiver.status !== "valid")) alerts.push({ id: "waiver", tone: "danger", message: waiver?.status === "expired" ? "Waiver expired" : "Waiver missing" });
   if (membership && membership.status === "inactive") alerts.push({ id: "membership", tone: "danger", message: "Membership expired" });
   if (decision.chosenAccess?.type === "punch-pass" && (decision.chosenAccess.remainingPunches ?? 0) <= 2) {
     alerts.push({ id: "punch", tone: "warning", message: `Punch pass low (${decision.chosenAccess.remainingPunches ?? 0} remaining)` });
@@ -609,6 +639,10 @@ export function CustomerDetailView({
                     accept="image/jpeg,image/png,image/webp"
                     className="sr-only"
                     onChange={(event) => {
+                      if (usesPersistedCustomer) {
+                        setProfileFeedback("Use Edit Profile to update the persisted profile photo URL.");
+                        return;
+                      }
                       const file = event.currentTarget.files?.[0];
                       if (!file) return;
                       if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
@@ -641,13 +675,14 @@ export function CustomerDetailView({
                       reader.readAsDataURL(file);
                     }}
                   />
-                  <Button variant="secondary" className="h-9" onClick={() => photoInputRef.current?.click()}>
+                  <Button variant="secondary" className="h-9" disabled={usesPersistedCustomer} onClick={() => photoInputRef.current?.click()}>
                     {customer.profilePhotoUrl ? "Replace Photo" : "Upload Photo"}
                   </Button>
                   {customer.profilePhotoUrl ? (
                     <Button
                       variant="destructiveSubtle"
                       className="h-9"
+                      disabled={usesPersistedCustomer}
                       onClick={() => {
                         const result = updateCustomerPhoto({
                           customerId: customer.id,
@@ -699,7 +734,16 @@ export function CustomerDetailView({
           </div>
           <div className="mt-3">
             <div className="flex flex-wrap items-center gap-2">
-              <CustomerBadges customer={customer} membership={membership} punchPass={pass} waiver={waiver} />
+              {usesPersistedCustomer ? (
+                <>
+                  <Badge tone="success">Neon Profile</Badge>
+                  <Badge tone="muted">Membership Deferred</Badge>
+                  <Badge tone="muted">Waiver Deferred</Badge>
+                  {customer.tags.includes("Inactive") ? <Badge tone="warning">Inactive</Badge> : <Badge tone="success">Active</Badge>}
+                </>
+              ) : (
+                <CustomerBadges customer={customer} membership={membership} punchPass={pass} waiver={waiver} />
+              )}
               {customerStaffProfile ? (
                 <Badge tone="muted">Staff: {ROLE_LABELS[customerStaffProfile.role]}</Badge>
               ) : null}
@@ -781,6 +825,7 @@ export function CustomerDetailView({
               <Button
                 className="h-9"
                 variant="secondary"
+                disabled={usesPersistedCustomer}
                 onClick={() => {
                   const result = createOperationsAlert({
                     title: "Staff Attention Required",
@@ -828,23 +873,23 @@ export function CustomerDetailView({
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="detail-summary-cards">
           <CustomerSummaryCard
             title="Access Status"
-            value={activeAccessCount > 0 ? `${activeAccessCount} active` : "No active access"}
-            detail={membership?.planName ?? pass?.title ?? customer.dayPassProductName ?? "No current plan or pass"}
+            value={usesPersistedCustomer ? "Deferred" : activeAccessCount > 0 ? `${activeAccessCount} active` : "No active access"}
+            detail={usesPersistedCustomer ? "Membership/access persistence is not built yet." : membership?.planName ?? pass?.title ?? customer.dayPassProductName ?? "No current plan or pass"}
           />
           <CustomerSummaryCard
             title="Waiver Status"
-            value={waiver?.status === "valid" ? "Valid" : waiver?.status === "expired" ? "Expired" : "Missing"}
-            detail={waiver?.expiresAt ? `Expires ${formatDate(waiver.expiresAt)}` : "No waiver on file"}
+            value={usesPersistedCustomer ? "Deferred" : waiver?.status === "valid" ? "Valid" : waiver?.status === "expired" ? "Expired" : "Missing"}
+            detail={usesPersistedCustomer ? "Waiver persistence is not built yet." : waiver?.expiresAt ? `Expires ${formatDate(waiver.expiresAt)}` : "No waiver on file"}
           />
           <CustomerSummaryCard
             title="Current Access"
-            value={currentAccessLabel}
-            detail={currentAccessDetail}
+            value={usesPersistedCustomer ? "Deferred" : currentAccessLabel}
+            detail={usesPersistedCustomer ? "No mock access is shown on Neon-backed profiles." : currentAccessDetail}
           />
           <CustomerSummaryCard
             title="Upcoming Registration"
-            value={latestUpcomingSession ? latestUpcomingSession.session?.title ?? "Scheduled Session" : "No upcoming session"}
-            detail={latestUpcomingSession?.session?.startsAt ? formatDateTime(latestUpcomingSession.session.startsAt) : "No upcoming registrations"}
+            value={usesPersistedCustomer ? "Deferred" : latestUpcomingSession ? latestUpcomingSession.session?.title ?? "Scheduled Session" : "No upcoming session"}
+            detail={usesPersistedCustomer ? "Registration persistence is not built yet." : latestUpcomingSession?.session?.startsAt ? formatDateTime(latestUpcomingSession.session.startsAt) : "No upcoming registrations"}
           />
           <CustomerSummaryCard
             title="Alerts"
@@ -886,7 +931,11 @@ export function CustomerDetailView({
       <Card aria-label="detail-access-products">
         <CardHeader><CardTitle>Access Products</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
-          {accessRecords.length === 0 ? <p className="text-muted-foreground">No access products yet.</p> : null}
+          {usesPersistedCustomer ? (
+            <p className="text-muted-foreground">Memberships and access products are not persisted yet. No demo access records are shown for Neon-backed customers.</p>
+          ) : accessRecords.length === 0 ? (
+            <p className="text-muted-foreground">No access products yet.</p>
+          ) : null}
           {accessRecords.map((entry) => (
             <div key={entry.id} className="rounded-lg border p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1830,7 +1879,9 @@ export function CustomerDetailView({
         <CardHeader><CardTitle>Purchase History</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
           {purchaseHistoryEntries.length === 0 ? (
-            <p className="text-muted-foreground">No purchases recorded yet.</p>
+            <p className="text-muted-foreground">
+              {usesPersistedCustomer ? "POS persistence is not built yet. No demo purchases are shown for Neon-backed customers." : "No purchases recorded yet."}
+            </p>
           ) : (
             purchaseHistoryEntries.slice(0, 3).map((entry) => (
               <div key={entry.id} className="rounded-lg border p-3">
@@ -1879,6 +1930,7 @@ export function CustomerDetailView({
             <div className="flex flex-wrap gap-2">
               <Button
                 className="h-9"
+                disabled={usesPersistedCustomer}
                 onClick={() => {
                   const now = new Date().toISOString();
                   setDocuments((prev) => [
@@ -1898,6 +1950,9 @@ export function CustomerDetailView({
                 Upload Document
               </Button>
             </div>
+            {usesPersistedCustomer ? (
+              <p className="text-muted-foreground">Document persistence is not built yet. No demo documents are shown for Neon-backed customers.</p>
+            ) : null}
             <div className="overflow-x-auto">
               <table className="w-full min-w-[680px] text-left">
                 <thead>
@@ -1961,6 +2016,7 @@ export function CustomerDetailView({
               <Button
                 className="h-9"
                 variant="secondary"
+                disabled={usesPersistedCustomer}
                 onClick={() => {
                   createCommunication({
                     channel: "internal_staff_note",
@@ -1978,12 +2034,16 @@ export function CustomerDetailView({
                 Log Communication
               </Button>
             </div>
+            {usesPersistedCustomer ? (
+              <p className="text-muted-foreground">Communication history and preferences are not persisted yet. No demo communications are shown for Neon-backed customers.</p>
+            ) : null}
             <div className="grid gap-3 rounded-md border p-3 md:grid-cols-5">
               <label className="flex items-center justify-between gap-3 text-sm">
                 <span>Email Opt-In</span>
                 <input
                   aria-label="Email communications"
                   type="checkbox"
+                  disabled={usesPersistedCustomer}
                   checked={customer.communicationPreferences?.email ?? true}
                   onChange={(event) => updateCustomerCommunicationPreferences(customer.id, { email: event.target.checked })}
                 />
@@ -1993,6 +2053,7 @@ export function CustomerDetailView({
                 <input
                   aria-label="SMS communications"
                   type="checkbox"
+                  disabled={usesPersistedCustomer}
                   checked={customer.communicationPreferences?.sms ?? true}
                   onChange={(event) => updateCustomerCommunicationPreferences(customer.id, { sms: event.target.checked })}
                 />
@@ -2001,6 +2062,7 @@ export function CustomerDetailView({
                 <span>Marketing</span>
                 <input
                   type="checkbox"
+                  disabled={usesPersistedCustomer}
                   checked={customer.communicationPreferences?.marketing ?? false}
                   onChange={(event) => updateCustomerCommunicationPreferences(customer.id, { marketing: event.target.checked })}
                 />
@@ -2010,6 +2072,7 @@ export function CustomerDetailView({
                 <input
                   aria-label="Transactional communications"
                   type="checkbox"
+                  disabled={usesPersistedCustomer}
                   checked={customer.communicationPreferences?.transactional ?? true}
                   onChange={(event) => updateCustomerCommunicationPreferences(customer.id, { transactional: event.target.checked })}
                 />
@@ -2019,6 +2082,7 @@ export function CustomerDetailView({
                 <select
                   aria-label="Preferred contact method"
                   className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
+                  disabled={usesPersistedCustomer}
                   value={customer.communicationPreferences?.preferredContactMethod ?? "email"}
                   onChange={(event) =>
                     updateCustomerCommunicationPreferences(customer.id, {
@@ -2045,7 +2109,7 @@ export function CustomerDetailView({
                   </div>
                 </div>
               ))}
-              {filteredCommunications.length === 0 ? <p className="text-muted-foreground">No communications found.</p> : null}
+              {filteredCommunications.length === 0 && !usesPersistedCustomer ? <p className="text-muted-foreground">No communications found.</p> : null}
             </div>
           </CardContent>
         </Card>
@@ -2057,7 +2121,11 @@ export function CustomerDetailView({
         <CardContent className="space-y-3 text-sm">
           <div>
             <p className="font-medium">Upcoming Sessions</p>
-            {upcomingSessions.length === 0 ? <p className="text-muted-foreground">No upcoming sessions.</p> : null}
+            {upcomingSessions.length === 0 ? (
+              <p className="text-muted-foreground">
+                {usesPersistedCustomer ? "Registration persistence is not built yet. No demo sessions are shown for Neon-backed customers." : "No upcoming sessions."}
+              </p>
+            ) : null}
             {upcomingSessions.slice(0, 4).map((entry) => (
               <p key={entry.registration.id} className="text-muted-foreground">
                 {entry.session?.title ?? entry.program?.title ?? "Session"} • {formatDateTime(entry.session?.startsAt)} • {entry.registration.status}
@@ -2066,7 +2134,7 @@ export function CustomerDetailView({
           </div>
           <div>
             <p className="font-medium">Past Sessions</p>
-            {pastSessions.length === 0 ? <p className="text-muted-foreground">No past sessions.</p> : null}
+            {pastSessions.length === 0 && !usesPersistedCustomer ? <p className="text-muted-foreground">No past sessions.</p> : null}
             {pastSessions.slice(0, 4).map((entry) => (
               <p key={entry.registration.id} className="text-muted-foreground">
                 {entry.session?.title ?? entry.program?.title ?? "Session"} • {formatDateTime(entry.session?.startsAt)} • {(entry.session?.status ?? entry.registration.status)}
@@ -2084,17 +2152,21 @@ export function CustomerDetailView({
           <div className="rounded-md border bg-secondary/30 p-3">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Current status</p>
             <p className="font-medium">
-              {generalWaiverStatus === "valid"
+              {usesPersistedCustomer
+                ? "Deferred"
+                : generalWaiverStatus === "valid"
                 ? "Valid"
                 : generalWaiverStatus === "expiring_soon"
                   ? "Expires Soon"
                   : generalWaiverStatus === "outdated_version"
                     ? "Outdated Version"
                     : generalWaiverStatus === "expired"
-                      ? "Expired"
+                    ? "Expired"
                     : "Missing"}
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">Updated by: {waiver?.updatedByStaffName ?? "Staff not recorded"}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {usesPersistedCustomer ? "Waiver persistence is not built yet. No demo waiver status is shown." : `Updated by: ${waiver?.updatedByStaffName ?? "Staff not recorded"}`}
+            </p>
           </div>
           {signedWaiverRecords.length ? (
             <div className="overflow-x-auto">
@@ -2128,12 +2200,15 @@ export function CustomerDetailView({
               </table>
             </div>
           ) : (
-            <p className="text-muted-foreground">No waiver history yet.</p>
+            <p className="text-muted-foreground">
+              {usesPersistedCustomer ? "Waiver persistence is not built yet. No demo waiver history is shown for Neon-backed customers." : "No waiver history yet."}
+            </p>
           )}
           <div className="flex flex-wrap gap-2">
             <Button
               className="h-9"
               variant="outline"
+              disabled={usesPersistedCustomer}
               onClick={() => {
                 if (!activeStaff) return;
                 const result = signWaiverForCustomer({
@@ -2154,6 +2229,7 @@ export function CustomerDetailView({
             <Button
               className="h-9"
               variant="outline"
+              disabled={usesPersistedCustomer}
               onClick={() => {
                 if (!activeStaff) return;
                 updateCustomerWaiver(customer.id, {
@@ -2171,6 +2247,7 @@ export function CustomerDetailView({
             <Button
               className="h-9"
               variant="outline"
+              disabled={usesPersistedCustomer}
               onClick={() => {
                 if (!activeStaff) return;
                 updateCustomerWaiver(customer.id, {
@@ -2185,6 +2262,7 @@ export function CustomerDetailView({
             <Button
               className="h-9"
               variant="outline"
+              disabled={usesPersistedCustomer}
               onClick={() => {
                 if (!activeStaff) return;
                 updateCustomerWaiver(customer.id, {

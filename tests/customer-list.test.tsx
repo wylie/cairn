@@ -8,6 +8,7 @@ import { TestProviders } from "@/tests/test-providers";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/customers",
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
   useSearchParams: () => new URLSearchParams(window.location.search)
 }));
 
@@ -18,12 +19,19 @@ function installStorageMock() {
   Object.defineProperty(window, "localStorage", {
     configurable: true,
     value: {
+      get length() {
+        return store.size;
+      },
       getItem: vi.fn((key: string) => store.get(key) ?? null),
+      key: vi.fn((index: number) => Array.from(store.keys())[index] ?? null),
       setItem: vi.fn((key: string, value: string) => {
         store.set(key, value);
       }),
       removeItem: vi.fn((key: string) => {
         store.delete(key);
+      }),
+      clear: vi.fn(() => {
+        store.clear();
       })
     }
   });
@@ -275,7 +283,7 @@ describe("CustomerList", () => {
     expect(within(dialog).getByTestId("modal-footer")).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "Close New Customer" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Next" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("First and last name are required.");
+    expect(screen.getByRole("alert")).toHaveTextContent("First name is required.");
   });
 
   it("creates a new customer and it appears in search", async () => {
@@ -296,7 +304,7 @@ describe("CustomerList", () => {
     expect(screen.getByText("Nina Stone")).toBeInTheDocument();
   });
 
-  it("new customer persists after refresh", async () => {
+  it("new mock customer does not persist after refresh", async () => {
     const storage = installStorageMock();
     const user = userEvent.setup();
     const first = render(
@@ -318,7 +326,8 @@ describe("CustomerList", () => {
     );
 
     await user.type(screen.getByLabelText("Search customers"), "Parker");
-    expect(screen.getByText("Parker Lane")).toBeInTheDocument();
+    expect(screen.queryByText("Parker Lane")).not.toBeInTheDocument();
+    expect(screen.getByText("No customers found")).toBeInTheDocument();
     storage.restore();
   });
 
@@ -496,7 +505,7 @@ describe("CustomerList", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("You do not have permission to perform this action.");
   });
 
-  it("customers page check in persists after refresh", async () => {
+  it("customers page check in does not persist through local mock refresh", async () => {
     const storage = installStorageMock();
     const user = userEvent.setup();
 
@@ -522,7 +531,7 @@ describe("CustomerList", () => {
     );
 
     const reloadedDana = screen.getByText("Dana Brooks").closest("div[class*='p-4']") as HTMLElement;
-    expect(within(reloadedDana).getByText("Checked In")).toBeInTheDocument();
+    expect(within(reloadedDana).getByText("Checked Out")).toBeInTheDocument();
     expect(screen.getByTestId("header-occupancy")).toHaveTextContent("2 currently in");
 
     storage.restore();

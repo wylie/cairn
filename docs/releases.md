@@ -10,11 +10,11 @@ Version metadata is centralized in `lib/version.ts`.
 
 Current shipped version metadata:
 
-- `currentVersion`: `0.3.1`
-- `releaseName`: `Household Persistence`
+- `currentVersion`: `0.3.2`
+- `releaseName`: `Customer Experience Improvements`
 - `releaseDate`: `2026-07-11`
 - `releaseType`: `patch`
-- `summary`: `Household CRUD and customer-household relationships now persist through Neon.`
+- `summary`: `Customer search, validation, duplicate warnings, and profile clarity are improved for Neon-backed records.`
 
 All active application version displays should read from the `version` object in `lib/version.ts`. Compatibility exports may exist for older components, but they must derive from `version`.
 
@@ -129,21 +129,45 @@ Update notifications are generated from release note data by `lib/releases/notif
 
 When a release entry becomes the latest release, Cairn can generate a system notification such as:
 
-`Cairn has been updated to v0.3.1. View what's new.`
+`Cairn has been updated to v0.3.2. View what's new.`
 
 The notification uses the existing communications notification center, counts toward unread totals, can be marked read, and links directly to the matching release note anchor.
 
 ## Current Shipped Version
 
-Version: `v0.3.1`
+Version: `v0.3.2`
 
 Released: `2026-07-11`
 
-Title: Household Persistence
+Title: Customer Experience Improvements
 
 Release type: Patch
 
-Summary: Household CRUD and customer-household relationships now persist through Neon.
+Summary: Customer search, validation, duplicate warnings, and profile clarity are improved for Neon-backed records.
+
+### v0.3.2 Notes
+
+#### Added
+
+- Neon-backed customer search
+- Duplicate-customer warnings
+- Improved validation states
+
+#### Improved
+
+- Customer profile clarity
+- Empty and loading states
+- Error handling
+- Customer and household data integrity
+
+#### Fixed
+
+- Persisted customer profiles no longer display mock access, waiver, check-in, POS, registration, document, communication, or alert records as persisted data.
+- Customer and household pages no longer fall back to mock records when Neon context is unavailable in the app.
+
+#### Known Issues
+
+- Memberships, check-ins, waivers, programs, POS, documents, communications, and authentication still use demo persistence until their migration releases.
 
 ### v0.3.1 Notes
 

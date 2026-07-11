@@ -60,6 +60,20 @@ export const roadmapMilestones: RoadmapMilestone[] = [
   },
   {
     versionRange: "v0.5.x",
+    title: "Programs & Registrations",
+    focus: [
+      "Program CRUD",
+      "Session CRUD",
+      "Registration persistence",
+      "Waitlists",
+      "Capacity management",
+      "Customer profile registration visibility",
+      "Program and registration diagnostics"
+    ],
+    status: "Shipped"
+  },
+  {
+    versionRange: "v0.6.x",
     title: "Customer & Household Operations",
     focus: [
       "Customer imports",
@@ -67,17 +81,6 @@ export const roadmapMilestones: RoadmapMilestone[] = [
       "Household imports",
       "Rich relationship roles",
       "Audit events"
-    ],
-    status: "Planned"
-  },
-  {
-    versionRange: "v0.6.x",
-    title: "Programs & Registrations",
-    focus: [
-      "Programs",
-      "Sessions",
-      "Registrations",
-      "Waitlists"
     ],
     status: "Planned"
   },

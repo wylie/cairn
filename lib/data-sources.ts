@@ -112,21 +112,21 @@ export const dataSourceInventory: DataSourceInventoryItem[] = [
   },
   {
     module: "Programs",
-    status: "Demo-backed",
-    currentSource: "`lib/mocks/programs.ts`, `lib/public-programs.ts`, and local mock state.",
-    repositoryLayer: "No Neon schema or repository layer yet.",
-    scopeAudit: "Mock program records include organization and facility/location assignments, but server isolation is future work.",
-    migrationStatus: "Not migrated.",
-    plannedOrder: "Program catalog, sessions, instructors, capacity, and public visibility after customer foundations."
+    status: "Neon-backed",
+    currentSource: "Neon `programs` and `program_sessions` through `db/schema/programs.ts`, `db/repositories/program-repository.ts`, and staff program server actions.",
+    repositoryLayer: "Server-only program and session create/read/update/delete/status helpers require organization scope and validate facility ownership.",
+    scopeAudit: "`programs.organization_id`, `program_sessions.organization_id`, and `program_sessions.facility_id` are required. Staff workflows resolve active organization and facility before reads and writes.",
+    migrationStatus: "Complete for staff program CRUD, session create/edit/cancel/archive, capacity defaults, age limits, and admin diagnostics. Public catalog discovery can still use public helpers until public checkout is migrated.",
+    plannedOrder: "Future program work: public catalog backed by Neon, richer recurrence, instructor assignment workflows, and reporting."
   },
   {
     module: "Registrations",
-    status: "Demo-backed",
-    currentSource: "`lib/mocks/registrations.ts`, program mocks, and local mock state.",
-    repositoryLayer: "No Neon schema or repository layer yet.",
-    scopeAudit: "Registration demo records reference organization-owned sessions/customers, but writes are not server-authorized.",
-    migrationStatus: "Not migrated.",
-    plannedOrder: "After programs and customers: registrations, waitlists, participant eligibility, and payment links."
+    status: "Neon-backed",
+    currentSource: "Neon `program_registrations` through `db/schema/programs.ts`, `db/repositories/program-repository.ts`, and registration server actions.",
+    repositoryLayer: "Server-only registration create, remove, waitlist, attendance-placeholder, customer-profile lookup, and count helpers require organization scope.",
+    scopeAudit: "`program_registrations.organization_id`, `session_id`, and `customer_id` are required. Writes validate customer and session ownership, prevent active duplicates, and enforce capacity before waitlisting.",
+    migrationStatus: "Complete for staff registration, removal, waitlists, capacity enforcement, duplicate prevention, customer profile visibility, and diagnostics. Payment collection and public self-service checkout remain future migrations.",
+    plannedOrder: "Future registration work: online payment-backed checkout, guardian workflows, waivers, refunds, transfer history, and richer attendance."
   },
   {
     module: "POS",

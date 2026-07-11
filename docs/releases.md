@@ -10,11 +10,11 @@ Version metadata is centralized in `lib/version.ts`.
 
 Current shipped version metadata:
 
-- `currentVersion`: `0.4.1`
-- `releaseName`: `Membership & Check-In Stabilization`
+- `currentVersion`: `0.5.0`
+- `releaseName`: `Programs & Registrations`
 - `releaseDate`: `2026-07-11`
-- `releaseType`: `patch`
-- `summary`: `Membership and check-in workflows now provide clearer access decisions, safer duplicate prevention, and better persistence feedback.`
+- `releaseType`: `minor`
+- `summary`: `Programs, sessions, registrations, capacity, and waitlists now persist through Neon-backed workflows.`
 
 All active application version displays should read from the `version` object in `lib/version.ts`. Compatibility exports may exist for older components, but they must derive from `version`.
 
@@ -129,21 +129,44 @@ Update notifications are generated from release note data by `lib/releases/notif
 
 When a release entry becomes the latest release, Cairn can generate a system notification such as:
 
-`Cairn has been updated to v0.4.1. View what's new.`
+`Cairn has been updated to v0.5.0. View what's new.`
 
 The notification uses the existing communications notification center, counts toward unread totals, can be marked read, and links directly to the matching release note anchor.
 
 ## Current Shipped Version
 
-Version: `v0.4.1`
+Version: `v0.5.0`
 
 Released: `2026-07-11`
 
-Title: Membership & Check-In Stabilization
+Title: Programs & Registrations
 
-Release type: Patch
+Release type: Minor
 
-Summary: Membership and check-in workflows now provide clearer access decisions, safer duplicate prevention, and better persistence feedback.
+Summary: Programs, sessions, registrations, capacity, and waitlists now persist through Neon-backed workflows.
+
+### v0.5.0 Notes
+
+#### Added
+
+- Program CRUD
+- Session CRUD
+- Registration persistence
+- Waitlists
+- Capacity management
+
+#### Improved
+
+- Customer profile
+- Repository architecture
+
+#### Changed
+
+- Programs and registrations now persist to Neon
+
+#### Known Issues
+
+- Public checkout, payment processing, POS, rentals, waivers, imports, merge workflows, platform provisioning, and production authentication remain deferred.
 
 ### v0.4.1 Notes
 

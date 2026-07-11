@@ -22,11 +22,20 @@ describe("data source inventory", () => {
     expect(notes.get("Check-ins")).toContain("access-denial messaging");
   });
 
+  it("marks programs and registrations as Neon-backed", () => {
+    const statuses = new Map(dataSourceInventory.map((entry) => [entry.module, entry.status]));
+    const notes = new Map(dataSourceInventory.map((entry) => [entry.module, entry.migrationStatus]));
+
+    expect(statuses.get("Programs")).toBe("Neon-backed");
+    expect(statuses.get("Registrations")).toBe("Neon-backed");
+    expect(notes.get("Programs")).toContain("session create/edit/cancel/archive");
+    expect(notes.get("Registrations")).toContain("capacity enforcement");
+  });
+
   it("keeps deferred adjacent workflows out of the completed migration", () => {
     const statuses = new Map(dataSourceInventory.map((entry) => [entry.module, entry.status]));
 
-    expect(statuses.get("Programs")).toBe("Demo-backed");
-    expect(statuses.get("Registrations")).toBe("Demo-backed");
     expect(statuses.get("POS")).toBe("Demo-backed");
+    expect(statuses.get("Waivers")).toBe("Demo-backed");
   });
 });

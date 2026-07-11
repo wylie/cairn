@@ -331,7 +331,7 @@ export function CustomerDetailActions({
           }
         >
           <p className="text-sm text-muted-foreground">
-            Delete {customer.firstName} {customer.lastName}? Memberships, check-ins, POS, and waiver data are not migrated in this release and are not affected by this Neon customer delete.
+            Delete {customer.firstName} {customer.lastName}? Persisted memberships, check-ins, program registrations, POS, and waiver data are not deleted by this Neon customer delete.
           </p>
         </ModalShell>
       ) : null}

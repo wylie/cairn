@@ -1110,7 +1110,7 @@ export function HouseholdsWorkspace({
           }
         >
           <p className="text-sm text-muted-foreground">
-            Delete {selected.household.householdName}? This clears household links for {selected.members.length} customer{selected.members.length === 1 ? "" : "s"} but does not delete customer profiles. Memberships, check-ins, waivers, billing, and program data are not migrated in this release and are not deleted by this action.
+            Delete {selected.household.householdName}? This clears household links for {selected.members.length} customer{selected.members.length === 1 ? "" : "s"} but does not delete customer profiles. Membership, check-in, program, and registration history is retained; waivers and billing remain separate deferred workflows.
           </p>
         </ModalShell>
       ) : null}

@@ -251,6 +251,42 @@ export default async function AdminDatabasePage() {
         </Card>
         <Card>
           <CardHeader>
+            <CardTitle>Programs</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.programCount}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Neon-backed program records available to staff program workflows.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Program Sessions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.programSessionCount}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Persisted class, camp, and event session records.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Registrations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.programRegistrationCount}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Persisted customer registrations across program sessions.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Waitlists</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.programWaitlistCount}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Registration rows currently holding waitlist positions.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
             <CardTitle>Last Migration</CardTitle>
           </CardHeader>
           <CardContent>

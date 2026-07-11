@@ -272,11 +272,11 @@ const membershipsCheckInPersistenceRelease: ReleaseNote = {
 };
 
 const membershipCheckInStabilizationRelease: ReleaseNote = {
-  version: version.currentVersion,
-  releaseName: version.releaseName,
-  releaseDate: version.releaseDate,
-  releaseType: version.releaseType,
-  summary: version.summary,
+  version: "0.4.1",
+  releaseName: "Membership & Check-In Stabilization",
+  releaseDate: "2026-07-11",
+  releaseType: "patch",
+  summary: "Membership and check-in workflows now provide clearer access decisions, safer duplicate prevention, and better persistence feedback.",
   sections: {
     added: [],
     improved: [
@@ -295,6 +295,34 @@ const membershipCheckInStabilizationRelease: ReleaseNote = {
     changed: [],
     knownIssues: [
       "Programs, registrations, POS, rentals, waivers, payment processing, imports, merge workflows, platform provisioning, and production authentication remain deferred"
+    ]
+  }
+};
+
+const programsRegistrationsRelease: ReleaseNote = {
+  version: version.currentVersion,
+  releaseName: version.releaseName,
+  releaseDate: version.releaseDate,
+  releaseType: version.releaseType,
+  summary: version.summary,
+  sections: {
+    added: [
+      "Program CRUD",
+      "Session CRUD",
+      "Registration persistence",
+      "Waitlists",
+      "Capacity management"
+    ],
+    improved: [
+      "Customer profile",
+      "Repository architecture"
+    ],
+    fixed: [],
+    changed: [
+      "Programs and registrations now persist to Neon"
+    ],
+    knownIssues: [
+      "Public checkout, payment processing, POS, rentals, waivers, imports, merge workflows, and production authentication remain deferred"
     ]
   }
 };
@@ -400,6 +428,7 @@ export function compareReleaseNotesNewestFirst(a: ReleaseNote, b: ReleaseNote) {
 }
 
 const releaseNoteEntries: ReleaseNote[] = [
+  programsRegistrationsRelease,
   membershipCheckInStabilizationRelease,
   membershipsCheckInPersistenceRelease,
   sitemapRobotsConfigurationRelease,

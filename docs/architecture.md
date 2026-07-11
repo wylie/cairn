@@ -100,13 +100,13 @@ Robots rules are only search-engine instructions. Authentication, authorization,
 
 ## Database Foundation
 
-The database foundation now covers organizations, facilities, staff, customers, households, memberships, check-ins, demo/production separation, and versioning. Programs, registrations, POS, waivers, payment processing, platform provisioning, and production authentication move to later releases.
+The database foundation now covers organizations, facilities, staff, customers, households, memberships, check-ins, programs, registrations, demo/production separation, and versioning. POS, waivers, rentals, payment processing, platform provisioning, and production authentication move to later releases.
 
 ### Current State
 
-- Organizations, facilities, customers, households, customer-household relationships, memberships, and check-ins are Neon-backed through the repository layer.
-- Customer and household CRUD, customer search, duplicate warnings, persisted profile basics, membership management, customer check-in, check-out, currently-in roster, and customer attendance history use organization-scoped Neon reads and writes.
-- Programs, registrations, POS, waivers, communications, documents, support, integrations, and platform-admin registry workflows still use mock or local demo persistence until their domain migrations are completed.
+- Organizations, facilities, customers, households, customer-household relationships, memberships, check-ins, programs, sessions, and registrations are Neon-backed through the repository layer.
+- Customer and household CRUD, customer search, duplicate warnings, persisted profile basics, membership management, customer check-in, check-out, currently-in roster, customer attendance history, program CRUD, session lifecycle, registration, waitlist, and customer profile registration visibility use organization-scoped Neon reads and writes.
+- POS, waivers, rentals, communications, documents, support, integrations, public checkout, and platform-admin registry workflows still use mock or local demo persistence until their domain migrations are completed.
 - localStorage remains acceptable only for harmless UI preferences, short-lived drafts, and explicitly deferred demo workflows going forward.
 
 ### New State
@@ -115,8 +115,8 @@ The database foundation now covers organizations, facilities, staff, customers, 
 - `drizzle.config.ts` points Drizzle at the schema in `db/schema` and migrations in `db/migrations`.
 - `DATABASE_URL` is the documented connection string for Neon PostgreSQL.
 - `db/index.ts` exposes a typed Drizzle database client without requiring application workflows to use it yet.
-- `db/schema` contains the tenant, staff, customer, household, membership, and check-in foundation: organizations, organization data classification, facilities, staff users, staff roles, staff role assignment, staff facility access, customers, households, membership plans, memberships, and check-ins.
-- `db/seed.ts` seeds the initial organizations, facilities, staff, customers, households, membership plans, memberships, and check-ins for Summit Rec Collective, Riverstone Nature Center, and Western Carolina YMCA Association.
+- `db/schema` contains the tenant, staff, customer, household, membership, check-in, program, session, and registration foundation: organizations, organization data classification, facilities, staff users, staff roles, staff role assignment, staff facility access, customers, households, membership plans, memberships, check-ins, programs, program sessions, and program registrations.
+- `db/seed.ts` seeds the initial organizations, facilities, staff, customers, households, membership plans, memberships, check-ins, programs, sessions, and registrations for Summit Rec Collective, Riverstone Nature Center, and Western Carolina YMCA Association.
 - `db/tenant.ts` provides server-side Drizzle reads for organization and facility context, with demo seed fallback when the database is unavailable.
 - `/api/internal/database-health` checks whether the configured database connection is available and returns only `connected` or `disconnected` status.
 
@@ -241,9 +241,10 @@ Current migration status:
 - Customer list, detail, create, edit, delete, and search are backed by Neon for modeled profile fields.
 - Household list, detail, create, edit, delete, add-member, remove-member, and primary-contact management are backed by Neon.
 - Membership list, detail, create, edit, cancel/suspend, customer profile membership visibility, customer check-in, check-out, active roster, today history, and customer check-in history are backed by Neon.
-- Customer merge, waiver, registration, POS, documents, communications, richer household relationships, and billing workflows are not migrated yet.
+- Staff program list/create/edit/delete-or-archive, session create/edit/cancel/archive, registration, waitlist, attendance placeholder, capacity checks, and customer profile registration visibility are backed by Neon.
+- Customer merge, waiver, POS, documents, communications, richer household relationships, public checkout, payment processing, and billing workflows are not migrated yet.
 - The existing client state provider remains in place for operational actions until server-backed write paths exist.
-- The v0.4.0 data-source audit is documented in [Data Sources](./data-sources.md) and exposed internally at `/admin/data-sources`.
+- The v0.5.0 data-source audit is documented in [Data Sources](./data-sources.md) and exposed internally at `/admin/data-sources`.
 
 Customer ownership rules:
 
@@ -297,10 +298,26 @@ Organization
   └─ Reporting
 ```
 
+### Programs And Registrations Foundation
+
+Programs and registrations are Neon-backed for the v0.5.0 persistence milestone. The implementation intentionally stops short of POS, rentals, waivers, payment processing, and public checkout persistence.
+
+- `programs` stores organization-owned and optionally facility-scoped catalog records with name, description, category, default capacity, age limits, status, waitlist setting, and timestamps.
+- `program_sessions` stores organization/facility/program-owned session records with date/time, instructor metadata, capacity, status, waitlist setting, and timestamps.
+- `program_registrations` stores organization-owned customer enrollment records that connect a persisted customer to a persisted program session.
+- Registration states are `confirmed`, `waitlisted`, `cancelled`, `attended`, and `absent`. Attendance remains a placeholder state until richer attendance workflows are migrated.
+- `db/repositories/program-repository.ts` owns program CRUD, session create/edit/cancel/archive, registration, waitlist, removal, attendance-placeholder updates, capacity checks, duplicate prevention, customer profile registration lookups, and diagnostics.
+- All tenant-facing program/session/registration reads and writes require `organization_id`. Session writes also validate facility ownership, and registration writes validate customer and session ownership in the same organization.
+- Capacity enforcement happens in the repository. Full sessions move new registrations to the waitlist when enabled; otherwise the write is rejected with a staff-facing message.
+- Active duplicate registrations are blocked before insert and by a partial unique index on organization, session, and customer.
+- Removing a registration cancels the registration row without deleting customer, program, or session history. When a confirmed spot opens, the earliest waitlisted registration is promoted in the same transaction.
+- Program and registration lists use focused organization-scoped indexes for program catalogs, session dates, rosters, customer profile history, and waitlist ordering.
+- `/admin/database` reports program, session, registration, and waitlist counts from Neon.
+
 ### Future State
 
 - Future releases will move remaining workflow domains behind the Next.js server/data layer incrementally.
-- Program, registration, waiver, POS, rental, notification, support, payment, and platform-provisioning records remain unmigrated until their planned phases.
+- Waiver, POS, rental, notification, support, payment, and platform-provisioning records remain unmigrated until their planned phases.
 - Existing localStorage-backed flows should be retired only after replacement server-backed reads and writes exist for the relevant domain.
 
 ### Multi-Tenant SaaS Model

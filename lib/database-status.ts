@@ -16,6 +16,7 @@ import { getHouseholdCount, getHouseholdRelationshipCounts } from "@/db/reposito
 import { getCheckInStatusCounts } from "@/db/repositories/check-in-repository";
 import { getMembershipPlanCount, getMembershipStatusCounts } from "@/db/repositories/membership-repository";
 import { getOrganizationCount } from "@/db/repositories/organization-repository";
+import { getProgramStatusCounts } from "@/db/repositories/program-repository";
 import { getStaffFacilityAccessCount, getStaffRoleCount, getStaffUserCount } from "@/db/repositories/staff-repository";
 import { seedCustomers } from "@/db/seed-data";
 
@@ -53,6 +54,10 @@ export type DatabaseStatus = {
   checkInsToday: number;
   currentlyCheckedIn: number;
   checkInHistoryCount: number;
+  programCount: number;
+  programSessionCount: number;
+  programRegistrationCount: number;
+  programWaitlistCount: number;
   tableCount: number;
   tableCounts: DatabaseTableCount[];
   lastMigrationTag: string | null;
@@ -119,6 +124,10 @@ function buildStatus(input: {
   checkInsToday?: number;
   currentlyCheckedIn?: number;
   checkInHistoryCount?: number;
+  programCount?: number;
+  programSessionCount?: number;
+  programRegistrationCount?: number;
+  programWaitlistCount?: number;
 }): DatabaseStatus {
   const organizationCount = input.organizationCount ?? 0;
   const facilityCount = input.facilityCount ?? 0;
@@ -144,6 +153,10 @@ function buildStatus(input: {
   const checkInsToday = input.checkInsToday ?? 0;
   const currentlyCheckedIn = input.currentlyCheckedIn ?? 0;
   const checkInHistoryCount = input.checkInHistoryCount ?? 0;
+  const programCount = input.programCount ?? 0;
+  const programSessionCount = input.programSessionCount ?? 0;
+  const programRegistrationCount = input.programRegistrationCount ?? 0;
+  const programWaitlistCount = input.programWaitlistCount ?? 0;
   const tableCounts = [
     { table: "organizations", records: organizationCount },
     { table: "facilities", records: facilityCount },
@@ -154,7 +167,10 @@ function buildStatus(input: {
     { table: "households", records: householdCount },
     { table: "membership_plans", records: membershipPlanCount },
     { table: "memberships", records: membershipCount },
-    { table: "check_ins", records: checkInHistoryCount }
+    { table: "check_ins", records: checkInHistoryCount },
+    { table: "programs", records: programCount },
+    { table: "program_sessions", records: programSessionCount },
+    { table: "program_registrations", records: programRegistrationCount }
   ];
   const migration = getLastMigration();
 
@@ -187,6 +203,10 @@ function buildStatus(input: {
     checkInsToday,
     currentlyCheckedIn,
     checkInHistoryCount,
+    programCount,
+    programSessionCount,
+    programRegistrationCount,
+    programWaitlistCount,
     tableCount: tableCounts.length,
     tableCounts,
     lastMigrationTag: migration.tag,
@@ -222,7 +242,8 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
       householdRelationshipCounts,
       membershipPlanCount,
       membershipStatusCounts,
-      checkInStatusCounts
+      checkInStatusCounts,
+      programStatusCounts
     ] = await Promise.all([
       getOrganizationCount(),
       getFacilityCount(),
@@ -238,7 +259,8 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
       getHouseholdRelationshipCounts(),
       getMembershipPlanCount(),
       getMembershipStatusCounts(),
-      getCheckInStatusCounts()
+      getCheckInStatusCounts(),
+      getProgramStatusCounts()
     ]);
 
     return buildStatus({
@@ -267,7 +289,11 @@ export async function getDatabaseStatus(): Promise<DatabaseStatus> {
       suspendedMembershipCount: membershipStatusCounts.suspended,
       checkInsToday: checkInStatusCounts.today,
       currentlyCheckedIn: checkInStatusCounts.currentlyIn,
-      checkInHistoryCount: checkInStatusCounts.history
+      checkInHistoryCount: checkInStatusCounts.history,
+      programCount: programStatusCounts.programs,
+      programSessionCount: programStatusCounts.sessions,
+      programRegistrationCount: programStatusCounts.registrations,
+      programWaitlistCount: programStatusCounts.waitlists
     });
   } catch {
     return disconnectedStatus();

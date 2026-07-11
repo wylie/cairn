@@ -32,7 +32,7 @@ import {
   removePersistedHouseholdMemberAction,
   setPersistedHouseholdPrimaryContactAction
 } from "@/app/(app)/households/actions";
-import type { CheckInLogRecord, CommunicationRecord, Customer, CustomerAccessRecord, Household, HouseholdMember, StaffRole } from "@/types/domain";
+import type { CheckInLogRecord, ClassCampSession, CommunicationRecord, Customer, CustomerAccessRecord, Household, HouseholdMember, Program, Registration, StaffRole } from "@/types/domain";
 
 type CustomerDocumentType =
   | "waiver"
@@ -61,6 +61,9 @@ export function CustomerDetailView({
   persistedHouseholdMembers,
   persistedAccessRecords,
   persistedCheckInRecords,
+  persistedRegistrations,
+  persistedSessions,
+  persistedPrograms,
   persistedMode = false
 }: {
   customerId: string;
@@ -70,6 +73,9 @@ export function CustomerDetailView({
   persistedHouseholdMembers?: HouseholdMember[];
   persistedAccessRecords?: CustomerAccessRecord[];
   persistedCheckInRecords?: CheckInLogRecord[];
+  persistedRegistrations?: Registration[];
+  persistedSessions?: ClassCampSession[];
+  persistedPrograms?: Program[];
   persistedMode?: boolean;
 }) {
   const router = useRouter();
@@ -215,7 +221,15 @@ export function CustomerDetailView({
     .sort((a, b) => b.completedAt.localeCompare(a.completedAt))
     .slice(0, 6);
   const customerSessionHistory = usesPersistedCustomer
-    ? []
+    ? (persistedRegistrations ?? [])
+    .filter((entry) => entry.customerId === customer.id)
+    .map((entry) => {
+      const session = (persistedSessions ?? []).find((item) => item.id === entry.sessionId);
+      const program = session ? (persistedPrograms ?? []).find((item) => item.id === session.programId) : undefined;
+      return { registration: entry, session, program };
+    })
+    .filter((entry) => entry.session)
+    .sort((a, b) => (b.session?.startsAt ?? "").localeCompare(a.session?.startsAt ?? ""))
     : registrations
     .filter((entry) => entry.customerId === customer.id)
     .map((entry) => {
@@ -893,8 +907,8 @@ export function CustomerDetailView({
           />
           <CustomerSummaryCard
             title="Upcoming Registration"
-            value={usesPersistedCustomer ? "Deferred" : latestUpcomingSession ? latestUpcomingSession.session?.title ?? "Scheduled Session" : "No upcoming session"}
-            detail={usesPersistedCustomer ? "Registration persistence is not built yet." : latestUpcomingSession?.session?.startsAt ? formatDateTime(latestUpcomingSession.session.startsAt) : "No upcoming registrations"}
+            value={latestUpcomingSession ? latestUpcomingSession.session?.title ?? latestUpcomingSession.program?.title ?? "Scheduled Session" : "No upcoming session"}
+            detail={latestUpcomingSession?.session?.startsAt ? formatDateTime(latestUpcomingSession.session.startsAt) : "No upcoming registrations"}
           />
           <CustomerSummaryCard
             title="Alerts"
@@ -2126,7 +2140,7 @@ export function CustomerDetailView({
             <p className="font-medium">Upcoming Sessions</p>
             {upcomingSessions.length === 0 ? (
               <p className="text-muted-foreground">
-                {usesPersistedCustomer ? "Registration persistence is not built yet. No demo sessions are shown for Neon-backed customers." : "No upcoming sessions."}
+                No upcoming sessions.
               </p>
             ) : null}
             {upcomingSessions.slice(0, 4).map((entry) => (
@@ -2137,7 +2151,7 @@ export function CustomerDetailView({
           </div>
           <div>
             <p className="font-medium">Past Sessions</p>
-            {pastSessions.length === 0 && !usesPersistedCustomer ? <p className="text-muted-foreground">No past sessions.</p> : null}
+            {pastSessions.length === 0 ? <p className="text-muted-foreground">No past sessions.</p> : null}
             {pastSessions.slice(0, 4).map((entry) => (
               <p key={entry.registration.id} className="text-muted-foreground">
                 {entry.session?.title ?? entry.program?.title ?? "Session"} • {formatDateTime(entry.session?.startsAt)} • {(entry.session?.status ?? entry.registration.status)}

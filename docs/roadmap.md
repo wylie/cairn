@@ -58,7 +58,21 @@ Focus:
 - Stabilized membership and check-in workflows
 - Access-decision clarity
 
-## v0.5.x - Customer & Household Operations
+## v0.5.x - Programs & Registrations
+
+Status: Shipped
+
+Focus:
+
+- Program CRUD
+- Session CRUD
+- Registration persistence
+- Waitlists
+- Capacity management
+- Customer profile registration visibility
+- Program and registration diagnostics
+
+## v0.6.x - Customer & Household Operations
 
 Status: Planned
 
@@ -69,17 +83,6 @@ Focus:
 - Household imports
 - Rich relationship roles
 - Audit events
-
-## v0.6.x - Programs & Registrations
-
-Status: Planned
-
-Focus:
-
-- Programs
-- Sessions
-- Registrations
-- Waitlists
 
 ## v0.7.x - Pilot Readiness
 

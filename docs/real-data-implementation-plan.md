@@ -57,7 +57,7 @@ v0.2.x now includes the first production data foundation pieces.
 - `db/index.ts` exposes the typed database client.
 - `/api/internal/database-health` verifies whether the configured database connection is reachable without exposing credentials or connection details.
 - `/admin/database` now shows connection state, known table count, record counts by table, the latest committed Drizzle migration, and seed data status.
-- `/admin/data-sources` now exposes the v0.4.0 data-source inventory for platform administrators.
+- `/admin/data-sources` now exposes the v0.5.0 data-source inventory for platform administrators.
 - `npm run db:generate`, `npm run db:migrate`, and `npm run db:studio` provide the migration and inspection workflow.
 - Local tooling loads `DATABASE_URL` from `.env.local`.
 
@@ -79,7 +79,7 @@ Organizations and facilities are the first data area wired toward the production
 - `/admin/data-sources` identifies each major module as Neon-backed, demo-backed, local-only, or not yet migrated.
 - If `DATABASE_URL` is missing or the database query fails, the same helpers fall back to canonical demo seed data so local demo mode remains stable.
 
-v0.3.x migrated customer CRUD, household CRUD, customer-household links, and profile search to Neon through the repository layer. v0.4.0 migrates membership management and front-desk check-ins to Neon. Programs, registrations, POS, waivers, notifications, support requests, rentals, payment processing, and authentication still use the existing mock/localStorage implementation until their planned migration phases.
+v0.3.x migrated customer CRUD, household CRUD, customer-household links, and profile search to Neon through the repository layer. v0.4.x migrated membership management and front-desk check-ins to Neon. v0.5.0 migrates staff program, session, registration, waitlist, and customer profile registration visibility to Neon. POS, waivers, notifications, support requests, rentals, payment processing, public checkout, and authentication still use the existing mock/localStorage implementation until their planned migration phases.
 
 ## Data Classification Layer
 
@@ -158,7 +158,7 @@ Customer and household database foundations now exist. Customer list/detail/crea
 - The staff customer create/edit/delete flows call server actions that resolve the active organization before repository writes.
 - Customer create/edit actions share validation for required fields, email format, normalized phone values, birth-date validity, and US state format.
 - Duplicate-customer checks warn on exact email, exact normalized phone, or matching name plus birth date; staff can save anyway when the possible match is not the same person.
-- Persisted customer profiles show persisted profile, household, membership, access, and check-in history data. Waiver, POS, registration, document, communication, and alert areas are labelled as deferred instead of showing demo records.
+- Persisted customer profiles show persisted profile, household, membership, access, check-in history, and registration data. Waiver, POS, document, communication, and alert areas are labelled as deferred instead of showing demo records.
 - Customer records are no longer loaded from or saved to the customer localStorage mock key.
 - The staff household list and detail pages read organization-scoped households from Neon through the repository layer and map them into the existing household workspace UI.
 - The staff household create/edit/delete flows call server actions that resolve the active organization before repository writes.
@@ -167,7 +167,7 @@ Customer and household database foundations now exist. Customer list/detail/crea
 - Household primary-contact writes verify that the contact belongs to the active organization and the target household before state changes are committed.
 - Household records and relationship links are no longer loaded from or saved to household localStorage mock keys.
 
-Registrations, waivers, POS, documents, communications, customer merge, richer relationship roles, billing behavior, rentals, payment processing, and authentication are not migrated yet. Those workflows continue to use localStorage-backed mock data until their models, import paths, and write semantics are finalized.
+Waivers, POS, documents, communications, customer merge, richer relationship roles, billing behavior, rentals, payment processing, public checkout, and authentication are not migrated yet. Those workflows continue to use localStorage-backed mock data until their models, import paths, and write semantics are finalized.
 
 Seed strategy:
 
@@ -179,7 +179,7 @@ Seed strategy:
 
 Customer And Household Migration Plan:
 
-Current: the v0.3.x Customer Operations milestone is complete for modeled customer and household CRUD, customer search, validation, duplicate warnings, customer-household links, admin diagnostics, data-source visibility, repository boundaries, transactional relationship writes, deterministic repository reads, and focused workflow coverage. v0.4.0 adds persisted membership and check-in visibility to customer profiles. Remaining customer-adjacent workflows such as registrations, waivers, POS, documents, communications, imports, merge behavior, richer relationship roles, and billing still use localStorage-backed mock data until their models are migrated.
+Current: the v0.3.x Customer Operations milestone is complete for modeled customer and household CRUD, customer search, validation, duplicate warnings, customer-household links, admin diagnostics, data-source visibility, repository boundaries, transactional relationship writes, deterministic repository reads, and focused workflow coverage. v0.4.x adds persisted membership and check-in visibility to customer profiles. v0.5.0 adds persisted program registration and waitlist visibility to customer profiles. Remaining customer-adjacent workflows such as waivers, POS, documents, communications, imports, merge behavior, richer relationship roles, and billing still use localStorage-backed mock data until their models are migrated.
 
 Future: Neon PostgreSQL becomes the durable source of truth through the Next.js server/data layer.
 
@@ -214,6 +214,29 @@ Future:
 3. Attendance operations: backdated corrections, automatic closeout, capacity rules, incident notes, and attendance reporting.
 4. Waiver-aware access: require migrated waiver records before blocking or warning through production access rules.
 5. Public/customer surfaces: persisted digital card issuance, account membership visibility, and self-service renewal after authentication is production-backed.
+
+## Programs And Registrations Migration Plan
+
+Current: the v0.5.0 Programs & Registrations milestone is complete for staff program CRUD, session create/edit/cancel/archive, customer registration, waitlists, capacity enforcement, duplicate prevention, attendance-placeholder states, customer profile registration visibility, admin diagnostics, and data-source visibility.
+
+Implemented:
+
+- Schema - `programs`, `program_sessions`, and `program_registrations` tables define organization ownership, facility scope, program/session lifecycle state, customer enrollment, waitlist position, attendance placeholder state, and timestamps. Complete.
+- Repositories - `db/repositories/program-repository.ts` owns all durable staff program, session, and registration reads/writes. Complete.
+- Seed/demo data - `npm run db:seed` inserts fictional demo programs, sessions, and registrations for seeded organizations. Complete.
+- Program workflows - staff program list/create/edit/delete-or-archive and session create/edit/cancel/archive read and write Neon through repository-backed server actions. Complete.
+- Registration workflows - staff registration, waitlist, removal, waitlist promotion, and attendance-placeholder updates read and write Neon through repository-backed server actions. Complete.
+- Capacity rules - repository writes prevent over-capacity confirmed registrations, create waitlist rows when enabled, reject duplicates, and promote the earliest waitlisted row when a confirmed spot opens. Complete.
+- Customer profile integration - persisted customer profiles show registered and waitlisted program activity from Neon. Complete.
+- Diagnostics - `/admin/database` reports program, session, registration, and waitlist counts from Neon, and `/admin/data-sources` marks staff program and registration workflows as Neon-backed. Complete.
+
+Future:
+
+1. Public catalog persistence: replace remaining public-program helper reads with Neon-backed catalog and session queries.
+2. Online checkout: connect public registration, carts, payment processing, receipts, and refunds after POS/payment persistence exists.
+3. Scheduling depth: recurrence rules, series management, instructor assignment workflows, rosters, and cancellation notices.
+4. Registration operations: transfer history, refund handling, guardian workflows, waiver requirements, and audit events.
+5. Reporting: server-side attendance, capacity, waitlist, and revenue reporting from durable program and registration data.
 
 ## localStorage Policy
 
@@ -298,9 +321,9 @@ Deliverables:
 - v0.1.x: Pilot Launch / External Testing
 - v0.2.x: Real Data Foundation
 - v0.3.x: Customer Operations
-- v0.4.x: Customer & Household Operations
-- v0.5.x: Memberships & Check-In
-- v0.6.x: Programs & Registrations
+- v0.4.x: Memberships & Check-In
+- v0.5.x: Programs & Registrations
+- v0.6.x: Customer & Household Operations follow-up
 - v0.7.x: Pilot Customer Release
 - v1.0.0: Production Ready
 

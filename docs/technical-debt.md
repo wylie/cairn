@@ -21,10 +21,10 @@ This log captures deferred work discovered during v0.2.0 release readiness. Thes
 
 ## v0.5.0 - Programs & Registrations
 
-- Create program, session, registration, attendance, and waitlist schemas.
-- Move calendar/session state from localStorage to server persistence.
-- Define registration eligibility checks on the server.
-- Model waitlist promotion, transfers, cancellations, and attendance updates.
+- Replace remaining public program catalog helper reads with Neon-backed public catalog queries.
+- Move calendar/session state from mock state to the new server repository where practical.
+- Define richer registration eligibility checks on the server after waivers and public checkout are migrated.
+- Model transfers, cancellation audit history, and richer attendance updates.
 - Add operational reporting hooks for program participation.
 - Decide how program data imports should validate organization and facility ownership.
 

@@ -64,6 +64,13 @@
       "when": 1784160000000,
       "tag": "0008_membership_checkin_stabilization_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1784246400000,
+      "tag": "0009_programs_registrations",
+      "breakpoints": true
     }
   ]
 }

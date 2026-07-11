@@ -691,3 +691,180 @@ export const seedCheckIns = [
     checkedOutByStaffName: "Jordan Kim"
   }
 ] as const;
+
+export const seedPrograms = [
+  {
+    id: "prog_summit_bouldering_basics",
+    organizationId: "org_summit",
+    facilityId: "loc_001",
+    name: "Bouldering Basics",
+    description: "Introductory movement, falling, and route-reading clinic for new climbers.",
+    category: "class",
+    capacity: 8,
+    minimumAge: 13,
+    maximumAge: null,
+    status: "active",
+    waitlistEnabled: true
+  },
+  {
+    id: "prog_summit_summer_climb_camp",
+    organizationId: "org_summit",
+    facilityId: "loc_001",
+    name: "Summer Climb Camp",
+    description: "Youth camp covering climbing technique, teamwork, and daily challenges.",
+    category: "camp",
+    capacity: 12,
+    minimumAge: 8,
+    maximumAge: 14,
+    status: "active",
+    waitlistEnabled: true
+  },
+  {
+    id: "prog_riverbend_forest_explorers",
+    organizationId: "org_riverbend",
+    facilityId: "loc_101",
+    name: "Forest Explorers",
+    description: "Guided nature discovery sessions for families and youth groups.",
+    category: "outdoor",
+    capacity: 16,
+    minimumAge: 6,
+    maximumAge: null,
+    status: "active",
+    waitlistEnabled: true
+  },
+  {
+    id: "prog_wcymca_swim_lessons",
+    organizationId: "org_western_carolina_ymca",
+    facilityId: "loc_201",
+    name: "Youth Swim Lessons",
+    description: "Progressive swim instruction for beginner and intermediate youth swimmers.",
+    category: "aquatics",
+    capacity: 10,
+    minimumAge: 5,
+    maximumAge: 12,
+    status: "active",
+    waitlistEnabled: true
+  }
+] as const;
+
+export const seedProgramSessions = [
+  {
+    id: "sess_summit_bouldering_20260715",
+    organizationId: "org_summit",
+    facilityId: "loc_001",
+    programId: "prog_summit_bouldering_basics",
+    title: "Bouldering Basics - Wednesday",
+    startsAt: "2026-07-15T22:00:00Z",
+    endsAt: "2026-07-15T23:30:00Z",
+    instructorStaffId: "staff_summit_casey_martinez",
+    instructorName: "Casey Martinez",
+    capacity: 2,
+    status: "scheduled",
+    waitlistEnabled: true
+  },
+  {
+    id: "sess_summit_camp_20260720",
+    organizationId: "org_summit",
+    facilityId: "loc_001",
+    programId: "prog_summit_summer_climb_camp",
+    title: "Summer Climb Camp - Week 4",
+    startsAt: "2026-07-20T13:00:00Z",
+    endsAt: "2026-07-20T20:00:00Z",
+    instructorStaffId: "staff_summit_jordan_kim",
+    instructorName: "Jordan Kim",
+    capacity: 12,
+    status: "scheduled",
+    waitlistEnabled: true
+  },
+  {
+    id: "sess_riverbend_forest_20260718",
+    organizationId: "org_riverbend",
+    facilityId: "loc_101",
+    programId: "prog_riverbend_forest_explorers",
+    title: "Forest Explorers - Saturday",
+    startsAt: "2026-07-18T14:00:00Z",
+    endsAt: "2026-07-18T16:00:00Z",
+    instructorStaffId: "staff_riverbend_avery_patel",
+    instructorName: "Avery Patel",
+    capacity: 16,
+    status: "scheduled",
+    waitlistEnabled: true
+  },
+  {
+    id: "sess_wcymca_swim_20260716",
+    organizationId: "org_western_carolina_ymca",
+    facilityId: "loc_201",
+    programId: "prog_wcymca_swim_lessons",
+    title: "Youth Swim Lessons - Beginner",
+    startsAt: "2026-07-16T19:00:00Z",
+    endsAt: "2026-07-16T19:45:00Z",
+    instructorStaffId: "staff_wcymca_sarah_wilson",
+    instructorName: "Sarah Wilson",
+    capacity: 10,
+    status: "scheduled",
+    waitlistEnabled: true
+  }
+] as const;
+
+export const seedProgramRegistrations = [
+  {
+    id: "reg_summit_001",
+    organizationId: "org_summit",
+    sessionId: "sess_summit_bouldering_20260715",
+    customerId: "cust_001",
+    status: "confirmed",
+    waitlistPosition: null,
+    attendanceStatus: null,
+    registeredAt: "2026-07-05T15:00:00Z"
+  },
+  {
+    id: "reg_summit_002",
+    organizationId: "org_summit",
+    sessionId: "sess_summit_bouldering_20260715",
+    customerId: "cust_002",
+    status: "confirmed",
+    waitlistPosition: null,
+    attendanceStatus: null,
+    registeredAt: "2026-07-05T15:15:00Z"
+  },
+  {
+    id: "reg_summit_003",
+    organizationId: "org_summit",
+    sessionId: "sess_summit_bouldering_20260715",
+    customerId: "cust_003",
+    status: "waitlisted",
+    waitlistPosition: 1,
+    attendanceStatus: null,
+    registeredAt: "2026-07-06T12:00:00Z"
+  },
+  {
+    id: "reg_summit_004",
+    organizationId: "org_summit",
+    sessionId: "sess_summit_camp_20260720",
+    customerId: "cust_004",
+    status: "confirmed",
+    waitlistPosition: null,
+    attendanceStatus: null,
+    registeredAt: "2026-07-04T18:20:00Z"
+  },
+  {
+    id: "reg_riverbend_001",
+    organizationId: "org_riverbend",
+    sessionId: "sess_riverbend_forest_20260718",
+    customerId: "cust_rb_001",
+    status: "confirmed",
+    waitlistPosition: null,
+    attendanceStatus: null,
+    registeredAt: "2026-07-07T13:30:00Z"
+  },
+  {
+    id: "reg_wcymca_001",
+    organizationId: "org_western_carolina_ymca",
+    sessionId: "sess_wcymca_swim_20260716",
+    customerId: "cust_wcymca_004",
+    status: "confirmed",
+    waitlistPosition: null,
+    attendanceStatus: null,
+    registeredAt: "2026-07-08T16:45:00Z"
+  }
+] as const;

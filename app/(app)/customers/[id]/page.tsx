@@ -4,6 +4,7 @@ import { getCustomerByOrganization, getCustomersByOrganization } from "@/db/repo
 import { getHouseholdsByOrganization } from "@/db/repositories/household-repository";
 import { getCheckInHistoryForCustomer } from "@/db/repositories/check-in-repository";
 import { getMembershipsForCustomer, membershipToAccessRecord } from "@/db/repositories/membership-repository";
+import { getRegistrationsForCustomer } from "@/db/repositories/program-repository";
 import { getActiveFacilityContext } from "@/db/tenant";
 import {
   buildHouseholdMembersFromCustomers,
@@ -31,9 +32,10 @@ async function getPersistedCustomerContext(customerId: string) {
     const displayCustomers = customers.map((entry, index) => mapCustomerRecordToDisplayCustomer(entry, index, locationId));
     const customersById = new Map(displayCustomers.map((entry) => [entry.id, entry]));
     const displayHouseholds = households.map((entry) => mapHouseholdRecordToDisplayHousehold(entry, customersById, locationId));
-    const [membershipRows, checkInRows] = await Promise.all([
+    const [membershipRows, checkInRows, registrationRows] = await Promise.all([
       getMembershipsForCustomer(customer.id, context.organization.id),
-      getCheckInHistoryForCustomer(customer.id, context.organization.id, 6)
+      getCheckInHistoryForCustomer(customer.id, context.organization.id, 6),
+      getRegistrationsForCustomer(customer.id, context.organization.id)
     ]);
     const persistedAccessRecords = membershipRows.map((row) => {
       const accessRecord = membershipToAccessRecord(row);
@@ -65,7 +67,44 @@ async function getPersistedCustomerContext(customerId: string) {
       households: displayHouseholds,
       householdMembers: buildHouseholdMembersFromCustomers(displayCustomers, displayHouseholds),
       accessRecords: persistedAccessRecords,
-      checkInRecords: persistedCheckInRecords
+      checkInRecords: persistedCheckInRecords,
+      registrations: registrationRows.map((row) => ({
+        id: row.registration.id,
+        customerId: row.registration.customerId,
+        sessionId: row.registration.sessionId,
+        status: row.registration.status,
+        waitlistPosition: row.registration.waitlistPosition ?? undefined,
+        registeredAt: row.registration.registeredAt.toISOString(),
+        updatedAt: row.registration.updatedAt.toISOString()
+      })),
+      sessions: registrationRows.map((row) => ({
+        id: row.session.id,
+        programId: row.session.programId,
+        locationId: row.session.facilityId,
+        title: row.session.title ?? row.program.name,
+        instructorStaffId: row.session.instructorStaffId ?? undefined,
+        instructorName: row.session.instructorName ?? undefined,
+        waitlistEnabled: row.session.waitlistEnabled,
+        waitlistCount: 0,
+        status: row.session.status === "archived" ? "completed" as const : row.session.status,
+        startsAt: row.session.startsAt.toISOString(),
+        endsAt: row.session.endsAt.toISOString(),
+        capacity: row.session.capacity,
+        enrolled: 0
+      })),
+      programs: registrationRows.map((row) => ({
+        id: row.program.id,
+        organizationId: row.program.organizationId,
+        title: row.program.name,
+        description: row.program.description ?? undefined,
+        category: ["class", "camp", "clinic", "course"].includes(row.program.category) ? row.program.category as "class" | "camp" | "clinic" | "course" : "class",
+        active: row.program.status === "active",
+        defaultCapacity: row.program.capacity,
+        locationId: row.program.facilityId ?? undefined,
+        waitlistEnabled: row.program.waitlistEnabled,
+        minimumAge: row.program.minimumAge ?? undefined,
+        maximumAge: row.program.maximumAge ?? undefined
+      }))
     };
   } catch {
     return undefined;
@@ -84,6 +123,9 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
       persistedHouseholdMembers={persisted?.householdMembers}
       persistedAccessRecords={persisted?.accessRecords}
       persistedCheckInRecords={persisted?.checkInRecords}
+      persistedRegistrations={persisted?.registrations}
+      persistedSessions={persisted?.sessions}
+      persistedPrograms={persisted?.programs}
       persistedMode={process.env.NODE_ENV !== "test"}
     />
   );

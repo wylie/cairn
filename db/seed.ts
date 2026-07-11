@@ -1,5 +1,21 @@
 import { sql } from "drizzle-orm";
-import { checkIns, customers, facilities, getDatabase, getSqlClient, households, membershipPlans, memberships, organizations, staffFacilityAccess, staffRoles, staffUsers } from "./index";
+import {
+  checkIns,
+  customers,
+  facilities,
+  getDatabase,
+  getSqlClient,
+  households,
+  membershipPlans,
+  memberships,
+  organizations,
+  programRegistrations,
+  programs,
+  programSessions,
+  staffFacilityAccess,
+  staffRoles,
+  staffUsers
+} from "./index";
 import {
   seedCheckIns,
   seedCustomers,
@@ -8,6 +24,9 @@ import {
   seedMembershipPlans,
   seedMemberships,
   seedOrganizations,
+  seedProgramRegistrations,
+  seedPrograms,
+  seedProgramSessions,
   seedStaffFacilityAccess,
   seedStaffRoles,
   seedStaffUsers
@@ -189,9 +208,78 @@ async function main() {
       }
     });
 
+  await database
+    .insert(programs)
+    .values([...seedPrograms])
+    .onConflictDoUpdate({
+      target: programs.id,
+      set: {
+        organizationId: sql`excluded.organization_id`,
+        facilityId: sql`excluded.facility_id`,
+        name: sql`excluded.name`,
+        description: sql`excluded.description`,
+        category: sql`excluded.category`,
+        capacity: sql`excluded.capacity`,
+        minimumAge: sql`excluded.minimum_age`,
+        maximumAge: sql`excluded.maximum_age`,
+        status: sql`excluded.status`,
+        waitlistEnabled: sql`excluded.waitlist_enabled`,
+        updatedAt: sql`now()`
+      }
+    });
+
+  await database
+    .insert(programSessions)
+    .values(
+      seedProgramSessions.map((entry) => ({
+        ...entry,
+        startsAt: new Date(entry.startsAt),
+        endsAt: new Date(entry.endsAt)
+      }))
+    )
+    .onConflictDoUpdate({
+      target: programSessions.id,
+      set: {
+        organizationId: sql`excluded.organization_id`,
+        facilityId: sql`excluded.facility_id`,
+        programId: sql`excluded.program_id`,
+        title: sql`excluded.title`,
+        startsAt: sql`excluded.starts_at`,
+        endsAt: sql`excluded.ends_at`,
+        instructorStaffId: sql`excluded.instructor_staff_id`,
+        instructorName: sql`excluded.instructor_name`,
+        capacity: sql`excluded.capacity`,
+        status: sql`excluded.status`,
+        waitlistEnabled: sql`excluded.waitlist_enabled`,
+        updatedAt: sql`now()`
+      }
+    });
+
+  await database
+    .insert(programRegistrations)
+    .values(
+      seedProgramRegistrations.map((entry) => ({
+        ...entry,
+        registeredAt: new Date(entry.registeredAt)
+      }))
+    )
+    .onConflictDoUpdate({
+      target: programRegistrations.id,
+      set: {
+        organizationId: sql`excluded.organization_id`,
+        sessionId: sql`excluded.session_id`,
+        customerId: sql`excluded.customer_id`,
+        status: sql`excluded.status`,
+        waitlistPosition: sql`excluded.waitlist_position`,
+        attendanceStatus: sql`excluded.attendance_status`,
+        registeredAt: sql`excluded.registered_at`,
+        updatedAt: sql`now()`
+      }
+    });
+
   await sqlClient.end();
   console.log(
-    `Seeded ${seedOrganizations.length} organizations, ${seedFacilities.length} facilities, ${seedStaffRoles.length} staff roles, ${seedStaffUsers.length} staff users, ${seedCustomers.length} customers, ${seedHouseholds.length} households, ${seedMembershipPlans.length} membership plans, ${seedMemberships.length} memberships, and ${seedCheckIns.length} check-ins.`
+    `Seeded ${seedOrganizations.length} organizations, ${seedFacilities.length} facilities, ${seedStaffRoles.length} staff roles, ${seedStaffUsers.length} staff users, ${seedCustomers.length} customers, ${seedHouseholds.length} households, ${seedMembershipPlans.length} membership plans, ${seedMemberships.length} memberships, ${seedCheckIns.length} check-ins, ${seedPrograms.length} programs, ${seedProgramSessions.length} sessions, and ${seedProgramRegistrations.length} registrations.`
   );
 }
 

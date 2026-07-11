@@ -6,6 +6,12 @@ describe("ReleaseNotesPage", () => {
     render(<ReleaseNotesPage />);
 
     expect(screen.getByRole("heading", { name: "Release Notes" })).toBeInTheDocument();
+    expect(screen.getByText("Programs & Registrations")).toBeInTheDocument();
+    expect(screen.getAllByText("Programs, sessions, registrations, capacity, and waitlists now persist through Neon-backed workflows.").length).toBeGreaterThan(0);
+    expect(screen.getByText("Program CRUD")).toBeInTheDocument();
+    expect(screen.getByText("Session CRUD")).toBeInTheDocument();
+    expect(screen.getByText("Registration persistence")).toBeInTheDocument();
+    expect(screen.getByText("Capacity management")).toBeInTheDocument();
     expect(screen.getByText("Membership & Check-In Stabilization")).toBeInTheDocument();
     expect(screen.getAllByText("Membership and check-in workflows now provide clearer access decisions, safer duplicate prevention, and better persistence feedback.").length).toBeGreaterThan(0);
     expect(screen.getByText("Access-decision messaging")).toBeInTheDocument();

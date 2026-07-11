@@ -18,7 +18,8 @@ const mocks = vi.hoisted(() => ({
   getHouseholdRelationshipCounts: vi.fn(),
   getMembershipPlanCount: vi.fn(),
   getMembershipStatusCounts: vi.fn(),
-  getCheckInStatusCounts: vi.fn()
+  getCheckInStatusCounts: vi.fn(),
+  getProgramStatusCounts: vi.fn()
 }));
 
 vi.mock("@/db", () => ({
@@ -61,6 +62,10 @@ vi.mock("@/db/repositories/check-in-repository", () => ({
   getCheckInStatusCounts: mocks.getCheckInStatusCounts
 }));
 
+vi.mock("@/db/repositories/program-repository", () => ({
+  getProgramStatusCounts: mocks.getProgramStatusCounts
+}));
+
 describe("getDatabaseStatus", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -84,9 +89,10 @@ describe("getDatabaseStatus", () => {
     mocks.getMembershipPlanCount.mockResolvedValue(4);
     mocks.getMembershipStatusCounts.mockResolvedValue({ total: 11, active: 7, expired: 2, suspended: 1, cancelled: 1 });
     mocks.getCheckInStatusCounts.mockResolvedValue({ today: 8, currentlyIn: 3, history: 44 });
+    mocks.getProgramStatusCounts.mockResolvedValue({ programs: 6, sessions: 14, registrations: 32, waitlists: 5 });
   });
 
-  it("returns repository-backed customer, household, membership, and check-in diagnostics", async () => {
+  it("returns repository-backed customer, household, membership, check-in, and program diagnostics", async () => {
     const { getDatabaseStatus } = await import("@/lib/database-status");
     const status = await getDatabaseStatus();
 
@@ -110,11 +116,16 @@ describe("getDatabaseStatus", () => {
     expect(status.checkInsToday).toBe(8);
     expect(status.currentlyCheckedIn).toBe(3);
     expect(status.checkInHistoryCount).toBe(44);
+    expect(status.programCount).toBe(6);
+    expect(status.programSessionCount).toBe(14);
+    expect(status.programRegistrationCount).toBe(32);
+    expect(status.programWaitlistCount).toBe(5);
     expect(status.lastCustomerCreatedName).toBe("Nina Stone");
     expect(mocks.getCustomerActivityCounts).toHaveBeenCalledTimes(1);
     expect(mocks.getCustomerDataModeCounts).toHaveBeenCalledTimes(1);
     expect(mocks.getHouseholdRelationshipCounts).toHaveBeenCalledTimes(1);
     expect(mocks.getMembershipStatusCounts).toHaveBeenCalledTimes(1);
     expect(mocks.getCheckInStatusCounts).toHaveBeenCalledTimes(1);
+    expect(mocks.getProgramStatusCounts).toHaveBeenCalledTimes(1);
   });
 });

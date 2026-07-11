@@ -10,11 +10,11 @@ Version metadata is centralized in `lib/version.ts`.
 
 Current shipped version metadata:
 
-- `currentVersion`: `0.3.4`
-- `releaseName`: `Customer Operations Stabilization`
+- `currentVersion`: `0.3.5`
+- `releaseName`: `Sitemap & Robots Configuration`
 - `releaseDate`: `2026-07-11`
 - `releaseType`: `patch`
-- `summary`: `Customer and household workflows are stabilized with transactional writes, deterministic repository reads, and focused validation coverage.`
+- `summary`: `Public sitemap, crawler rules, and production canonical URLs now separate indexable Cairn pages from private application routes.`
 
 All active application version displays should read from the `version` object in `lib/version.ts`. Compatibility exports may exist for older components, but they must derive from `version`.
 
@@ -129,21 +129,37 @@ Update notifications are generated from release note data by `lib/releases/notif
 
 When a release entry becomes the latest release, Cairn can generate a system notification such as:
 
-`Cairn has been updated to v0.3.4. View what's new.`
+`Cairn has been updated to v0.3.5. View what's new.`
 
 The notification uses the existing communications notification center, counts toward unread totals, can be marked read, and links directly to the matching release note anchor.
 
 ## Current Shipped Version
 
-Version: `v0.3.4`
+Version: `v0.3.5`
 
 Released: `2026-07-11`
 
-Title: Customer Operations Stabilization
+Title: Sitemap & Robots Configuration
 
 Release type: Patch
 
-Summary: Customer and household workflows are stabilized with transactional writes, deterministic repository reads, and focused validation coverage.
+Summary: Public sitemap, crawler rules, and production canonical URLs now separate indexable Cairn pages from private application routes.
+
+### v0.3.5 Notes
+
+#### Added
+
+- Public XML sitemap
+- Search-engine crawler rules
+
+#### Improved
+
+- Canonical metadata for public Cairn pages
+- Separation of public and private routes for indexing
+
+#### Known Issues
+
+- Private, authenticated, administrative, and operational app routes remain excluded from indexing.
 
 ### v0.3.4 Notes
 

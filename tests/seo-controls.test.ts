@@ -69,19 +69,35 @@ describe("SEO controls", () => {
     const config = robots();
     const rules = Array.isArray(config.rules) ? config.rules[0] : config.rules;
     expect(rules.allow).toContain("/");
+    expect(rules.allow).toContain("/request-demo");
     expect(rules.allow).toContain("/f/");
+    expect(rules.allow).toContain("/p/*/programs");
+    expect(rules.allow).toContain("/p/*/sessions");
+    expect(rules.disallow).toContain("/admin/*");
+    expect(rules.disallow).toContain("/api/*");
     expect(rules.disallow).toContain("/login");
     expect(rules.disallow).toContain("/o/");
     expect(rules.disallow).toContain("/p/*/login");
     expect(rules.disallow).toContain("/p/*/account/");
+    expect(rules.disallow).toContain("/customers/*");
+    expect(rules.disallow).toContain("/households/*");
+    expect(config.sitemap).toBe("https://stonecairn.app/sitemap.xml");
   });
 
   it("sitemap includes only public marketing and program discovery pages", () => {
     const entries = sitemap();
     const urls = entries.map((entry) => entry.url);
-    expect(urls).toContain("https://cairn.example.com/");
-    expect(urls).toContain("https://cairn.example.com/f/summit");
-    expect(urls).toContain("https://cairn.example.com/p/summit/programs");
+    expect(urls).toContain("https://stonecairn.app/");
+    expect(urls).toContain("https://stonecairn.app/request-demo");
+    expect(urls).toContain("https://stonecairn.app/legal");
+    expect(urls).toContain("https://stonecairn.app/f/summit");
+    expect(urls).toContain("https://stonecairn.app/f/riverbend");
+    expect(urls).toContain("https://stonecairn.app/p/summit/programs");
+    expect(urls).toContain("https://stonecairn.app/p/riverbend/programs");
     expect(urls.some((url) => url.includes("/account/"))).toBe(false);
+    expect(urls.some((url) => url.includes("/admin"))).toBe(false);
+    expect(urls.some((url) => url.includes("/api/"))).toBe(false);
+    expect(urls.some((url) => url.includes("/customers/"))).toBe(false);
+    expect(urls.some((url) => url.includes("cairn.example.com"))).toBe(false);
   });
 });

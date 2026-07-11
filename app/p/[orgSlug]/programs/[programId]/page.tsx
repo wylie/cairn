@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicRegistrationPanel } from "@/components/public/public-registration-panel";
 import { formatDateTime } from "@/lib/format/date";
-import { buildSocialMetadata } from "@/lib/metadata";
+import { absoluteUrl, buildSocialMetadata } from "@/lib/metadata";
 import { getLocationName, getOrganizationForPublic, getProgramPricing, getPublicProgram, getPublicSessionsForProgram, getSessionStats } from "@/lib/public-programs";
 
 export async function generateMetadata({
@@ -20,8 +20,8 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: { canonical: `https://cairn.example.com/p/${orgSlug}/programs/${programId}` },
-    ...buildSocialMetadata({ title, description, url: `https://cairn.example.com/p/${orgSlug}/programs/${programId}` }),
+    alternates: { canonical: absoluteUrl(`/p/${orgSlug}/programs/${programId}`) },
+    ...buildSocialMetadata({ title, description, url: absoluteUrl(`/p/${orgSlug}/programs/${programId}`) }),
     robots: { index: true, follow: true }
   };
 }

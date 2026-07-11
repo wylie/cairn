@@ -13,6 +13,11 @@ export const CAIRN_ICON_METADATA = {
   apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }]
 } satisfies Metadata["icons"];
 
+export function absoluteUrl(path = "/") {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${SITE_URL}${normalizedPath}`;
+}
+
 type SocialMetadataOptions = {
   title?: string;
   description?: string;

@@ -1,11 +1,11 @@
 export type ReleaseType = "patch" | "minor" | "major";
 
 export const version = {
-  currentVersion: "0.3.4",
-  releaseName: "Customer Operations Stabilization",
+  currentVersion: "0.3.5",
+  releaseName: "Sitemap & Robots Configuration",
   releaseDate: "2026-07-11",
   releaseType: "patch" as ReleaseType,
-  summary: "Customer and household workflows are stabilized with transactional writes, deterministic repository reads, and focused validation coverage."
+  summary: "Public sitemap, crawler rules, and production canonical URLs now separate indexable Cairn pages from private application routes."
 } as const;
 
 export function formatReleaseType(type: ReleaseType) {

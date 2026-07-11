@@ -6,7 +6,7 @@ describe("RoadmapPage", () => {
     render(<RoadmapPage />);
 
     expect(screen.getByRole("heading", { name: "Roadmap" })).toBeInTheDocument();
-    expect(screen.getByText("Current v0.3.4")).toBeInTheDocument();
+    expect(screen.getByText("Current v0.3.5")).toBeInTheDocument();
     expect(screen.getByText("CI/CD")).toBeInTheDocument();
     expect(screen.getByText("Semantic Versioning")).toBeInTheDocument();
     expect(screen.getByText("v0.2.x")).toBeInTheDocument();

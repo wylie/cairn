@@ -87,6 +87,17 @@ The footer, Release Notes page, Roadmap page, admin version displays, version ch
 
 Cairn uses CI/CD release discipline with Semantic Versioning. `main` should remain deployable, version numbers track shipped software, Release Notes document shipped versions, and the Roadmap documents future milestones.
 
+## Public SEO Surface
+
+Cairn uses Next.js App Router metadata routes for search indexing configuration.
+
+- `lib/metadata.ts` owns `SITE_URL`, fixed to the production canonical domain `https://stonecairn.app`, plus `absoluteUrl()` for production canonical URL construction. Preview and local builds should still emit the production canonical domain rather than preview hosts.
+- `app/sitemap.ts` generates `/sitemap.xml` through Next's native sitemap support. It includes only public marketing and discovery pages: `/`, `/request-demo`, `/legal`, public facility landing pages under `/f/[orgSlug]`, public program catalogs under `/p/[orgSlug]/programs`, and public program/session detail pages intended for discovery.
+- `app/robots.ts` generates `/robots.txt`, allows public marketing/facility/program discovery paths, disallows admin, API, staff app, customer account, login, diagnostics, support, and operational route groups, and references `https://stonecairn.app/sitemap.xml`.
+- Public facility and program pages set canonical metadata with `absoluteUrl()`. Private, authenticated, administrative, and operational route layouts stay `noindex` and should not add canonicals that expose tenant, customer, staff, household, membership, or operational paths.
+
+Robots rules are only search-engine instructions. Authentication, authorization, tenant scoping, and server-side data access controls remain the protection boundary for private data.
+
 ## Database Foundation
 
 v0.2.x is limited to the Real Data Foundation: organizations, facilities, staff, customers, households, demo/production separation, and versioning. Customer editing, memberships, check-ins, programs, POS, and production authentication move to later releases.

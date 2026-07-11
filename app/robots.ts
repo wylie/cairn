@@ -1,29 +1,81 @@
 import type { MetadataRoute } from "next";
+import { absoluteUrl } from "@/lib/metadata";
 
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/f/", "/p/*/programs", "/p/*/programs/", "/p/*/sessions", "/p/*/sessions/"],
+        allow: ["/", "/request-demo", "/legal", "/f/", "/p/*/programs", "/p/*/programs/", "/p/*/sessions", "/p/*/sessions/"],
         disallow: [
+          "/admin",
+          "/admin/",
+          "/admin/*",
+          "/api",
+          "/api/",
+          "/api/*",
           "/login",
+          "/org-chooser",
+          "/no-access",
           "/o/",
           "/o/*/login",
           "/p/login",
+          "/p/*",
           "/p/*/login",
           "/p/*/account/",
+          "/p/*/account/*",
+          "/p/*/billing",
+          "/p/*/checkout",
           "/p/*/dashboard",
-          "/p/*/memberships",
-          "/p/*/registrations",
-          "/p/*/waivers",
+          "/p/*/facility",
           "/p/*/household",
-          "/p/*/visits",
+          "/p/*/kiosk/",
+          "/p/*/membership-card",
+          "/p/*/memberships",
+          "/p/*/memberships/*",
           "/p/*/purchases",
-          "/p/*/facility"
+          "/p/*/purchases/*",
+          "/p/*/registrations",
+          "/p/*/registrations/*",
+          "/p/*/rentals",
+          "/p/*/store",
+          "/p/*/visits",
+          "/p/*/waivers",
+          "/p/*/waivers/*",
+          "/alerts",
+          "/billing",
+          "/calendar",
+          "/check-in",
+          "/check-ins",
+          "/communications",
+          "/customers",
+          "/customers/",
+          "/customers/*",
+          "/dashboard",
+          "/households",
+          "/households/",
+          "/households/*",
+          "/integrations",
+          "/memberships",
+          "/pos",
+          "/pos/",
+          "/pos/*",
+          "/products",
+          "/programs",
+          "/registrations",
+          "/release-notes",
+          "/rentals",
+          "/reports",
+          "/roadmap",
+          "/settings",
+          "/staff",
+          "/staff/",
+          "/staff/*",
+          "/support",
+          "/waivers"
         ]
       }
     ],
-    sitemap: "https://cairn.example.com/sitemap.xml"
+    sitemap: absoluteUrl("/sitemap.xml")
   };
 }

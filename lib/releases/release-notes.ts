@@ -191,11 +191,11 @@ const customerAdministrationDataQualityRelease: ReleaseNote = {
 };
 
 const customerOperationsStabilizationRelease: ReleaseNote = {
-  version: version.currentVersion,
-  releaseName: version.releaseName,
-  releaseDate: version.releaseDate,
-  releaseType: version.releaseType,
-  summary: version.summary,
+  version: "0.3.4",
+  releaseName: "Customer Operations Stabilization",
+  releaseDate: "2026-07-11",
+  releaseType: "patch",
+  summary: "Customer and household workflows are stabilized with transactional writes, deterministic repository reads, and focused validation coverage.",
   sections: {
     added: [],
     improved: [
@@ -214,6 +214,29 @@ const customerOperationsStabilizationRelease: ReleaseNote = {
     changed: [],
     knownIssues: [
       "Memberships, check-ins, waivers, programs, POS, documents, communications, imports, merge workflows, and authentication remain deferred to later releases"
+    ]
+  }
+};
+
+const sitemapRobotsConfigurationRelease: ReleaseNote = {
+  version: version.currentVersion,
+  releaseName: version.releaseName,
+  releaseDate: version.releaseDate,
+  releaseType: version.releaseType,
+  summary: version.summary,
+  sections: {
+    added: [
+      "Public XML sitemap",
+      "Search-engine crawler rules"
+    ],
+    improved: [
+      "Canonical metadata for public Cairn pages",
+      "Separation of public and private routes for indexing"
+    ],
+    fixed: [],
+    changed: [],
+    knownIssues: [
+      "Private, authenticated, administrative, and operational app routes remain excluded from indexing"
     ]
   }
 };
@@ -319,6 +342,7 @@ export function compareReleaseNotesNewestFirst(a: ReleaseNote, b: ReleaseNote) {
 }
 
 const releaseNoteEntries: ReleaseNote[] = [
+  sitemapRobotsConfigurationRelease,
   customerOperationsStabilizationRelease,
   customerAdministrationDataQualityRelease,
   customerExperienceImprovementsRelease,

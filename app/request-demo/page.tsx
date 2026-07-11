@@ -1,9 +1,17 @@
 import type { Metadata } from "next";
 import { CairnBrand } from "@/components/brand/cairn-brand";
+import { absoluteUrl } from "@/lib/metadata";
 
 export const metadata: Metadata = {
   title: "Request Live Demo | Cairn",
-  description: "Request a live walkthrough of Cairn facility operations software."
+  description: "Request a live walkthrough of Cairn facility operations software.",
+  alternates: {
+    canonical: absoluteUrl("/request-demo")
+  },
+  robots: {
+    index: true,
+    follow: true
+  }
 };
 
 export default function RequestDemoPage() {

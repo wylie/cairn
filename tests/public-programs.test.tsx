@@ -60,6 +60,9 @@ describe("public program discovery", () => {
     const sessionMetadata = await generateSessionDetailMetadata({ params: Promise.resolve({ orgSlug: "summit", sessionId: "sess_001" }) });
 
     expect(listMetadata.robots).toEqual({ index: true, follow: true });
+    expect(listMetadata.alternates?.canonical).toBe("https://stonecairn.app/p/summit/programs");
+    expect(programMetadata.alternates?.canonical).toBe("https://stonecairn.app/p/summit/programs/prog_101");
+    expect(sessionMetadata.alternates?.canonical).toBe("https://stonecairn.app/p/summit/sessions/sess_001");
     expect(programMetadata.title).toContain("Summit Rec Collective");
     expect(sessionMetadata.description).toMatch(/Session|on/i);
   });

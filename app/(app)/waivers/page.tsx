@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FormField } from "@/components/shared/form-layout";
+import { absoluteUrl } from "@/lib/metadata";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useWorkstationState } from "@/lib/state/workstation-state";
 import type { WaiverExpirationRuleType, WaiverTemplateBlock } from "@/types/domain";
@@ -314,7 +315,7 @@ export default function WaiversPage() {
                   <div className="rounded-md border bg-secondary/20 p-3 text-sm">
                     <p className="font-medium">Waiver sharing</p>
                     <p className="text-muted-foreground">Direct Link</p>
-                    <p className="break-all rounded bg-white px-2 py-1 text-xs">{`https://cairn.example.com/p/${orgSlug}/waivers/${selectedTemplate.id}`}</p>
+                    <p className="break-all rounded bg-white px-2 py-1 text-xs">{absoluteUrl(`/p/${orgSlug}/waivers/${selectedTemplate.id}`)}</p>
                     <p className="mt-2 text-muted-foreground">QR Code</p>
                     <div className="inline-flex h-24 w-24 items-center justify-center rounded border bg-white text-[10px] text-muted-foreground">
                       QR Placeholder

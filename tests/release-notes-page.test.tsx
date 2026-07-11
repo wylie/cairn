@@ -6,6 +6,11 @@ describe("ReleaseNotesPage", () => {
     render(<ReleaseNotesPage />);
 
     expect(screen.getByRole("heading", { name: "Release Notes" })).toBeInTheDocument();
+    expect(screen.getByText("Sitemap & Robots Configuration")).toBeInTheDocument();
+    expect(screen.getAllByText("Public sitemap, crawler rules, and production canonical URLs now separate indexable Cairn pages from private application routes.").length).toBeGreaterThan(0);
+    expect(screen.getByText("Public XML sitemap")).toBeInTheDocument();
+    expect(screen.getByText("Search-engine crawler rules")).toBeInTheDocument();
+    expect(screen.getByText("Canonical metadata for public Cairn pages")).toBeInTheDocument();
     expect(screen.getByText("Customer Operations Stabilization")).toBeInTheDocument();
     expect(screen.getAllByText("Customer and household workflows are stabilized with transactional writes, deterministic repository reads, and focused validation coverage.").length).toBeGreaterThan(0);
     expect(screen.getByText("Customer and household workflow reliability")).toBeInTheDocument();

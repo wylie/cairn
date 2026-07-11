@@ -4,7 +4,7 @@ import { CairnBrand } from "@/components/brand/cairn-brand";
 import { getOrganizationForPublic, getPublicPrograms } from "@/lib/public-programs";
 import { RuntimeFacilityLanding } from "@/components/public/runtime-facility-landing";
 import { data } from "@/lib/data";
-import { buildSocialMetadata } from "@/lib/metadata";
+import { absoluteUrl, buildSocialMetadata } from "@/lib/metadata";
 import { getActiveFacilityContext } from "@/db/tenant";
 
 export async function generateMetadata({
@@ -22,8 +22,8 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: { canonical: `https://cairn.example.com/f/${orgSlug}` },
-    ...buildSocialMetadata({ title, description, url: `https://cairn.example.com/f/${orgSlug}` }),
+    alternates: { canonical: absoluteUrl(`/f/${orgSlug}`) },
+    ...buildSocialMetadata({ title, description, url: absoluteUrl(`/f/${orgSlug}`) }),
     robots: { index: true, follow: true }
   };
 }

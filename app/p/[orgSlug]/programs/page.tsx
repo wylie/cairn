@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ProgramCatalog } from "@/components/public/program-catalog";
 import { CustomerPortalContainer } from "@/components/portal/customer-portal-container";
+import { absoluteUrl } from "@/lib/metadata";
 import { getOrganizationForPublic, getPublicPrograms, getPublicSessionsForProgram } from "@/lib/public-programs";
 
 export async function generateMetadata({ params }: { params: Promise<{ orgSlug: string }> }): Promise<Metadata> {
@@ -11,7 +12,7 @@ export async function generateMetadata({ params }: { params: Promise<{ orgSlug: 
   return {
     title: `Programs | ${orgName}`,
     description: `Discover programs and sessions at ${orgName}.`,
-    alternates: { canonical: `https://cairn.example.com/p/${orgSlug}/programs` },
+    alternates: { canonical: absoluteUrl(`/p/${orgSlug}/programs`) },
     robots: { index: true, follow: true }
   };
 }

@@ -1,10 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CairnBrand } from "@/components/brand/cairn-brand";
+import { absoluteUrl } from "@/lib/metadata";
 
 export const metadata: Metadata = {
   title: "Legal | Cairn",
-  description: "Legal ownership and attribution for Cairn."
+  description: "Legal ownership and attribution for Cairn.",
+  alternates: {
+    canonical: absoluteUrl("/legal")
+  },
+  robots: {
+    index: true,
+    follow: true
+  }
 };
 
 export default function LegalPage() {

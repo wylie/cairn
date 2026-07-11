@@ -1,4 +1,6 @@
 import { resolveOrganizationBySlug } from "@/lib/tenant/resolve";
+import { absoluteUrl } from "@/lib/metadata";
+import { demoOrganizationSlugs } from "@/lib/mocks/organizations";
 import { programs as seedPrograms, classCampSessions } from "@/lib/mocks/programs";
 import { posProducts } from "@/lib/mocks/products";
 import { registrations } from "@/lib/mocks/registrations";
@@ -81,9 +83,13 @@ export function getPublicProgramSitemapEntries(orgSlug: string) {
   const org = resolveOrganizationBySlug(orgSlug);
   if (!org) return { programs: [] as string[], sessions: [] as string[] };
   const orgPrograms = seedPrograms.filter((entry) => entry.organizationId === org.id && entry.active !== false);
-  const programUrls = orgPrograms.map((entry) => `https://cairn.example.com/p/${orgSlug}/programs/${entry.id}`);
+  const programUrls = orgPrograms.map((entry) => absoluteUrl(`/p/${orgSlug}/programs/${entry.id}`));
   const sessionUrls = classCampSessions
     .filter((entry) => orgPrograms.some((program) => program.id === entry.programId) && entry.status !== "cancelled")
-    .map((entry) => `https://cairn.example.com/p/${orgSlug}/sessions/${entry.id}`);
+    .map((entry) => absoluteUrl(`/p/${orgSlug}/sessions/${entry.id}`));
   return { programs: programUrls, sessions: sessionUrls };
+}
+
+export function getPublicSitemapOrganizationSlugs() {
+  return demoOrganizationSlugs;
 }

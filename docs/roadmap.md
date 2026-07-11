@@ -29,6 +29,9 @@ Focus:
 - Customer repository
 - Neon-backed customer management
 - Organization-scoped customer writes
+- Household CRUD
+- Persisted customer-household relationships
+- Primary-contact management
 
 ## v0.4.x - Customer & Household Operations
 
@@ -37,9 +40,9 @@ Status: Planned
 Focus:
 
 - Customer imports
-- Household imports
 - Customer merge workflows
-- Relationship roles
+- Household imports
+- Rich relationship roles
 - Audit events
 
 ## v0.5.x - Memberships & Check-In

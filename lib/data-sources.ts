@@ -50,11 +50,20 @@ export const dataSourceInventory: DataSourceInventoryItem[] = [
   {
     module: "Households",
     status: "Neon-backed",
-    currentSource: "Neon via `households` and customer `household_id` links with server actions for household profile writes.",
-    repositoryLayer: "Server-only household reads, organization-scoped household lists, counts, create, edit, and delete.",
+    currentSource: "Neon via `households`, customer `household_id` links, organization-scoped repositories, and server actions.",
+    repositoryLayer: "Server-only household create, read, update, delete, list-by-organization, member reads, member add/remove, primary-contact updates, counts, and duplicate checks.",
     scopeAudit: "`households.organization_id` is required. Household reads and writes resolve the active organization before repository access.",
-    migrationStatus: "Fully persistent for household list/detail/create/edit/delete and primary-contact assignment. Membership, billing, and relationship detail behavior remain future migrations.",
+    migrationStatus: "Fully persistent for household list/detail/create/edit/delete, customer assignment, removal, and primary-contact assignment. Membership, billing, and rich relationship-role behavior remain future migrations.",
     plannedOrder: "Next household operations phase: richer household member roles, guardians, emergency contacts, billing contacts, and audit events."
+  },
+  {
+    module: "Customer-Household Relationships",
+    status: "Neon-backed",
+    currentSource: "Neon customer `household_id` links with `customers.household_id` referencing `households.id` using `ON DELETE SET NULL`.",
+    repositoryLayer: "Server-only organization-scoped helpers get household members, add a customer, remove a customer, and set the primary contact.",
+    scopeAudit: "A customer can belong to zero or one household. Member changes validate customer and household organization ownership before writes.",
+    migrationStatus: "Persisted relationship links, safe member removal, safe household deletion, and primary-contact reassignment are in place.",
+    plannedOrder: "Future relationship migrations can add explicit roles, guardian permissions, billing roles, and audit events."
   },
   {
     module: "Memberships",

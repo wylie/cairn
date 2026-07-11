@@ -82,11 +82,11 @@ const releaseNotesCommitLinksRelease: ReleaseNote = {
 };
 
 const customerPersistenceRelease: ReleaseNote = {
-  version: version.currentVersion,
-  releaseName: version.releaseName,
-  releaseDate: version.releaseDate,
-  releaseType: version.releaseType,
-  summary: version.summary,
+  version: "0.3.0",
+  releaseName: "Customer Persistence",
+  releaseDate: "2026-07-11",
+  releaseType: "minor",
+  summary: "Customer CRUD now uses a Neon-backed repository and server persistence.",
   sections: {
     added: [
       "Customer CRUD",
@@ -100,6 +100,33 @@ const customerPersistenceRelease: ReleaseNote = {
     fixed: [],
     changed: [
       "Customer data no longer stored in localStorage"
+    ],
+    knownIssues: [
+      "Memberships, check-ins, waivers, programs, POS, and authentication still use demo persistence"
+    ]
+  }
+};
+
+const householdPersistenceRelease: ReleaseNote = {
+  version: version.currentVersion,
+  releaseName: version.releaseName,
+  releaseDate: version.releaseDate,
+  releaseType: version.releaseType,
+  summary: version.summary,
+  sections: {
+    added: [
+      "Neon-backed household CRUD",
+      "Persisted customer-household relationships",
+      "Primary-contact management"
+    ],
+    improved: [
+      "Household validation",
+      "Household diagnostics",
+      "Customer profile household data"
+    ],
+    fixed: [],
+    changed: [
+      "Household data no longer relies on localStorage"
     ],
     knownIssues: [
       "Memberships, check-ins, waivers, programs, POS, and authentication still use demo persistence"
@@ -208,6 +235,7 @@ export function compareReleaseNotesNewestFirst(a: ReleaseNote, b: ReleaseNote) {
 }
 
 const releaseNoteEntries: ReleaseNote[] = [
+  householdPersistenceRelease,
   customerPersistenceRelease,
   releaseNotesCommitLinksRelease,
   neonReadinessAuditRelease,

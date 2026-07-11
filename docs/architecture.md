@@ -182,9 +182,9 @@ Staff accounts are now represented in Neon as production data foundations, but p
 
 Future authentication work should authenticate staff through a production provider, resolve the staff user from the database, then derive organization, role, permission, and facility scope server-side before any protected read or write.
 
-### Customer Foundation
+### Customer And Household Foundation
 
-Customers now have database-backed profile workflows for modeled fields. Customer list/detail/create/edit/delete operations use Neon through server actions and `db/repositories/customer-repository.ts`, while memberships, check-ins, waivers, programs, POS, and authentication still use the existing demo persistence.
+Customers and households now have database-backed profile workflows for modeled fields. Customer list/detail/create/edit/delete/search and household list/detail/create/edit/delete/member assignment operations use Neon through server actions and repository helpers, while memberships, check-ins, waivers, programs, POS, billing, rich relationship roles, and authentication still use the existing demo persistence.
 
 - `customers.organization_id` requires every customer to belong to one organization.
 - `customers.household_id` is nullable so individual customers can exist before household relationships are assigned.
@@ -193,8 +193,9 @@ Customers now have database-backed profile workflows for modeled fields. Custome
 - `db/repositories/customer-repository.ts` provides server-only create, read, update, delete, search, count, duplicate-detection, and last-created helpers.
 - `households.organization_id` requires every household to belong to one organization.
 - `households.primary_contact_id` is nullable so household records can be created before a primary contact is selected.
-- `db/repositories/household-repository.ts` provides server-only household read, write, delete, and count helpers.
-- `/admin/database` reports customer count, last customer created, customer seed count, and household counts from Neon for internal visibility.
+- `customers.household_id` references `households.id` with `ON DELETE SET NULL`, so deleting a household clears customer household links without deleting customer profiles.
+- `db/repositories/household-repository.ts` provides server-only household create, read, update, delete, list-by-organization, member reads, member add/remove, primary-contact updates, duplicate checks, and count helpers.
+- `/admin/database` reports customer count, last customer created, customer seed count, household counts, customers assigned to households, and customers without households from Neon for internal visibility.
 - `npm run db:seed` seeds a small fictional customer and household set for each demo organization.
 
 Customer read path:
@@ -212,16 +213,18 @@ Household read path:
 - The staff household list and detail pages resolve the active organization from the server-side organization context.
 - The pages read households through `db/repositories/household-repository.ts`.
 - Household creates, edits, and deletes call server actions that resolve organization context before repository writes.
+- Household member add/remove and primary-contact changes call server actions that resolve organization context before repository writes.
 - Household reads and writes are organization-scoped before rows are mapped into the existing household workspace UI.
 - Primary-contact metadata and household membership display are derived from organization-scoped customer reads where available.
+- The household mock-state provider no longer loads or saves household records or household member records from localStorage.
 
 Current migration status:
 
 - Customer list, detail, create, edit, delete, and search are backed by Neon for modeled profile fields.
-- Household list, detail, create, edit, and delete are backed by Neon for modeled household fields.
+- Household list, detail, create, edit, delete, add-member, remove-member, and primary-contact management are backed by Neon.
 - Customer merge, membership, check-in, waiver, registration, POS, richer household relationships, and billing workflows are not migrated yet.
 - The existing client state provider remains in place for operational actions until server-backed write paths exist.
-- The v0.3.0 data-source audit is documented in [Data Sources](./data-sources.md) and exposed internally at `/admin/data-sources`.
+- The v0.3.1 data-source audit is documented in [Data Sources](./data-sources.md) and exposed internally at `/admin/data-sources`.
 
 Customer ownership rules:
 
@@ -233,9 +236,13 @@ Customer ownership rules:
 Household ownership rules:
 
 - A household inherits data mode from the owning organization.
-- Household membership should be derived from organization-owned customers.
+- Household membership is represented by organization-owned customers with `customers.household_id`.
+- A customer can belong to zero or one household.
+- Removing a customer from a household clears `customers.household_id` and does not delete the customer.
+- Deleting a household clears member customer links and does not delete customer records.
+- Primary contact must be an organization-owned customer assigned to the household.
 - Future memberships can attach to either a household or customer depending on the product model, but the owning organization must remain explicit.
-- Household billing, emergency contacts, and primary contact behavior should be modeled in later migrations after the customer foundation is validated.
+- Household billing, emergency contacts, rich relationship roles, and guardian permissions should be modeled in later migrations after the household foundation is validated.
 
 Target ownership model:
 

@@ -12,6 +12,7 @@ vi.mock("next/navigation", async () => {
   const actual = await vi.importActual<typeof import("next/navigation")>("next/navigation");
   return {
     ...actual,
+    useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
     useSearchParams: () => new URLSearchParams(window.location.search)
   };
 });
@@ -29,6 +30,9 @@ function installStorageMock() {
       }),
       removeItem: vi.fn((key: string) => {
         store.delete(key);
+      }),
+      clear: vi.fn(() => {
+        store.clear();
       })
     }
   });
@@ -163,7 +167,7 @@ describe("CustomerDetailPage", () => {
     const observe = vi.fn();
     const disconnect = vi.fn();
     const originalObserver = globalThis.IntersectionObserver;
-    globalThis.IntersectionObserver = vi.fn((cb: IntersectionObserverCallback) => {
+    globalThis.IntersectionObserver = vi.fn(function (cb: IntersectionObserverCallback) {
       callbacks.push(cb);
       return {
         observe,

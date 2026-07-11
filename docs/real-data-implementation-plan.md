@@ -57,7 +57,7 @@ v0.2.x now includes the first production data foundation pieces.
 - `db/index.ts` exposes the typed database client.
 - `/api/internal/database-health` verifies whether the configured database connection is reachable without exposing credentials or connection details.
 - `/admin/database` now shows connection state, known table count, record counts by table, the latest committed Drizzle migration, and seed data status.
-- `/admin/data-sources` now exposes the v0.3.0 data-source inventory for platform administrators.
+- `/admin/data-sources` now exposes the v0.3.1 data-source inventory for platform administrators.
 - `npm run db:generate`, `npm run db:migrate`, and `npm run db:studio` provide the migration and inspection workflow.
 - Local tooling loads `DATABASE_URL` from `.env.local`.
 
@@ -79,7 +79,7 @@ Organizations and facilities are the first data area wired toward the production
 - `/admin/data-sources` identifies each major module as Neon-backed, demo-backed, local-only, or not yet migrated.
 - If `DATABASE_URL` is missing or the database query fails, the same helpers fall back to canonical demo seed data so local demo mode remains stable.
 
-v0.3.0 migrates customer CRUD and profile search to Neon through the customer repository. Memberships, programs, registrations, POS, waivers, notifications, support requests, check-ins, and authentication still use the existing mock/localStorage implementation until their planned migration phases.
+v0.3.x migrates customer CRUD, household CRUD, customer-household links, and profile search to Neon through the repository layer. Memberships, programs, registrations, POS, waivers, notifications, support requests, check-ins, and authentication still use the existing mock/localStorage implementation until their planned migration phases.
 
 ## Data Classification Layer
 
@@ -145,19 +145,21 @@ Organization boundary audit:
 
 ## Customer Foundation Started
 
-Customer and household database foundations now exist. Customer list/detail/create/edit/delete/search operations for modeled profile fields now use Neon through server actions and repository helpers. Household profile operations also have a Neon foundation, while richer household relationship behavior remains future work.
+Customer and household database foundations now exist. Customer list/detail/create/edit/delete/search operations for modeled profile fields now use Neon through server actions and repository helpers. Household list/detail/create/edit/delete, member add/remove, and primary-contact operations also use Neon, while richer relationship roles remain future work.
 
 - `customers` stores organization-owned customer profile fields: name, preferred name, pronouns, member ID, contact details, address, birth date, emergency contact, notes, profile photo URL, household link, active status, and timestamps.
 - `households` stores organization-owned household records with an optional primary contact reference.
 - `db/repositories/customer-repository.ts` exposes server-only reads, organization-scoped customer search, counts, create, edit, delete, duplicate detection, and last-created reporting.
-- `db/repositories/household-repository.ts` exposes server-only reads, counts, create, edit, delete, and customer household-link clearing.
-- `/admin/database` now reports customer count, last customer created, customer seed count, and household counts from Neon for internal validation, plus migration and seed-run availability metadata.
+- `db/repositories/household-repository.ts` exposes server-only reads, counts, create, edit, delete, member reads, member add/remove, primary-contact updates, duplicate checks, and customer household-link clearing.
+- `/admin/database` now reports customer count, last customer created, customer seed count, household counts, customers assigned to households, and customers without households from Neon for internal validation, plus migration and seed-run availability metadata.
 - `npm run db:seed` now seeds small fictional customer and household sets for Summit Rec Collective, Riverstone Nature Center, and Western Carolina YMCA Association.
 - The staff customer list and detail pages read organization-scoped customers from Neon through the repository layer and map them into the existing customer UI.
 - The staff customer create/edit/delete flows call server actions that resolve the active organization before repository writes.
 - Customer records are no longer loaded from or saved to the customer localStorage mock key.
 - The staff household list and detail pages read organization-scoped households from Neon through the repository layer and map them into the existing household workspace UI.
 - The staff household create/edit/delete flows call server actions that resolve the active organization before repository writes.
+- Household member add/remove and primary-contact changes call server actions that resolve the active organization before repository writes.
+- Household records and relationship links are no longer loaded from or saved to household localStorage mock keys.
 
 Memberships, check-ins, registrations, waivers, POS, customer merge, richer relationship roles, billing behavior, and authentication are not migrated yet. Those workflows continue to use localStorage-backed mock data until their models, import paths, and write semantics are finalized.
 
@@ -169,9 +171,9 @@ Seed strategy:
 - Production customer data should enter through import/onboarding workflows, not through demo seed scripts.
 - Future seed scripts must be idempotent and must never create production records inside demo organizations.
 
-Customer Migration Plan:
+Customer And Household Migration Plan:
 
-Current: localStorage-backed customer and household records remain the demo source for customer workflows.
+Current: customer and household records are Neon-backed for modeled CRUD and customer-household links. Remaining customer-adjacent workflows such as memberships, check-ins, registrations, waivers, POS, merge behavior, richer relationship roles, and billing still use localStorage-backed mock data until their models are migrated.
 
 Future: Neon PostgreSQL becomes the durable source of truth through the Next.js server/data layer.
 
@@ -181,8 +183,8 @@ Phases:
 2. Repositories - add server-only customer and household read helpers. Complete.
 3. Seed/demo data - design and add a limited demo seed set after relationships stabilize. Initial customer and household seeds are complete.
 4. Read operations - move low-risk customer and household views to server-backed reads with demo fallback. Customer and household list/detail reads are complete for modeled fields.
-5. Write operations - move customer and household creates, updates, and deletes behind server actions or route handlers. Initial profile writes are complete; merge workflows and audit trails remain future work.
-6. Full migration - retire remaining localStorage customer and household adjunct state after imports, permissions, tests, and rollback paths exist.
+5. Write operations - move customer and household creates, updates, deletes, and household membership changes behind server actions or route handlers. Customer and household writes are complete for modeled fields; merge workflows, richer relationship roles, and audit trails remain future work.
+6. Full migration - retire remaining localStorage customer-adjacent adjunct state after imports, permissions, tests, and rollback paths exist.
 
 ## localStorage Policy
 
@@ -213,7 +215,7 @@ Goal: identify every place production data enters, changes, or leaves the app.
 Deliverables:
 
 - Map current `lib/state/*` providers to future server-backed domains. Complete in [Data Sources](./data-sources.md).
-- Mark which localStorage keys can be retired, migrated, or kept as UI preferences. In progress through the v0.3.0 inventory.
+- Mark which localStorage keys can be retired, migrated, or kept as UI preferences. In progress through the v0.3.1 inventory.
 - Confirm tenant scope for each domain: organization-level, facility-level, customer-level, or platform-level. Initial audit complete for current repositories.
 
 ### 2. Schema Foundation

@@ -1231,8 +1231,6 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     signedWaiverRecords: buildScopedMockKey(activeOrgId, activeLocationId, "signedWaiverRecords"),
     waiverTemplates: buildScopedMockKey(activeOrgId, activeLocationId, "waiverTemplates"),
     waiverTemplateVersions: buildScopedMockKey(activeOrgId, activeLocationId, "waiverTemplateVersions"),
-    households: buildScopedMockKey(activeOrgId, activeLocationId, "households"),
-    householdMembers: buildScopedMockKey(activeOrgId, activeLocationId, "householdMembers"),
     rentableResources: buildScopedMockKey(activeOrgId, activeLocationId, "rentableResources"),
     reservations: buildScopedMockKey(activeOrgId, activeLocationId, "reservations"),
     maintenanceBlocks: buildScopedMockKey(activeOrgId, activeLocationId, "maintenanceBlocks"),
@@ -1374,8 +1372,6 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         "signedWaiverRecords",
         "waiverTemplates",
         "waiverTemplateVersions",
-        "households",
-        "householdMembers",
         "rentableResources",
         "reservations",
         "maintenanceBlocks",
@@ -1431,12 +1427,8 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     setWaiverTemplateVersions(
       loadMockState(storageKeys.waiverTemplateVersions, seededWaiverTemplateVersionsForOrg) as WaiverTemplateVersion[]
     );
-    setHouseholds(loadMockState(storageKeys.households, seededHouseholdsForOrg) as Household[]);
-    setHouseholdMembers(
-      (loadMockState(storageKeys.householdMembers, seededHouseholdMembersForOrg) as HouseholdMember[]).map(
-        normalizeHouseholdMemberForState
-      )
-    );
+    setHouseholds(seededHouseholdsForOrg);
+    setHouseholdMembers(seededHouseholdMembersForOrg.map(normalizeHouseholdMemberForState));
     setRentableResources(loadMockState(storageKeys.rentableResources, seededRentableResourcesForOrg) as RentableResource[]);
     setReservations(loadMockState(storageKeys.reservations, seededReservationsForOrg) as ReservationRecord[]);
     setMaintenanceBlocks(loadMockState(storageKeys.maintenanceBlocks, seededMaintenanceBlocksForOrg) as MaintenanceBlock[]);
@@ -1561,14 +1553,6 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
     if (!hydrated) return;
     saveMockState(storageKeys.waiverTemplateVersions, waiverTemplateVersions);
   }, [waiverTemplateVersions, hydrated]);
-  useEffect(() => {
-    if (!hydrated) return;
-    saveMockState(storageKeys.households, households);
-  }, [households, hydrated]);
-  useEffect(() => {
-    if (!hydrated) return;
-    saveMockState(storageKeys.householdMembers, householdMembers);
-  }, [householdMembers, hydrated]);
   useEffect(() => {
     if (!hydrated) return;
     saveMockState(storageKeys.rentableResources, rentableResources);
@@ -7277,7 +7261,7 @@ export function CustomerStateProvider({ children }: { children: React.ReactNode 
         clearScopedMockState(
           activeOrgId,
           activeLocationId,
-          ["billingAccounts", "billingCredits", "billingInvoices", "billingStatements", "membershipRenewals", "billingRefunds", "punchPasses", "checkIns", "memberships", "transactions", "products", "inventoryAudit", "productCategories", "programs", "sessions", "registrations", "registrationActivity", "accessRecords", "waivers", "signedWaiverRecords", "waiverTemplates", "waiverTemplateVersions", "households", "householdMembers", "rentableResources", "reservations", "maintenanceBlocks", "communications", "membershipCardEvents", "operationsAlertOverrides", "operationsManualAlerts", "operationsTasks"]
+          ["billingAccounts", "billingCredits", "billingInvoices", "billingStatements", "membershipRenewals", "billingRefunds", "punchPasses", "checkIns", "memberships", "transactions", "products", "inventoryAudit", "productCategories", "programs", "sessions", "registrations", "registrationActivity", "accessRecords", "waivers", "signedWaiverRecords", "waiverTemplates", "waiverTemplateVersions", "rentableResources", "reservations", "maintenanceBlocks", "communications", "membershipCardEvents", "operationsAlertOverrides", "operationsManualAlerts", "operationsTasks"]
         );
       }
     }),

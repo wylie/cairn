@@ -1,7 +1,7 @@
 import "server-only";
 
 import { and, asc, count, desc, eq, ilike, or, type SQLWrapper } from "drizzle-orm";
-import { customers, getDatabase } from "@/db";
+import { customers, getDatabase, households } from "@/db";
 
 export type CustomerRecord = typeof customers.$inferSelect;
 export type NewCustomerRecord = typeof customers.$inferInsert;
@@ -175,6 +175,11 @@ export async function updateCustomer(
 export async function deleteCustomer(customerId: string, organizationId: string): Promise<boolean> {
   const database = getDatabase();
   if (!database) return false;
+
+  await database
+    .update(households)
+    .set({ primaryContactId: null, updatedAt: new Date() })
+    .where(and(eq(households.primaryContactId, customerId), eq(households.organizationId, organizationId)));
 
   const deleted = await database
     .delete(customers)

@@ -6,10 +6,12 @@ describe("ReleaseNotesPage", () => {
     render(<ReleaseNotesPage />);
 
     expect(screen.getByRole("heading", { name: "Release Notes" })).toBeInTheDocument();
-    expect(screen.getByText("Customer & Household Persistence")).toBeInTheDocument();
-    expect(screen.getAllByText("Customers and households are now editable Neon-backed business workflows.").length).toBeGreaterThan(0);
-    expect(screen.getByText("Customer create/edit/delete")).toBeInTheDocument();
-    expect(screen.getByText("Household create/edit/delete")).toBeInTheDocument();
+    expect(screen.getByText("Household Persistence")).toBeInTheDocument();
+    expect(screen.getAllByText("Household CRUD and customer-household relationships now persist through Neon.").length).toBeGreaterThan(0);
+    expect(screen.getByText("Neon-backed household CRUD")).toBeInTheDocument();
+    expect(screen.getByText("Persisted customer-household relationships")).toBeInTheDocument();
+    expect(screen.getByText("Customer Persistence")).toBeInTheDocument();
+    expect(screen.getByText("Customer CRUD")).toBeInTheDocument();
     expect(screen.getAllByText("Patch").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Minor").length).toBeGreaterThan(0);
     expect(screen.getByText("Real Data Foundation")).toBeInTheDocument();

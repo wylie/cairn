@@ -10,11 +10,11 @@ Version metadata is centralized in `lib/version.ts`.
 
 Current shipped version metadata:
 
-- `currentVersion`: `0.3.0`
-- `releaseName`: `Customer Persistence`
+- `currentVersion`: `0.3.1`
+- `releaseName`: `Household Persistence`
 - `releaseDate`: `2026-07-11`
-- `releaseType`: `minor`
-- `summary`: `Customer CRUD now uses a Neon-backed repository and server persistence.`
+- `releaseType`: `patch`
+- `summary`: `Household CRUD and customer-household relationships now persist through Neon.`
 
 All active application version displays should read from the `version` object in `lib/version.ts`. Compatibility exports may exist for older components, but they must derive from `version`.
 
@@ -129,21 +129,43 @@ Update notifications are generated from release note data by `lib/releases/notif
 
 When a release entry becomes the latest release, Cairn can generate a system notification such as:
 
-`Cairn has been updated to v0.3.0. View what's new.`
+`Cairn has been updated to v0.3.1. View what's new.`
 
 The notification uses the existing communications notification center, counts toward unread totals, can be marked read, and links directly to the matching release note anchor.
 
 ## Current Shipped Version
 
-Version: `v0.3.0`
+Version: `v0.3.1`
 
 Released: `2026-07-11`
 
-Title: Customer Persistence
+Title: Household Persistence
 
-Release type: Minor
+Release type: Patch
 
-Summary: Customer CRUD now uses a Neon-backed repository and server persistence.
+Summary: Household CRUD and customer-household relationships now persist through Neon.
+
+### v0.3.1 Notes
+
+#### Added
+
+- Neon-backed household CRUD
+- Persisted customer-household relationships
+- Primary-contact management
+
+#### Improved
+
+- Household validation
+- Household diagnostics
+- Customer profile household data
+
+#### Changed
+
+- Household data no longer relies on localStorage
+
+#### Known Issues
+
+- Memberships, check-ins, waivers, programs, POS, and authentication still use demo persistence.
 
 ### v0.3.0 Notes
 

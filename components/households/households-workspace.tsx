@@ -14,6 +14,7 @@ import { ModalShell } from "@/components/ui/modal-shell";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormField, FormGrid } from "@/components/shared/form-layout";
+import { CustomerSearchCombobox } from "@/components/shared/customer-search-combobox";
 import { SearchInput } from "@/components/shared/search-input";
 import { useCustomerState } from "@/lib/state/customer-state";
 import { useSettingsState } from "@/lib/state/settings-state";
@@ -31,8 +32,11 @@ import {
 } from "@/lib/households/presentation";
 import { buildMembershipCardRecord } from "@/lib/memberships/cards";
 import {
+  addPersistedHouseholdMemberAction,
   createPersistedHouseholdAction,
   deletePersistedHouseholdAction,
+  removePersistedHouseholdMemberAction,
+  setPersistedHouseholdPrimaryContactAction,
   updatePersistedHouseholdAction
 } from "@/app/(app)/households/actions";
 
@@ -112,6 +116,7 @@ export function HouseholdsWorkspace({
   const [selectedHouseholdId, setSelectedHouseholdId] = useState(initialHouseholdId ?? displayHouseholds[0]?.id ?? "");
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [showHouseholdForm, setShowHouseholdForm] = useState<"create" | "edit" | null>(null);
+  const [showAddMember, setShowAddMember] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const householdPhotoInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -605,7 +610,18 @@ export function HouseholdsWorkspace({
                     <Button variant="secondary">Sell Access</Button>
                     <Button variant="secondary">View Receipts</Button>
                     <Button variant="secondary">Send Message</Button>
-                    <Button variant="secondary">Add Member</Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        if (usesPersistedHouseholds) {
+                          setShowAddMember(true);
+                          return;
+                        }
+                        setFeedback("Add member controls live on each customer profile in demo mode.");
+                      }}
+                    >
+                      Add Member
+                    </Button>
                     {usesPersistedHouseholds ? (
                       <>
                         <Button variant="secondary" onClick={() => setShowHouseholdForm("edit")}>Edit Household</Button>
@@ -710,7 +726,32 @@ export function HouseholdsWorkspace({
                             <Button variant="secondary" className="h-9" onClick={() => setFeedback(`Edit relationship controls live on the customer profile for ${entry.customer.firstName}.`)}>
                               Edit Relationship
                             </Button>
-                            <Button variant="secondary" className="h-9" onClick={() => setFeedback(`Use the household detail actions on ${entry.customer.firstName}'s customer profile to remove this member.`)}>
+                            {usesPersistedHouseholds && selected.primaryContact?.id !== entry.customer.id ? (
+                              <Button
+                                variant="secondary"
+                                className="h-9"
+                                onClick={async () => {
+                                  const result = await setPersistedHouseholdPrimaryContactAction(selected.household.id, entry.customer.id);
+                                  setFeedback(result.message);
+                                  if (result.ok) router.refresh();
+                                }}
+                              >
+                                Set Primary
+                              </Button>
+                            ) : null}
+                            <Button
+                              variant="secondary"
+                              className="h-9"
+                              onClick={async () => {
+                                if (!usesPersistedHouseholds) {
+                                  setFeedback(`Use the household detail actions on ${entry.customer.firstName}'s customer profile to remove this member.`);
+                                  return;
+                                }
+                                const result = await removePersistedHouseholdMemberAction(selected.household.id, entry.customer.id);
+                                setFeedback(result.message);
+                                if (result.ok) router.refresh();
+                              }}
+                            >
                               Remove From Household
                             </Button>
                           </div>
@@ -1021,6 +1062,23 @@ export function HouseholdsWorkspace({
           }}
         />
       ) : null}
+      {showAddMember && selected ? (
+        <AddPersistedHouseholdMemberModal
+          household={selected.household}
+          customers={displayCustomers}
+          currentMemberIds={selected.memberIds}
+          onClose={() => setShowAddMember(false)}
+          onSubmit={async (customerId) => {
+            const result = await addPersistedHouseholdMemberAction(selected.household.id, customerId);
+            setFeedback(result.message);
+            if (result.ok) {
+              setShowAddMember(false);
+              router.refresh();
+            }
+            return result;
+          }}
+        />
+      ) : null}
       {confirmingDelete && selected ? (
         <ModalShell
           open
@@ -1052,11 +1110,83 @@ export function HouseholdsWorkspace({
           }
         >
           <p className="text-sm text-muted-foreground">
-            Delete {selected.household.householdName}? Memberships, check-ins, waivers, billing, and program data are not migrated in this release and are not deleted by this action.
+            Delete {selected.household.householdName}? This clears household links for {selected.members.length} customer{selected.members.length === 1 ? "" : "s"} but does not delete customer profiles. Memberships, check-ins, waivers, billing, and program data are not migrated in this release and are not deleted by this action.
           </p>
         </ModalShell>
       ) : null}
     </section>
+  );
+}
+
+function AddPersistedHouseholdMemberModal({
+  household,
+  customers,
+  currentMemberIds,
+  onClose,
+  onSubmit
+}: {
+  household: Household;
+  customers: Customer[];
+  currentMemberIds: string[];
+  onClose: () => void;
+  onSubmit: (customerId: string) => Promise<{ ok: boolean; message: string }>;
+}) {
+  const [query, setQuery] = useState("");
+  const [warning, setWarning] = useState("");
+  const [isSubmittingCustomerId, setIsSubmittingCustomerId] = useState("");
+  const candidates = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return customers
+      .filter((customer) => !currentMemberIds.includes(customer.id))
+      .filter((customer) => !customer.householdId)
+      .filter((customer) => {
+        if (!normalized) return true;
+        return [
+          `${customer.firstName} ${customer.lastName}`,
+          customer.memberId,
+          customer.email,
+          customer.phone
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalized);
+      })
+      .slice(0, 8);
+  }, [currentMemberIds, customers, query]);
+
+  return (
+    <ModalShell
+      open
+      ariaLabel="Add household member"
+      title="Add Household Member"
+      description={`Add an existing customer to ${household.householdName}. Customers can belong to only one household.`}
+      onClose={onClose}
+      maxWidthClassName="max-w-2xl"
+      footer={
+        <div className="flex justify-end">
+          <Button variant="secondary" onClick={onClose}>Close</Button>
+        </div>
+      }
+    >
+      <div className="space-y-3">
+        {warning ? <p role="alert" className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">{warning}</p> : null}
+        <CustomerSearchCombobox
+          label="Search customers"
+          showLabel
+          query={query}
+          onQueryChange={setQuery}
+          customers={candidates}
+          placeholder="Search by name, member ID, phone, or email"
+          emptyMessage="No eligible customers found. Customers already assigned to a household are hidden."
+          onSelect={async (customerId) => {
+            setIsSubmittingCustomerId(customerId);
+            const result = await Promise.resolve(onSubmit(customerId)).finally(() => setIsSubmittingCustomerId(""));
+            if (!result.ok) setWarning(result.message);
+          }}
+        />
+        {isSubmittingCustomerId ? <p className="text-sm text-muted-foreground">Adding customer...</p> : null}
+      </div>
+    </ModalShell>
   );
 }
 

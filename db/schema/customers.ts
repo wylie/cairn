@@ -1,4 +1,5 @@
 import { boolean, date, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { households } from "./households";
 import { organizations } from "./organizations";
 
 export const customers = pgTable("customers", {
@@ -6,7 +7,7 @@ export const customers = pgTable("customers", {
   organizationId: text("organization_id")
     .notNull()
     .references(() => organizations.id, { onDelete: "cascade" }),
-  householdId: text("household_id"),
+  householdId: text("household_id").references(() => households.id, { onDelete: "set null" }),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   preferredName: text("preferred_name"),

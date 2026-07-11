@@ -6,15 +6,16 @@ describe("RoadmapPage", () => {
     render(<RoadmapPage />);
 
     expect(screen.getByRole("heading", { name: "Roadmap" })).toBeInTheDocument();
-    expect(screen.getByText("Current v0.3.0")).toBeInTheDocument();
+    expect(screen.getByText("Current v0.3.1")).toBeInTheDocument();
     expect(screen.getByText("CI/CD")).toBeInTheDocument();
     expect(screen.getByText("Semantic Versioning")).toBeInTheDocument();
     expect(screen.getByText("v0.2.x")).toBeInTheDocument();
     expect(screen.getByText("Real Data Foundation")).toBeInTheDocument();
     expect(screen.getByText("Data classification")).toBeInTheDocument();
-    expect(screen.getByText("Customer & Household Persistence")).toBeInTheDocument();
+    expect(screen.getByText("Customer Persistence")).toBeInTheDocument();
     expect(screen.getByText("Neon-backed customer management")).toBeInTheDocument();
-    expect(screen.getByText("Customer Operations")).toBeInTheDocument();
+    expect(screen.getByText("Persisted customer-household relationships")).toBeInTheDocument();
+    expect(screen.getByText("Customer & Household Operations")).toBeInTheDocument();
     expect(screen.getByText("Memberships & Check-In")).toBeInTheDocument();
     expect(screen.getByText("Programs & Registrations")).toBeInTheDocument();
     expect(screen.getByText("Pilot Readiness")).toBeInTheDocument();

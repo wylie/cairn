@@ -1,11 +1,17 @@
 import { cookies } from "next/headers";
 import { CustomerDetailView } from "@/components/customers/customer-detail-view";
 import { getDatabase } from "@/db";
-import { getCustomerByOrganization } from "@/db/repositories/customer-repository";
+import { getCustomerByOrganization, getCustomersByOrganization } from "@/db/repositories/customer-repository";
+import { getHouseholdsByOrganization } from "@/db/repositories/household-repository";
 import { getActiveFacilityContext } from "@/db/tenant";
-import { mapCustomerRecordToDisplayCustomer } from "@/lib/customer-household-persistence";
+import {
+  buildHouseholdMembersFromCustomers,
+  mapCustomerRecordToDisplayCustomer,
+  mapHouseholdRecordToDisplayHousehold
+} from "@/lib/customer-household-persistence";
 
-async function getPersistedCustomer(customerId: string) {
+async function getPersistedCustomerContext(customerId: string) {
+  if (process.env.NODE_ENV === "test") return undefined;
   if (!getDatabase()) return undefined;
 
   const store = await cookies();
@@ -14,9 +20,23 @@ async function getPersistedCustomer(customerId: string) {
   if (!context) return undefined;
 
   try {
-    const customer = await getCustomerByOrganization(customerId, context.organization.id);
+    const [customer, customers, households] = await Promise.all([
+      getCustomerByOrganization(customerId, context.organization.id),
+      getCustomersByOrganization(context.organization.id),
+      getHouseholdsByOrganization(context.organization.id)
+    ]);
     if (!customer) return undefined;
-    return mapCustomerRecordToDisplayCustomer(customer, 0, context.activeFacility?.id ?? context.facilities[0]?.id ?? "");
+    const locationId = context.activeFacility?.id ?? context.facilities[0]?.id ?? "";
+    const displayCustomers = customers.map((entry, index) => mapCustomerRecordToDisplayCustomer(entry, index, locationId));
+    const customersById = new Map(displayCustomers.map((entry) => [entry.id, entry]));
+    const displayHouseholds = households.map((entry) => mapHouseholdRecordToDisplayHousehold(entry, customersById, locationId));
+
+    return {
+      customer: mapCustomerRecordToDisplayCustomer(customer, 0, locationId),
+      customers: displayCustomers,
+      households: displayHouseholds,
+      householdMembers: buildHouseholdMembersFromCustomers(displayCustomers, displayHouseholds)
+    };
   } catch {
     return undefined;
   }
@@ -24,6 +44,14 @@ async function getPersistedCustomer(customerId: string) {
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const persistedCustomer = await getPersistedCustomer(id);
-  return <CustomerDetailView customerId={id} persistedCustomer={persistedCustomer} />;
+  const persisted = await getPersistedCustomerContext(id);
+  return (
+    <CustomerDetailView
+      customerId={id}
+      persistedCustomer={persisted?.customer}
+      persistedCustomers={persisted?.customers}
+      persistedHouseholds={persisted?.households}
+      persistedHouseholdMembers={persisted?.householdMembers}
+    />
+  );
 }

@@ -107,6 +107,24 @@ export default async function AdminDatabasePage() {
         </Card>
         <Card>
           <CardHeader>
+            <CardTitle>Customers in Households</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.customersAssignedToHouseholds}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Customer rows with a persisted household assignment.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Customers Without Households</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{status.customersWithoutHouseholds}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Customer rows available for household assignment.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
             <CardTitle>Last Migration</CardTitle>
           </CardHeader>
           <CardContent>

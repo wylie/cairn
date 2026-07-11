@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRef } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ContextBackLink } from "@/components/shared/context-back-link";
 import { CustomerBadges } from "@/components/customers/customer-badges";
 import { ActivityTimeline } from "@/components/customers/activity-timeline";
@@ -26,7 +26,13 @@ import { buildDetailHref } from "@/lib/navigation/detail-navigation";
 import { buildMembershipCardRecord } from "@/lib/memberships/cards";
 import { ROLE_LABELS } from "@/lib/staff/capabilities";
 import { PERMISSION_LABELS } from "@/lib/staff/permissions";
-import type { CommunicationRecord, Customer, StaffRole } from "@/types/domain";
+import {
+  addPersistedHouseholdMemberAction,
+  createPersistedHouseholdAction,
+  removePersistedHouseholdMemberAction,
+  setPersistedHouseholdPrimaryContactAction
+} from "@/app/(app)/households/actions";
+import type { CommunicationRecord, Customer, Household, HouseholdMember, StaffRole } from "@/types/domain";
 
 type CustomerDocumentType =
   | "waiver"
@@ -49,11 +55,18 @@ type CustomerDocumentRecord = {
 
 export function CustomerDetailView({
   customerId,
-  persistedCustomer
+  persistedCustomer,
+  persistedCustomers,
+  persistedHouseholds,
+  persistedHouseholdMembers
 }: {
   customerId: string;
   persistedCustomer?: Customer;
+  persistedCustomers?: Customer[];
+  persistedHouseholds?: Household[];
+  persistedHouseholdMembers?: HouseholdMember[];
 }) {
+  const router = useRouter();
   const pathname = usePathname() ?? "";
   const {
     customers,
@@ -133,6 +146,9 @@ export function CustomerDetailView({
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const customer = persistedCustomer ?? customers.find((entry) => entry.id === customerId);
   const usesPersistedCustomer = Boolean(persistedCustomer);
+  const displayCustomers = persistedCustomers ?? customers;
+  const displayHouseholds = persistedHouseholds ?? households;
+  const displayHouseholdMembers = persistedHouseholdMembers ?? householdMembers;
 
   if (!customer) {
     return <p className="text-sm text-muted-foreground">Customer not found.</p>;
@@ -282,7 +298,7 @@ export function CustomerDetailView({
     emergencyContactName: !customer.emergencyContactName?.trim(),
     emergencyContactPhone: !customer.emergencyContactPhone?.trim()
   };
-  const householdMembership = householdMembers.find((entry) => entry.customerId === customer.id);
+  const householdMembership = displayHouseholdMembers.find((entry) => entry.customerId === customer.id);
   const customerStaffProfile = customer.staffProfile?.isStaff ? customer.staffProfile : null;
   const photoUpdatedBy =
     customer.profilePhotoUpdatedBy ||
@@ -300,22 +316,22 @@ export function CustomerDetailView({
     });
     setShowEditStaffProfile(true);
   };
-  const household = householdMembership ? households.find((entry) => entry.id === householdMembership.householdId) : undefined;
+  const household = householdMembership ? displayHouseholds.find((entry) => entry.id === householdMembership.householdId) : undefined;
   const householdRows = household
-    ? householdMembers
+    ? displayHouseholdMembers
         .filter((entry) => entry.householdId === household.id)
         .map((entry) => ({
           ...entry,
-          customer: customers.find((customerEntry) => customerEntry.id === entry.customerId)
+          customer: displayCustomers.find((customerEntry) => customerEntry.id === entry.customerId)
         }))
         .sort((a, b) => (a.emergencyContactPriority ?? 999) - (b.emergencyContactPriority ?? 999))
     : [];
   const householdCustomerIdSet = new Set(householdRows.map((row) => row.customerId));
   const householdPrimaryContact = household
-    ? customers.find((entry) => entry.id === household.primaryContactCustomerId)
+    ? displayCustomers.find((entry) => entry.id === household.primaryContactCustomerId)
     : undefined;
   const householdBillingCustomer = household
-    ? customers.find((entry) => entry.id === household.billingCustomerId)
+    ? displayCustomers.find((entry) => entry.id === household.billingCustomerId)
     : undefined;
   const householdDefaultPayment = householdBillingCustomer?.paymentMethods?.find((method) => method.isDefault);
   const householdCheckInRows = householdRows.filter((row) => row.customer);
@@ -341,7 +357,7 @@ export function CustomerDetailView({
         registration,
         session,
         program,
-        customer: customers.find((entry) => entry.id === registration.customerId)
+        customer: displayCustomers.find((entry) => entry.id === registration.customerId)
       };
     })
     .filter((entry) => entry.session)
@@ -373,10 +389,10 @@ export function CustomerDetailView({
       householdMemberQuery.trim().length === 0
         ? []
         : filterCustomers(
-            customers.filter((entry) => !householdRows.some((member) => member.customerId === entry.id)),
+            displayCustomers.filter((entry) => !entry.householdId && !householdRows.some((member) => member.customerId === entry.id)),
             householdMemberQuery
           ).slice(0, 8),
-    [customers, householdRows, householdMemberQuery]
+    [displayCustomers, householdRows, householdMemberQuery]
   );
   const sectionLinks = useMemo(() => {
     const links: Array<{ id: string; label: string }> = [
@@ -1176,7 +1192,19 @@ export function CustomerDetailView({
                 />
                 <Button
                   className="h-11"
-                  onClick={() => {
+                  onClick={async () => {
+                    if (usesPersistedCustomer) {
+                      const result = await createPersistedHouseholdAction({
+                        name: newHouseholdName || `${customer.lastName} Household`,
+                        primaryContactId: customer.id
+                      });
+                      setProfileFeedback(result.message);
+                      if (result.ok) {
+                        setNewHouseholdName("");
+                        router.refresh();
+                      }
+                      return;
+                    }
                     const result = createHousehold({
                       householdName: newHouseholdName || `${customer.lastName} Family`,
                       primaryContactCustomerId: customer.id,
@@ -1287,7 +1315,14 @@ export function CustomerDetailView({
                           <Button
                             variant="ghost"
                             className="h-9 text-destructive hover:text-destructive"
-                            onClick={() => {
+                            onClick={async () => {
+                              if (usesPersistedCustomer && household) {
+                                const result = await removePersistedHouseholdMemberAction(household.id, member.customerId);
+                                setProfileFeedback(result.message);
+                                if (editingMemberId === member.customerId) cancelEditHouseholdMember();
+                                if (result.ok) router.refresh();
+                                return;
+                              }
                               const result = removeHouseholdMember(household.id, member.customerId);
                               setProfileFeedback(result.message);
                               if (editingMemberId === member.customerId) cancelEditHouseholdMember();
@@ -1373,7 +1408,21 @@ export function CustomerDetailView({
                         <div className="flex flex-wrap gap-2">
                           <Button
                             className="h-9"
-                            onClick={() => {
+                            onClick={async () => {
+                              if (usesPersistedCustomer && household) {
+                                const result =
+                                  member.customerId === household.primaryContactCustomerId
+                                    ? { ok: true, message: "Primary contact is already set." }
+                                    : await setPersistedHouseholdPrimaryContactAction(household.id, member.customerId);
+                                setProfileFeedback(
+                                  result.ok
+                                    ? "Primary contact updated. Relationship role details remain derived until relationship roles are migrated."
+                                    : result.message
+                                );
+                                cancelEditHouseholdMember();
+                                if (result.ok) router.refresh();
+                                return;
+                              }
                               const result = updateHouseholdMember(household.id, member.customerId, {
                                 memberType: draftMember.memberType,
                                 relationship: draftMember.relationship as typeof member.relationship,
@@ -1395,7 +1444,14 @@ export function CustomerDetailView({
                             <Button
                               variant="destructive"
                               className="h-9"
-                              onClick={() => {
+                              onClick={async () => {
+                                if (usesPersistedCustomer && household) {
+                                  const result = await removePersistedHouseholdMemberAction(household.id, member.customerId);
+                                  setProfileFeedback(result.message);
+                                  cancelEditHouseholdMember();
+                                  if (result.ok) router.refresh();
+                                  return;
+                                }
                                 const result = removeHouseholdMember(household.id, member.customerId);
                                 setProfileFeedback(result.message);
                                 cancelEditHouseholdMember();
@@ -1418,7 +1474,16 @@ export function CustomerDetailView({
                   query={householdMemberQuery}
                   onQueryChange={setHouseholdMemberQuery}
                   customers={householdCandidates}
-                  onSelect={(selectedId) => {
+                  onSelect={async (selectedId) => {
+                    if (usesPersistedCustomer && household) {
+                      const result = await addPersistedHouseholdMemberAction(household.id, selectedId);
+                      setProfileFeedback(result.message);
+                      if (result.ok) {
+                        setHouseholdMemberQuery("");
+                        router.refresh();
+                      }
+                      return;
+                    }
                     const result = addHouseholdMember({
                       householdId: household.id,
                       customerId: selectedId,
@@ -1548,7 +1613,7 @@ export function CustomerDetailView({
                 <div key={entry.id} className="rounded-md border p-2">
                   <p className="font-medium">Receipt #{entry.receiptNumber}</p>
                   <p className="text-muted-foreground">
-                    Purchaser: {customers.find((customerEntry) => customerEntry.id === entry.customerId)?.firstName ?? "Unknown"} · {formatCurrency(entry.total)}
+                    Purchaser: {displayCustomers.find((customerEntry) => customerEntry.id === entry.customerId)?.firstName ?? "Unknown"} · {formatCurrency(entry.total)}
                   </p>
                 </div>
               ))}

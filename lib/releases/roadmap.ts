@@ -29,7 +29,10 @@ export const roadmapMilestones: RoadmapMilestone[] = [
       "Customer CRUD",
       "Customer repository",
       "Neon-backed customer management",
-      "Organization-scoped customer writes"
+      "Organization-scoped customer writes",
+      "Household CRUD",
+      "Persisted customer-household relationships",
+      "Primary-contact management"
     ],
     status: "Shipped"
   },
@@ -38,9 +41,9 @@ export const roadmapMilestones: RoadmapMilestone[] = [
     title: "Customer & Household Operations",
     focus: [
       "Customer imports",
-      "Household imports",
       "Customer merge workflows",
-      "Relationship roles",
+      "Household imports",
+      "Rich relationship roles",
       "Audit events"
     ],
     status: "Planned"

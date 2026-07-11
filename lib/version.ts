@@ -1,11 +1,11 @@
 export type ReleaseType = "patch" | "minor" | "major";
 
 export const version = {
-  currentVersion: "0.4.0",
-  releaseName: "Memberships & Check-In Persistence",
+  currentVersion: "0.4.1",
+  releaseName: "Membership & Check-In Stabilization",
   releaseDate: "2026-07-11",
-  releaseType: "minor" as ReleaseType,
-  summary: "Membership management and front-desk check-ins now persist through Neon with centralized access-rule evaluation."
+  releaseType: "patch" as ReleaseType,
+  summary: "Membership and check-in workflows now provide clearer access decisions, safer duplicate prevention, and better persistence feedback."
 } as const;
 
 export function formatReleaseType(type: ReleaseType) {

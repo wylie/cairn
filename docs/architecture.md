@@ -269,11 +269,14 @@ Memberships and check-ins are Neon-backed for the v0.4.0 persistence milestone. 
 - Membership ownership is limited to either an organization-owned customer or an organization-owned household. Household memberships can expose covered members through the existing customer-household relationship.
 - Membership states are `active`, `expired`, `cancelled`, and `suspended`. Cancellation or suspension changes status without deleting the membership row or any check-in history.
 - `db/repositories/membership-repository.ts` owns plan reads, membership CRUD, status transitions, customer membership lookups, status counts, data-mode counts, and active-access evaluation.
-- Active-access evaluation is centralized and checks organization, facility scope when present, customer or household ownership, membership status, and start/expiration dates before approving check-in access.
+- Active-access evaluation is centralized and checks organization, facility scope when present, customer or household ownership, membership status, and start/expiration dates before approving check-in access. It returns explicit allowed, allowed-with-warning, and denied decisions for active, expiring-soon, expired, suspended, cancelled, future, missing, and wrong-facility memberships.
 - `check_ins` stores organization/facility/customer attendance records with optional membership reference, check-in timestamp, optional check-out timestamp, staff metadata, access status, optional denial reason, and created timestamp.
 - `db/repositories/check-in-repository.ts` owns check-in, check-out, active roster, today history, customer history, duplicate-active prevention, repository error handling, and diagnostics.
 - Check-in writes validate customer and facility organization ownership before insert.
 - A partial unique index prevents duplicate active check-ins for the same organization/customer. Check-out updates only an active check-in in the same organization.
+- Membership mutations reject overlapping active memberships for the same owner, plan, and facility scope, which keeps accidental retry submissions from creating duplicate active access.
+- Membership extension renews from the later of today or the current expiration date and preserves historical check-ins.
+- Membership and check-in lookups use focused indexes for customer/household access decisions, current-roster reads, and customer check-in history.
 - Staff overrides can create an override check-in record when no active persisted membership grants access. Waiver-backed access blocks remain deferred until waivers are migrated.
 - `/admin/database` reports membership and attendance counts from Neon, including membership totals by status, check-ins today, currently checked in, and check-in history.
 - Primary contact must be an organization-owned customer assigned to the household.

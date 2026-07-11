@@ -242,11 +242,11 @@ const sitemapRobotsConfigurationRelease: ReleaseNote = {
 };
 
 const membershipsCheckInPersistenceRelease: ReleaseNote = {
-  version: version.currentVersion,
-  releaseName: version.releaseName,
-  releaseDate: version.releaseDate,
-  releaseType: version.releaseType,
-  summary: version.summary,
+  version: "0.4.0",
+  releaseName: "Memberships & Check-In Persistence",
+  releaseDate: "2026-07-11",
+  releaseType: "minor",
+  summary: "Membership management and front-desk check-ins now persist through Neon with centralized access-rule evaluation.",
   sections: {
     added: [
       "Neon-backed membership management",
@@ -265,6 +265,34 @@ const membershipsCheckInPersistenceRelease: ReleaseNote = {
     changed: [
       "Memberships and check-ins no longer rely on localStorage or mock persistence"
     ],
+    knownIssues: [
+      "Programs, registrations, POS, rentals, waivers, payment processing, imports, merge workflows, platform provisioning, and production authentication remain deferred"
+    ]
+  }
+};
+
+const membershipCheckInStabilizationRelease: ReleaseNote = {
+  version: version.currentVersion,
+  releaseName: version.releaseName,
+  releaseDate: version.releaseDate,
+  releaseType: version.releaseType,
+  summary: version.summary,
+  sections: {
+    added: [],
+    improved: [
+      "Membership workflow reliability",
+      "Check-in and check-out clarity",
+      "Access-decision messaging",
+      "Loading, success, and error states",
+      "Database query performance"
+    ],
+    fixed: [
+      "Duplicate overlapping active memberships are now rejected for the same owner, plan, and facility scope",
+      "Expired, suspended, cancelled, future, and wrong-facility memberships now show specific check-in denial messages",
+      "Membership create, edit, extend, status, check-in, and check-out actions now surface friendly success and error messages instead of failing silently",
+      "Empty check-in search no longer loads the full customer list"
+    ],
+    changed: [],
     knownIssues: [
       "Programs, registrations, POS, rentals, waivers, payment processing, imports, merge workflows, platform provisioning, and production authentication remain deferred"
     ]
@@ -372,6 +400,7 @@ export function compareReleaseNotesNewestFirst(a: ReleaseNote, b: ReleaseNote) {
 }
 
 const releaseNoteEntries: ReleaseNote[] = [
+  membershipCheckInStabilizationRelease,
   membershipsCheckInPersistenceRelease,
   sitemapRobotsConfigurationRelease,
   customerOperationsStabilizationRelease,

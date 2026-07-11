@@ -14,9 +14,12 @@ describe("data source inventory", () => {
 
   it("marks memberships and check-ins as Neon-backed", () => {
     const statuses = new Map(dataSourceInventory.map((entry) => [entry.module, entry.status]));
+    const notes = new Map(dataSourceInventory.map((entry) => [entry.module, entry.migrationStatus]));
 
     expect(statuses.get("Memberships")).toBe("Neon-backed");
     expect(statuses.get("Check-ins")).toBe("Neon-backed");
+    expect(notes.get("Memberships")).toContain("duplicate-active prevention");
+    expect(notes.get("Check-ins")).toContain("access-denial messaging");
   });
 
   it("keeps deferred adjacent workflows out of the completed migration", () => {

@@ -98,7 +98,7 @@ export const dataSourceInventory: DataSourceInventoryItem[] = [
     currentSource: "Neon `membership_plans` and `memberships` through `db/schema/memberships.ts`, `db/repositories/membership-repository.ts`, and membership server actions.",
     repositoryLayer: "Server-only membership plan reads, membership create/read/update/status transitions, customer membership lookups, active-access checks, status counts, plan counts, and data-mode counts.",
     scopeAudit: "`memberships.organization_id` is required and `memberships.facility_id` scopes facility-specific access when present. Membership reads and writes resolve organization and facility context before repository access, and ownership is limited to an organization-owned customer or household.",
-    migrationStatus: "Complete for membership plans, individual memberships, household memberships, start and expiration dates, active/expired/cancelled/suspended states, profile visibility, and access-rule lookups. Renewals, payment processing, freezes, card events, and billing remain future work.",
+    migrationStatus: "Complete for membership plans, individual memberships, household memberships, start and expiration dates, active/expired/cancelled/suspended states, profile visibility, extension, status changes, duplicate-active prevention, and access-rule lookups. Payment processing, freezes, card events, and billing remain future work.",
     plannedOrder: "Future membership work: renewals, payment-backed sales, freezes, card events, billing history, and richer reporting."
   },
   {
@@ -107,7 +107,7 @@ export const dataSourceInventory: DataSourceInventoryItem[] = [
     currentSource: "Neon `check_ins` through `db/schema/check-ins.ts`, `db/repositories/check-in-repository.ts`, and check-in server actions.",
     repositoryLayer: "Server-only check-in, check-out, active roster, today history, customer history, status counts, data-mode counts, duplicate-active prevention, and integrity checks.",
     scopeAudit: "`check_ins.organization_id`, `facility_id`, and `customer_id` are required. Check-ins validate customer and facility organization ownership, enforce active membership access unless staff override is used, and prevent duplicate active check-ins per organization/customer.",
-    migrationStatus: "Complete for customer check-in, check-out, currently-in roster, today history, customer profile history, staff override records, and admin diagnostics. Backdated check-in, capacity rules, automatic closeout, and waiver enforcement remain future work.",
+    migrationStatus: "Complete for customer check-in, check-out, currently-in roster, today history, customer profile history, staff override records, access-denial messaging, duplicate active check-in prevention, and admin diagnostics. Backdated check-in, capacity rules, automatic closeout, and waiver enforcement remain future work.",
     plannedOrder: "Future attendance work: capacity rules, backdated corrections, automatic closeout, waiver-backed blocks, audit events, and reporting."
   },
   {

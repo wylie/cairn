@@ -57,6 +57,13 @@
       "when": 1784073600000,
       "tag": "0007_memberships_checkins",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1784160000000,
+      "tag": "0008_membership_checkin_stabilization_indexes",
+      "breakpoints": true
     }
   ]
 }

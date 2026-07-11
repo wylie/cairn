@@ -7,6 +7,7 @@ Memberships cover active access, household coverage, start and expiration dates,
 - create individual or household memberships without payment processing
 - review membership status, renewal, and covered members
 - edit membership dates, owner, plan, and notes
+- extend active or expired memberships from the current expiration date or today
 - cancel or suspend a membership without deleting history
 - open related customer and household records
 
@@ -27,7 +28,9 @@ Day-pass sale and payment processing are still deferred. Use staff override duri
 2. Search by customer, household, membership type, or status.
 3. Open the detail panel.
 4. Edit dates, owner, plan, status, or notes.
-5. Cancel or suspend when needed.
+5. Extend, cancel, suspend, or reactivate when needed.
+
+If another active membership already overlaps for the same owner, plan, and facility scope, Cairn blocks the duplicate and shows a clear error. Adjust the existing membership instead of creating a second active record.
 
 ### Review a digital membership card
 Digital card issuance remains future work. Use the membership detail or customer profile to confirm status, plan, owner, and expiration.
@@ -42,7 +45,8 @@ Digital card issuance remains future work. Use the membership detail or customer
 - Use household coverage views before troubleshooting family access.
 - Check owner type before troubleshooting household coverage.
 - Review start and expiration dates before changing status.
-- Payment and receipt history are not part of the v0.4.0 membership persistence release.
+- Use extension for straightforward renewal when payment handling is not part of the workflow.
+- Payment and receipt history are not part of the v0.4.x membership persistence milestone.
 
 ## Related Features
 - [Check-In](./check-in.md)

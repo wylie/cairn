@@ -10,11 +10,11 @@ Version metadata is centralized in `lib/version.ts`.
 
 Current shipped version metadata:
 
-- `currentVersion`: `0.4.0`
-- `releaseName`: `Memberships & Check-In Persistence`
+- `currentVersion`: `0.4.1`
+- `releaseName`: `Membership & Check-In Stabilization`
 - `releaseDate`: `2026-07-11`
-- `releaseType`: `minor`
-- `summary`: `Membership management and front-desk check-ins now persist through Neon with centralized access-rule evaluation.`
+- `releaseType`: `patch`
+- `summary`: `Membership and check-in workflows now provide clearer access decisions, safer duplicate prevention, and better persistence feedback.`
 
 All active application version displays should read from the `version` object in `lib/version.ts`. Compatibility exports may exist for older components, but they must derive from `version`.
 
@@ -129,21 +129,42 @@ Update notifications are generated from release note data by `lib/releases/notif
 
 When a release entry becomes the latest release, Cairn can generate a system notification such as:
 
-`Cairn has been updated to v0.4.0. View what's new.`
+`Cairn has been updated to v0.4.1. View what's new.`
 
 The notification uses the existing communications notification center, counts toward unread totals, can be marked read, and links directly to the matching release note anchor.
 
 ## Current Shipped Version
 
-Version: `v0.4.0`
+Version: `v0.4.1`
 
 Released: `2026-07-11`
 
-Title: Memberships & Check-In Persistence
+Title: Membership & Check-In Stabilization
 
-Release type: Minor
+Release type: Patch
 
-Summary: Membership management and front-desk check-ins now persist through Neon with centralized access-rule evaluation.
+Summary: Membership and check-in workflows now provide clearer access decisions, safer duplicate prevention, and better persistence feedback.
+
+### v0.4.1 Notes
+
+#### Improved
+
+- Membership workflow reliability
+- Check-in and check-out clarity
+- Access-decision messaging
+- Loading, success, and error states
+- Database query performance
+
+#### Fixed
+
+- Duplicate overlapping active memberships are now rejected for the same owner, plan, and facility scope.
+- Expired, suspended, cancelled, future, and wrong-facility memberships now show specific check-in denial messages.
+- Membership create, edit, extend, status, check-in, and check-out actions now surface friendly success and error messages instead of failing silently.
+- Empty check-in search no longer loads the full customer list.
+
+#### Known Issues
+
+- Programs, registrations, POS, rentals, waivers, payment processing, imports, merge workflows, platform provisioning, and production authentication remain deferred.
 
 ### v0.4.0 Notes
 

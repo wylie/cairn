@@ -13,7 +13,7 @@ import {
   type MembershipWithRelations
 } from "@/db/repositories/membership-repository";
 import { getActiveFacilityContext } from "@/db/tenant";
-import { createMembershipAction, setMembershipStatusAction, updateMembershipAction } from "./actions";
+import { createMembershipAction, extendMembershipAction, setMembershipStatusAction, updateMembershipAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +39,7 @@ function ownerName(row: MembershipWithRelations) {
 export default async function MembershipsWorkspacePage({
   searchParams
 }: {
-  searchParams?: Promise<{ membershipId?: string; status?: string; q?: string }>;
+  searchParams?: Promise<{ membershipId?: string; status?: string; q?: string; notice?: string; error?: string }>;
 }) {
   const store = await cookies();
   const orgSlug = store.get("cairn_org_slug")?.value ?? "summit";
@@ -78,6 +78,9 @@ export default async function MembershipsWorkspacePage({
       .includes(query);
   });
   const selected = filteredRows.find((row) => row.membership.id === params.membershipId) ?? filteredRows[0] ?? null;
+  const coveredMembers = selected?.membership.ownerType === "household" && selected.membership.householdId
+    ? customers.filter((customer) => customer.householdId === selected.membership.householdId)
+    : [];
   const today = new Date().toISOString().slice(0, 10);
   const defaultExpires = new Date();
   defaultExpires.setDate(defaultExpires.getDate() + (plans[0]?.durationDays ?? 30));
@@ -102,6 +105,9 @@ export default async function MembershipsWorkspacePage({
         <MetricCard title="Expired memberships" value={counts.expired} />
         <MetricCard title="Suspended memberships" value={counts.suspended} />
       </div>
+
+      {params.notice ? <StatusMessage tone="success" message={params.notice} /> : null}
+      {params.error ? <StatusMessage tone="danger" message={params.error} /> : null}
 
       <Card>
         <CardHeader><CardTitle>Sell / Create Membership</CardTitle></CardHeader>
@@ -238,11 +244,30 @@ export default async function MembershipsWorkspacePage({
                   <Field label="Notes" value={selected.membership.notes ?? "No notes"} />
                 </dl>
 
+                {selected.membership.ownerType === "household" ? (
+                  <div className="rounded-lg border p-3" aria-label="covered-members">
+                    <p className="font-medium">Covered household members</p>
+                    {coveredMembers.length === 0 ? (
+                      <p className="mt-1 text-sm text-muted-foreground">No household members are currently linked to this household.</p>
+                    ) : (
+                      <ul className="mt-2 space-y-1">
+                        {coveredMembers.map((customer) => (
+                          <li key={customer.id} className="flex items-center justify-between gap-3 text-sm">
+                            <span>{customer.firstName} {customer.lastName}</span>
+                            <Link href={`/customers/${customer.id}#access`} className="text-primary hover:underline">Profile</Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ) : null}
+
                 <form action={updateMembershipAction} className="grid gap-3 rounded-lg border p-3">
                   <input type="hidden" name="membershipId" value={selected.membership.id} />
                   <input type="hidden" name="ownerType" value={selected.membership.ownerType} />
                   <input type="hidden" name="customerId" value={selected.membership.customerId ?? ""} />
                   <input type="hidden" name="householdId" value={selected.membership.householdId ?? ""} />
+                  <input type="hidden" name="status" value={selected.membership.status} />
                   <label>
                     <span className="mb-1 block text-muted-foreground">Plan</span>
                     <select name="planId" defaultValue={selected.membership.planId} className="h-11 w-full rounded-md border bg-background px-3">
@@ -262,6 +287,12 @@ export default async function MembershipsWorkspacePage({
                     <textarea name="notes" defaultValue={selected.membership.notes ?? ""} className="min-h-24 w-full rounded-md border bg-background px-3 py-2" />
                   </label>
                   <Button type="submit" variant="secondary">Save Membership</Button>
+                </form>
+
+                <form action={extendMembershipAction} className="rounded-lg border p-3">
+                  <input type="hidden" name="membershipId" value={selected.membership.id} />
+                  <input type="hidden" name="days" value="30" />
+                  <Button type="submit" variant="secondary" className="w-full">Extend 30 Days</Button>
                 </form>
 
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -306,6 +337,17 @@ function Field({ label, value }: { label: string; value: string }) {
     <div>
       <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
       <dd className="font-medium">{value}</dd>
+    </div>
+  );
+}
+
+function StatusMessage({ tone, message }: { tone: "success" | "danger"; message: string }) {
+  const toneClass = tone === "success"
+    ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+    : "border-red-200 bg-red-50 text-red-900";
+  return (
+    <div role="status" className={`rounded-lg border px-4 py-3 text-sm ${toneClass}`}>
+      {message}
     </div>
   );
 }

@@ -2,8 +2,10 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import {
   createMembership,
+  extendMembership,
   setMembershipStatus,
   updateMembership,
   type MembershipMutationInput
@@ -28,11 +30,12 @@ function readMembershipInput(formData: FormData, context: NonNullable<Awaited<Re
   const householdId = String(formData.get("householdId") ?? "").trim() || null;
   const startsOn = String(formData.get("startsOn") ?? "").trim();
   const expiresOn = String(formData.get("expiresOn") ?? "").trim() || null;
+  const status = String(formData.get("status") ?? "active").trim() as MembershipMutationInput["status"];
   const notes = String(formData.get("notes") ?? "").trim() || null;
 
   if (!planId) return { error: "Choose a membership plan." };
   if (!startsOn) return { error: "Start date is required." };
-  if (expiresOn && expiresOn < startsOn) return { error: "Expiration date must be after the start date." };
+  if (expiresOn && expiresOn < startsOn) return { error: "Expiration date must be on or after the start date." };
   if (ownerType === "customer" && !customerId) return { error: "Choose a customer for this membership." };
   if (ownerType === "household" && !householdId) return { error: "Choose a household for this membership." };
 
@@ -46,51 +49,87 @@ function readMembershipInput(formData: FormData, context: NonNullable<Awaited<Re
     startsOn,
     expiresOn,
     notes,
-    status: "active"
+    status: ["active", "expired", "cancelled", "suspended"].includes(status ?? "") ? status : "active"
   };
+}
+
+function membershipRedirect(kind: "notice" | "error", message: string, membershipId?: string | null): never {
+  const params = new URLSearchParams({ [kind]: message });
+  if (membershipId) params.set("membershipId", membershipId);
+  redirect(`/memberships?${params.toString()}`);
 }
 
 export async function createMembershipAction(formData: FormData): Promise<void> {
   const context = await resolveActionContext();
-  if (!context) return;
+  if (!context) membershipRedirect("error", "Database-backed organization context is unavailable.");
   const input = readMembershipInput(formData, context);
-  if ("error" in input) return;
+  if ("error" in input) membershipRedirect("error", input.error);
 
-  try {
-    const membership = await createMembership(input);
-    if (!membership) return;
-    revalidatePath("/memberships");
-    revalidatePath("/customers");
-  } catch {
-    return;
-  }
+  const result = await (async () => {
+    try {
+      return await createMembership(input);
+    } catch {
+      return { ok: false as const, message: "Membership could not be created. Check the database status and try again." };
+    }
+  })();
+  if (!result.ok) membershipRedirect("error", result.message);
+  revalidatePath("/memberships");
+  revalidatePath("/customers");
+  membershipRedirect("notice", "Membership created.", result.membership.id);
 }
 
 export async function updateMembershipAction(formData: FormData): Promise<void> {
   const context = await resolveActionContext();
-  if (!context) return;
+  if (!context) membershipRedirect("error", "Database-backed organization context is unavailable.");
   const membershipId = String(formData.get("membershipId") ?? "").trim();
-  if (!membershipId) return;
+  if (!membershipId) membershipRedirect("error", "Membership was not selected.");
   const input = readMembershipInput(formData, context);
-  if ("error" in input) return;
+  if ("error" in input) membershipRedirect("error", input.error, membershipId);
 
-  try {
-    const membership = await updateMembership(membershipId, context.organizationId, input);
-    if (!membership) return;
-    revalidatePath("/memberships");
-    revalidatePath(`/customers/${membership.customerId ?? ""}`);
-  } catch {
-    return;
-  }
+  const result = await (async () => {
+    try {
+      return await updateMembership(membershipId, context.organizationId, input);
+    } catch {
+      return { ok: false as const, message: "Membership could not be saved. Check the database status and try again." };
+    }
+  })();
+  if (!result.ok) membershipRedirect("error", result.message, membershipId);
+  revalidatePath("/memberships");
+  revalidatePath(`/customers/${result.membership.customerId ?? ""}`);
+  membershipRedirect("notice", "Membership saved.", result.membership.id);
 }
 
 export async function setMembershipStatusAction(formData: FormData): Promise<void> {
   const context = await resolveActionContext();
-  if (!context) return;
+  if (!context) membershipRedirect("error", "Database-backed organization context is unavailable.");
   const membershipId = String(formData.get("membershipId") ?? "").trim();
   const status = String(formData.get("status") ?? "").trim() as "active" | "expired" | "cancelled" | "suspended";
-  if (!membershipId || !["active", "expired", "cancelled", "suspended"].includes(status)) return;
-  await setMembershipStatus(membershipId, context.organizationId, status);
+  if (!membershipId || !["active", "expired", "cancelled", "suspended"].includes(status)) membershipRedirect("error", "Choose a valid membership status.", membershipId);
+  const result = await setMembershipStatus(membershipId, context.organizationId, status);
+  if (!result.ok) membershipRedirect("error", result.message, membershipId);
   revalidatePath("/memberships");
   revalidatePath("/check-in");
+  membershipRedirect("notice", `Membership marked ${status}.`, result.membership.id);
+}
+
+export async function extendMembershipAction(formData: FormData): Promise<void> {
+  const context = await resolveActionContext();
+  if (!context) membershipRedirect("error", "Database-backed organization context is unavailable.");
+  const membershipId = String(formData.get("membershipId") ?? "").trim();
+  const daysValue = Number.parseInt(String(formData.get("days") ?? "30"), 10);
+  const days = Number.isFinite(daysValue) ? daysValue : 30;
+  if (!membershipId) membershipRedirect("error", "Membership was not selected.");
+
+  const result = await (async () => {
+    try {
+      return await extendMembership(membershipId, context.organizationId, days);
+    } catch {
+      return { ok: false as const, message: "Membership could not be extended. Check the database status and try again." };
+    }
+  })();
+  if (!result.ok) membershipRedirect("error", result.message, membershipId);
+  revalidatePath("/memberships");
+  revalidatePath("/check-in");
+  revalidatePath(`/customers/${result.membership.customerId ?? ""}`);
+  membershipRedirect("notice", `Membership extended ${Math.max(1, days)} days.`, result.membership.id);
 }

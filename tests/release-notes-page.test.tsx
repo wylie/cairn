@@ -6,6 +6,11 @@ describe("ReleaseNotesPage", () => {
     render(<ReleaseNotesPage />);
 
     expect(screen.getByRole("heading", { name: "Release Notes" })).toBeInTheDocument();
+    expect(screen.getByText("Membership & Check-In Stabilization")).toBeInTheDocument();
+    expect(screen.getAllByText("Membership and check-in workflows now provide clearer access decisions, safer duplicate prevention, and better persistence feedback.").length).toBeGreaterThan(0);
+    expect(screen.getByText("Access-decision messaging")).toBeInTheDocument();
+    expect(screen.getByText("Database query performance")).toBeInTheDocument();
+    expect(screen.getByText("Duplicate overlapping active memberships are now rejected for the same owner, plan, and facility scope")).toBeInTheDocument();
     expect(screen.getByText("Memberships & Check-In Persistence")).toBeInTheDocument();
     expect(screen.getAllByText("Membership management and front-desk check-ins now persist through Neon with centralized access-rule evaluation.").length).toBeGreaterThan(0);
     expect(screen.getByText("Neon-backed membership management")).toBeInTheDocument();

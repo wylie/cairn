@@ -25,6 +25,7 @@ describe("membership and check-in persistence boundaries", () => {
 
   it("adds database safeguards for ownership and duplicate active check-ins", () => {
     const migration = readProjectFile("db/migrations/0007_memberships_checkins.sql");
+    const stabilizationMigration = readProjectFile("db/migrations/0008_membership_checkin_stabilization_indexes.sql");
 
     expect(migration).toContain('CREATE TYPE "public"."membership_owner_type"');
     expect(migration).toContain('CREATE TABLE "membership_plans"');
@@ -35,6 +36,10 @@ describe("membership and check-in persistence boundaries", () => {
     expect(migration).toContain('WHERE "checked_out_at" IS NULL');
     expect(migration).toContain('FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id")');
     expect(migration).toContain('FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id")');
+    expect(stabilizationMigration).toContain("memberships_access_customer_idx");
+    expect(stabilizationMigration).toContain("memberships_access_household_idx");
+    expect(stabilizationMigration).toContain("check_ins_customer_history_idx");
+    expect(stabilizationMigration).toContain("check_ins_active_facility_idx");
   });
 
   it("keeps active membership and check-in routes on repositories instead of localStorage state", () => {
@@ -60,18 +65,38 @@ describe("membership and check-in persistence boundaries", () => {
     const membershipRepository = readProjectFile("db/repositories/membership-repository.ts");
     const checkInRepository = readProjectFile("db/repositories/check-in-repository.ts");
 
+    expect(membershipRepository).toContain("export async function getMembershipAccessDecision");
     expect(membershipRepository).toContain("export async function getActiveAccessForCustomer");
+    expect(membershipRepository).toContain("findOverlappingActiveMembership");
+    expect(membershipRepository).toContain("export async function extendMembership");
     expect(membershipRepository).toContain("eq(memberships.organizationId, organizationId)");
-    expect(membershipRepository).toContain("eq(memberships.facilityId, facilityId)");
-    expect(membershipRepository).toContain("eq(memberships.status, \"active\")");
-    expect(membershipRepository).toContain("eq(memberships.householdId, customer.householdId)");
+    expect(membershipRepository).toContain("Membership is suspended.");
+    expect(membershipRepository).toContain("Membership is cancelled.");
+    expect(membershipRepository).toContain("Membership expired");
+    expect(membershipRepository).toContain("Membership exists, but it is not valid for this facility.");
 
     expect(checkInRepository).toContain("export async function checkInCustomer");
     expect(checkInRepository).toContain("export async function checkOutCustomer");
+    expect(checkInRepository).toContain("getMembershipAccessDecision");
     expect(checkInRepository).toContain("eq(checkIns.organizationId, input.organizationId)");
     expect(checkInRepository).toContain("eq(checkIns.customerId, input.customerId)");
     expect(checkInRepository).toContain("isNull(checkIns.checkedOutAt)");
     expect(checkInRepository).toContain("return { ok: false, message: \"Customer is already checked in.");
     expect(checkInRepository).toContain("return record ? { ok: true, record } : { ok: false, message: \"No active check-in was found.\"");
+  });
+
+  it("keeps check-in search and action feedback clear on the server page", () => {
+    const page = readProjectFile("app/(app)/check-in/page.tsx");
+    const actions = readProjectFile("app/(app)/check-in/actions.ts");
+
+    expect(page).toContain("query ? searchCustomers(organizationId, query) : Promise.resolve([])");
+    expect(page).toContain("getMembershipAccessDecision");
+    expect(page).toContain("Allowed with warning");
+    expect(page).toContain("access?.message");
+    expect(page).toContain("params.notice");
+    expect(page).toContain("params.error");
+    expect(actions).toContain("checkInRedirect(\"notice\"");
+    expect(actions).toContain("checkInRedirect(\"error\"");
+    expect(actions).toContain("result.message");
   });
 });

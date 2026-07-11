@@ -52,7 +52,9 @@ export const roadmapMilestones: RoadmapMilestone[] = [
       "Check-ins",
       "Attendance",
       "Centralized access rules",
-      "Membership and attendance diagnostics"
+      "Membership and attendance diagnostics",
+      "Stabilized membership and check-in workflows",
+      "Access-decision clarity"
     ],
     status: "Shipped"
   },

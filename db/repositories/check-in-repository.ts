@@ -2,7 +2,7 @@ import "server-only";
 
 import { and, asc, count, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import { checkIns, customers, facilities, getDatabase, membershipPlans, memberships, organizations } from "@/db";
-import { getActiveAccessForCustomer } from "@/db/repositories/membership-repository";
+import { getMembershipAccessDecision } from "@/db/repositories/membership-repository";
 
 export type CheckInRecord = typeof checkIns.$inferSelect;
 export type CheckInWithCustomer = {
@@ -129,25 +129,25 @@ export async function checkInCustomer(input: {
       .limit(1);
     if (active) return { ok: false, message: "Customer is already checked in." };
 
-    const access = await getActiveAccessForCustomer(input.customerId, input.organizationId, input.facilityId);
-    if (!access && !input.override) {
-      return { ok: false, message: "No active membership is valid for this facility." };
+    const access = await getMembershipAccessDecision(input.customerId, input.organizationId, input.facilityId);
+    if (access.status === "denied" && !input.override) {
+      return { ok: false, message: access.message };
     }
 
     const [record] = await tx
       .insert(checkIns)
       .values({
         id: `cin_${crypto.randomUUID()}`,
-        organizationId: input.organizationId,
-        facilityId: input.facilityId,
-        customerId: input.customerId,
-        membershipId: access?.membership.id ?? null,
-        checkedInAt: new Date(),
-        status: "checked-in",
-        accessStatus: access ? "approved" : "override",
-        denialReason: access ? null : input.denialReason ?? "Staff override",
-        checkedInByStaffId: input.staffUserId ?? null,
-        checkedInByStaffName: input.staffName ?? null
+         organizationId: input.organizationId,
+         facilityId: input.facilityId,
+         customerId: input.customerId,
+         membershipId: access.membership?.id ?? null,
+         checkedInAt: new Date(),
+         status: "checked-in",
+         accessStatus: access.status === "denied" ? "override" : "approved",
+         denialReason: access.status === "denied" ? input.denialReason ?? access.message : access.status === "warning" ? access.message : null,
+         checkedInByStaffId: input.staffUserId ?? null,
+         checkedInByStaffName: input.staffName ?? null
       })
       .returning();
     return record ? { ok: true, record } : { ok: false, message: "Check-in could not be created." };

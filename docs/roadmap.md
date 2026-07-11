@@ -55,6 +55,8 @@ Focus:
 - Attendance
 - Centralized access rules
 - Membership and attendance diagnostics
+- Stabilized membership and check-in workflows
+- Access-decision clarity
 
 ## v0.5.x - Customer & Household Operations
 

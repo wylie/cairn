@@ -194,17 +194,18 @@ Phases:
 
 ## Membership And Check-In Migration Plan
 
-Current: the v0.4.0 Memberships & Check-In Persistence milestone is complete for membership plans, individual and household memberships, membership status changes, persisted access evaluation, customer check-in, check-out, currently-in roster, today history, customer profile membership visibility, and customer check-in history. Remaining membership-adjacent work such as renewals, payment-backed sales, freezes, billing history, card events, capacity rules, automatic closeout, waiver-backed blocks, backdated corrections, and attendance reporting remains future work.
+Current: the v0.4.x Memberships & Check-In milestone is complete for membership plans, individual and household memberships, membership status changes, membership extension, duplicate-active prevention, persisted access evaluation, customer check-in, check-out, currently-in roster, today history, customer profile membership visibility, and customer check-in history. Remaining membership-adjacent work such as payment-backed sales, freezes, billing history, card events, capacity rules, automatic closeout, waiver-backed blocks, backdated corrections, and attendance reporting remains future work.
 
 Implemented:
 
 - Schema - `membership_plans`, `memberships`, and `check_ins` tables define organization and facility ownership, timestamps, membership status, ownership mode, attendance status, and access status. Complete.
 - Repositories - `db/repositories/membership-repository.ts` and `db/repositories/check-in-repository.ts` own all durable membership and check-in reads/writes. Complete.
 - Seed/demo data - `npm run db:seed` inserts fictional demo membership plans, membership records, and check-ins for seeded organizations. Complete.
-- Membership workflows - membership list/detail/create/edit/cancel/suspend and customer profile membership visibility read and write Neon through repository-backed server actions. Complete.
-- Check-in workflows - customer search-based check-in, staff override, check-out, currently-in roster, today history, and customer profile history read and write Neon through repository-backed server actions. Complete.
-- Access rules - persisted membership status, start/expiration dates, organization scope, facility scope when present, and customer/household ownership are evaluated centrally before check-in. Complete.
-- Integrity - duplicate active check-ins are blocked, check-out requires an active check-in, membership cancellation does not delete history, and customer/facility organization ownership is validated before attendance writes. Complete.
+- Membership workflows - membership list/detail/create/edit/extend/cancel/suspend and customer profile membership visibility read and write Neon through repository-backed server actions. Complete.
+- Check-in workflows - customer search-based check-in, staff override, check-out, currently-in roster, today history, and customer profile history read and write Neon through repository-backed server actions with visible success and error states. Complete.
+- Access rules - persisted membership status, start/expiration dates, organization scope, facility scope when present, and customer/household ownership are evaluated centrally before check-in with specific staff-facing decision messages. Complete.
+- Integrity - duplicate active check-ins are blocked, overlapping active memberships are rejected, check-out requires an active check-in, membership cancellation does not delete history, and customer/facility organization ownership is validated before attendance writes. Complete.
+- Performance - focused indexes support membership access decisions, active roster reads, and check-in history. Complete.
 
 Future:
 

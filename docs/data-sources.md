@@ -1,6 +1,6 @@
 # Data Sources
 
-Cairn v0.4.0 documents which modules are database-backed today and which modules still rely on demo storage.
+Cairn v0.4.1 documents which modules are database-backed today and which modules still rely on demo storage.
 
 This is both a readiness inventory and the current source-of-truth audit for migrated workflows. It should be reviewed before any future Neon schema or workflow migration work.
 
@@ -24,8 +24,8 @@ This is both a readiness inventory and the current source-of-truth audit for mig
 | Households | Neon `households`, customer `household_id` links, organization-scoped repositories, and server actions | Neon-backed | Household list/detail and member display are fully persistent. Household memberships now persist through membership ownership records. Rich relationship roles and billing behavior remain future migrations. |
 | Household Create/Edit/Delete | Neon `households`, customer `household_id` links, household server actions, and repository mutations | Neon-backed | Household create/edit/delete, member add/remove, and primary-contact assignment are fully persistent. Deleting a household clears member links without deleting customers. |
 | Customer-Household Relationships | Neon `customers.household_id` with `ON DELETE SET NULL`, organization-scoped repositories, and server actions | Neon-backed | A customer can belong to zero or one household. Removing a member clears the link without deleting the customer. Deleting a household clears member links without deleting customers. |
-| Memberships | Neon `membership_plans` and `memberships`, organization/facility-scoped repositories, and server actions | Neon-backed | Membership plans, individual memberships, household memberships, dates, active/expired/cancelled/suspended states, customer profile visibility, and access-rule lookup are persistent. Payment processing, renewals, freezes, billing, and card events remain future work. |
-| Check-ins | Neon `check_ins`, organization/facility-scoped repositories, and server actions | Neon-backed | Customer check-in, check-out, currently-in roster, today history, customer profile history, staff override records, and admin diagnostics are persistent. Capacity rules, automatic closeout, backdated corrections, and waiver-backed blocks remain future work. |
+| Memberships | Neon `membership_plans` and `memberships`, organization/facility-scoped repositories, and server actions | Neon-backed | Membership plans, individual memberships, household memberships, dates, active/expired/cancelled/suspended states, customer profile visibility, extension, status changes, duplicate-active prevention, and access-rule lookup are persistent. Payment processing, freezes, billing, and card events remain future work. |
+| Check-ins | Neon `check_ins`, organization/facility-scoped repositories, and server actions | Neon-backed | Customer check-in, check-out, currently-in roster, today history, customer profile history, staff override records, access-denial messaging, duplicate active check-in prevention, and admin diagnostics are persistent. Capacity rules, automatic closeout, backdated corrections, and waiver-backed blocks remain future work. |
 | Programs | `lib/mocks/programs.ts`, public program helpers, and local mock state | Demo-backed | Program/session data is not server-authoritative. |
 | Registrations | `lib/mocks/registrations.ts`, program mocks, and local mock state | Demo-backed | Registration and waitlist writes are not migrated. |
 | POS | Product and transaction mocks, POS helpers, and local mock state | Demo-backed | Products, carts, receipts, refunds, and inventory are not migrated. |
@@ -44,8 +44,8 @@ The current repository layer is intentionally narrow:
 - `db/repositories/staff-repository.ts` has platform-wide admin reads plus organization-scoped and facility-scoped staff reads.
 - `db/repositories/customer-repository.ts` has platform/admin metrics plus organization-scoped customer list, single-customer reads, normalized search, create, edit, delete, duplicate-warning, last-created, data-mode counts, active/inactive counts, potential duplicate count, and count helpers.
 - `db/repositories/household-repository.ts` has platform/admin metrics plus organization-scoped household list, single-household reads, create, edit, delete, member reads, member add/remove, primary-contact updates, duplicate checks, customer-link clearing, and count helpers.
-- `db/repositories/membership-repository.ts` has organization/facility-scoped plan reads, membership create/read/update/status transitions, customer membership lookups, active-access checks, and platform/admin counts.
-- `db/repositories/check-in-repository.ts` has organization/facility-scoped check-in, check-out, active roster, today history, customer history, duplicate-active prevention, and platform/admin counts.
+- `db/repositories/membership-repository.ts` has organization/facility-scoped plan reads, membership create/read/update/extend/status transitions, duplicate-active checks, customer membership lookups, detailed access decisions, and platform/admin counts.
+- `db/repositories/check-in-repository.ts` has organization/facility-scoped check-in, check-out, active roster, today history, customer history, duplicate-active prevention, detailed denial messaging, and platform/admin counts.
 
 Tenant-facing pages should use scoped repository helpers after resolving the active organization through `db/tenant.ts`. Platform admin pages may use cross-tenant reads only for explicit platform visibility.
 
@@ -67,9 +67,10 @@ Tenant-facing pages should use scoped repository helpers after resolving the act
 - Household primary-contact repository mutations validate organization ownership and household membership before writing primary-contact state.
 - Household records and relationship links are no longer hydrated from or saved to household localStorage mock keys.
 - Membership records require organization scope, support facility-specific scope when present, and are owned by either one organization-owned customer or one organization-owned household.
-- Active access checks are centralized in the membership repository and evaluate persisted membership status, date windows, facility scope when present, and customer/household ownership.
+- Active access checks are centralized in the membership repository and evaluate persisted membership status, date windows, facility scope when present, and customer/household ownership. Decisions distinguish allowed, allowed-with-warning, expired, suspended, cancelled, future, missing, and wrong-facility access.
 - Check-in writes validate customer and facility organization ownership before insert, prevent duplicate active check-ins for the same organization/customer, and reject check-out requests without an active check-in.
 - Membership cancellation or suspension changes membership status without deleting membership or check-in history.
+- Membership access and attendance queries are supported by focused indexes in `0008_membership_checkin_stabilization_indexes.sql`.
 - Demo fallback data is separated by organization id and `data_mode`, but fallback/demo state is not production-authoritative.
 - Platform admin organization provisioning still persists browser-local registry records and must be replaced before real customer provisioning.
 

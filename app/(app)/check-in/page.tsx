@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
-import { getActiveAccessForCustomer } from "@/db/repositories/membership-repository";
+import { getMembershipAccessDecision } from "@/db/repositories/membership-repository";
 import { searchCustomers } from "@/db/repositories/customer-repository";
 import { getActiveCheckIns, getTodayCheckIns } from "@/db/repositories/check-in-repository";
 import { getActiveFacilityContext } from "@/db/tenant";
@@ -28,7 +28,7 @@ function formatDateTime(value: string | Date) {
 export default async function CheckInPage({
   searchParams
 }: {
-  searchParams?: Promise<{ q?: string }>;
+  searchParams?: Promise<{ q?: string; notice?: string; error?: string }>;
 }) {
   const store = await cookies();
   const orgSlug = store.get("cairn_org_slug")?.value ?? "summit";
@@ -52,7 +52,7 @@ export default async function CheckInPage({
   const organizationId = context.organization.id;
   const facilityId = context.activeFacility.id;
   const [results, todayRows, activeRows] = await Promise.all([
-    query ? searchCustomers(organizationId, query) : searchCustomers(organizationId, ""),
+    query ? searchCustomers(organizationId, query) : Promise.resolve([]),
     getTodayCheckIns(organizationId, facilityId),
     getActiveCheckIns(organizationId, facilityId)
   ]);
@@ -62,7 +62,7 @@ export default async function CheckInPage({
     await Promise.all(
       visibleResults.map(async (customer) => [
         customer.id,
-        await getActiveAccessForCustomer(customer.id, organizationId, facilityId)
+        await getMembershipAccessDecision(customer.id, organizationId, facilityId)
       ] as const)
     )
   );
@@ -80,6 +80,9 @@ export default async function CheckInPage({
         <MetricCard title="Today's Check-Ins" value={todayRows.length} />
         <MetricCard title="Checked Out Today" value={todayRows.filter((row) => row.checkIn.checkedOutAt).length} />
       </div>
+
+      {params.notice ? <StatusMessage tone="success" message={params.notice} /> : null}
+      {params.error ? <StatusMessage tone="danger" message={params.error} /> : null}
 
       <Card>
         <CardHeader><CardTitle>Customer Lookup</CardTitle></CardHeader>
@@ -107,13 +110,14 @@ export default async function CheckInPage({
           <CardHeader><CardTitle>Search Results</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             {query.length === 0 ? (
-              <EmptyState title="Start with customer search" description="Search by name, preferred name, phone, or email." />
+              <EmptyState title="Start with customer search" description="Search by name, preferred name, member ID, phone, or email." />
             ) : visibleResults.length === 0 ? (
               <EmptyState title="No customers found" description="Try a different name, email, or phone number." />
             ) : (
               visibleResults.map((customer) => {
                 const access = accessByCustomer.get(customer.id) ?? null;
                 const checkedIn = activeCustomerIds.has(customer.id);
+                const canCheckIn = access?.status === "allowed" || access?.status === "warning";
                 return (
                   <div key={customer.id} className="rounded-lg border p-3">
                     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -121,9 +125,12 @@ export default async function CheckInPage({
                         <p className="font-medium">{customer.firstName} {customer.lastName}</p>
                         <p className="text-xs text-muted-foreground">{customer.email ?? customer.phone ?? customer.memberId ?? customer.id}</p>
                         <div className="mt-2 flex flex-wrap gap-2">
-                          <Badge tone={checkedIn ? "success" : access ? "success" : "warning"}>{checkedIn ? "Checked in" : access ? "Eligible" : "No active membership"}</Badge>
-                          {access ? <Badge tone="muted">{access.plan.name}</Badge> : null}
+                          <Badge tone={checkedIn ? "success" : access?.status === "denied" ? "danger" : access?.status === "warning" ? "warning" : "success"}>
+                            {checkedIn ? "Checked in" : access?.status === "denied" ? "Denied" : access?.status === "warning" ? "Allowed with warning" : "Allowed"}
+                          </Badge>
+                          {access?.plan ? <Badge tone="muted">{access.plan.name}</Badge> : null}
                         </div>
+                        <p className="mt-2 text-sm text-muted-foreground">{checkedIn ? "Already checked in. Check out from the current roster before checking in again." : access?.message ?? "Search returned no access decision."}</p>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <Link href={`/customers/${customer.id}?from=check-in&returnTo=/check-in?q=${encodeURIComponent(query)}`}>
@@ -132,14 +139,16 @@ export default async function CheckInPage({
                         {!checkedIn ? (
                           <form action={checkInCustomerAction}>
                             <input type="hidden" name="customerId" value={customer.id} />
-                            <Button type="submit" disabled={!access}>Check In</Button>
+                            <input type="hidden" name="searchQuery" value={query} />
+                            <Button type="submit" disabled={!canCheckIn}>Check In</Button>
                           </form>
                         ) : null}
-                        {!access && !checkedIn ? (
+                        {access?.status === "denied" && !checkedIn ? (
                           <form action={checkInCustomerAction}>
                             <input type="hidden" name="customerId" value={customer.id} />
+                            <input type="hidden" name="searchQuery" value={query} />
                             <input type="hidden" name="override" value="true" />
-                            <input type="hidden" name="denialReason" value="Staff override without active membership" />
+                            <input type="hidden" name="denialReason" value={`Staff override: ${access.message}`} />
                             <Button type="submit" variant="secondary">Override</Button>
                           </form>
                         ) : null}
@@ -168,6 +177,7 @@ export default async function CheckInPage({
                     </div>
                     <form action={checkOutCustomerAction}>
                       <input type="hidden" name="checkInId" value={row.checkIn.id} />
+                      <input type="hidden" name="searchQuery" value={query} />
                       <Button type="submit" variant="secondary">Check Out</Button>
                     </form>
                   </div>
@@ -223,5 +233,16 @@ function MetricCard({ title, value, testId }: { title: string; value: number; te
         <p className="mt-1 text-2xl font-semibold" data-testid={testId}>{value}</p>
       </CardContent>
     </Card>
+  );
+}
+
+function StatusMessage({ tone, message }: { tone: "success" | "danger"; message: string }) {
+  const toneClass = tone === "success"
+    ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+    : "border-red-200 bg-red-50 text-red-900";
+  return (
+    <div role="status" className={`rounded-lg border px-4 py-3 text-sm ${toneClass}`}>
+      {message}
+    </div>
   );
 }

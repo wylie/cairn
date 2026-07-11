@@ -18,6 +18,8 @@ Check-In supports persisted customer lookup, membership access validation, occup
 4. Review persisted membership access status.
 5. Complete check-in.
 
+Access messages explain whether access is allowed, allowed with an expiration warning, denied because the membership expired, denied because it is suspended or cancelled, denied because it has not started, denied because it belongs to another facility, or denied because no membership exists.
+
 ### Use staff override
 1. Search for the customer.
 2. Review the denied access reason.
@@ -35,6 +37,7 @@ Waiver-backed access blocks remain deferred until waiver persistence is migrated
 ## Operational Notes
 - Duplicate active check-ins for the same organization and customer are prevented.
 - Check-out requires an active check-in.
+- Check-in and check-out actions show visible success or error messages after the database write completes.
 - Automatic closeout settings remain future work.
 - Dashboard occupancy metrics deep-link into current check-in views.
 

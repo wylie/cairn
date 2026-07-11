@@ -1,11 +1,11 @@
 export type ReleaseType = "patch" | "minor" | "major";
 
 export const version = {
-  currentVersion: "0.3.3",
-  releaseName: "Customer Administration & Data Quality",
+  currentVersion: "0.3.4",
+  releaseName: "Customer Operations Stabilization",
   releaseDate: "2026-07-11",
   releaseType: "patch" as ReleaseType,
-  summary: "Customer and household administration, data-source visibility, repository boundaries, and workflow coverage are finalized for v0.3.x."
+  summary: "Customer and household workflows are stabilized with transactional writes, deterministic repository reads, and focused validation coverage."
 } as const;
 
 export function formatReleaseType(type: ReleaseType) {

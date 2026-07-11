@@ -36,4 +36,36 @@ describe("customer and household repository boundaries", () => {
       expect(source, file).not.toMatch(/\bgetDatabase\b/);
     }
   });
+
+  it("keeps multi-step customer and household mutations transactional", () => {
+    const customerRepository = readProjectFile("db/repositories/customer-repository.ts");
+    const householdRepository = readProjectFile("db/repositories/household-repository.ts");
+
+    expect(customerRepository).toMatch(/export async function deleteCustomer[\s\S]*database\.transaction/);
+    expect(householdRepository).toMatch(/export async function createHousehold[\s\S]*database\.transaction/);
+    expect(householdRepository).toMatch(/export async function updateHousehold[\s\S]*database\.transaction/);
+    expect(householdRepository).toMatch(/export async function addCustomerToHousehold[\s\S]*database\.transaction/);
+    expect(householdRepository).toMatch(/export async function removeCustomerFromHousehold[\s\S]*database\.transaction/);
+    expect(householdRepository).toMatch(/export async function deleteHousehold[\s\S]*database\.transaction/);
+  });
+
+  it("validates household primary contacts before repository mutations", () => {
+    const householdRepository = readProjectFile("db/repositories/household-repository.ts");
+
+    expect(householdRepository).toMatch(/if \(!primaryContact \|\| primaryContact\.householdId\) return null/);
+    expect(householdRepository).toMatch(/primaryContact\.householdId && primaryContact\.householdId !== householdId/);
+    expect(householdRepository).toMatch(/eq\(customers\.householdId, householdId\)/);
+  });
+
+  it("returns friendly customer and household database errors from server actions", () => {
+    const customerActions = readProjectFile("app/(app)/customers/actions.ts");
+    const householdActions = readProjectFile("app/(app)/households/actions.ts");
+
+    expect(customerActions).toMatch(/function customerDatabaseError/);
+    expect(customerActions).toMatch(/behind the required migrations/);
+    expect(customerActions).toMatch(/catch \{/);
+    expect(householdActions).toMatch(/function householdDatabaseError/);
+    expect(householdActions).toMatch(/behind the required migrations/);
+    expect(householdActions).toMatch(/catch \{/);
+  });
 });

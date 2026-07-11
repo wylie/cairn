@@ -6,6 +6,10 @@ describe("ReleaseNotesPage", () => {
     render(<ReleaseNotesPage />);
 
     expect(screen.getByRole("heading", { name: "Release Notes" })).toBeInTheDocument();
+    expect(screen.getByText("Customer Operations Stabilization")).toBeInTheDocument();
+    expect(screen.getAllByText("Customer and household workflows are stabilized with transactional writes, deterministic repository reads, and focused validation coverage.").length).toBeGreaterThan(0);
+    expect(screen.getByText("Customer and household workflow reliability")).toBeInTheDocument();
+    expect(screen.getByText("Customer delete and household mutation steps now run transactionally so related customer-household links cannot be partially updated")).toBeInTheDocument();
     expect(screen.getByText("Customer Administration & Data Quality")).toBeInTheDocument();
     expect(screen.getAllByText("Customer and household administration, data-source visibility, repository boundaries, and workflow coverage are finalized for v0.3.x.").length).toBeGreaterThan(0);
     expect(screen.getByText("Customer and household admin diagnostics")).toBeInTheDocument();

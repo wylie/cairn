@@ -194,10 +194,12 @@ Customers and households now have database-backed profile workflows for modeled 
 - Duplicate-customer checks warn on exact email, exact normalized phone, or matching name plus birth date within the active organization. Staff may review the possible match and save anyway; merge is not built yet.
 - `db/repositories/customer-repository.ts` provides server-only create, read, update, delete, normalized search, count, duplicate-warning, potential duplicate count, and last-created helpers.
 - Customer search is organization-scoped, trims and normalizes input, and supports partial matching across first name, last name, preferred name, email, and phone.
+- Customer delete uses a transaction when clearing household primary-contact references and deleting the customer row.
 - `households.organization_id` requires every household to belong to one organization.
 - `households.primary_contact_id` is nullable so household records can be created before a primary contact is selected.
 - `customers.household_id` references `households.id` with `ON DELETE SET NULL`, so deleting a household clears customer household links without deleting customer profiles.
 - `db/repositories/household-repository.ts` provides server-only household create, read, update, delete, list-by-organization, member reads, member add/remove, primary-contact updates, duplicate checks, and count helpers.
+- Household mutations that touch both households and customers use transactions, and primary-contact mutations verify organization ownership and household membership before writing.
 - `/admin/database` reports customer count, active and inactive customers, demo/sandbox/production customer counts, searchable customer count, potential duplicate pairs, last customer created, customer seed count, household counts, customers assigned to households, and customers without households from Neon for internal visibility.
 - `npm run db:seed` seeds a small fictional customer and household set for each demo organization.
 
@@ -206,6 +208,7 @@ Customer read path:
 - The staff customer list and detail pages resolve the active organization from the server-side organization context.
 - The pages read customers through `db/repositories/customer-repository.ts`.
 - Customer creates, edits, and deletes call server actions that resolve organization context before repository writes.
+- Customer and household server actions return friendly unavailable-or-migration-needed errors when Neon write paths fail.
 - Customer reads and writes are organization-scoped before rows are mapped into the existing customer UI.
 - The customer mock-state provider no longer loads or saves customer records from the customer localStorage key.
 - If the database path is unavailable, customer and household app pages show empty or unavailable states instead of falling back to seeded demo customer or household records.
@@ -228,7 +231,7 @@ Current migration status:
 - Household list, detail, create, edit, delete, add-member, remove-member, and primary-contact management are backed by Neon.
 - Customer merge, membership, check-in, waiver, registration, POS, documents, communications, richer household relationships, and billing workflows are not migrated yet.
 - The existing client state provider remains in place for operational actions until server-backed write paths exist.
-- The v0.3.3 data-source audit is documented in [Data Sources](./data-sources.md) and exposed internally at `/admin/data-sources`.
+- The v0.3.4 data-source audit is documented in [Data Sources](./data-sources.md) and exposed internally at `/admin/data-sources`.
 
 Customer ownership rules:
 

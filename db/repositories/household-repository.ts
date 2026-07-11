@@ -17,7 +17,7 @@ export async function getHouseholdsByOrganization(organizationId: string): Promi
   const database = getDatabase();
   if (!database) return [];
 
-  return database.select().from(households).where(eq(households.organizationId, organizationId)).orderBy(asc(households.name));
+  return database.select().from(households).where(eq(households.organizationId, organizationId)).orderBy(asc(households.name), asc(households.id));
 }
 
 export async function getHouseholdByOrganization(householdId: string, organizationId: string): Promise<HouseholdRecord | null> {
@@ -52,7 +52,7 @@ export async function getHouseholdMembers(householdId: string, organizationId: s
     .select()
     .from(customers)
     .where(and(eq(customers.organizationId, organizationId), eq(customers.householdId, householdId)))
-    .orderBy(asc(customers.lastName), asc(customers.firstName));
+    .orderBy(asc(customers.lastName), asc(customers.firstName), asc(customers.id));
 }
 
 export async function getHouseholdCount(): Promise<number> {
@@ -82,14 +82,25 @@ export async function createHousehold(input: HouseholdMutationInput): Promise<Ho
   const database = getDatabase();
   if (!database) return null;
 
-  const [household] = await database.insert(households).values(input).returning();
-  if (household?.primaryContactId) {
-    await database
-      .update(customers)
-      .set({ householdId: household.id, updatedAt: new Date() })
-      .where(and(eq(customers.id, household.primaryContactId), eq(customers.organizationId, household.organizationId)));
-  }
-  return household ?? null;
+  return database.transaction(async (tx) => {
+    if (input.primaryContactId) {
+      const [primaryContact] = await tx
+        .select()
+        .from(customers)
+        .where(and(eq(customers.id, input.primaryContactId), eq(customers.organizationId, input.organizationId)))
+        .limit(1);
+      if (!primaryContact || primaryContact.householdId) return null;
+    }
+
+    const [household] = await tx.insert(households).values(input).returning();
+    if (household?.primaryContactId) {
+      await tx
+        .update(customers)
+        .set({ householdId: household.id, updatedAt: new Date() })
+        .where(and(eq(customers.id, household.primaryContactId), eq(customers.organizationId, household.organizationId)));
+    }
+    return household ?? null;
+  });
 }
 
 export async function updateHousehold(
@@ -100,20 +111,31 @@ export async function updateHousehold(
   const database = getDatabase();
   if (!database) return null;
 
-  const [household] = await database
-    .update(households)
-    .set({ ...input, updatedAt: new Date() })
-    .where(and(eq(households.id, householdId), eq(households.organizationId, organizationId)))
-    .returning();
+  return database.transaction(async (tx) => {
+    if (input.primaryContactId) {
+      const [primaryContact] = await tx
+        .select()
+        .from(customers)
+        .where(and(eq(customers.id, input.primaryContactId), eq(customers.organizationId, organizationId)))
+        .limit(1);
+      if (!primaryContact || (primaryContact.householdId && primaryContact.householdId !== householdId)) return null;
+    }
 
-  if (household?.primaryContactId) {
-    await database
-      .update(customers)
-      .set({ householdId: household.id, updatedAt: new Date() })
-      .where(and(eq(customers.id, household.primaryContactId), eq(customers.organizationId, household.organizationId)));
-  }
+    const [household] = await tx
+      .update(households)
+      .set({ ...input, updatedAt: new Date() })
+      .where(and(eq(households.id, householdId), eq(households.organizationId, organizationId)))
+      .returning();
 
-  return household ?? null;
+    if (household?.primaryContactId) {
+      await tx
+        .update(customers)
+        .set({ householdId: household.id, updatedAt: new Date() })
+        .where(and(eq(customers.id, household.primaryContactId), eq(customers.organizationId, household.organizationId)));
+    }
+
+    return household ?? null;
+  });
 }
 
 export async function addCustomerToHousehold(
@@ -124,27 +146,36 @@ export async function addCustomerToHousehold(
   const database = getDatabase();
   if (!database) return null;
 
-  const household = await getHouseholdByOrganization(householdId, organizationId);
-  if (!household) return null;
+  return database.transaction(async (tx) => {
+    const [household] = await tx
+      .select()
+      .from(households)
+      .where(and(eq(households.id, householdId), eq(households.organizationId, organizationId)))
+      .limit(1);
+    if (!household) return null;
 
-  const [existingCustomer] = await database
-    .select()
-    .from(customers)
-    .where(and(eq(customers.id, customerId), eq(customers.organizationId, organizationId)))
-    .limit(1);
-  if (!existingCustomer || existingCustomer.householdId) return null;
+    const [existingCustomer] = await tx
+      .select()
+      .from(customers)
+      .where(and(eq(customers.id, customerId), eq(customers.organizationId, organizationId)))
+      .limit(1);
+    if (!existingCustomer || existingCustomer.householdId) return null;
 
-  const [customer] = await database
-    .update(customers)
-    .set({ householdId, updatedAt: new Date() })
-    .where(and(eq(customers.id, customerId), eq(customers.organizationId, organizationId)))
-    .returning();
+    const [customer] = await tx
+      .update(customers)
+      .set({ householdId, updatedAt: new Date() })
+      .where(and(eq(customers.id, customerId), eq(customers.organizationId, organizationId)))
+      .returning();
 
-  if (customer && !household.primaryContactId) {
-    await setHouseholdPrimaryContact(householdId, organizationId, customerId);
-  }
+    if (customer && !household.primaryContactId) {
+      await tx
+        .update(households)
+        .set({ primaryContactId: customerId, updatedAt: new Date() })
+        .where(and(eq(households.id, householdId), eq(households.organizationId, organizationId)));
+    }
 
-  return customer ?? null;
+    return customer ?? null;
+  });
 }
 
 export async function removeCustomerFromHousehold(
@@ -155,32 +186,38 @@ export async function removeCustomerFromHousehold(
   const database = getDatabase();
   if (!database) return null;
 
-  const household = await getHouseholdByOrganization(householdId, organizationId);
-  if (!household) return null;
-
-  const [customer] = await database
-    .update(customers)
-    .set({ householdId: null, updatedAt: new Date() })
-    .where(and(eq(customers.id, customerId), eq(customers.organizationId, organizationId), eq(customers.householdId, householdId)))
-    .returning();
-
-  if (!customer) return null;
-
-  if (household.primaryContactId === customerId) {
-    const [nextPrimary] = await database
+  return database.transaction(async (tx) => {
+    const [household] = await tx
       .select()
-      .from(customers)
-      .where(and(eq(customers.organizationId, organizationId), eq(customers.householdId, householdId)))
-      .orderBy(asc(customers.lastName), asc(customers.firstName))
+      .from(households)
+      .where(and(eq(households.id, householdId), eq(households.organizationId, organizationId)))
       .limit(1);
+    if (!household) return null;
 
-    await database
-      .update(households)
-      .set({ primaryContactId: nextPrimary?.id ?? null, updatedAt: new Date() })
-      .where(and(eq(households.id, householdId), eq(households.organizationId, organizationId)));
-  }
+    const [customer] = await tx
+      .update(customers)
+      .set({ householdId: null, updatedAt: new Date() })
+      .where(and(eq(customers.id, customerId), eq(customers.organizationId, organizationId), eq(customers.householdId, householdId)))
+      .returning();
 
-  return customer;
+    if (!customer) return null;
+
+    if (household.primaryContactId === customerId) {
+      const [nextPrimary] = await tx
+        .select()
+        .from(customers)
+        .where(and(eq(customers.organizationId, organizationId), eq(customers.householdId, householdId)))
+        .orderBy(asc(customers.lastName), asc(customers.firstName), asc(customers.id))
+        .limit(1);
+
+      await tx
+        .update(households)
+        .set({ primaryContactId: nextPrimary?.id ?? null, updatedAt: new Date() })
+        .where(and(eq(households.id, householdId), eq(households.organizationId, organizationId)));
+    }
+
+    return customer;
+  });
 }
 
 export async function setHouseholdPrimaryContact(
@@ -213,15 +250,17 @@ export async function deleteHousehold(householdId: string, organizationId: strin
   const database = getDatabase();
   if (!database) return false;
 
-  await database
-    .update(customers)
-    .set({ householdId: null, updatedAt: new Date() })
-    .where(and(eq(customers.householdId, householdId), eq(customers.organizationId, organizationId)));
+  return database.transaction(async (tx) => {
+    await tx
+      .update(customers)
+      .set({ householdId: null, updatedAt: new Date() })
+      .where(and(eq(customers.householdId, householdId), eq(customers.organizationId, organizationId)));
 
-  const deleted = await database
-    .delete(households)
-    .where(and(eq(households.id, householdId), eq(households.organizationId, organizationId)))
-    .returning({ id: households.id });
+    const deleted = await tx
+      .delete(households)
+      .where(and(eq(households.id, householdId), eq(households.organizationId, organizationId)))
+      .returning({ id: households.id });
 
-  return deleted.length > 0;
+    return deleted.length > 0;
+  });
 }

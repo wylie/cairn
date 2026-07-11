@@ -1,6 +1,6 @@
 # Data Sources
 
-Cairn v0.3.3 documents which modules are database-backed today and which modules still rely on demo storage.
+Cairn v0.3.4 documents which modules are database-backed today and which modules still rely on demo storage.
 
 This is both a readiness inventory and the current source-of-truth audit for migrated workflows. It should be reviewed before any future Neon schema or workflow migration work.
 
@@ -54,11 +54,15 @@ Tenant-facing pages should use scoped repository helpers after resolving the act
 - `staff_users` has a unique index on `organization_id + email`, avoiding accidental cross-tenant email uniqueness assumptions.
 - Customer list/detail/create/edit/delete/search paths resolve the active organization before reading or writing Neon rows.
 - Customer search trims and normalizes input, supports partial matching across first name, last name, preferred name, email, and phone, and does not search browser-local customer state in persisted mode.
+- Customer and household repository list/search reads order by stable ID tie-breakers after user-facing fields so repeated queries remain deterministic.
 - Customer create/edit validations are shared across server actions and forms for required fields, email format, phone normalization, birth-date validity, and US state format.
 - Duplicate-customer checks warn on exact email, exact normalized phone, or matching name plus birth date within the active organization; staff may review the possible match and save anyway when appropriate. Merge remains future work.
+- Customer and household server actions return staff-readable errors when Neon is unavailable or behind committed migrations.
 - Customer records are no longer hydrated from or saved to the customer localStorage mock key.
 - Customer and household list/detail/create/edit/delete paths resolve the active organization before reading or writing Neon rows and no longer fall back to mock records when the Neon context is unavailable in the app.
 - Household member add/remove and primary-contact changes resolve the active organization before writing Neon rows.
+- Customer delete and household create/edit/delete/member changes use transactional repository writes when multiple rows are affected.
+- Household primary-contact repository mutations validate organization ownership and household membership before writing primary-contact state.
 - Household records and relationship links are no longer hydrated from or saved to household localStorage mock keys.
 - Demo fallback data is separated by organization id and `data_mode`, but fallback/demo state is not production-authoritative.
 - Platform admin organization provisioning still persists browser-local registry records and must be replaced before real customer provisioning.

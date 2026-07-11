@@ -35,6 +35,21 @@ async function getActiveOrganizationContext() {
   return context ? { orgSlug, context } : null;
 }
 
+function householdDatabaseError(action: "create" | "update" | "delete" | "add" | "remove" | "primaryContact"): HouseholdActionResult {
+  const actionLabel =
+    action === "add"
+      ? "added to this household"
+      : action === "remove"
+        ? "removed from this household"
+        : action === "primaryContact"
+          ? "set as primary contact"
+          : `${action}d`;
+  return {
+    ok: false,
+    message: `Household could not be ${actionLabel} because the Neon database is unavailable or behind the required migrations. Check Admin Database status and try again.`
+  };
+}
+
 function normalizeOptional(value: string | null | undefined) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
@@ -92,157 +107,181 @@ async function validateDuplicateHousehold(input: {
 }
 
 export async function createPersistedHouseholdAction(input: PersistedHouseholdInput): Promise<HouseholdActionResult> {
-  const active = await getActiveOrganizationContext();
-  if (!active) return { ok: false, message: "Database-backed organization context is unavailable." };
+  try {
+    const active = await getActiveOrganizationContext();
+    if (!active) return { ok: false, message: "Database-backed organization context is unavailable." };
 
-  const name = await buildHouseholdName(input, active.context.organization.id);
-  if (!name) return { ok: false, message: "Household name is required." };
-  const primaryContactId = normalizeOptional(input.primaryContactId);
+    const name = await buildHouseholdName(input, active.context.organization.id);
+    if (!name) return { ok: false, message: "Household name is required." };
+    const primaryContactId = normalizeOptional(input.primaryContactId);
 
-  const primaryContactMessage = await validatePrimaryContact({
-    organizationId: active.context.organization.id,
-    primaryContactId
-  });
-  if (primaryContactMessage) return { ok: false, message: primaryContactMessage };
+    const primaryContactMessage = await validatePrimaryContact({
+      organizationId: active.context.organization.id,
+      primaryContactId
+    });
+    if (primaryContactMessage) return { ok: false, message: primaryContactMessage };
 
-  const duplicateMessage = await validateDuplicateHousehold({
-    organizationId: active.context.organization.id,
-    name
-  });
-  if (duplicateMessage) return { ok: false, message: duplicateMessage };
+    const duplicateMessage = await validateDuplicateHousehold({
+      organizationId: active.context.organization.id,
+      name
+    });
+    if (duplicateMessage) return { ok: false, message: duplicateMessage };
 
-  const householdId = `hh_${crypto.randomUUID()}`;
-  const household = await createHousehold({
-    id: householdId,
-    organizationId: active.context.organization.id,
-    name,
-    primaryContactId
-  });
+    const householdId = `hh_${crypto.randomUUID()}`;
+    const household = await createHousehold({
+      id: householdId,
+      organizationId: active.context.organization.id,
+      name,
+      primaryContactId
+    });
 
-  if (!household) return { ok: false, message: "Household could not be created in Neon." };
+    if (!household) return { ok: false, message: "Household could not be created in Neon." };
 
-  revalidateHouseholdPaths(active.orgSlug, household.id);
-  revalidateCustomerPaths(active.orgSlug, primaryContactId ?? undefined);
-  return { ok: true, message: "Household created in Neon.", householdId: household.id };
+    revalidateHouseholdPaths(active.orgSlug, household.id);
+    revalidateCustomerPaths(active.orgSlug, primaryContactId ?? undefined);
+    return { ok: true, message: "Household created in Neon.", householdId: household.id };
+  } catch {
+    return householdDatabaseError("create");
+  }
 }
 
 export async function updatePersistedHouseholdAction(
   householdId: string,
   input: PersistedHouseholdInput
 ): Promise<HouseholdActionResult> {
-  const active = await getActiveOrganizationContext();
-  if (!active) return { ok: false, message: "Database-backed organization context is unavailable." };
+  try {
+    const active = await getActiveOrganizationContext();
+    if (!active) return { ok: false, message: "Database-backed organization context is unavailable." };
 
-  const existing = await getHouseholdByOrganization(householdId, active.context.organization.id);
-  if (!existing) return { ok: false, message: "Household not found for this organization." };
+    const existing = await getHouseholdByOrganization(householdId, active.context.organization.id);
+    if (!existing) return { ok: false, message: "Household not found for this organization." };
 
-  const name = await buildHouseholdName(input, active.context.organization.id);
-  if (!name) return { ok: false, message: "Household name is required." };
-  const primaryContactId = normalizeOptional(input.primaryContactId);
+    const name = await buildHouseholdName(input, active.context.organization.id);
+    if (!name) return { ok: false, message: "Household name is required." };
+    const primaryContactId = normalizeOptional(input.primaryContactId);
 
-  const primaryContactMessage = await validatePrimaryContact({
-    organizationId: active.context.organization.id,
-    primaryContactId,
-    householdId
-  });
-  if (primaryContactMessage) return { ok: false, message: primaryContactMessage };
+    const primaryContactMessage = await validatePrimaryContact({
+      organizationId: active.context.organization.id,
+      primaryContactId,
+      householdId
+    });
+    if (primaryContactMessage) return { ok: false, message: primaryContactMessage };
 
-  const duplicateMessage = await validateDuplicateHousehold({
-    organizationId: active.context.organization.id,
-    name,
-    householdId
-  });
-  if (duplicateMessage) return { ok: false, message: duplicateMessage };
+    const duplicateMessage = await validateDuplicateHousehold({
+      organizationId: active.context.organization.id,
+      name,
+      householdId
+    });
+    if (duplicateMessage) return { ok: false, message: duplicateMessage };
 
-  const household = await updateHousehold(householdId, active.context.organization.id, {
-    name,
-    primaryContactId
-  });
+    const household = await updateHousehold(householdId, active.context.organization.id, {
+      name,
+      primaryContactId
+    });
 
-  if (!household) return { ok: false, message: "Household could not be updated in Neon." };
+    if (!household) return { ok: false, message: "Household could not be updated in Neon." };
 
-  revalidateHouseholdPaths(active.orgSlug, household.id);
-  revalidateCustomerPaths(active.orgSlug, primaryContactId ?? undefined);
-  return { ok: true, message: "Household updated in Neon.", householdId: household.id };
+    revalidateHouseholdPaths(active.orgSlug, household.id);
+    revalidateCustomerPaths(active.orgSlug, primaryContactId ?? undefined);
+    return { ok: true, message: "Household updated in Neon.", householdId: household.id };
+  } catch {
+    return householdDatabaseError("update");
+  }
 }
 
 export async function deletePersistedHouseholdAction(householdId: string): Promise<HouseholdActionResult> {
-  const active = await getActiveOrganizationContext();
-  if (!active) return { ok: false, message: "Database-backed organization context is unavailable." };
+  try {
+    const active = await getActiveOrganizationContext();
+    if (!active) return { ok: false, message: "Database-backed organization context is unavailable." };
 
-  const existing = await getHouseholdByOrganization(householdId, active.context.organization.id);
-  if (!existing) return { ok: false, message: "Household not found for this organization." };
-  const members = await getHouseholdMembers(householdId, active.context.organization.id);
+    const existing = await getHouseholdByOrganization(householdId, active.context.organization.id);
+    if (!existing) return { ok: false, message: "Household not found for this organization." };
+    const members = await getHouseholdMembers(householdId, active.context.organization.id);
 
-  const deleted = await deleteHousehold(householdId, active.context.organization.id);
-  if (!deleted) return { ok: false, message: "Household could not be deleted from Neon." };
+    const deleted = await deleteHousehold(householdId, active.context.organization.id);
+    if (!deleted) return { ok: false, message: "Household could not be deleted from Neon." };
 
-  revalidateHouseholdPaths(active.orgSlug, householdId);
-  members.forEach((member) => revalidateCustomerPaths(active.orgSlug, member.id));
-  revalidateCustomerPaths(active.orgSlug);
-  return { ok: true, message: `Household deleted from Neon. ${members.length} customer link${members.length === 1 ? "" : "s"} cleared.` };
+    revalidateHouseholdPaths(active.orgSlug, householdId);
+    members.forEach((member) => revalidateCustomerPaths(active.orgSlug, member.id));
+    revalidateCustomerPaths(active.orgSlug);
+    return { ok: true, message: `Household deleted from Neon. ${members.length} customer link${members.length === 1 ? "" : "s"} cleared.` };
+  } catch {
+    return householdDatabaseError("delete");
+  }
 }
 
 export async function addPersistedHouseholdMemberAction(
   householdId: string,
   customerId: string
 ): Promise<HouseholdActionResult> {
-  const active = await getActiveOrganizationContext();
-  if (!active) return { ok: false, message: "Database-backed organization context is unavailable." };
+  try {
+    const active = await getActiveOrganizationContext();
+    if (!active) return { ok: false, message: "Database-backed organization context is unavailable." };
 
-  const customer = await getCustomerByOrganization(customerId, active.context.organization.id);
-  if (!customer) return { ok: false, message: "Customer not found for this organization." };
-  if (customer.householdId) return { ok: false, message: "Customer already belongs to a household." };
+    const customer = await getCustomerByOrganization(customerId, active.context.organization.id);
+    if (!customer) return { ok: false, message: "Customer not found for this organization." };
+    if (customer.householdId) return { ok: false, message: "Customer already belongs to a household." };
 
-  const added = await addCustomerToHousehold(householdId, active.context.organization.id, customerId);
-  if (!added) return { ok: false, message: "Customer could not be added to this household." };
+    const added = await addCustomerToHousehold(householdId, active.context.organization.id, customerId);
+    if (!added) return { ok: false, message: "Customer could not be added to this household." };
 
-  revalidateHouseholdPaths(active.orgSlug, householdId);
-  revalidateCustomerPaths(active.orgSlug, customerId);
-  return {
-    ok: true,
-    message: `${added.firstName} ${added.lastName} added to household.`,
-    householdId,
-    customerId
-  };
+    revalidateHouseholdPaths(active.orgSlug, householdId);
+    revalidateCustomerPaths(active.orgSlug, customerId);
+    return {
+      ok: true,
+      message: `${added.firstName} ${added.lastName} added to household.`,
+      householdId,
+      customerId
+    };
+  } catch {
+    return householdDatabaseError("add");
+  }
 }
 
 export async function removePersistedHouseholdMemberAction(
   householdId: string,
   customerId: string
 ): Promise<HouseholdActionResult> {
-  const active = await getActiveOrganizationContext();
-  if (!active) return { ok: false, message: "Database-backed organization context is unavailable." };
+  try {
+    const active = await getActiveOrganizationContext();
+    if (!active) return { ok: false, message: "Database-backed organization context is unavailable." };
 
-  const removed = await removeCustomerFromHousehold(householdId, active.context.organization.id, customerId);
-  if (!removed) return { ok: false, message: "Customer could not be removed from this household." };
+    const removed = await removeCustomerFromHousehold(householdId, active.context.organization.id, customerId);
+    if (!removed) return { ok: false, message: "Customer could not be removed from this household." };
 
-  revalidateHouseholdPaths(active.orgSlug, householdId);
-  revalidateCustomerPaths(active.orgSlug, customerId);
-  return {
-    ok: true,
-    message: `${removed.firstName} ${removed.lastName} removed from household. Customer profile was not deleted.`,
-    householdId,
-    customerId
-  };
+    revalidateHouseholdPaths(active.orgSlug, householdId);
+    revalidateCustomerPaths(active.orgSlug, customerId);
+    return {
+      ok: true,
+      message: `${removed.firstName} ${removed.lastName} removed from household. Customer profile was not deleted.`,
+      householdId,
+      customerId
+    };
+  } catch {
+    return householdDatabaseError("remove");
+  }
 }
 
 export async function setPersistedHouseholdPrimaryContactAction(
   householdId: string,
   customerId: string
 ): Promise<HouseholdActionResult> {
-  const active = await getActiveOrganizationContext();
-  if (!active) return { ok: false, message: "Database-backed organization context is unavailable." };
+  try {
+    const active = await getActiveOrganizationContext();
+    if (!active) return { ok: false, message: "Database-backed organization context is unavailable." };
 
-  const household = await setHouseholdPrimaryContact(householdId, active.context.organization.id, customerId);
-  if (!household) return { ok: false, message: "Primary contact must already belong to this household." };
+    const household = await setHouseholdPrimaryContact(householdId, active.context.organization.id, customerId);
+    if (!household) return { ok: false, message: "Primary contact must already belong to this household." };
 
-  revalidateHouseholdPaths(active.orgSlug, householdId);
-  revalidateCustomerPaths(active.orgSlug, customerId);
-  return {
-    ok: true,
-    message: "Primary contact updated.",
-    householdId,
-    customerId
-  };
+    revalidateHouseholdPaths(active.orgSlug, householdId);
+    revalidateCustomerPaths(active.orgSlug, customerId);
+    return {
+      ok: true,
+      message: "Primary contact updated.",
+      householdId,
+      customerId
+    };
+  } catch {
+    return householdDatabaseError("primaryContact");
+  }
 }

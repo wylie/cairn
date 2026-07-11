@@ -10,11 +10,11 @@ Version metadata is centralized in `lib/version.ts`.
 
 Current shipped version metadata:
 
-- `currentVersion`: `0.3.3`
-- `releaseName`: `Customer Administration & Data Quality`
+- `currentVersion`: `0.3.4`
+- `releaseName`: `Customer Operations Stabilization`
 - `releaseDate`: `2026-07-11`
 - `releaseType`: `patch`
-- `summary`: `Customer and household administration, data-source visibility, repository boundaries, and workflow coverage are finalized for v0.3.x.`
+- `summary`: `Customer and household workflows are stabilized with transactional writes, deterministic repository reads, and focused validation coverage.`
 
 All active application version displays should read from the `version` object in `lib/version.ts`. Compatibility exports may exist for older components, but they must derive from `version`.
 
@@ -129,21 +129,42 @@ Update notifications are generated from release note data by `lib/releases/notif
 
 When a release entry becomes the latest release, Cairn can generate a system notification such as:
 
-`Cairn has been updated to v0.3.3. View what's new.`
+`Cairn has been updated to v0.3.4. View what's new.`
 
 The notification uses the existing communications notification center, counts toward unread totals, can be marked read, and links directly to the matching release note anchor.
 
 ## Current Shipped Version
 
-Version: `v0.3.3`
+Version: `v0.3.4`
 
 Released: `2026-07-11`
 
-Title: Customer Administration & Data Quality
+Title: Customer Operations Stabilization
 
 Release type: Patch
 
-Summary: Customer and household administration, data-source visibility, repository boundaries, and workflow coverage are finalized for v0.3.x.
+Summary: Customer and household workflows are stabilized with transactional writes, deterministic repository reads, and focused validation coverage.
+
+### v0.3.4 Notes
+
+#### Improved
+
+- Customer and household workflow reliability
+- Neon persistence verification
+- Search performance and consistency
+- Loading, error, and success states
+- Tenant and data-mode safeguards
+
+#### Fixed
+
+- Customer delete and household mutation steps now run transactionally so related customer-household links cannot be partially updated.
+- Household repository mutations now reject invalid primary contacts before writing household records.
+- Customer and household repository reads now use deterministic ID tie-breakers after user-facing sort fields.
+- Customer and household server actions now return friendly database migration or availability errors instead of surfacing raw write failures.
+
+#### Known Issues
+
+- Memberships, check-ins, waivers, programs, POS, documents, communications, imports, merge workflows, and authentication remain deferred to later releases.
 
 ### v0.3.3 Notes
 

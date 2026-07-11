@@ -57,7 +57,7 @@ v0.2.x now includes the first production data foundation pieces.
 - `db/index.ts` exposes the typed database client.
 - `/api/internal/database-health` verifies whether the configured database connection is reachable without exposing credentials or connection details.
 - `/admin/database` now shows connection state, known table count, record counts by table, the latest committed Drizzle migration, and seed data status.
-- `/admin/data-sources` now exposes the v0.3.3 data-source inventory for platform administrators.
+- `/admin/data-sources` now exposes the v0.3.4 data-source inventory for platform administrators.
 - `npm run db:generate`, `npm run db:migrate`, and `npm run db:studio` provide the migration and inspection workflow.
 - Local tooling loads `DATABASE_URL` from `.env.local`.
 
@@ -163,6 +163,8 @@ Customer and household database foundations now exist. Customer list/detail/crea
 - The staff household list and detail pages read organization-scoped households from Neon through the repository layer and map them into the existing household workspace UI.
 - The staff household create/edit/delete flows call server actions that resolve the active organization before repository writes.
 - Household member add/remove and primary-contact changes call server actions that resolve the active organization before repository writes.
+- Multi-row customer and household repository mutations use transactions, so delete and relationship changes do not leave partial customer-household state.
+- Household primary-contact writes verify that the contact belongs to the active organization and the target household before state changes are committed.
 - Household records and relationship links are no longer loaded from or saved to household localStorage mock keys.
 
 Memberships, check-ins, registrations, waivers, POS, documents, communications, customer merge, richer relationship roles, billing behavior, and authentication are not migrated yet. Those workflows continue to use localStorage-backed mock data until their models, import paths, and write semantics are finalized.
@@ -177,7 +179,7 @@ Seed strategy:
 
 Customer And Household Migration Plan:
 
-Current: the v0.3.x Customer Operations milestone is complete for modeled customer and household CRUD, customer search, validation, duplicate warnings, customer-household links, admin diagnostics, data-source visibility, repository boundaries, and focused workflow coverage. Remaining customer-adjacent workflows such as memberships, check-ins, registrations, waivers, POS, documents, communications, imports, merge behavior, richer relationship roles, and billing still use localStorage-backed mock data until their models are migrated.
+Current: the v0.3.x Customer Operations milestone is complete for modeled customer and household CRUD, customer search, validation, duplicate warnings, customer-household links, admin diagnostics, data-source visibility, repository boundaries, transactional relationship writes, deterministic repository reads, and focused workflow coverage. Remaining customer-adjacent workflows such as memberships, check-ins, registrations, waivers, POS, documents, communications, imports, merge behavior, richer relationship roles, and billing still use localStorage-backed mock data until their models are migrated.
 
 Future: Neon PostgreSQL becomes the durable source of truth through the Next.js server/data layer.
 

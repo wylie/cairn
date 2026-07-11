@@ -62,7 +62,7 @@ export async function getCustomersByOrganization(organizationId: string): Promis
     .select()
     .from(customers)
     .where(eq(customers.organizationId, organizationId))
-    .orderBy(asc(customers.lastName), asc(customers.firstName));
+    .orderBy(asc(customers.lastName), asc(customers.firstName), asc(customers.id));
 }
 
 export async function getCustomerByOrganization(customerId: string, organizationId: string): Promise<CustomerRecord | null> {
@@ -108,7 +108,7 @@ export async function searchCustomers(organizationId: string, query: string): Pr
         or(...searchConditions)
       )
     )
-    .orderBy(asc(customers.lastName), asc(customers.firstName));
+    .orderBy(asc(customers.lastName), asc(customers.firstName), asc(customers.id));
 }
 
 export async function findDuplicateCustomers(input: CustomerDuplicateInput): Promise<CustomerDuplicateMatch[]> {
@@ -254,14 +254,16 @@ export async function deleteCustomer(customerId: string, organizationId: string)
   const database = getDatabase();
   if (!database) return false;
 
-  await database
-    .update(households)
-    .set({ primaryContactId: null, updatedAt: new Date() })
-    .where(and(eq(households.primaryContactId, customerId), eq(households.organizationId, organizationId)));
+  return database.transaction(async (tx) => {
+    await tx
+      .update(households)
+      .set({ primaryContactId: null, updatedAt: new Date() })
+      .where(and(eq(households.primaryContactId, customerId), eq(households.organizationId, organizationId)));
 
-  const deleted = await database
-    .delete(customers)
-    .where(and(eq(customers.id, customerId), eq(customers.organizationId, organizationId)))
-    .returning({ id: customers.id });
-  return deleted.length > 0;
+    const deleted = await tx
+      .delete(customers)
+      .where(and(eq(customers.id, customerId), eq(customers.organizationId, organizationId)))
+      .returning({ id: customers.id });
+    return deleted.length > 0;
+  });
 }

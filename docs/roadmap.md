@@ -40,6 +40,9 @@ Focus:
 - Data-source migration
 - Customer operations documentation
 - Automated customer workflow coverage
+- Stabilized transactional customer and household writes
+- Deterministic repository reads and search ordering
+- Focused validation and repository-boundary coverage
 
 ## v0.4.x - Customer & Household Operations
 

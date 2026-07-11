@@ -55,6 +55,14 @@ async function getActiveOrganizationContext() {
   return context ? { orgSlug, context } : null;
 }
 
+function customerDatabaseError(action: "create" | "update" | "delete"): CustomerActionResult {
+  const verb = action === "create" ? "created" : action === "update" ? "updated" : "deleted";
+  return {
+    ok: false,
+    message: `Customer could not be ${verb} because the Neon database is unavailable or behind the required migrations. Check Admin Database status and try again.`
+  };
+}
+
 async function getDuplicateMessage(input: {
   organizationId: string;
   customer: ReturnType<typeof normalizeCustomerInput>;
@@ -91,85 +99,97 @@ function revalidateCustomerPaths(orgSlug: string, customerId?: string) {
 }
 
 export async function createPersistedCustomerAction(input: PersistedCustomerInput): Promise<CustomerActionResult> {
-  const active = await getActiveOrganizationContext();
-  if (!active) return { ok: false, message: "Database-backed organization context is unavailable." };
+  try {
+    const active = await getActiveOrganizationContext();
+    if (!active) return { ok: false, message: "Database-backed organization context is unavailable." };
 
-  const normalized = normalizeCustomerInput(input);
-  const validation = validateCustomerInput(normalized);
-  if (!validation.ok) return { ok: false, message: validation.message };
+    const normalized = normalizeCustomerInput(input);
+    const validation = validateCustomerInput(normalized);
+    if (!validation.ok) return { ok: false, message: validation.message };
 
-  const duplicate = await getDuplicateMessage({
-    organizationId: active.context.organization.id,
-    customer: normalized
-  });
-  if (duplicate && !input.allowPotentialDuplicate) {
-    return {
-      ok: false,
-      message: duplicate.message,
-      requiresConfirmation: true,
-      duplicateMatches: duplicate.matches
-    };
+    const duplicate = await getDuplicateMessage({
+      organizationId: active.context.organization.id,
+      customer: normalized
+    });
+    if (duplicate && !input.allowPotentialDuplicate) {
+      return {
+        ok: false,
+        message: duplicate.message,
+        requiresConfirmation: true,
+        duplicateMatches: duplicate.matches
+      };
+    }
+
+    const customerId = `cust_${crypto.randomUUID()}`;
+    const customer = await createCustomer({
+      id: customerId,
+      organizationId: active.context.organization.id,
+      ...normalized,
+      memberId: normalized.memberId ?? customerId.replace(/^cust_/, "M-").slice(0, 16)
+    });
+
+    if (!customer) return { ok: false, message: "Customer could not be created in Neon." };
+
+    revalidateCustomerPaths(active.orgSlug, customer.id);
+    return { ok: true, message: "Customer created in Neon.", customerId: customer.id };
+  } catch {
+    return customerDatabaseError("create");
   }
-
-  const customerId = `cust_${crypto.randomUUID()}`;
-  const customer = await createCustomer({
-    id: customerId,
-    organizationId: active.context.organization.id,
-    ...normalized,
-    memberId: normalized.memberId ?? customerId.replace(/^cust_/, "M-").slice(0, 16)
-  });
-
-  if (!customer) return { ok: false, message: "Customer could not be created in Neon." };
-
-  revalidateCustomerPaths(active.orgSlug, customer.id);
-  return { ok: true, message: "Customer created in Neon.", customerId: customer.id };
 }
 
 export async function updatePersistedCustomerAction(
   customerId: string,
   input: PersistedCustomerInput
 ): Promise<CustomerActionResult> {
-  const active = await getActiveOrganizationContext();
-  if (!active) return { ok: false, message: "Database-backed organization context is unavailable." };
+  try {
+    const active = await getActiveOrganizationContext();
+    if (!active) return { ok: false, message: "Database-backed organization context is unavailable." };
 
-  const existing = await getCustomerByOrganization(customerId, active.context.organization.id);
-  if (!existing) return { ok: false, message: "Customer not found for this organization." };
+    const existing = await getCustomerByOrganization(customerId, active.context.organization.id);
+    if (!existing) return { ok: false, message: "Customer not found for this organization." };
 
-  const normalized = normalizeCustomerInput(input);
-  const validation = validateCustomerInput(normalized);
-  if (!validation.ok) return { ok: false, message: validation.message };
+    const normalized = normalizeCustomerInput(input);
+    const validation = validateCustomerInput(normalized);
+    if (!validation.ok) return { ok: false, message: validation.message };
 
-  const duplicate = await getDuplicateMessage({
-    organizationId: active.context.organization.id,
-    customer: normalized,
-    excludeCustomerId: customerId
-  });
-  if (duplicate && !input.allowPotentialDuplicate) {
-    return {
-      ok: false,
-      message: duplicate.message,
-      requiresConfirmation: true,
-      duplicateMatches: duplicate.matches
-    };
+    const duplicate = await getDuplicateMessage({
+      organizationId: active.context.organization.id,
+      customer: normalized,
+      excludeCustomerId: customerId
+    });
+    if (duplicate && !input.allowPotentialDuplicate) {
+      return {
+        ok: false,
+        message: duplicate.message,
+        requiresConfirmation: true,
+        duplicateMatches: duplicate.matches
+      };
+    }
+
+    const customer = await updateCustomer(customerId, active.context.organization.id, normalized);
+    if (!customer) return { ok: false, message: "Customer could not be updated in Neon." };
+
+    revalidateCustomerPaths(active.orgSlug, customer.id);
+    return { ok: true, message: "Customer updated in Neon.", customerId: customer.id };
+  } catch {
+    return customerDatabaseError("update");
   }
-
-  const customer = await updateCustomer(customerId, active.context.organization.id, normalized);
-  if (!customer) return { ok: false, message: "Customer could not be updated in Neon." };
-
-  revalidateCustomerPaths(active.orgSlug, customer.id);
-  return { ok: true, message: "Customer updated in Neon.", customerId: customer.id };
 }
 
 export async function deletePersistedCustomerAction(customerId: string): Promise<CustomerActionResult> {
-  const active = await getActiveOrganizationContext();
-  if (!active) return { ok: false, message: "Database-backed organization context is unavailable." };
+  try {
+    const active = await getActiveOrganizationContext();
+    if (!active) return { ok: false, message: "Database-backed organization context is unavailable." };
 
-  const existing = await getCustomerByOrganization(customerId, active.context.organization.id);
-  if (!existing) return { ok: false, message: "Customer not found for this organization." };
+    const existing = await getCustomerByOrganization(customerId, active.context.organization.id);
+    if (!existing) return { ok: false, message: "Customer not found for this organization." };
 
-  const deleted = await deleteCustomer(customerId, active.context.organization.id);
-  if (!deleted) return { ok: false, message: "Customer could not be deleted from Neon." };
+    const deleted = await deleteCustomer(customerId, active.context.organization.id);
+    if (!deleted) return { ok: false, message: "Customer could not be deleted from Neon." };
 
-  revalidateCustomerPaths(active.orgSlug, customerId);
-  return { ok: true, message: "Customer deleted from Neon." };
+    revalidateCustomerPaths(active.orgSlug, customerId);
+    return { ok: true, message: "Customer deleted from Neon." };
+  } catch {
+    return customerDatabaseError("delete");
+  }
 }

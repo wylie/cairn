@@ -164,11 +164,11 @@ const customerExperienceImprovementsRelease: ReleaseNote = {
 };
 
 const customerAdministrationDataQualityRelease: ReleaseNote = {
-  version: version.currentVersion,
-  releaseName: version.releaseName,
-  releaseDate: version.releaseDate,
-  releaseType: version.releaseType,
-  summary: version.summary,
+  version: "0.3.3",
+  releaseName: "Customer Administration & Data Quality",
+  releaseDate: "2026-07-11",
+  releaseType: "patch",
+  summary: "Customer and household administration, data-source visibility, repository boundaries, and workflow coverage are finalized for v0.3.x.",
   sections: {
     added: [],
     improved: [
@@ -182,6 +182,34 @@ const customerAdministrationDataQualityRelease: ReleaseNote = {
       "Stale localStorage references in completed customer and household workflow documentation",
       "Unscoped customer and household repository helper exports",
       "Inaccurate customer and household admin metric coverage"
+    ],
+    changed: [],
+    knownIssues: [
+      "Memberships, check-ins, waivers, programs, POS, documents, communications, imports, merge workflows, and authentication remain deferred to later releases"
+    ]
+  }
+};
+
+const customerOperationsStabilizationRelease: ReleaseNote = {
+  version: version.currentVersion,
+  releaseName: version.releaseName,
+  releaseDate: version.releaseDate,
+  releaseType: version.releaseType,
+  summary: version.summary,
+  sections: {
+    added: [],
+    improved: [
+      "Customer and household workflow reliability",
+      "Neon persistence verification",
+      "Search performance and consistency",
+      "Loading, error, and success states",
+      "Tenant and data-mode safeguards"
+    ],
+    fixed: [
+      "Customer delete and household mutation steps now run transactionally so related customer-household links cannot be partially updated",
+      "Household repository mutations now reject invalid primary contacts before writing household records",
+      "Customer and household repository reads now use deterministic ID tie-breakers after user-facing sort fields",
+      "Customer and household server actions now return friendly database migration or availability errors instead of surfacing raw write failures"
     ],
     changed: [],
     knownIssues: [
@@ -291,6 +319,7 @@ export function compareReleaseNotesNewestFirst(a: ReleaseNote, b: ReleaseNote) {
 }
 
 const releaseNoteEntries: ReleaseNote[] = [
+  customerOperationsStabilizationRelease,
   customerAdministrationDataQualityRelease,
   customerExperienceImprovementsRelease,
   householdPersistenceRelease,
